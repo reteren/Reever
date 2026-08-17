@@ -1,0 +1,5 @@
+# Файлы, которые приложение пишет в рантайме (калибровка / сохранение настроек).
+# Без этого tauri dev перезапускает приложение при каждом добавлении фразы.
+resources/actions.json
+resources/settings.json
+resources/aliases.json

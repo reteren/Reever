@@ -1,0 +1,38 @@
+/* Hallmark · studied-DNA: Frutiger Aero / Win7 Aero Glass (source: image, r/FrutigerAero — user brand)
+ * paper-band: light (cyan-aqua glass) · display: rounded-humanist (Quicksand) + Segoe UI · accent: cyan-blue
+ * treatments: heavy glassmorphism · aqua mirror-gloss · aurora ribbons · glossy orbs · Aero scrollbar · Win7 caption bar
+ * Aero frame values referenced from 7.css (MIT) */
+:root{
+  /* glass */
+  --glass-body-1: oklch(99% 0.015 222 / 0.46);
+  --glass-body-2: oklch(95% 0.035 212 / 0.50);
+  --sheen:        oklch(100% 0 0 / 0.62);
+  --stroke-hi:    oklch(100% 0 0 / 0.85);
+  --stroke-lo:    oklch(45% 0.05 240 / 0.22);
+  --gloss:        oklch(100% 0 0 / 0.90);
+
+  /* ink */
+  --ink:   oklch(34% 0.04 244);
+  --ink-2: oklch(46% 0.035 242);
+  --ink-3: oklch(58% 0.025 240);
+
+  /* accent */
+  --aqua:       oklch(64% 0.14 232);
+  --aqua-deep:  oklch(52% 0.16 238);
+  --aqua-glow:  oklch(80% 0.12 220);
+  --green:      oklch(74% 0.18 150);
+  --green-deep: oklch(63% 0.18 152);
+  --amber:      oklch(80% 0.14 78);
+  --red:        oklch(62% 0.20 26);
+
+  /* type */
+  --font-display: "Quicksand", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+
+  /* radius / motion */
+  --r-lg:16px; --r-md:12px; --r-sm:8px; --r-pill:999px;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --ease-in-out: cubic-bezier(.6,0,.3,1);
+  --dur: 160ms;
+}

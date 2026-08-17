@@ -1,0 +1,20 @@
+{
+  "_comment": "HTTP-сервер Everything. Включи его в Everything: Tools → Options → HTTP Server → Enable, и поставь ТОТ ЖЕ порт, что здесь. Читается при старте Reever.",
+  "_comment_wake": "Как Vosk слышит 'reever'. Смотри [wake] heard в логе и добавляй свои варианты. Активация — если любое слово фразы совпало с этим списком.",
+  "confirm_dangerous": true,
+  "endpoint_ms": 250,
+  "everything_host": "127.0.0.1",
+  "everything_port": 8011,
+  "hotkey": "Ctrl+Shift+G",
+  "mute_hotkey": "",
+  "offline_mode": false,
+  "private_log": false,
+  "raise_result": true,
+  "sound_pack": "default",
+  "wake_words": [
+    "ривер",
+    "ревер",
+    "ривьер",
+    "ливер"
+  ]
+}

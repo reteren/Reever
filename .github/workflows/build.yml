@@ -1,0 +1,62 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Модели Vosk и нативная библиотека не хранятся в git (~238 МБ).
+      # Ключ кеша завязан на скрипт: в нём же прибиты версии и URL.
+      - name: Cache Vosk dependencies
+        id: cache-vosk
+        uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/resources/model
+            src-tauri/vendor
+          key: vosk-${{ runner.os }}-${{ hashFiles('scripts/fetch-deps.ps1') }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Fetch Vosk dependencies
+        shell: powershell
+        run: .\scripts\fetch-deps.ps1
+
+      - run: npm ci
+
+      - name: Check formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
+        continue-on-error: true # в проекте пока нет единого форматирования
+
+      - name: Build installer
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Reever-nsis-installer
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error

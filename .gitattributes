@@ -1,0 +1,22 @@
+# Windows PowerShell 5.1 читает .ps1 без BOM как ANSI и ломает кириллицу
+# в сообщениях. Скрипты хранятся в UTF-8 с BOM — BOM это содержимое файла,
+# git его сохраняет; здесь фиксируются только переводы строк.
+*.ps1 text eol=crlf
+
+# Текст — с нормализацией переводов строк
+*.rs      text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.html    text eol=lf
+*.css     text eol=lf
+*.toml    text eol=lf
+*.yml     text eol=lf
+
+# Бинарные ресурсы — без нормализации
+*.png     binary
+*.ico     binary
+*.icns    binary
+*.wav     binary
+*.exe     binary
+*.dll     binary
+*.lib     binary

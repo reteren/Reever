@@ -1,0 +1,10 @@
+/node_modules
+/dist
+/src-tauri/target
+/src-tauri/gen/schemas
+*.log
+
+# Крупные бинарные зависимости (~238 МБ) — не хранятся в git.
+# Ставятся одной командой: pwsh scripts/fetch-deps.ps1
+/src-tauri/resources/model/
+/src-tauri/vendor/

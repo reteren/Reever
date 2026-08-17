@@ -1,0 +1,642 @@
+[
+  {
+    "id": "act_mqlp3ixy",
+    "label": "Dota2",
+    "kind": "shell",
+    "target": "steam://rungameid/570",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "дота",
+      "дота два",
+      "доту два",
+      "вторая дота",
+      "вторую доту",
+      "доту",
+      "компьютерную",
+      "компьютерную игру",
+      "худшая игра в мире",
+      "худшую игру в мире",
+      "daughter"
+    ]
+  },
+  {
+    "id": "act_mqlpc0cc",
+    "label": "FL",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Image-Line\\FL Studio 2025.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "файл студия",
+      "fl studio",
+      "файл ко",
+      "fl come",
+      "фолко",
+      "файлы к",
+      "файл ка",
+      "файл студио",
+      "файл студию",
+      "fl",
+      "эл файл"
+    ]
+  },
+  {
+    "id": "act_mqlpel49",
+    "label": "Photoshop",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Photoshop 2025.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "фотошоп",
+      "photoshop"
+    ]
+  },
+  {
+    "id": "act_mqlphn52",
+    "label": "Nora",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Nora.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "нора",
+      "mora",
+      "нору"
+    ]
+  },
+  {
+    "id": "act_mqlpim2f",
+    "label": "HLSR",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\HLSR.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "халф лайф",
+      "half life",
+      "h l"
+    ]
+  },
+  {
+    "id": "act_mqlpka2u",
+    "label": "Obsidian",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Obsidian.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "обсидиан",
+      "obsidian",
+      "об силен",
+      "об сити"
+    ]
+  },
+  {
+    "id": "act_mqlpl939",
+    "label": "UnityHub",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Unity Hub.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "юнити",
+      "юнити хаб"
+    ]
+  },
+  {
+    "id": "act_mqlpm6wi",
+    "label": "OBS",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\OBS Studio.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "обе с",
+      "or bass",
+      "обе",
+      "or bears"
+    ]
+  },
+  {
+    "id": "act_mqlpnnft",
+    "label": "Antigravity",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Antigravity.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "анти гравити",
+      "анти гравитации",
+      "интегра ведь"
+    ]
+  },
+  {
+    "id": "act_mqlpon99",
+    "label": "AntigravityIDE",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Antigravity IDE\\Antigravity IDE.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "анти гравити идея",
+      "анти гравити и деньги"
+    ]
+  },
+  {
+    "id": "act_mqlpq2q2",
+    "label": "Rust",
+    "kind": "shell",
+    "target": "steam://rungameid/252490",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "раст",
+      "rust"
+    ]
+  },
+  {
+    "id": "act_mqlpqupr",
+    "label": "GeoGuessr",
+    "kind": "shell",
+    "target": "steam://rungameid/3478870",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "георгия сэр",
+      "ева сыр",
+      "you're here so",
+      "его есть",
+      "yeah oh yes sir"
+    ]
+  },
+  {
+    "id": "act_mqlpt431",
+    "label": "PaintNET",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Paint.NET.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "пэйнт нет",
+      "пэйнтин нет"
+    ]
+  },
+  {
+    "id": "act_mqlpvdum",
+    "label": "Brave",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Brave.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "брейв",
+      "brave"
+    ]
+  },
+  {
+    "id": "act_mqlpwj9y",
+    "label": "Discord",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Discord Inc\\Discord.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "discord",
+      "дэвис",
+      "ди скорость",
+      "дискомфорт",
+      "ди сковороду",
+      "he scored",
+      "scored"
+    ]
+  },
+  {
+    "id": "act_mqlpyt30",
+    "label": "Firefox",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Firefox.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "фаер фокс",
+      "firefox"
+    ]
+  },
+  {
+    "id": "act_mqlpzmbb",
+    "label": "Vivaldi",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Vivaldi.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "вивальди"
+    ]
+  },
+  {
+    "id": "act_mqlq0nr6",
+    "label": "qBittorrent",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\qBittorrent\\qBittorrent.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "хьюитт торрент",
+      "торрент",
+      "к убит в торрент"
+    ]
+  },
+  {
+    "id": "act_mqlq1j5z",
+    "label": "TG",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Telegram Desktop\\Telegram.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "телеграмм",
+      "telegram",
+      "тэг"
+    ]
+  },
+  {
+    "id": "act_mqlq2mcn",
+    "label": "Modrinth",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Modrinth App.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "мадрид",
+      "moody and",
+      "mod that him",
+      "монтре инд",
+      "more that him",
+      "more that he and",
+      "more dream"
+    ]
+  },
+  {
+    "id": "act_mqlq3sqd",
+    "label": "GitHub",
+    "kind": "shell",
+    "target": "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\GitHub, Inc\\GitHub Desktop.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "гид хаб",
+      "гид хаббл",
+      "give hub",
+      "гид",
+      "ет хаб",
+      "хит хаб"
+    ]
+  },
+  {
+    "id": "act_mqlq5omb",
+    "label": "Topaz",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Topaz Video AI\\Topaz Video AI.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "топаз"
+    ]
+  },
+  {
+    "id": "act_mqlq6jf0",
+    "label": "Spotify",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Spotify.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "спати фай",
+      "spotify",
+      "с патефон и",
+      "с по тик"
+    ]
+  },
+  {
+    "id": "act_mqlq85n6",
+    "label": "TunnelBear",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\TunnelBear\\TunnelBear.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "туннель уберу",
+      "to move beer",
+      "туннель обер"
+    ]
+  },
+  {
+    "id": "act_mqlq9bys",
+    "label": "Blender",
+    "kind": "shell",
+    "target": "steam://rungameid/365670",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "блендер",
+      "blender"
+    ]
+  },
+  {
+    "id": "act_mqlqar7s",
+    "label": "Roblox",
+    "kind": "shell",
+    "target": "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Roblox\\Roblox Player.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "роблокс"
+    ]
+  },
+  {
+    "id": "act_mqlqbyoy",
+    "label": "Upscayl",
+    "kind": "shell",
+    "target": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Upscayl.lnk",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "абс кейлл",
+      "upscale",
+      "абс кайл",
+      "абс келлер",
+      "аскер",
+      "scale",
+      "об скел"
+    ]
+  },
+  {
+    "id": "act_mqlqf9pu",
+    "label": "Isaac",
+    "kind": "shell",
+    "target": "steam://rungameid/250900",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "айзек",
+      "isaac",
+      "бенд айзека"
+    ]
+  },
+  {
+    "id": "act_mqlqmu6d",
+    "label": "VHOLUME",
+    "kind": "shell",
+    "target": "steam://rungameid/4245250",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "волю",
+      "volume",
+      "в холле ума",
+      "волен"
+    ]
+  },
+  {
+    "id": "act_mqm8lbc1",
+    "label": "Calculator",
+    "kind": "uwp",
+    "target": "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "калькулятор",
+      "calculator"
+    ]
+  },
+  {
+    "id": "act_mqm8lzwk",
+    "label": "Notepad",
+    "kind": "uwp",
+    "target": "Microsoft.WindowsNotepad_8wekyb3d8bbwe!App",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "блокнот",
+      "заметка",
+      "заметку"
+    ]
+  },
+  {
+    "id": "act_mqmhsn3m",
+    "label": "YouTube",
+    "kind": "url",
+    "target": "https://www.youtube.com",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "youtube",
+      "ютуб",
+      "ютюб"
+    ]
+  },
+  {
+    "id": "act_mqmhwszq",
+    "label": "TikTok",
+    "kind": "url",
+    "target": "https://www.tiktok.com",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "тик ток",
+      "тт",
+      "tik tok",
+      "tiktok"
+    ]
+  },
+  {
+    "id": "act_mqmi1zmx",
+    "label": "GMAIL",
+    "kind": "url",
+    "target": "https://mail.google.com/mail/u/0/#inbox",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "gmail",
+      "джим майкл",
+      "the mail",
+      "имэйл",
+      "email"
+    ]
+  },
+  {
+    "id": "act_mqmi3mki",
+    "label": "Instagram",
+    "kind": "url",
+    "target": "https://www.instagram.com",
+    "verbs": [
+      "запусти"
+    ],
+    "phrases": [
+      "инстаграме",
+      "instagram",
+      "инстаграм",
+      "инста",
+      "инн стул",
+      "инсту"
+    ]
+  },
+  {
+    "id": "sys_shutdown",
+    "label": "Выключить ПК",
+    "kind": "system",
+    "target": "shutdown",
+    "verbs": [],
+    "phrases": [
+      "выключи компьютер",
+      "выключи комп",
+      "выключи пк",
+      "оффни пк",
+      "оффни комп"
+    ]
+  },
+  {
+    "id": "sys_restart",
+    "label": "Перезагрузка",
+    "kind": "system",
+    "target": "restart",
+    "verbs": [],
+    "phrases": [
+      "перезагрузи компьютер",
+      "перезагрузи пк",
+      "ребутни пк",
+      "рестарт",
+      "ребут"
+    ]
+  },
+  {
+    "id": "sys_mute",
+    "label": "Без звука",
+    "kind": "system",
+    "target": "mute",
+    "verbs": [],
+    "phrases": [
+      "выключи звук",
+      "без звука",
+      "мьют"
+    ]
+  },
+  {
+    "id": "sys_play",
+    "label": "Пауза/Плей",
+    "kind": "system",
+    "target": "media_play_pause",
+    "verbs": [],
+    "phrases": [
+      "пауза",
+      "останови музыку",
+      "продолжи музыку",
+      "плей"
+    ]
+  },
+  {
+    "id": "web_google",
+    "label": "Google",
+    "kind": "search",
+    "target": "https://www.google.com/search?q={q}",
+    "verbs": [],
+    "phrases": [
+      "загугли",
+      "гугл",
+      "поищи"
+    ]
+  },
+  {
+    "id": "web_youtube",
+    "label": "YouTube",
+    "kind": "search",
+    "target": "https://www.youtube.com/results?search_query={q}",
+    "verbs": [],
+    "phrases": [
+      "ютуб",
+      "на ютубе"
+    ]
+  },
+  {
+    "id": "sys_next",
+    "label": "Следующий трек",
+    "kind": "system",
+    "target": "media_next",
+    "verbs": [],
+    "phrases": [
+      "следующий трек",
+      "переключи трек",
+      "дальше трек"
+    ]
+  },
+  {
+    "id": "sys_prev",
+    "label": "Предыдущий трек",
+    "kind": "system",
+    "target": "media_prev",
+    "verbs": [],
+    "phrases": [
+      "предыдущий трек",
+      "назад трек"
+    ]
+  },
+  {
+    "id": "act_mqnph6ks",
+    "label": "Панель управления",
+    "kind": "uwp",
+    "target": "Microsoft.Windows.ControlPanel",
+    "verbs": [],
+    "phrases": [
+      "панель управления",
+      "control panel"
+    ]
+  },
+  {
+    "id": "act_mqnpi186",
+    "label": "Настройки",
+    "kind": "uwp",
+    "target": "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel",
+    "verbs": [],
+    "phrases": [
+      "настройки",
+      "settings",
+      "параметры"
+    ]
+  }
+]
