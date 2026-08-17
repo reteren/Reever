@@ -1,38 +1,191 @@
-/* Hallmark · studied-DNA: Frutiger Aero / Win7 Aero Glass (source: image, r/FrutigerAero — user brand)
- * paper-band: light (cyan-aqua glass) · display: rounded-humanist (Quicksand) + Segoe UI · accent: cyan-blue
- * treatments: heavy glassmorphism · aqua mirror-gloss · aurora ribbons · glossy orbs · Aero scrollbar · Win7 caption bar
- * Aero frame values referenced from 7.css (MIT) */
-:root{
-  /* glass */
-  --glass-body-1: oklch(99% 0.015 222 / 0.46);
-  --glass-body-2: oklch(95% 0.035 212 / 0.50);
-  --sheen:        oklch(100% 0 0 / 0.62);
-  --stroke-hi:    oklch(100% 0 0 / 0.85);
-  --stroke-lo:    oklch(45% 0.05 240 / 0.22);
-  --gloss:        oklch(100% 0 0 / 0.90);
+/* ============================================================================
+   Reever — Windows 7 / Vista Aero design tokens
+   ----------------------------------------------------------------------------
+   Значения не придуманы: это реальная палитра Aero, снятая с рабочих
+   воспроизведений темы. Провенанс каждой группы указан в комментарии.
+   Держим hex, а не OKLCH: это исторические константы, перевод в другое
+   цветовое пространство внёс бы ошибку округления и спрятал источник.
 
-  /* ink */
-  --ink:   oklch(34% 0.04 244);
-  --ink-2: oklch(46% 0.035 242);
-  --ink-3: oklch(58% 0.025 240);
+   Источники:
+     [7AERO]  github.com/Z2r-YT/7-Aero-Stylesheet — окно, кнопки, чекбоксы,
+              радио, группбоксы, кнопки заголовка, суперпанель
+     [OBS7]   github.com/I0lagin/obsidian-windows7-theme — выделение в списках,
+              вкладки, всплывающие подсказки
+     [SYS]    системные метрики Windows 7 (размеры контролов, Segoe UI 9pt)
+   ========================================================================= */
 
-  /* accent */
-  --aqua:       oklch(64% 0.14 232);
-  --aqua-deep:  oklch(52% 0.16 238);
-  --aqua-glow:  oklch(80% 0.12 220);
-  --green:      oklch(74% 0.18 150);
-  --green-deep: oklch(63% 0.18 152);
-  --amber:      oklch(80% 0.14 78);
-  --red:        oklch(62% 0.20 26);
+:root {
+  /* --- Стекло рамки ------------------------------------------------------
+     Настоящий блюр даёт НАТИВНЫЙ слой (Tauri windowEffects: acrylic).
+     CSS отвечает только за колоризацию, блик и кромки — как DWM в семёрке. */
+  --glass-tint:        rgba(70, 162, 255, 0.37);   /* [7AERO] #46a2ff5e     */
+  --glass-wash:        rgba(182, 216, 251, 0.18);  /* [7AERO] #b6d8fb2f     */
+  --glass-sheen-lo:    rgba(231, 240, 255, 0);
+  --glass-sheen-mid:   rgba(253, 254, 255, 0);
+  --glass-sheen-hi:    #ffffff;                     /* полоса отражения      */
+  --glass-inner-edge:  #fcfcfc;                     /* [7AERO] внутр. кромка */
+  --glass-outer-edge:  rgba(0, 0, 0, 0.62);         /* внешний контур        */
+  --glass-blur:        3px;                         /* [7AERO] поверх нативного */
 
-  /* type */
-  --font-display: "Quicksand", "Segoe UI", system-ui, sans-serif;
-  --font-ui: "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+  /* Ореол текста на стекле — подпись эпохи. В оригинале тень повторена
+     восемь раз, иначе буквы тонут в произвольном фоне за окном. [7AERO] */
+  --glass-text-halo:
+      0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff,
+      0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff;
 
-  /* radius / motion */
-  --r-lg:16px; --r-md:12px; --r-sm:8px; --r-pill:999px;
-  --ease-out: cubic-bezier(.2,.8,.2,1);
-  --ease-in-out: cubic-bezier(.6,0,.3,1);
-  --dur: 160ms;
+  /* --- Клиентская область ------------------------------------------------
+     Клиент показывает обои пользователя, а поверхности лежат на них
+     полупрозрачным матовым стеклом. Непрозрачность 0.84 — не вкусовая:
+     это нижняя граница, при которой текст держит контраст даже если обои
+     полностью чёрные (см. --ink-3). */
+  --client:            #f0eff2;   /* [7AERO] фон диалога, запасной вариант  */
+  --panel:             rgba(255, 255, 255, 0.84);  /* плитки, группы, блоки */
+  --panel-solid:       rgba(255, 255, 255, 0.92);  /* списки: строк много   */
+  --side-panel:        rgba(250, 251, 253, 0.80);  /* левая панель задач    */
+  --wallpaper-lift:    rgba(255, 255, 255, 0.22);  /* поднимает тёмное фото */
+  --content:           #ffffff;   /* поля ввода — в семёрке всегда глухие   */
+  --client-edge:       #a0a0a0;   /* разделители внутри клиента             */
+
+  /* --- Чернила ----------------------------------------------------------- */
+  --ink:               #000000;   /* [SYS] Win7 UI — чистый чёрный          */
+  --ink-2:             #333333;
+  --ink-3:             #5a5a5a;   /* держит 4.5:1 даже над чёрными обоями   */
+  --ink-link:          #0066cc;
+  --ink-legend:        #003c74;   /* [SYS] заголовок группбокса             */
+  --ink-caption:       #1c2b3a;   /* текст на стекле, поверх ореола         */
+
+  /* --- Акцент Aero ------------------------------------------------------- */
+  --aero-edge:         #3c7fb1;   /* [7AERO] кромка hover                   */
+  --aero-edge-active:  #2c628b;   /* [7AERO] кромка нажатия                 */
+  --aero-glow:         #c2e4f6;   /* свечение фокуса                        */
+  --aero-check:        #4e64a1;   /* [7AERO] галочка чекбокса               */
+  --aero-radio:        #7cd3eb;   /* [7AERO] заливка радиокнопки            */
+  --aero-radio-edge:   #2e648b;   /* [7AERO] кромка радиокнопки             */
+
+  /* --- Кнопка: покой ------------------------------------------------------
+     Излом глянца ровно на 51% — то, что делает кнопку «семёрочной». [7AERO] */
+  --btn-face:
+      linear-gradient(to bottom, #fcfcfc 0%, #ebebeb 51%, #dbdbdb 51%, #cfcfcf 100%);
+  --btn-edge:          #707070;
+  --btn-inner:         #ffffff;
+
+  /* --- Кнопка: наведение [7AERO] --- */
+  --btn-face-hover:
+      linear-gradient(to bottom, #eaf6fd 0%, #d9f0fc 51%, #bce5fc 51%, #a7d9f5 100%);
+
+  /* --- Кнопка: нажатие [7AERO] --- */
+  --btn-face-active:
+      linear-gradient(to bottom, #e5f4fc 0%, #c4e5f6 51%, #98d1ef 51%, #68b2da 100%);
+
+  /* --- Кнопка: недоступна [SYS] --- */
+  --btn-face-off:      linear-gradient(to bottom, #f4f4f4 0%, #f0f0f0 100%);
+  --btn-edge-off:      #adb2b5;
+  --ink-off:           #838383;
+
+  /* --- Кнопка по умолчанию (Aero подсвечивал её) --- */
+  --btn-face-default:
+      linear-gradient(to bottom, #f2fbfe 0%, #dff3fc 51%, #c4e9fa 51%, #aadcf5 100%);
+
+  /* --- Опасное действие: красный из кнопки «закрыть» [7AERO] --- */
+  --btn-face-danger:
+      linear-gradient(to bottom, #efb1a1 0%, #d5836f 49%, #ab4732 49%, #c17f6e 100%);
+  --btn-edge-danger:   #8c3a28;
+
+  /* --- Зелёное подтверждение (в тон Frutiger Aero) --- */
+  --btn-face-go:
+      linear-gradient(to bottom, #f0fbe8 0%, #d8f2c2 51%, #b4e389 51%, #8fd15c 100%);
+  --btn-edge-go:       #5c8f36;
+
+  /* --- Поля ввода [SYS] --- */
+  --field-edge:        #abadb3;
+  --field-edge-hover:  #5794bf;
+  --field-inner:       inset 0 1px 2px rgba(0, 0, 0, 0.10);
+
+  /* --- Чекбокс и радио: четыре inset-тени — вся глубина контрола [7AERO] --- */
+  --check-face:        #f6f6f6;
+  --check-edge:        #8e8f8f;
+  --check-inner:
+      inset 0 0 0 1px #f4f4f4, inset 1px 1px 0 1px #aeaeae,
+      inset -1px -1px 0 1px #dddddd, inset 3px 3px 6px #cccccc;
+  --check-face-hover:  #e9f7fe;
+  --check-inner-hover:
+      inset 0 0 0 1px #def9fa, inset 1px 1px 0 1px #79c6f9,
+      inset -1px -1px 0 1px #c6e9fc, inset 3px 3px 6px #b1dffd;
+
+  /* --- Группбокс [7AERO] --- */
+  --group-edge:        #cdd7db;
+  --group-inner:       inset 0 0 0 1px #ffffff;
+
+  /* --- Выделение в списках [OBS7] + жёсткий излом Aero --- */
+  --row-hover:
+      linear-gradient(to bottom, #ffffff 0%, #eaf4fd 50%, #d6ecfd 50%, #cfe8fc 100%);
+  --row-hover-edge:    rgba(0, 120, 215, 0.40);
+  --row-sel:
+      linear-gradient(to bottom, #fdfeff 0%, #e0f0fd 50%, #c2e3fb 50%, #b7ddf9 100%);
+  --row-sel-edge:      #4a90e2;
+
+  /* --- Кнопки заголовка окна [7AERO] --- */
+  --cap-face:
+      linear-gradient(to bottom, #b8c5d3 0%, rgba(174,174,174,.49) 50%, rgba(132,132,132,.48) 50%, #728aa9 100%);
+  --cap-face-hover:
+      linear-gradient(to bottom, #b3d6ed 0%, #83b5d7 50%, #2978ae 50%, #09fdfa 100%);
+  --cap-face-active:
+      linear-gradient(to bottom, #a0bacb 0%, #57a4b3 50%, #0b3f5b 50%, #13d5c4 100%);
+  /* Кнопка «закрыть» в покое. ОТСТУПЛЕНИЕ ОТ ИСТОЧНИКА: в 7AERO этот
+     градиент заметно приглушён (терракота), тогда как у активного окна в
+     семёрке кнопка ощутимо краснее. Структура сохранена — четыре стопа и
+     жёсткий излом на 49%, сдвинута только насыщенность средних тонов. */
+  --cap-close:
+      linear-gradient(to bottom, #f6bcac 0%, #e08d76 49%, #b03826 49%, #cb6d58 100%);
+  --cap-close-hover:
+      linear-gradient(to bottom, #f99b8b 0%, #ed6c56 49%, #ab220c 49%, #d22405 72%, #f4e679 100%);
+  --cap-close-active:
+      linear-gradient(to bottom, #d1a993 0%, #b7745b 49%, #8a1f09 51%, #f0c928 100%);
+
+  /* --- Полоса прокрутки Aero [SYS] --- */
+  --sb-track:          #f0f0f0;
+  --sb-track-edge:     #dcdcdc;
+  --sb-thumb:
+      linear-gradient(to right, #fdfdfd 0%, #f0f0f0 45%, #e2e2e2 45%, #d5d5d5 100%);
+  --sb-thumb-hover:
+      linear-gradient(to right, #f4fbfe 0%, #dcf0fb 45%, #bfe4f8 45%, #a9d9f2 100%);
+  --sb-thumb-edge:     #a3a3a3;
+  --sb-size:           17px;      /* [SYS] реальная ширина в семёрке        */
+
+  /* --- Индикаторы состояния (глянцевые сферы Aero) --- */
+  --orb-idle:          #9aa4ad;
+  --orb-live:          #5cd139;
+  --orb-busy:          #f2b21c;
+  --orb-error:         #dc3a1e;
+
+  /* --- Типографика ------------------------------------------------------
+     Segoe UI есть на каждой Windows 7+ — локально, без единого запроса
+     в сеть. Это одновременно и точность, и починка офлайн-режима. */
+  --font-ui:           "Segoe UI", Tahoma, "Segoe UI Variable Text", sans-serif;
+  --font-mono:         Consolas, "Lucida Console", monospace;
+  --fs-base:           12px;   /* [SYS] Segoe UI 9pt при 96 dpi            */
+  --fs-sm:             11px;
+  --fs-cap:            12px;   /* текст заголовка окна                     */
+  --fs-head:           15px;   /* заголовок раздела внутри клиента         */
+  --fs-lead:           13px;
+
+  /* --- Метрики [SYS] --- */
+  --btn-h:             23px;
+  --btn-min-w:         75px;
+  --field-h:           22px;
+  --check-size:        13px;
+  --radius-btn:        3px;
+  --radius-window:     8px;
+
+  /* --- Движение ---------------------------------------------------------
+     Aero гасил подсветку заметно медленнее, чем зажигал. */
+  --t-in:              150ms;
+  --t-out:             250ms;
+  --ease:              cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Слои -------------------------------------------------------------- */
+  --z-content:         1;
+  --z-chrome:          10;
+  --z-overlay:         100;
+  --z-modal:           110;
 }
