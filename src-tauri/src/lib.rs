@@ -12,6 +12,7 @@ pub mod config;
 pub mod dispatch;
 pub mod engine;
 pub mod events;
+pub mod grammar;
 pub mod everything;
 pub mod launcher;
 pub mod recognizer;
@@ -91,7 +92,8 @@ pub fn run() {
 
             // Все конфиги полностью редактируемы пользователем (release -> %APPDATA%).
             let actions_path = config::user_config_path(app.handle(), "actions.json");
-            let shared = Arc::new(SharedState::new(actions_path));
+            let grammar_path = config::user_config_path(app.handle(), "grammar.json");
+            let shared = Arc::new(SharedState::new(actions_path, grammar_path, &cfg.settings));
 
             app.manage(cfg.clone());
             app.manage(shared.clone());
@@ -177,6 +179,9 @@ pub fn run() {
             commands_api::list_apps,
             commands_api::list_sound_packs,
             commands_api::list_asr_models,
+            commands_api::get_grammar,
+            commands_api::save_grammar,
+            commands_api::reset_grammar,
             commands_api::save_action,
             commands_api::delete_action,
             commands_api::add_phrase,

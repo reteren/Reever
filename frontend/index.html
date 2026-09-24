@@ -59,14 +59,15 @@
               <div class="partial" id="partial">…</div>
               <div class="last" id="lastCmd">Можно сказать «ривер» и дождаться сигнала, а можно сразу: «ривер, открой …».</div>
             </div>
-            <div class="cheat">
-              <div class="h2">Что можно сказать</div>
-              <div class="row"><code>ривер открой X</code><span>· твоё действие (прога, ссылка, папка-шорткат)</span></div>
-              <div class="row"><code>ривер запусти X</code><span>· то же, любым глаголом</span></div>
-              <div class="row"><code>ривер открой папку X</code><span>· динамический поиск папок (Everything)</span></div>
-              <div class="row"><code>ривер загугли X</code><code>ривер ютуб X</code><span>· веб-поиск</span></div>
-              <div class="row"><code>ривер выключи комп</code><span>· система (с подтверждением)</span></div>
-              <div class="row"><code>ривер отмена</code><span>· стоп, если передумал</span></div>
+            <div class="cheat" id="grammarPanel">
+              <div class="grammar-heading">
+                <div class="h2">Что можно сказать</div>
+                <button id="editGrammarBtn" class="sm">Изменить</button>
+              </div>
+              <div id="grammarExamples"></div>
+              <div class="hint grammar-live-note">Изменения применяются сразу — перезапуск не нужен.</div>
+              <div class="hint grammar-preview-note" id="grammarPreviewNote" hidden>Открыт предпросмотр без Tauri; изменения сохраняются только для этой вкладки.</div>
+              <div class="grammar-editor" id="grammarEditor" hidden></div>
             </div>
           </section>
 
@@ -94,6 +95,7 @@
 
           <section class="panel" id="p-settings" role="tabpanel">
             <h1 class="h1">Настройки</h1>
+            <div class="hint grammar-settings-link">Wake-слово и фразы — на Главной, <a href="#" id="grammarSettingsLink">«Что можно сказать» → Изменить</a>.</div>
             <div id="settingsForm"></div>
             <div class="editrow" style="margin-top:2px;">
               <button id="saveSettingsBtn" class="default">Сохранить</button>
@@ -149,9 +151,42 @@
         raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,
         sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:''
       };
-      const invoke = tauri?.core?.invoke || (async(command)=>{
+      const defaultGrammarPreview=()=>({
+        wake_words:['ривер','ревер','ривьер','ливер'],
+        cancel_words:['отмена','стоп','отбой','забудь'],
+        intents:[
+          {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true},
+          {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку'],url:'',enabled:true},
+          {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли'],url:'https://www.google.com/search?q={q}',enabled:true},
+          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true}
+        ]
+      });
+      let previewGrammar=defaultGrammarPreview();
+      const cloneValue=value=>JSON.parse(JSON.stringify(value));
+      const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
         switch(command){
           case 'get_settings': return {...previewSettings};
+          case 'get_grammar': return cloneValue(previewGrammar);
+          case 'save_grammar': {
+            const g=commandArgs.grammar, errors=[];
+            if(!g?.wake_words?.some(w=>String(w).trim())) errors.push('Добавь хотя бы одно wake-слово.');
+            const ids=new Set(), phrases=new Map();
+            for(const intent of g?.intents||[]){
+              if(!String(intent.id||'').trim()) errors.push('У намерения должен быть id.');
+              else if(ids.has(intent.id)) errors.push(`Повторяется id «${intent.id}».`);
+              ids.add(intent.id);
+              if(intent.kind==='search'&&!String(intent.url||'').includes('{q}')) errors.push(`В URL «${intent.label||intent.id}» должен быть шаблон {q}.`);
+              for(const phrase of intent.triggers||[]){
+                const key=String(phrase).trim().toLocaleLowerCase();
+                if(!key&&intent.kind!=='launch') errors.push(`Пустая фраза доступна только для запуска программ («${intent.label||intent.id}»).`);
+                if(key&&phrases.has(key)) errors.push(`Фраза «${phrase}» уже используется в «${phrases.get(key)}».`);
+                else if(key) phrases.set(key,intent.label||intent.id);
+              }
+            }
+            if(errors.length) throw new Error(errors.join('\n'));
+            previewGrammar=cloneValue(g); return undefined;
+          }
+          case 'reset_grammar': previewGrammar=defaultGrammarPreview(); return cloneValue(previewGrammar);
           case 'list_actions': return [];
           case 'list_apps': return [];
           case 'list_sound_packs': return ['default'];
@@ -332,11 +367,176 @@
         else if($('#calOverlay').classList.contains('on')) $('#calDone').click();
       });
 
+      let grammar=defaultGrammarPreview(), grammarDraft=null;
+      const grammarEditor=$('#grammarEditor');
+      function grammarWake(){ return (grammar?.wake_words||[]).find(word=>String(word).trim())||'ривер'; }
+      function grammarExampleRow(command,description){
+        const row=el('div',{className:'row'});
+        row.append(el('code',{textContent:command}),el('span',{textContent:description}));
+        return row;
+      }
+      function renderGrammarExamples(){
+        const host=$('#grammarExamples'); host.replaceChildren();
+        const wake=grammarWake();
+        for(const intent of grammar.intents||[]){
+          if(!intent.enabled) continue;
+          const triggers=(intent.triggers||[]).map(value=>String(value).trim());
+          const bare=intent.kind==='launch'&&triggers.includes('');
+          const trigger=triggers.find(value=>value);
+          if(bare){
+            host.append(grammarExampleRow(`${wake} X`,`${intent.label||'Запуск'} · просто назови программу`));
+            continue;
+          }
+          if(trigger) host.append(grammarExampleRow(`${wake} ${trigger} X`,intent.label||'Команда'));
+        }
+        host.append(grammarExampleRow(`${wake} выключи комп`,'система, с подтверждением'));
+        const cancel=(grammar.cancel_words||[]).find(word=>String(word).trim());
+        host.append(grammarExampleRow(`${wake} ${cancel||'отмена'}`,'отмена команды'));
+      }
+      async function loadGrammar(){
+        $('#grammarPreviewNote').hidden=!!tauri;
+        try{
+          const value=await invoke('get_grammar');
+          if(value&&Array.isArray(value.wake_words)&&Array.isArray(value.cancel_words)&&Array.isArray(value.intents)) grammar=value;
+          else throw new Error('Команда вернула грамматику в неизвестном формате.');
+        }catch(error){
+          reportError('загрузки грамматики',error);
+          grammar=defaultGrammarPreview();
+        }
+        renderGrammarExamples();
+      }
+      function addChipEditor(parent,getValues,setValues,label,minimum=0){
+        const box=el('div',{className:'grammar-chipbox'});
+        const chips=el('div',{className:'grammar-chips'});
+        const clearHint=()=>{const hint=parent.querySelector('.grammar-small-note');if(hint)hint.textContent='';};
+        const refresh=()=>{
+          chips.replaceChildren();
+          getValues().forEach((value,index)=>{
+            const item=el('span',{className:'grammar-chip'});
+            item.append(el('span',{textContent:value}),el('button',{type:'button',className:'sm grammar-chip-remove',textContent:'×',title:`Удалить «${value}»`,ariaLabel:`Удалить ${value}`}));
+            if(label==='wake-слова'&&index===0) item.classList.add('primary');
+            item.lastChild.onclick=()=>{
+              const next=getValues().filter((_,i)=>i!==index);
+              if(next.length<minimum){ const hint=parent.querySelector('.grammar-small-note');if(hint)hint.textContent='Нужно оставить хотя бы одно wake-слово.'; return; }
+              setValues(next); refresh();
+            };
+            chips.append(item);
+          });
+        };
+        const line=el('div',{className:'editrow grammar-chip-add'});
+        const input=el('input',{placeholder:`Добавить ${label}…`,ariaLabel:`Добавить ${label}`});
+        const add=()=>{const value=input.value.trim();if(!value)return;setValues([...getValues(),value]);input.value='';clearHint();refresh();};
+        input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();add();}};
+        line.append(input,el('button',{type:'button',className:'sm',textContent:'Добавить',onclick:add}));
+        box.append(chips,line); parent.append(box); refresh();
+      }
+      function renderGrammarEditor(){
+        grammarEditor.replaceChildren();
+        const wakeGroup=el('fieldset',{className:'grp'}); wakeGroup.append(el('legend',{textContent:'Wake-слова'}));
+        wakeGroup.append(el('div',{className:'hint grammar-small-note',textContent:'Первое слово — основное; остальные принимаются как варианты.'}));
+        addChipEditor(wakeGroup,()=>grammarDraft.wake_words||[],values=>grammarDraft.wake_words=values,'wake-слова',1);
+        grammarEditor.append(wakeGroup);
+        for(const intent of grammarDraft.intents||[]){
+          const group=el('fieldset',{className:'grp grammar-intent'});
+          const legend=el('legend',{textContent:intent.kind==='launch'?'Запуск':intent.kind==='folder'?'Папки':'Поиск'}); group.append(legend);
+          const head=el('div',{className:'grammar-intent-head'});
+          const enabledWrap=el('label',{className:'cbrow grammar-enabled'});
+          const enabled=el('input',{type:'checkbox'}); enabled.checked=!!intent.enabled; enabled.onchange=()=>intent.enabled=enabled.checked;
+          enabledWrap.append(enabled,el('span',{textContent:'Включено'}));
+          const labelWrap=el('label',{className:'grammar-label-field'}); labelWrap.append(el('span',{className:'fld',textContent:'Подпись'}));
+          const labelInput=el('input',{value:intent.label||''}); labelInput.oninput=()=>intent.label=labelInput.value; labelWrap.append(labelInput);
+          head.append(enabledWrap,labelWrap);
+          if(intent.kind==='search'&&String(intent.id).startsWith('search_')){
+            const remove=el('button',{type:'button',className:'sm danger grammar-delete-intent',textContent:'Удалить поиск'});
+            remove.onclick=()=>{grammarDraft.intents=grammarDraft.intents.filter(item=>item!==intent);renderGrammarEditor();}; head.append(remove);
+          }
+          group.append(head);
+          const phraseLabel=el('div',{className:'fld grammar-field-label',textContent:'Фразы'}); group.append(phraseLabel);
+          const getTriggers=()=>intent.triggers||[];
+          const setTriggers=values=>intent.triggers=values;
+          const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim());
+          const triggerHost=el('div'); group.append(triggerHost);
+          addChipEditor(triggerHost,visibleTriggers,values=>{
+            const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
+            intent.triggers=hasBare?['',...values]:values;
+          },'фразу');
+          if(intent.kind==='launch'){
+            const bareRow=el('label',{className:'cbrow grammar-bare-launch'});
+            const bare=el('input',{type:'checkbox'}); bare.checked=getTriggers().some(value=>!String(value).trim());
+            bare.onchange=()=>{
+              const rest=getTriggers().filter(value=>String(value).trim());
+              intent.triggers=bare.checked?['',...rest]:rest;
+            };
+            bareRow.append(bare,el('span',{textContent:`Открывать без ключевого слова (просто «${grammarWake()} фотошоп»)`}));
+            group.append(bareRow);
+          }
+          if(intent.kind==='search'){
+            const urlWrap=el('label',{className:'grammar-url-field'}); urlWrap.append(el('span',{className:'fld',textContent:'URL с {q}'}));
+            const urlInput=el('input',{value:intent.url||'',placeholder:'https://example.com/?q={q}'}); urlInput.oninput=()=>intent.url=urlInput.value; urlWrap.append(urlInput); group.append(urlWrap);
+          }
+          grammarEditor.append(group);
+        }
+        const addSearch=el('button',{type:'button',className:'sm grammar-add-search',textContent:'+ Свой поиск'});
+        addSearch.onclick=()=>{
+          let timestamp=Date.now();
+          while(grammarDraft.intents.some(intent=>intent.id===`search_${timestamp}`)) timestamp++;
+          const id=`search_${timestamp}`;
+          grammarDraft.intents.push({id,kind:'search',label:'Новый поиск',triggers:['поиск'],url:'https://example.com/?q={q}',enabled:true});
+          renderGrammarEditor();
+        };
+        grammarEditor.append(addSearch);
+        const cancelGroup=el('fieldset',{className:'grp'}); cancelGroup.append(el('legend',{textContent:'Слова отмены'}));
+        cancelGroup.append(el('div',{className:'hint grammar-small-note',textContent:'Первое слово показывается как команда отмены в примерах.'}));
+        addChipEditor(cancelGroup,()=>grammarDraft.cancel_words||[],values=>grammarDraft.cancel_words=values,'слово отмены');
+        grammarEditor.append(cancelGroup);
+        const actions=el('div',{className:'grammar-actions'});
+        const save=el('button',{type:'button',className:'default',textContent:'Сохранить'});
+        const cancel=el('button',{type:'button',className:'sm',textContent:'Отмена'});
+        const reset=el('button',{type:'button',className:'sm danger',textContent:'Сброс к умолчанию'});
+        const errors=el('ul',{className:'grammar-errors',hidden:true,ariaLive:'polite'});
+        const setErrors=error=>{
+          errors.replaceChildren();
+          const details=String(error?.message||error||'Не удалось сохранить грамматику.').split(/\r?\n/).filter(Boolean);
+          for(const message of details) errors.append(el('li',{textContent:message}));
+          errors.hidden=!details.length;
+        };
+        save.onclick=async()=>{
+          save.disabled=true; errors.hidden=true;
+          try{
+            await invoke('save_grammar',{grammar:grammarDraft});
+            grammar=cloneValue(grammarDraft); grammarDraft=null; grammarEditor.hidden=true; $('#editGrammarBtn').textContent='Изменить';
+            renderGrammarExamples();
+          }catch(error){setErrors(error);reportError('сохранения грамматики',error);}
+          finally{save.disabled=false;}
+        };
+        cancel.onclick=()=>{grammarDraft=null;grammarEditor.hidden=true;$('#editGrammarBtn').textContent='Изменить';};
+        reset.onclick=async()=>{
+          if(!window.confirm('Сбросить wake-слова и фразы к значениям по умолчанию?'))return;
+          reset.disabled=true;errors.hidden=true;
+          try{
+            const result=await invoke('reset_grammar');
+            grammar=result&&Array.isArray(result.intents)?result:defaultGrammarPreview();
+            grammarDraft=null;grammarEditor.hidden=true;$('#editGrammarBtn').textContent='Изменить';renderGrammarExamples();
+          }catch(error){setErrors(error);reportError('сброса грамматики',error);}
+          finally{reset.disabled=false;}
+        };
+        actions.append(save,cancel,reset); grammarEditor.append(actions,errors);
+      }
+      $('#editGrammarBtn').onclick=()=>{
+        if(grammarDraft){grammarDraft=null;grammarEditor.hidden=true;$('#editGrammarBtn').textContent='Изменить';return;}
+        grammarDraft=cloneValue(grammar);renderGrammarEditor();grammarEditor.hidden=false;$('#editGrammarBtn').textContent='Закрыть редактор';
+      };
+      $('#grammarSettingsLink').onclick=event=>{
+        event.preventDefault();selectNav(document.querySelector('[data-nav="home"]'));
+        if(!grammarDraft)$('#editGrammarBtn').click();
+        $('#grammarPanel').scrollIntoView({block:'start',behavior:'smooth'});
+      };
+
       let settingsObj={};
       const GROUPS=[
-        ['Активация',[['activation_mode','Режим — рестарт','select',['both','wake','hotkey']],['hotkey','Хоткей push-to-talk — сразу','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» — сразу','hotkey'],['wake_words','Wake-слова (через запятую) — рестарт','list']]],
+        ['Активация',[['activation_mode','Режим — рестарт','select',['both','wake','hotkey']],['hotkey','Хоткей push-to-talk — сразу','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» — сразу','hotkey']]],
         ['Приватность',[['private_log','Приватный лог — рестарт','bool'],['offline_mode','Офлайн-режим — рестарт','bool']]],
-        ['Распознавание',[['asr_model','Модель ASR — рестарт','model'],['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после «ривер», мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number'],['cancel_words','Слова отмены (через запятую) — рестарт','list']]],
+        ['Распознавание',[['asr_model','Модель ASR — рестарт','model'],['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после wake, мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number']]],
         ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],
         ['Система',[['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],['raise_result','Поднимать открытое окно на передний план — рестарт','bool']]],
       ];
@@ -447,7 +647,7 @@
         }catch(e){ reportError('загрузки обоев',e); }
       }
 
-      loadWallpaper(); loadActions().catch(e=>reportError('загрузки действий',e)); loadSettings(); refreshPause();
+      loadWallpaper(); loadActions().catch(e=>reportError('загрузки действий',e)); loadSettings(); loadGrammar(); refreshPause();
     </script>
   </body>
 </html>

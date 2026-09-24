@@ -8,11 +8,62 @@ use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use crate::actions::{Action, SharedState};
 use crate::apps::{self, AppEntry};
 use crate::config::ReeverConfig;
+use crate::grammar::Grammar;
 
 /// Список всех действий (для UI).
 #[tauri::command]
 pub fn list_actions(state: State<'_, Arc<SharedState>>) -> Vec<Action> {
     state.actions.lock().map(|a| a.clone()).unwrap_or_default()
+}
+
+/// Вернуть текущую редактируемую грамматику для раздела «Что можно сказать».
+#[tauri::command]
+pub fn get_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
+    state
+        .grammar
+        .lock()
+        .map(|grammar| grammar.clone())
+        .unwrap_or_else(|_| Grammar::defaults())
+}
+
+/// Проверить и применить грамматику сразу, затем сохранить её для следующего запуска.
+#[tauri::command]
+pub fn save_grammar(state: State<'_, Arc<SharedState>>, grammar: Grammar) -> Result<(), String> {
+    grammar.validate().map_err(|errors| errors.join("\n"))?;
+    let previous = {
+        let mut current = state.grammar.lock().map_err(|error| error.to_string())?;
+        let previous = current.clone();
+        *current = grammar.clone();
+        previous
+    };
+    if let Err(error) = state.persist_grammar() {
+        if let Ok(mut current) = state.grammar.lock() {
+            if *current == grammar {
+                *current = previous;
+            }
+        }
+        return Err(format!("Не удалось сохранить грамматику: {error}"));
+    }
+    state.bump_grammar();
+    Ok(())
+}
+
+/// Восстановить встроенные значения, сохранить их и уведомить аудио-воркер о версии.
+#[tauri::command]
+pub fn reset_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
+    let grammar = Grammar::defaults();
+    match state.grammar.lock() {
+        Ok(mut current) => {
+            *current = grammar.clone();
+            drop(current);
+            state.bump_grammar();
+            if let Err(error) = state.persist_grammar() {
+                eprintln!("[reever] не удалось сохранить грамматику по умолчанию: {error}");
+            }
+        }
+        Err(error) => eprintln!("[reever] не удалось сбросить грамматику: {error}"),
+    }
+    grammar
 }
 
 /// Установленные приложения (вкл. UWP) для пикера.

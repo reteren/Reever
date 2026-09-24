@@ -2,9 +2,10 @@
 //! Владелец: воркер `engine`.
 
 use crate::commands::is_bare_verb;
+use crate::grammar::Grammar;
 use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
 use crate::speech::{samples, Transcriber, VoiceDetector};
-use crate::textnorm::{is_yes, strip_wake};
+use crate::textnorm::{is_yes, starts_with_wake, strip_wake};
 
 #[derive(Clone, Debug)]
 pub struct EngineConfig {
@@ -121,6 +122,9 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     pending_events: Vec<EngineEvent>,
     /// Отличает режим, в котором началась обработка чанка, от режима после транскрипции.
     mode_epoch: u64,
+    /// Пользовательская грамматика: какие фразы — «незаконченная команда». Пока её нет
+    /// (тесты, старт) — встроенный список глаголов `commands::is_bare_verb`.
+    grammar: Option<Grammar>,
 }
 
 impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
@@ -143,6 +147,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             mute_remaining: 0,
             pending_events: Vec::new(),
             mode_epoch: 0,
+            grammar: None,
         }
     }
 
@@ -228,6 +233,15 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
 
         out
+    }
+
+    /// Грамматика из редактора: wake-слова и незаконченные фразы («ривер папка» →
+    /// дослушать). Применяется сразу, в том числе посреди ожидания команды.
+    pub fn set_grammar(&mut self, grammar: Grammar) {
+        if !grammar.wake_words.is_empty() {
+            self.cfg.wake_words = grammar.wake_words.clone();
+        }
+        self.grammar = Some(grammar);
     }
 
     /// Хоткей push-to-talk: сразу ждать команду, без wake-слова.
@@ -492,7 +506,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         };
         let rest = rest.trim();
-        if rest.is_empty() || is_bare_verb(rest) {
+        if rest.is_empty() || self.is_incomplete(rest) {
             out.push(EngineEvent::WakeHeard);
             self.begin_listening(ListenKind::Command, rest.to_string());
             out.push(EngineEvent::State("listening"));
@@ -522,6 +536,15 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     }
 }
 
+impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
+    fn is_incomplete(&self, text: &str) -> bool {
+        match &self.grammar {
+            Some(g) => g.is_incomplete(text),
+            None => is_bare_verb(text),
+        }
+    }
+}
+
 fn join_command(prefix: &str, text: &str) -> String {
     match (prefix.trim(), text.trim()) {
         ("", text) => text.to_string(),
@@ -540,7 +563,7 @@ fn strip_initial_wake(text: &str, wake_words: &[String]) -> Option<String> {
     let rest = strip_wake(text, wake_words)?;
     let mut words = text.split_whitespace();
     let first = words.next()?;
-    let wake_first = strip_wake(first, wake_words).is_some();
+    let wake_first = starts_with_wake(text, wake_words);
     let lead_in = WAKE_LEAD_INS.contains(&first) && words.next().is_some();
     (wake_first || lead_in).then_some(rest)
 }
@@ -653,6 +676,18 @@ mod tests {
         assert!(is_bare_verb("запусти"));
         assert!(!is_bare_verb("открой загрузки"));
         assert!(!is_bare_verb("переоткрой"));
+    }
+
+    #[test]
+    fn grammar_trigger_without_target_waits_for_continuation() {
+        // «ривер папка» + пауза + «загрузки»: ключевое слово из грамматики без цели —
+        // сигнал и дослушивание, как раньше с голым глаголом.
+        let (mut engine, _, _, _) = engine(test_config(), &["ривер папка", "загрузки"]);
+        engine.set_grammar(crate::grammar::Grammar::defaults());
+        let mut events = engine.push_audio(&phrase(123, 700));
+        assert!(contains(&events, &EngineEvent::WakeHeard));
+        events.extend(engine.push_audio(&phrase(123, 1_000)));
+        assert!(contains(&events, &EngineEvent::Command("папка загрузки".into())));
     }
 
     #[test]

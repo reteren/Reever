@@ -21,9 +21,19 @@ pub fn normalize(text: &str) -> String {
 /// Fuzzy-порог пропускает типичные ошибки ASR, но требует похожую длину слова, чтобы
 /// не принимать самостоятельные слова вроде «реверс» или «ривьера».
 pub fn strip_wake(text: &str, wake_words: &[String]) -> Option<String> {
+    strip_wake_within(text, wake_words, 2)
+}
+
+/// Стоит ли wake-слово в самом начале фразы (в том числе со сдвинутой границей:
+/// «риверс потифай»). Нужно Engine, чтобы отличать «ривер X» от «открой ривер X».
+pub fn starts_with_wake(text: &str, wake_words: &[String]) -> bool {
+    strip_wake_within(text, wake_words, 1).is_some()
+}
+
+fn strip_wake_within(text: &str, wake_words: &[String], positions: usize) -> Option<String> {
     let normalized = normalize(text);
     let words: Vec<&str> = normalized.split_whitespace().collect();
-    for (i, word) in words.iter().take(2).enumerate() {
+    for (i, word) in words.iter().take(positions).enumerate() {
         let exact = wake_words.iter().any(|wake| wake_exact(word, wake));
         // Список wake_words хранит допустимые варианты, но fuzzy-якорь один: первое
         // слово (каноническое «ривер»). Иначе «ревёт» становится похожим на вариант
@@ -38,6 +48,21 @@ pub fn strip_wake(text: &str, wake_words: &[String]) -> Option<String> {
         // лишнюю букву: «тривер». Только для канонического wake — иначе «реверсивный»
         // стал бы вариантом «ревер».
         if let Some(wake) = wake_words.first() {
+            // Сдвинутая граница слова: «риверс потифай» = «ривер спотифай». Одна лишняя
+            // **согласная** переносится в следующее слово, только если оно есть: гласная
+            // на конце — падежное окончание («ривера нет», «риверу»), это не wake.
+            if let Some(next) = words.get(i + 1) {
+                let canonical = normalize(wake);
+                if let Some(tail) = word.strip_prefix(canonical.as_str()) {
+                    let consonant = tail.chars().count() == 1
+                        && tail.chars().all(|c| "бвгджзйклмнпрстфхцчшщ".contains(c));
+                    if canonical.chars().count() >= 4 && consonant {
+                        let mut rest = vec![format!("{tail}{next}")];
+                        rest.extend(words[i + 2..].iter().map(|w| w.to_string()));
+                        return Some(rest.join(" "));
+                    }
+                }
+            }
             if let Some(glued) = glued_wake_tail(word, wake) {
                 let mut rest = vec![glued];
                 rest.extend(words[i + 1..].iter().map(|w| w.to_string()));
@@ -540,6 +565,16 @@ fn push_unique(forms: &mut Vec<String>, value: String) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn shifted_word_boundary_moves_letter_to_next_word() {
+        let wake = vec!["ривер".to_string(), "ревер".to_string()];
+        assert_eq!(super::strip_wake("риверс потифай", &wake), Some("спотифай".into()));
+        assert_eq!(super::strip_wake("риверс потифай пожалуйста", &wake), Some("спотифай пожалуйста".into()));
+        // без следующего слова и у вариантов — не wake
+        assert_eq!(super::strip_wake("риверы", &wake), None);
+        assert_eq!(super::strip_wake("реверс гитары", &wake), None);
+    }
+
     #[test]
     fn glued_and_prefixed_wake_is_recognized() {
         let wake = vec!["ривер".to_string(), "ревер".to_string()];

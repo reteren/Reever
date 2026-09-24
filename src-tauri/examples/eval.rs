@@ -10,7 +10,9 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use reever_lib::actions::Action;
+use reever_lib::actions::{load_actions, Action};
+use reever_lib::dispatch::{route, Route};
+use reever_lib::grammar::Grammar;
 use reever_lib::asr::{Asr, AsrConfig};
 use reever_lib::engine::{Engine, EngineConfig, EngineEvent};
 use reever_lib::speech::samples;
@@ -62,6 +64,16 @@ fn main() -> anyhow::Result<()> {
         SileroVad::new(&root.join("resources/model/silero_vad.onnx"), 0.5)?,
     );
     eprintln!("модель загружена за {:.1} с", asr_started.elapsed().as_secs_f64());
+    // Раскладка по умолчанию из редактора: «ривер папка» / «ривер загугли» без цели —
+    // незаконченная команда, Engine дослушивает.
+    let grammar = Grammar::defaults();
+    engine.set_grammar(grammar.clone());
+    // Поиск живёт в грамматике; старые search-действия из бандла сюда не берём.
+    let actions: Vec<Action> = load_actions(&root.join("resources/actions.json"))
+        .into_iter()
+        .filter(|a| a.kind != "search")
+        .collect();
+    let routing = Routing { grammar, actions };
 
     let trace = std::env::var_os("EVAL_TRACE").is_some();
     let mut rows = Vec::new();
@@ -76,7 +88,7 @@ fn main() -> anyhow::Result<()> {
         let started = Instant::now();
         let out = run_case(&mut engine, &speech, noise_db, i as u64, trace);
         compute += started.elapsed().as_secs_f64();
-        rows.push(judge(case, out));
+        rows.push(judge(case, out, &routing));
     }
 
     let report = render(&rows, &model, noise_db, compute, audio_s);
@@ -152,7 +164,19 @@ struct Row<'a> {
     verdict: &'static str,
 }
 
-fn judge(case: &Case, out: Outcome) -> Row<'_> {
+/// Грамматика и реестр для функционального вердикта через `dispatch::route`.
+struct Routing {
+    grammar: Grammar,
+    actions: Vec<Action>,
+}
+
+impl Routing {
+    fn route(&self, text: &str) -> Route {
+        route(text, &self.grammar, &self.actions, 0.7)
+    }
+}
+
+fn judge<'a>(case: &'a Case, out: Outcome, routing: &Routing) -> Row<'a> {
     let got: Vec<String> = out.commands.iter().map(|c| normalize(c)).collect();
     let want: Vec<String> = case.expected.iter().map(|c| normalize(c)).collect();
     let wake_ok = !case.wake_heard || out.wake_heard == 1;
@@ -160,7 +184,7 @@ fn judge(case: &Case, out: Outcome) -> Row<'_> {
         "FAIL"
     } else if got == want {
         "exact"
-    } else if got.iter().zip(&want).all(|(g, w)| same_command(g, w)) {
+    } else if got.iter().zip(&want).all(|(g, w)| same_command(g, w, routing)) {
         "close"
     } else {
         "FAIL"
@@ -168,8 +192,13 @@ fn judge(case: &Case, out: Outcome) -> Row<'_> {
     Row { case, out, verdict }
 }
 
-/// Та же ли команда с точки зрения приложения: «доту 2» = «доту два», «дискард» ≈ «дискорд».
-fn same_command(got: &str, want: &str) -> bool {
+/// Та же ли команда с точки зрения приложения: одинаковый маршрут `dispatch::route`
+/// (то же действие, та же папка, тот же поиск) или похожий текст («дискард» ≈ «дискорд»).
+fn same_command(got: &str, want: &str, routing: &Routing) -> bool {
+    let wanted = routing.route(want);
+    if wanted != Route::Unknown && !matches!(wanted, Route::LaunchFallback(_)) && routing.route(got) == wanted {
+        return true;
+    }
     let action = Action {
         id: String::new(),
         label: String::new(),

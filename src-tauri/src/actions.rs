@@ -10,7 +10,7 @@ use crate::textnorm::comparison_forms;
 
 /// Одно пользовательское действие (программа/папка-шорткат), которое юзер
 /// определяет сам и калибрует голосом.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Action {
     pub id: String,
     #[serde(default)]
@@ -133,7 +133,7 @@ fn act(id: &str, label: &str, kind: &str, target: &str, phrases: &[&str]) -> Act
     }
 }
 
-/// Дефолтные системные и поисковые действия.
+/// Дефолтные системные действия. Поиск хранится в grammar.json.
 fn default_actions() -> Vec<Action> {
     vec![
         act(
@@ -189,20 +189,6 @@ fn default_actions() -> Vec<Action> {
             "media_prev",
             &["предыдущий трек", "назад трек"],
         ),
-        act(
-            "web_google",
-            "Google",
-            "search",
-            "https://www.google.com/search?q={q}",
-            &["загугли", "за гугле", "гугл", "поищи"],
-        ),
-        act(
-            "web_youtube",
-            "YouTube",
-            "search",
-            "https://www.youtube.com/results?search_query={q}",
-            &["ютуб", "на ютубе"],
-        ),
     ]
 }
 
@@ -228,7 +214,10 @@ fn remove_obsolete(actions: &mut Vec<Action>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{word_overlap_score, Action};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use super::{word_overlap_score, Action, SharedState};
+    use crate::config::Settings;
 
     fn actions() -> Vec<Action> {
         serde_json::from_str(include_str!("../resources/actions.json"))
@@ -265,6 +254,52 @@ mod tests {
         assert!(score("act_mqlpc0cc", "студио файл") >= 0.7);
         assert!(word_overlap_score("файл студио", "студио") < 0.7);
     }
+
+    #[test]
+    fn search_actions_are_not_merged_as_defaults() {
+        let mut actions = Vec::new();
+        assert!(super::merge_defaults(&mut actions));
+        assert!(actions.iter().all(|action| action.kind != "search"));
+        assert!(!actions
+            .iter()
+            .any(|action| { action.id == "web_google" || action.id == "web_youtube" }));
+    }
+
+    #[test]
+    fn shared_state_creates_persists_and_versions_grammar() {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let name = format!(
+            "reever-actions-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        );
+        let root = std::env::temp_dir();
+        let actions_path = root.join(format!("{name}-actions.json"));
+        let grammar_path = root.join(format!("{name}-grammar.json"));
+
+        let state = SharedState::new(
+            actions_path.clone(),
+            grammar_path.clone(),
+            &Settings::default(),
+        );
+        assert!(grammar_path.exists());
+        state.bump_grammar();
+        assert_eq!(state.grammar_version.load(Ordering::SeqCst), 1);
+
+        let expected = {
+            let mut grammar = state.grammar.lock().unwrap();
+            grammar.wake_words[0] = "новое слово".into();
+            grammar.clone()
+        };
+        state.persist_grammar().unwrap();
+        let persisted: crate::grammar::Grammar =
+            serde_json::from_str(&std::fs::read_to_string(&grammar_path).unwrap()).unwrap();
+        assert_eq!(persisted, expected);
+
+        drop(state);
+        let _ = std::fs::remove_file(actions_path);
+        let _ = std::fs::remove_file(grammar_path);
+    }
 }
 
 /// Состояние, разделяемое между Tauri-командами (UI) и аудио-воркером.
@@ -281,13 +316,27 @@ pub struct SharedState {
     pub ptt_hotkey: Mutex<String>,
     /// Текущий mute-хоткей (panic-mute). Пусто — выкл.
     pub mute_hotkey: Mutex<String>,
+    /// Грамматика голосовых команд (редактор «Что можно сказать»).
+    pub grammar: Mutex<crate::grammar::Grammar>,
+    pub grammar_path: PathBuf,
+    /// Растёт при каждом сохранении грамматики — аудио-поток сверяет и перечитывает.
+    pub grammar_version: std::sync::atomic::AtomicU64,
 }
 
 impl SharedState {
-    pub fn new(actions_path: PathBuf) -> Self {
+    /// `grammar_path` — `grammar.json`; `settings` нужны только для переноса старых
+    /// `wake_words`/`cancel_words` при первом создании грамматики.
+    pub fn new(
+        actions_path: PathBuf,
+        grammar_path: PathBuf,
+        settings: &crate::config::Settings,
+    ) -> Self {
+        let grammar_is_new = !grammar_path.exists();
         let mut actions = load_actions(&actions_path);
         let removed = remove_obsolete(&mut actions);
         let added = merge_defaults(&mut actions);
+        let (grammar, migrated_actions) =
+            crate::grammar::Grammar::load_or_migrate(&grammar_path, settings, &mut actions);
         let state = Self {
             actions: Mutex::new(actions),
             calibrate: Mutex::new(None),
@@ -296,8 +345,16 @@ impl SharedState {
             force_listen: AtomicBool::new(false),
             ptt_hotkey: Mutex::new(String::new()),
             mute_hotkey: Mutex::new(String::new()),
+            grammar: Mutex::new(grammar),
+            grammar_path,
+            grammar_version: std::sync::atomic::AtomicU64::new(0),
         };
-        if removed || added {
+        if grammar_is_new {
+            if let Err(e) = state.persist_grammar() {
+                eprintln!("[reever] не удалось сохранить grammar.json: {e}");
+            }
+        }
+        if removed || added || migrated_actions {
             state.persist();
         }
         state
@@ -310,5 +367,20 @@ impl SharedState {
                 eprintln!("[reever] не удалось сохранить actions.json: {e}");
             }
         }
+    }
+
+    /// Сохраняет текущую грамматику в файл редактора.
+    pub fn persist_grammar(&self) -> std::io::Result<()> {
+        let grammar = self
+            .grammar
+            .lock()
+            .map_err(|_| std::io::Error::other("блокировка грамматики повреждена"))?;
+        grammar.save(&self.grammar_path)
+    }
+
+    /// Уведомляет аудио-поток, что грамматика изменилась.
+    pub fn bump_grammar(&self) {
+        self.grammar_version
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }

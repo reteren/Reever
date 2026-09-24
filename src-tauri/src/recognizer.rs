@@ -127,7 +127,16 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     // Поток микрофона держим в Option: на паузе/мьюте реально закрываем его
     // (дроп Stream останавливает захват → системный индикатор микрофона гаснет).
     let mut stream = Some(start_capture(tx.clone())?);
-    let mut worker = Worker { app, cfg, shared, player: &player, confirm_op: None, calibrating: None };
+    let mut worker = Worker {
+        app,
+        cfg,
+        shared,
+        player: &player,
+        confirm_op: None,
+        calibrating: None,
+        cancel_words: cfg.settings.cancel_words.clone(),
+        grammar_version: None,
+    };
     set_state(app, "idle");
     ui_log(app, "✓ готов. «ривер» — и команду сразу или после сигнала. Хоткей — то же без «ривер». «отмена» — стоп.");
 
@@ -168,6 +177,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             Err(RecvTimeoutError::Disconnected) => break,
         };
 
+        worker.sync_grammar(&mut engine);
         worker.poll_triggers(&mut engine);
         for ev in engine.push_audio(&chunk) {
             worker.handle(&mut engine, ev);
@@ -187,6 +197,10 @@ struct Worker<'a> {
     confirm_op: Option<String>,
     /// id действия, которое сейчас калибруется.
     calibrating: Option<String>,
+    /// Слова отмены из грамматики (редактор меняет их на лету).
+    cancel_words: Vec<String>,
+    /// Версия грамматики, уже переданная в Engine; `None` — ещё ни разу.
+    grammar_version: Option<u64>,
 }
 
 impl Worker<'_> {
@@ -196,6 +210,30 @@ impl Worker<'_> {
 
     fn private(&self) -> bool {
         self.cfg.settings.private_log
+    }
+
+    /// Грамматику редактирует UI-поток; сверка атомика на каждом чанке дешёвая, а клон
+    /// под мьютексом — только когда версия действительно сменилась.
+    fn sync_grammar<T, V>(&mut self, engine: &mut Engine<T, V>)
+    where
+        T: crate::speech::Transcriber,
+        V: crate::speech::VoiceDetector,
+    {
+        let version = self.shared.grammar_version.load(Ordering::Relaxed);
+        if self.grammar_version == Some(version) {
+            return;
+        }
+        let Some(grammar) = self.shared.grammar.lock().ok().map(|g| g.clone()) else {
+            return;
+        };
+        if !grammar.cancel_words.is_empty() {
+            self.cancel_words = grammar.cancel_words.clone();
+        }
+        if self.grammar_version.is_some() {
+            ui_log(self.app, "✓ фразы команд обновлены");
+        }
+        engine.set_grammar(grammar);
+        self.grammar_version = Some(version);
     }
 
     /// Внешние триггеры из UI/хоткеев: калибровка и push-to-talk.
@@ -277,7 +315,7 @@ impl Worker<'_> {
             ui_log(self.app, format!("📝 «{text}»"));
             let _ = self.app.emit("reever://heard", text.to_string());
         }
-        if textnorm::is_cancel(text, &self.cfg.settings.cancel_words) {
+        if textnorm::is_cancel(text, &self.cancel_words) {
             ui_log(self.app, "↩ отменено");
             self.sound("error.wav");
             set_state(self.app, "idle");
