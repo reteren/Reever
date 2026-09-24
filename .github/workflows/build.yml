@@ -20,16 +20,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # Модели Vosk и нативная библиотека не хранятся в git (~238 МБ).
-      # Ключ кеша завязан на скрипт: в нём же прибиты версии и URL.
-      - name: Cache Vosk dependencies
-        id: cache-vosk
+      # Модель GigaAM и Silero VAD не хранятся в git (~225 МБ).
+      # Скрипт фиксирует имена, версии и URL; конфиг фиксирует состав ресурсов.
+      - name: Cache speech dependencies
+        id: cache-speech
         uses: actions/cache@v4
         with:
-          path: |
-            src-tauri/resources/model
-            src-tauri/vendor
-          key: vosk-${{ runner.os }}-${{ hashFiles('scripts/fetch-deps.ps1') }}
+          path: src-tauri/resources/model
+          key: speech-${{ runner.os }}-${{ hashFiles('scripts/fetch-deps.ps1', 'src-tauri/tauri.conf.json') }}
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -41,7 +39,7 @@ jobs:
           key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-
 
-      - name: Fetch Vosk dependencies
+      - name: Fetch speech dependencies
         shell: powershell
         run: .\scripts\fetch-deps.ps1
 

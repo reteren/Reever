@@ -4,7 +4,9 @@
 /src-tauri/gen/schemas
 *.log
 
-# Крупные бинарные зависимости (~238 МБ) — не хранятся в git.
+# Модели распознавания (~225 МБ) — не хранятся в git.
 # Ставятся одной командой: pwsh scripts/fetch-deps.ps1
 /src-tauri/resources/model/
-/src-tauri/vendor/
+
+# Синтетический корпус (scripts/gen-corpus.ps1); manifest.json хранится в git.
+/testdata/corpus/

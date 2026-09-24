@@ -3,11 +3,11 @@
     Загружает бинарные зависимости Reever, которые не хранятся в git.
 
 .DESCRIPTION
-    Ставит две вещи:
-      1. Модели Vosk (RU + EN) -> src-tauri/resources/model/
-      2. Нативную библиотеку Vosk для Windows -> src-tauri/vendor/vosk/
+    Ставит модель распознавания речи GigaAM v3 и Silero VAD (обе — через
+    sherpa-onnx) в src-tauri/resources/model/. Сама библиотека sherpa-onnx
+    линкуется статически и скачивается сборкой cargo, здесь её нет.
 
-    Суммарно около 238 МБ на диске (~100 МБ загрузки).
+    Около 225 МБ на диске (~200 МБ загрузки).
     Скрипт идемпотентен: уже установленное пропускается, если не задан -Force.
 
 .PARAMETER Force
@@ -16,14 +16,20 @@
 .PARAMETER SkipModels
     Не трогать модели (полезно в CI, где они закешированы).
 
+.PARAMETER AsrModel
+    Имя sherpa-onnx ASR-модели из GitHub release asr-models.
+    По умолчанию sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16.
+
 .EXAMPLE
     pwsh scripts/fetch-deps.ps1
     pwsh scripts/fetch-deps.ps1 -Force
+    pwsh scripts/fetch-deps.ps1 -AsrModel sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16
 #>
 [CmdletBinding()]
 param(
     [switch]$Force,
-    [switch]$SkipModels
+    [switch]$SkipModels,
+    [string]$AsrModel = 'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,30 +37,12 @@ $ProgressPreference = 'SilentlyContinue'  # иначе Invoke-WebRequest в ра
 
 $RepoRoot  = Split-Path -Parent $PSScriptRoot
 $ModelDir  = Join-Path $RepoRoot 'src-tauri/resources/model'
-$VendorDir = Join-Path $RepoRoot 'src-tauri/vendor/vosk'
+$SherpaReleaseUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models'
+$SileroName = 'silero_vad.onnx'
 
-# --- источники ---------------------------------------------------------------
-# Версия нативной библиотеки соответствует бинарям, с которыми проект собирался
-# изначально (файлы от 2022-12-14 = релиз v0.3.45).
-$VoskNativeUrl = 'https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45.zip'
-$Models = @(
-    @{ Name = 'vosk-model-small-ru-0.22';    Url = 'https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip' }
-    @{ Name = 'vosk-model-small-en-us-0.15'; Url = 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip' }
-)
-
-# Файлы, без которых сборка соберётся, но приложение упадёт в рантайме.
-# libvosk.dll — MinGW-сборка, поэтому тянет за собой три рантайм-DLL.
-$RequiredVendorFiles = @(
-    'libvosk.dll',
-    'libstdc++-6.dll',
-    'libgcc_s_seh-1.dll',
-    'libwinpthread-1.dll'
-)
-# Импортная библиотека для линковщика MSVC. Имя не произвольное: vosk-sys 0.2.0
-# объявляет #[cfg_attr(target_os = "windows", link(name = "libvosk"))], поэтому
-# линковщик ищет ровно libvosk.lib. (Встречающийся рядом vosk.lib — избыточный
-# дубль того же файла, сборке он не нужен.)
-$RequiredLib = 'libvosk.lib'
+if ([IO.Path]::GetFileName($AsrModel) -ne $AsrModel -or [string]::IsNullOrWhiteSpace($AsrModel)) {
+    throw "-AsrModel должен быть именем модели без пути: $AsrModel"
+}
 
 # --- вспомогательное ---------------------------------------------------------
 function Write-Step   { param([string]$m) Write-Host "==> $m" -ForegroundColor Cyan }
@@ -69,84 +57,68 @@ function Get-Archive {
     Write-Host "    получено $mb МБ"
 }
 
+function Test-SherpaModel {
+    param([string]$Path)
+    if (-not (Test-Path (Join-Path $Path 'tokens.txt') -PathType Leaf)) { return $false }
+
+    $onnx = @(Get-ChildItem -LiteralPath $Path -Filter '*.onnx' -File -ErrorAction SilentlyContinue)
+    $hasTransducer = ($onnx.Name -like 'encoder*.onnx') -and
+        (Test-Path (Join-Path $Path 'decoder.onnx') -PathType Leaf) -and
+        (Test-Path (Join-Path $Path 'joiner.onnx') -PathType Leaf)
+    $hasCtc = ($onnx.Name -like 'model*.onnx')
+    return ($hasTransducer -or $hasCtc)
+}
+
 # --- 1. модели ---------------------------------------------------------------
 if (-not $SkipModels) {
-    Write-Step 'Модели Vosk'
     New-Item -ItemType Directory -Force -Path $ModelDir | Out-Null
-
-    foreach ($model in $Models) {
-        $target = Join-Path $ModelDir $model.Name
-        if ((Test-Path $target) -and -not $Force) {
-            Write-Skip $model.Name
-            continue
-        }
-
-        $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "$($model.Name).zip"
+    Write-Step 'Модели sherpa-onnx (GigaAM v3 + Silero VAD)'
+    $sileroPath = Join-Path $ModelDir $SileroName
+    if ((Test-Path $sileroPath -PathType Leaf) -and -not $Force) {
+        Write-Skip $SileroName
+    } else {
+        $tmpSilero = Join-Path ([System.IO.Path]::GetTempPath()) $SileroName
         try {
-            Get-Archive -Url $model.Url -Destination $tmp
+            Get-Archive -Url "$SherpaReleaseUrl/$SileroName" -Destination $tmpSilero
+            Copy-Item -LiteralPath $tmpSilero -Destination $sileroPath -Force
+            Write-Ok $SileroName
+        } finally {
+            if (Test-Path $tmpSilero) { Remove-Item -LiteralPath $tmpSilero -Force }
+        }
+    }
 
-            if (Test-Path $target) { Remove-Item -Recurse -Force $target }
-            # Архив содержит папку с именем модели на верхнем уровне,
-            # поэтому распаковываем в родительский каталог.
-            Expand-Archive -Path $tmp -DestinationPath $ModelDir -Force
-
-            if (-not (Test-Path $target)) {
-                throw "после распаковки не найден каталог $target — изменилась структура архива"
+    $asrTarget = Join-Path $ModelDir $AsrModel
+    if ((Test-SherpaModel $asrTarget) -and -not $Force) {
+        Write-Skip $AsrModel
+    } else {
+        $tmpAsr = Join-Path ([System.IO.Path]::GetTempPath()) "$AsrModel.tar.bz2"
+        try {
+            Get-Archive -Url "$SherpaReleaseUrl/$AsrModel.tar.bz2" -Destination $tmpAsr
+            if (Test-Path $asrTarget) { Remove-Item -LiteralPath $asrTarget -Recurse -Force }
+            & tar.exe -xjf $tmpAsr -C $ModelDir
+            if ($LASTEXITCODE -ne 0) { throw "tar.exe завершился с кодом $LASTEXITCODE при распаковке $AsrModel" }
+            if (-not (Test-SherpaModel $asrTarget)) {
+                throw "после распаковки $AsrModel не найдены tokens.txt и ожидаемые ONNX-файлы"
             }
-            Write-Ok $model.Name
-        }
-        finally {
-            if (Test-Path $tmp) { Remove-Item -Force $tmp }
+            Write-Ok $AsrModel
+        } finally {
+            if (Test-Path $tmpAsr) { Remove-Item -LiteralPath $tmpAsr -Force }
         }
     }
 } else {
-    Write-Step 'Модели Vosk — пропущено (-SkipModels)'
+    Write-Step 'Модели — пропущено (-SkipModels)'
 }
 
-# --- 2. нативная библиотека --------------------------------------------------
-Write-Step 'Нативная библиотека Vosk (win64)'
-New-Item -ItemType Directory -Force -Path $VendorDir | Out-Null
-
-$haveAllVendor = ($RequiredVendorFiles | ForEach-Object { Test-Path (Join-Path $VendorDir $_) }) -notcontains $false
-$haveLib = Test-Path (Join-Path $VendorDir $RequiredLib)
-
-if ($haveAllVendor -and $haveLib -and -not $Force) {
-    Write-Skip 'vendor/vosk'
-} else {
-    $tmpZip     = Join-Path ([System.IO.Path]::GetTempPath()) 'vosk-win64.zip'
-    $tmpExtract = Join-Path ([System.IO.Path]::GetTempPath()) 'vosk-win64-extract'
-    try {
-        Get-Archive -Url $VoskNativeUrl -Destination $tmpZip
-
-        if (Test-Path $tmpExtract) { Remove-Item -Recurse -Force $tmpExtract }
-        Expand-Archive -Path $tmpZip -DestinationPath $tmpExtract -Force
-
-        # Раскладка внутри архива между релизами менялась — ищем рекурсивно.
-        Get-ChildItem -Path $tmpExtract -Recurse -File | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination (Join-Path $VendorDir $_.Name) -Force
-        }
-        Write-Ok 'vendor/vosk'
-    }
-    finally {
-        if (Test-Path $tmpZip)     { Remove-Item -Force $tmpZip }
-        if (Test-Path $tmpExtract) { Remove-Item -Recurse -Force $tmpExtract }
-    }
-}
-
-# --- 3. проверка -------------------------------------------------------------
+# --- 2. проверка -------------------------------------------------------------
 Write-Step 'Проверка'
 $missing = @()
 
-foreach ($f in $RequiredVendorFiles) {
-    if (-not (Test-Path (Join-Path $VendorDir $f))) { $missing += "vendor/vosk/$f" }
-}
-if (-not (Test-Path (Join-Path $VendorDir $RequiredLib))) {
-    $missing += "vendor/vosk/$RequiredLib"
-}
 if (-not $SkipModels) {
-    foreach ($model in $Models) {
-        $amFile = Join-Path $ModelDir "$($model.Name)/am/final.mdl"
-        if (-not (Test-Path $amFile)) { $missing += "resources/model/$($model.Name)" }
+    if (-not (Test-Path (Join-Path $ModelDir $SileroName) -PathType Leaf)) {
+        $missing += "resources/model/$SileroName"
+    }
+    if (-not (Test-SherpaModel (Join-Path $ModelDir $AsrModel))) {
+        $missing += "resources/model/$AsrModel (tokens.txt и encoder/decoder/joiner либо model*.onnx)"
     }
 }
 
@@ -155,8 +127,7 @@ if ($missing.Count -gt 0) {
     Write-Host 'НЕ ХВАТАЕТ:' -ForegroundColor Red
     $missing | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     Write-Host ''
-    Write-Host 'Сборка пройдёт, но приложение упадёт при загрузке Vosk:' -ForegroundColor Yellow
-    Write-Host 'build.rs на отсутствующую DLL печатает предупреждение, а не ошибку.' -ForegroundColor Yellow
+    Write-Host 'Сборка пройдёт, но приложение не сможет загрузить модель распознавания.' -ForegroundColor Yellow
     exit 1
 }
 

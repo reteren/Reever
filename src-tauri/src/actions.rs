@@ -5,6 +5,9 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use strsim::jaro_winkler;
 
+use crate::commands::ReeverCommand;
+use crate::textnorm::comparison_forms;
+
 /// Одно пользовательское действие (программа/папка-шорткат), которое юзер
 /// определяет сам и калибрует голосом.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -35,19 +38,76 @@ impl Action {
     pub fn score(&self, candidates: &[String]) -> f64 {
         let mut best = 0.0_f64;
         for p in &self.phrases {
-            let pl = p.trim().to_lowercase();
-            if pl.is_empty() {
-                continue;
-            }
+            let phrase_forms = scoring_forms(p);
             for c in candidates {
-                let s = jaro_winkler(&pl, c);
-                if s > best {
-                    best = s;
-                }
+                let candidate_forms = scoring_forms(c);
+                best = best.max(pair_score(&phrase_forms, &candidate_forms));
             }
         }
         best
     }
+}
+
+/// Добавляет цель, если в фразе явно произнесён глагол команды. Так score работает и
+/// при полном транскрипте, и после того, как dispatch уже снял глагол.
+fn scoring_forms(text: &str) -> Vec<String> {
+    let mut forms = comparison_forms(text);
+    if let Some(command) = crate::commands::parse(text) {
+        let target = match command {
+            ReeverCommand::Open(target) | ReeverCommand::Launch(target) => target,
+        };
+        forms.extend(comparison_forms(&target));
+        forms.sort();
+        forms.dedup();
+    }
+    forms
+}
+
+fn pair_score(left: &[String], right: &[String]) -> f64 {
+    let mut best = 0.0_f64;
+    for a in left {
+        for b in right {
+            let overlap = word_overlap_score(a, b);
+            let left_words = a.split_whitespace().count();
+            let right_words = b.split_whitespace().count();
+            if left_words != right_words && left_words.min(right_words) == 1 {
+                // Одно общее слово среди многословной фразы не должно выигрывать
+                // только за счёт высокого Jaro по общей подстроке.
+                best = best.max(overlap);
+            } else {
+                best = best.max(jaro_winkler(a, b));
+                best = best.max(overlap);
+            }
+        }
+    }
+    best
+}
+
+/// Считает похожесть по словам отдельно от полной фразы. Каждое слово может совпасть
+/// только с одним словом второй фразы, поэтому общий короткий фрагмент не даёт score=1.
+fn word_overlap_score(left: &str, right: &str) -> f64 {
+    let left_words: Vec<&str> = left.split_whitespace().collect();
+    let right_words: Vec<&str> = right.split_whitespace().collect();
+    if left_words.is_empty() || right_words.is_empty() {
+        return 0.0;
+    }
+
+    let mut used = vec![false; right_words.len()];
+    let mut matches = 0usize;
+    for word in &left_words {
+        let best = right_words
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| !used[*index])
+            .map(|(index, other)| (index, jaro_winkler(word, other)))
+            .filter(|(_, similarity)| *similarity >= 0.82)
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        if let Some((index, _)) = best {
+            used[index] = true;
+            matches += 1;
+        }
+    }
+    (2 * matches) as f64 / (left_words.len() + right_words.len()) as f64
 }
 
 pub fn load_actions(path: &Path) -> Vec<Action> {
@@ -58,8 +118,7 @@ pub fn load_actions(path: &Path) -> Vec<Action> {
 }
 
 pub fn save_actions(path: &Path, actions: &[Action]) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(actions)
-        .unwrap_or_else(|_| "[]".to_string());
+    let json = serde_json::to_string_pretty(actions).unwrap_or_else(|_| "[]".to_string());
     std::fs::write(path, json)
 }
 
@@ -77,14 +136,73 @@ fn act(id: &str, label: &str, kind: &str, target: &str, phrases: &[&str]) -> Act
 /// Дефолтные системные и поисковые действия.
 fn default_actions() -> Vec<Action> {
     vec![
-        act("sys_shutdown", "Выключить ПК", "system", "shutdown", &["выключи компьютер", "выключи комп", "выключи пк", "оффни пк", "оффни комп"]),
-        act("sys_restart", "Перезагрузка", "system", "restart", &["перезагрузи компьютер", "перезагрузи пк", "ребутни пк", "рестарт"]),
-        act("sys_mute", "Без звука", "system", "mute", &["выключи звук", "без звука", "мьют"]),
-        act("sys_play", "Пауза/Плей", "system", "media_play_pause", &["пауза", "плей", "останови музыку", "продолжи музыку"]),
-        act("sys_next", "Следующий трек", "system", "media_next", &["следующий трек", "переключи трек", "дальше трек"]),
-        act("sys_prev", "Предыдущий трек", "system", "media_prev", &["предыдущий трек", "назад трек"]),
-        act("web_google", "Google", "search", "https://www.google.com/search?q={q}", &["загугли", "за гугле", "гугл", "поищи"]),
-        act("web_youtube", "YouTube", "search", "https://www.youtube.com/results?search_query={q}", &["ютуб", "на ютубе"]),
+        act(
+            "sys_shutdown",
+            "Выключить ПК",
+            "system",
+            "shutdown",
+            &[
+                "выключи компьютер",
+                "выключи комп",
+                "выключи пк",
+                "оффни пк",
+                "оффни комп",
+            ],
+        ),
+        act(
+            "sys_restart",
+            "Перезагрузка",
+            "system",
+            "restart",
+            &[
+                "перезагрузи компьютер",
+                "перезагрузи пк",
+                "ребутни пк",
+                "рестарт",
+            ],
+        ),
+        act(
+            "sys_mute",
+            "Без звука",
+            "system",
+            "mute",
+            &["выключи звук", "без звука", "мьют"],
+        ),
+        act(
+            "sys_play",
+            "Пауза/Плей",
+            "system",
+            "media_play_pause",
+            &["пауза", "плей", "останови музыку", "продолжи музыку"],
+        ),
+        act(
+            "sys_next",
+            "Следующий трек",
+            "system",
+            "media_next",
+            &["следующий трек", "переключи трек", "дальше трек"],
+        ),
+        act(
+            "sys_prev",
+            "Предыдущий трек",
+            "system",
+            "media_prev",
+            &["предыдущий трек", "назад трек"],
+        ),
+        act(
+            "web_google",
+            "Google",
+            "search",
+            "https://www.google.com/search?q={q}",
+            &["загугли", "за гугле", "гугл", "поищи"],
+        ),
+        act(
+            "web_youtube",
+            "YouTube",
+            "search",
+            "https://www.youtube.com/results?search_query={q}",
+            &["ютуб", "на ютубе"],
+        ),
     ]
 }
 
@@ -106,6 +224,47 @@ fn remove_obsolete(actions: &mut Vec<Action>) -> bool {
     let before = actions.len();
     actions.retain(|a| !OBSOLETE.contains(&a.id.as_str()));
     actions.len() != before
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{word_overlap_score, Action};
+
+    fn actions() -> Vec<Action> {
+        serde_json::from_str(include_str!("../resources/actions.json"))
+            .expect("valid read-only fixture")
+    }
+
+    fn score(id: &str, transcript: &str) -> f64 {
+        let action = actions()
+            .into_iter()
+            .find(|action| action.id == id)
+            .expect("action in actions.json");
+        action.score(&[transcript.to_string()])
+    }
+
+    #[test]
+    fn real_vosk_phrases_match_gigaam_transcripts() {
+        assert!(score("act_mqlp3ixy", "дота 2") >= 0.7);
+        assert!(score("act_mqlp3ixy", "дота два") >= 0.7);
+        assert!(score("act_mqlp3ixy", "daughter") >= 0.7);
+        assert!(score("act_mqlpc0cc", "фл студио") >= 0.7);
+        assert!(score("act_mqlpc0cc", "эф эл студио") >= 0.7);
+        assert!(score("act_mqlpel49", "фотошоп") >= 0.7);
+        assert!(score("act_mqlpwj9y", "дискорд") >= 0.7);
+    }
+
+    #[test]
+    fn action_score_accepts_polite_and_reverse_command_phrases() {
+        assert!(score("act_mqlpel49", "запусти пожалуйста фотошоп") >= 0.7);
+        assert!(score("act_mqlpel49", "фотошоп открой") >= 0.7);
+    }
+
+    #[test]
+    fn word_overlap_contributes_without_making_one_shared_word_a_full_match() {
+        assert!(score("act_mqlpc0cc", "студио файл") >= 0.7);
+        assert!(word_overlap_score("файл студио", "студио") < 0.7);
+    }
 }
 
 /// Состояние, разделяемое между Tauri-командами (UI) и аудио-воркером.

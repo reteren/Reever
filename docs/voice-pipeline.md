@@ -1,0 +1,140 @@
+# Голосовой конвейер Reever v2 — контракт для параллельной работы
+
+Документ фиксирует интерфейсы между модулями. Каждый воркер **правит только свои файлы**
+(таблица «Владение»). Сигнатуры из `src-tauri/src/speech.rs` и заготовок менять нельзя без
+согласования с координатором (`orca orchestration ask`). Добавлять свои приватные функции,
+типы, тесты — можно и нужно.
+
+## Статус (2026-09-24)
+
+Реализовано, Vosk удалён. Замер на синтетическом корпусе (66 фраз, 6 голосов SAPI,
+`cargo run --release --example eval`, модель RNNT):
+
+| условия | верно | ложные wake |
+|---|---|---|
+| без шума | 66/66 (62 точно) | 0/16 |
+| белый шум −30 дБFS | 61/66 | 0/16 |
+| белый шум −25 дБFS | 53/66 | 0/16 |
+
+Задержка от конца речи до команды: ~0.45 с слитно, ~0.75 с после паузы. RTF конвейера ~0.05.
+CTC-вариант GigaAM проигрывает RNNT без шума (95% против 100%) — RNNT по умолчанию.
+
+Отступления от исходного контракта, найденные замером:
+- `signal_mute_ms` по умолчанию 0 — аудио из очереди записано до сигнала, и глушение
+  съедало начало команды; эхо сигнала гасится пропуском пустых фраз (до 2 подряд).
+- `strip_wake` понимает wake, склеенный со следующим словом («риверпли») и с 1–2 лишними
+  буквами спереди от шума («тривер») — только для канонического «ривер».
+- `is_bare_verb` считает незаконченными и поисковые триггеры («загугли»), и «открой папку».
+
+## Цель
+
+1. Резко поднять точность распознавания: Vosk small (45 МБ) → **GigaAM v3** (русская модель
+   Сбера, SOTA для русского) через **sherpa-onnx** (крейт `sherpa-onnx = "1.13.8"`, статическая
+   линковка, уже в Cargo.toml и проверен на линковку). Тяжелее для CPU — это приемлемо.
+2. Нормально воспринимать **оба стиля речи**:
+   - **с паузой**: «ривер» → (сигнал «слушаю») → «открой загрузки»;
+   - **слитно**: «ривер открой загрузки», в т.ч. с короткими паузами внутри.
+3. Задача программы не меняется: wake-слово/хоткей → команда → действие.
+
+## Новая схема
+
+```
+микрофон → audio.rs (16 кГц mono i16)
+   → Segmenter (Silero VAD, pre-roll, конец фразы по тишине)
+   → Engine (автомат: Idle / Command / Confirm / Calibrating)
+        └ Transcriber = Asr (GigaAM v3) — распознаёт каждую законченную фразу
+   → recognizer.rs (glue с Tauri: звуки, события UI, dispatch)
+   → dispatch.rs (system → search → verbs) → launcher / everything / system
+```
+
+Vosk уходит полностью (волна 2): wake-слово ловится тем же GigaAM — каждая фраза в простое
+распознаётся целиком и проверяется на wake в начале. Это даёт одну модель, одну точность и
+естественную поддержку обоих стилей речи.
+
+## Поведение Engine (обязательное)
+
+- **Idle** (wake включён): `end_silence = wake_pause_ms` (600). На каждую законченную фразу —
+  `transcribe` → `textnorm::strip_wake`:
+  - `None` → ничего (буферы затереть);
+  - `Some("")` (только «ривер») → `WakeHeard` + `State("listening")`, переход в Command;
+  - `Some(rest)`, где `rest` — голый глагол (`commands::is_bare_verb`, напр. «открой») →
+    `WakeHeard`, переход в Command с префиксом `rest` (итог = `rest + " " + продолжение`);
+  - `Some(rest)` иначе → сразу `Command(rest)`, остаёмся в Idle.
+  - Оптимизация допустима: для длинных фраз сначала распознать первые ~2.5 с, полный текст —
+    только если wake нашёлся.
+- **Command** (после wake или `listen_command()`): `end_silence = command_pause_ms` (900).
+  Первые `signal_mute_ms` (250) после `WakeHeard`, а также после `listen_command()`,
+  `listen_confirm()` и `start_calibration()` в VAD идёт тишина (glue играет сигнал, микрофон
+  слышит его). Нет начала речи за `command_wait_ms` (5000) → `Timeout` → Idle. Если в команде снова
+  сказали wake-слово в начале — срезать. Во время речи раз в `partial_interval_ms` —
+  `Partial(text)` по `current_audio()` (0 = выкл). Конец → `Command(prefix + text)` → Idle.
+  Пустой текст → `Timeout`.
+- **Confirm** (`listen_confirm()`): как Command, итог `Confirm(textnorm::is_yes(text))`;
+  таймаут → `Confirm(false)`.
+- **Calibrating**: каждая фраза → `Calibration(text без wake)`; до `stop_calibration()`.
+- `reset()` — пауза микрофона: Idle, все буферы затёрты нулями.
+- `State(...)`: "listening" при входе в Command/Confirm/Calibrating, "busy" на время
+  распознавания законченной команды, "idle" при возврате.
+- **Engine не делает побочных эффектов** (звуки, запуск, emit) — только возвращает события.
+  Отмену («отмена», «стоп») решает glue через `textnorm::is_cancel`.
+
+## Модули и владение
+
+| Воркер | Файлы (только их правит) | Суть |
+|---|---|---|
+| `asr` | `src/asr.rs`, `scripts/fetch-deps.ps1`, `tauri.conf.json` (resources), `THIRD-PARTY-NOTICES.md`, `.github/workflows/build.yml`, `src-tauri/examples/asr_bench.rs` | GigaAM v3 через sherpa-onnx, загрузка моделей, бенчмарк RNNT vs CTC |
+| `vad` | `src/vad.rs`, `src/segmenter.rs` | Silero VAD + EnergyVad, нарезка на фразы, юнит-тесты |
+| `text` | `src/textnorm.rs`, `src/commands.rs`, `src/actions.rs` (только `score` и матчинг), `src/dispatch.rs` | нормализация, wake-strip, грамматика, матчинг фраз, тесты |
+| `engine` | `src/engine.rs` | автомат из раздела выше, тесты на моках Transcriber/VoiceDetector |
+| `corpus` | `scripts/gen-corpus.ps1`, `testdata/**`, `src-tauri/examples/eval.rs` | синтетический корпус TTS и прогон конвейера |
+| `ui` | `src/config.rs`, `src/commands_api.rs`, `frontend/**`, `resources/settings.json` | новые настройки, события UI, живой partial |
+| координатор | `speech.rs`, `lib.rs`, `main.rs`, `Cargo.toml`, `build.rs`, `recognizer.rs`, `events.rs`, `docs/` | контракт, сборка, склейка (волна 2) |
+
+Нужна зависимость в Cargo.toml → `orca orchestration ask` координатору, сам не правь.
+
+## Модели
+
+- ASR по умолчанию: `sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16`
+  (`encoder.int8.onnx`, `decoder.onnx`, `joiner.onnx`, `tokens.txt`; ~230 МБ, MIT).
+  Альтернатива: `sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16` (`model.int8.onnx`).
+  Архивы: `https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/<имя>.tar.bz2`.
+  `Asr::new` сам определяет тип по файлам в папке.
+- VAD: `silero_vad.onnx` из того же релиза → `src-tauri/resources/model/silero_vad.onnx`.
+- Всё в `src-tauri/resources/model/` (в .gitignore), ставится `scripts/fetch-deps.ps1`.
+
+## Настройки (settings.json) — контракт для `ui` и glue
+
+| Ключ | Тип | Дефолт | Смысл |
+|---|---|---|---|
+| `asr_model` | string | `sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16` | папка в resources/model |
+| `asr_threads` | u32 | 4 | потоков ONNX |
+| `vad_threshold` | f32 | 0.5 | порог Silero |
+| `wake_pause_ms` | u32 | 600 | конец фразы в простое |
+| `command_pause_ms` | u32 | 900 | конец команды |
+| `command_wait_ms` | u32 | 5000 | ожидание начала команды |
+| `partial_results` | bool | true | живой текст во время команды |
+
+`ReeverConfig` получает `asr_model_dir: PathBuf` (resources/model/<asr_model>) и
+`vad_model_path: PathBuf` (resources/model/silero_vad.onnx), с той же логикой dev↔release и
+срезанием `\\?\`, что у `model_dir`. `endpoint_ms` и `english_enabled` остаются в структуре
+для совместимости старых файлов, но из UI убираются. `model_dir`/`en_model_dir` не удалять до
+волны 2 (их ещё читает recognizer.rs).
+
+## События UI — контракт для `ui` и glue
+
+- `reever://state` — `"idle" | "listening" | "busy" | "paused" | "error" | "loading"`.
+- `reever://partial` — string, живой текст команды (раньше не эмитился — теперь будет).
+- `reever://heard` — string, итоговый распознанный текст команды (не шлётся при `private_log`).
+- `reever://status` — JSON `{ "asr": "loading"|"ready"|"error", "model": string,
+  "everything": bool|null }` — вместо разбора лога регулярками во фронтенде.
+- `reever://log`, `reever://calibrated` — как раньше.
+
+## Правила для всех
+
+- Один крейт, один `target/` на всех: `cargo` может ждать блокировку — это нормально.
+  Держи свой файл **компилируемым всегда**; проверяй `cargo check --all-targets` и
+  `cargo test --lib <твой_модуль>` из `src-tauri/`. Чужой модуль сломал сборку — подожди и
+  повтори, не чини чужое; висит дольше 10 минут — `ask`.
+- Комментарии по-русски, объясняют «почему». Стиль — как в существующем коде.
+- Не коммить. Не трогай `src-tauri/resources/actions.json`.
+- `cargo fmt` только для своих файлов (`rustfmt src/<file>.rs`), не для всего крейта.

@@ -39,12 +39,34 @@ pub fn list_sound_packs(config: State<'_, Arc<ReeverConfig>>) -> Vec<String> {
     packs
 }
 
+/// Доступные папки моделей распознавания в resources/model/.
+#[tauri::command]
+pub fn list_asr_models(app: AppHandle) -> Vec<String> {
+    let model_root = crate::config::resource(&app, "model");
+    let mut models: Vec<String> = std::fs::read_dir(model_root)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|entry| entry.path().is_dir())
+                .filter_map(|entry| entry.file_name().into_string().ok())
+                .collect()
+        })
+        .unwrap_or_default();
+    models.sort();
+    models
+}
+
 /// Универсализация пути: C:\Users\me\… -> %USERPROFILE%\… (переносимость).
 fn universalize(target: &str, kind: &str) -> String {
     if kind == "uwp" || target.contains("://") {
         return target.to_string();
     }
-    for var in ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA", "APPDATA", "USERPROFILE"] {
+    for var in [
+        "ProgramFiles(x86)",
+        "ProgramFiles",
+        "LOCALAPPDATA",
+        "APPDATA",
+        "USERPROFILE",
+    ] {
         if let Ok(val) = std::env::var(var) {
             if !val.is_empty() && target.to_lowercase().starts_with(&val.to_lowercase()) {
                 return format!("%{}%{}", var, &target[val.len()..]);
@@ -139,7 +161,24 @@ pub fn cancel_calibration(state: State<'_, Arc<SharedState>>) -> Result<(), Stri
 #[tauri::command]
 pub fn get_settings(config: State<'_, Arc<ReeverConfig>>) -> Result<serde_json::Value, String> {
     let txt = std::fs::read_to_string(&config.settings_path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&txt).map_err(|e| e.to_string())
+    let mut settings = match serde_json::from_str::<serde_json::Value>(&txt) {
+        Ok(serde_json::Value::Object(object)) => serde_json::Value::Object(object),
+        _ => serde_json::Value::Object(serde_json::Map::new()),
+    };
+    let normalized = serde_json::to_value(&config.settings).map_err(|e| e.to_string())?;
+    if let (Some(object), Some(defaults)) = (settings.as_object_mut(), normalized.as_object()) {
+        // Keep comments and future/unknown keys, while returning recovered known fields
+        // so one malformed value cannot break the settings form.
+        for (key, value) in defaults {
+            // Legacy compatibility fields stay absent in newly written settings files,
+            // but existing values remain available to older installations.
+            if (key == "endpoint_ms" || key == "english_enabled") && !object.contains_key(key) {
+                continue;
+            }
+            object.insert(key.clone(), value.clone());
+        }
+    }
+    Ok(settings)
 }
 
 /// Сохранить settings.json (применяется при перезапуске).
@@ -222,8 +261,16 @@ fn b64(data: &[u8]) -> String {
         let n = (b0 << 16) | (b1 << 8) | b2;
         out.push(T[(n >> 18 & 63) as usize] as char);
         out.push(T[(n >> 12 & 63) as usize] as char);
-        out.push(if chunk.len() > 1 { T[(n >> 6 & 63) as usize] as char } else { '=' });
-        out.push(if chunk.len() > 2 { T[(n & 63) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            T[(n >> 6 & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(n & 63) as usize] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -242,28 +289,46 @@ fn reapply_hotkeys(app: &AppHandle, mode: &str, ptt: &str, mute: &str) -> Result
     Ok(())
 }
 
+fn persist_hotkey(config: &ReeverConfig, key: &str, hotkey: &str) -> Result<(), String> {
+    let mut settings = std::fs::read_to_string(&config.settings_path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .filter(serde_json::Value::is_object)
+        .unwrap_or(serde_json::to_value(&config.settings).map_err(|e| e.to_string())?);
+    let object = settings
+        .as_object_mut()
+        .ok_or_else(|| "settings.json должен содержать объект".to_string())?;
+    object.insert(key.into(), serde_json::Value::String(hotkey.into()));
+    let text = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    std::fs::write(&config.settings_path, text).map_err(|e| e.to_string())
+}
+
 /// Перерегистрировать push-to-talk хоткей на лету (применяется сразу, без рестарта).
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub fn set_hotkey(
     app: AppHandle,
     config: State<'_, Arc<ReeverConfig>>,
     state: State<'_, Arc<SharedState>>,
     hotkey: String,
+    activation_mode: String,
 ) -> Result<(), String> {
-    *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = hotkey.clone();
     let mute = state.mute_hotkey.lock().map_err(|e| e.to_string())?.clone();
-    reapply_hotkeys(&app, &config.settings.activation_mode, &hotkey, &mute)
+    reapply_hotkeys(&app, &activation_mode, &hotkey, &mute)?;
+    *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = hotkey.clone();
+    persist_hotkey(&config, "hotkey", &hotkey)
 }
 
 /// Перерегистрировать mute-хоткей (panic-mute) на лету.
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub fn set_mute_hotkey(
     app: AppHandle,
     config: State<'_, Arc<ReeverConfig>>,
     state: State<'_, Arc<SharedState>>,
     hotkey: String,
+    activation_mode: String,
 ) -> Result<(), String> {
-    *state.mute_hotkey.lock().map_err(|e| e.to_string())? = hotkey.clone();
     let ptt = state.ptt_hotkey.lock().map_err(|e| e.to_string())?.clone();
-    reapply_hotkeys(&app, &config.settings.activation_mode, &ptt, &hotkey)
+    reapply_hotkeys(&app, &activation_mode, &ptt, &hotkey)?;
+    *state.mute_hotkey.lock().map_err(|e| e.to_string())? = hotkey.clone();
+    persist_hotkey(&config, "mute_hotkey", &hotkey)
 }

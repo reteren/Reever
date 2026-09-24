@@ -2,39 +2,38 @@
 
 Reever распространяется вместе со сторонними компонентами, перечисленными ниже. Файлы загружаются скриптом `scripts/fetch-deps.ps1` и попадают в инсталлятор, поэтому их лицензии распространяются на дистрибутив.
 
-## Vosk API
+## sherpa-onnx
 
-- **Компонент**: `libvosk.dll`, `libvosk.lib`, `vosk_api.h`
-- **Лицензия**: Apache License 2.0 — указана в заголовке `vendor/vosk/vosk_api.h`
-- **Источник**: https://github.com/alphacep/vosk-api (релиз v0.3.45)
+- **Компонент**: Rust-крейт `sherpa-onnx` и его нативная библиотека (вместе с ONNX Runtime, MIT), статически линкуются в `reever.exe`
+- **Лицензия**: Apache License 2.0
+- **Источник**: https://github.com/k2-fsa/sherpa-onnx/blob/master/LICENSE
 
-## Модели распознавания Vosk
+## GigaAM v3
 
-- **Компоненты**: `vosk-model-small-ru-0.22`, `vosk-model-small-en-us-0.15`
-- **Лицензия**: Apache License 2.0 — согласно таблице моделей на https://alphacephei.com/vosk/models
-- **Источник**: https://alphacephei.com/vosk/models
+- **Компонент**: sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16
+- **Лицензия**: MIT (файл LICENSE в архиве модели)
+- **Авторское право**: Copyright (c) 2024 GigaChat Team; архив LICENSE входит в папку модели.
+- **Источник**: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
 
-## Рантайм MinGW-w64
+## Silero VAD
 
-`libvosk.dll` собран MinGW, поэтому вместе с ним поставляются три библиотеки рантайма:
-
-- `libstdc++-6.dll`, `libgcc_s_seh-1.dll` — GCC Runtime Library Exception поверх GPLv3. Исключение прямо разрешает распространение в составе несвободного ПО при условии сборки штатным GCC.
-- `libwinpthread-1.dll` — проект MinGW-w64, лицензии в стиле BSD/ZPL.
-
-> Эти три файла входят в архив `vosk-win64-0.3.45.zip` и поставляются в том виде, в каком их выпустил upstream. Точные тексты лицензий — в исходниках MinGW-w64 и GCC. **Перед коммерческим распространением стоит подтвердить формулировки с юристом**: здесь зафиксировано то, что следует из общедоступных лицензий компонентов, а не юридическое заключение.
+- **Компонент**: silero_vad.onnx
+- **Лицензия**: MIT
+- **Авторское право**: Copyright (c) 2020-present Silero Team.
+- **Источник**: https://github.com/snakers4/silero-vad/blob/master/LICENSE
 
 ## Rust-зависимости
 
-Полный список с версиями — `src-tauri/Cargo.lock`. Ключевые: `tauri` (Apache-2.0 / MIT), `cpal`, `rodio`, `rubato`, `strsim`, `serde`, `windows`, `lnk`. Проверить лицензии всего дерева разом:
+Полный список с версиями — `src-tauri/Cargo.lock`. Ключевые: `tauri` (Apache-2.0 / MIT), `sherpa-onnx`, `cpal`, `rodio`, `rubato`, `strsim`, `serde`, `windows`, `lnk`. Проверить лицензии всего дерева разом:
 
 ```bash
 cargo install cargo-license
 cargo license --manifest-path src-tauri/Cargo.toml
 ```
 
-## Шрифт Quicksand
+## Шрифт
 
-Подключается интерфейсом с Google Fonts по сети (`frontend/index.html:7-9`), в дистрибутив не входит. Лицензия — SIL Open Font License 1.1. Если шрифт будет инлайниться локально (см. планы в `Reever-memory/ROADMAP.md`), его файл и текст OFL нужно будет добавить в репозиторий.
+Интерфейс использует системный Segoe UI и ничего не загружает из сети; шрифтов в дистрибутиве нет.
 
 ## Everything
 

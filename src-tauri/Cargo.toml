@@ -1,8 +1,15 @@
 [package]
 name = "reever"
-version = "0.1.0"
+version = "0.1.3"
 edition = "2021"
-description = "Reever — voice interface for the Everything search utility"
+description = "Reever — offline voice launcher for Windows"
+
+# Библиотека — всё приложение (тесты и examples/ собираются против неё),
+# бинарь — только точка входа. Имя отличается от пакета: на Windows одинаковые
+# имена lib и bin конфликтуют по .pdb.
+[lib]
+name = "reever_lib"
+path = "src/lib.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -21,8 +28,9 @@ cpal   = "0.15"
 rodio  = "0.19"
 rubato = "0.15"
 
-# speech recognition (needs native libvosk in vendor/vosk + libvosk.dll at runtime)
-vosk = "0.3"
+# ASR (GigaAM v3) + VAD (Silero) — sherpa-onnx, статическая линковка, prebuilt
+# скачивается build-скриптом крейта (или берётся из SHERPA_ONNX_LIB_DIR).
+sherpa-onnx = "1.13.8"
 
 # shortcut parsing
 lnk = "0.5"

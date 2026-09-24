@@ -51,11 +51,13 @@
               <div class="tile"><div class="k">Активация</div><div class="v" id="t-mode">—</div></div>
               <div class="tile"><div class="k">Хоткей</div><div class="v" id="t-hotkey">—</div></div>
               <div class="tile"><div class="k">Everything</div><div class="v" id="t-ev"><span class="pill">проверка…</span></div></div>
+              <div class="tile"><div class="k">Распознавание</div><div class="v" id="t-asr"><span class="pill">ожидание…</span></div></div>
+              <div class="tile"><div class="k">Модель</div><div class="v" id="t-model"><span>—</span></div></div>
               <div class="tile"><div class="k">Действий</div><div class="v" id="t-count">—</div></div>
             </div>
             <div class="live">
               <div class="partial" id="partial">…</div>
-              <div class="last" id="lastCmd">скажи «ривер» и команду</div>
+              <div class="last" id="lastCmd">Можно сказать «ривер» и дождаться сигнала, а можно сразу: «ривер, открой …».</div>
             </div>
             <div class="cheat">
               <div class="h2">Что можно сказать</div>
@@ -137,15 +139,46 @@
     </div>
 
     <script>
-      const { invoke } = window.__TAURI__.core;
-      const { listen } = window.__TAURI__.event;
+      const tauri = window.__TAURI__;
+      const previewSettings={
+        everything_host:'127.0.0.1',everything_port:8011,wake_words:['ривер','ревер','ривьер'],
+        launch_everything_fallback:false,match_threshold:0.7,
+        asr_model:'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',asr_threads:4,
+        vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
+        partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
+        raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,
+        sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:''
+      };
+      const invoke = tauri?.core?.invoke || (async(command)=>{
+        switch(command){
+          case 'get_settings': return {...previewSettings};
+          case 'list_actions': return [];
+          case 'list_apps': return [];
+          case 'list_sound_packs': return ['default'];
+          case 'list_asr_models': return [previewSettings.asr_model];
+          case 'get_paused': case 'get_autostart': return false;
+          case 'check_everything': return false;
+          case 'get_wallpaper': return null;
+          default: return undefined;
+        }
+      });
+      const listen = tauri?.event?.listen || (async()=>()=>{});
       const $ = (s)=>document.querySelector(s);
       const el=(t,p={},k=[])=>{const e=document.createElement(t);Object.assign(e,p);for(const c of k)e.append(c);return e;};
 
       let appWindow=null;
-      try{ appWindow = window.__TAURI__.window.getCurrentWindow(); }catch(e){}
-      $('#winMin').onclick=()=>{ try{ appWindow && appWindow.minimize(); }catch(e){} };
-      $('#winClose').onclick=()=>{ try{ appWindow && appWindow.hide(); }catch(e){} };
+      try{ appWindow = tauri?.window?.getCurrentWindow?.() || null; }catch(e){ reportError('получения окна',e); }
+      function reportError(context,error){
+        const message=`Ошибка ${context}: ${error?.message||error}`;
+        console.error(message,error);
+        appendLog(message);
+      }
+      function subscribe(event,handler){
+        try{ Promise.resolve(listen(event,handler)).catch(e=>reportError(`подписки ${event}`,e)); }
+        catch(e){ reportError(`подписки ${event}`,e); }
+      }
+      $('#winMin').onclick=()=>{ try{ appWindow?.minimize(); }catch(e){ reportError('сворачивания окна',e); } };
+      $('#winClose').onclick=()=>{ try{ appWindow?.hide(); }catch(e){ reportError('скрытия окна',e); } };
 
       // Один геометрический монохромный набор: смешивать эмодзи и глифы —
       // самый заметный признак несобранного интерфейса.
@@ -168,30 +201,48 @@
       let paused=false;
       function setDot(p){
         const d=$('#dot'), l=$('#micLabel');
-        d.className='dot'+(p==='listening'?' listening':p==='busy'?' busy':p==='error'?' error':'');
-        l.textContent = p==='listening'?'Слушаю…':p==='busy'?'Обработка…':p==='paused'?'Пауза':p==='error'?'Ошибка':'Ожидание…';
+        d.className='dot'+(p==='listening'?' listening':p==='busy'?' busy':p==='loading'?' loading':p==='error'?' error':'');
+        l.textContent = p==='listening'?'Слушаю…':p==='busy'?'Обработка…':p==='loading'?'Загружается модель…':p==='paused'?'Пауза':p==='error'?'Ошибка':'Ожидание…';
         if(p==='idle'||p==='paused') refreshPause();
       }
-      async function refreshPause(){ try{ paused=await invoke('get_paused'); $('#pauseBtn').textContent=paused?'Возобновить':'Пауза'; $('#t-mic').innerHTML=paused?'<span class="pill bad">пауза</span>':'<span class="pill ok">активен</span>'; }catch(e){} }
-      $('#pauseBtn').onclick=async()=>{ await invoke('set_paused',{paused:!paused}); refreshPause(); };
+      async function refreshPause(){ try{ paused=await invoke('get_paused'); $('#pauseBtn').textContent=paused?'Возобновить':'Пауза'; $('#t-mic').innerHTML=paused?'<span class="pill bad">пауза</span>':'<span class="pill ok">активен</span>'; }catch(e){ reportError('проверки микрофона',e); } }
+      $('#pauseBtn').onclick=async()=>{ try{ await invoke('set_paused',{paused:!paused}); await refreshPause(); }catch(e){ reportError('переключения микрофона',e); } };
 
-      listen('reever://state', e=>setDot(String(e.payload)));
-      listen('reever://partial', e=>{ const v=String(e.payload); $('#partial').textContent=v||'…'; $('#partial2').textContent=v; });
-      listen('reever://log', e=>{ const t=String(e.payload); appendLog(t); onLogLine(t); });
+      subscribe('reever://state', e=>setDot(String(e.payload)));
+      subscribe('reever://partial', e=>{ const v=String(e.payload||''); $('#partial').textContent=v||'…'; $('#partial2').textContent=v; });
+      subscribe('reever://heard', e=>{ const v=String(e.payload||'').trim(); if(v) $('#lastCmd').textContent=v; });
+      subscribe('reever://status', e=>applyStatus(e.payload));
+      subscribe('reever://log', e=>appendLog(String(e.payload)));
       let calId=null;
       function renderCalCount(){ if(!calId) return; const a=actions.find(x=>x.id===calId); const ph=a&&a.phrases?a.phrases:[]; $('#calCount').textContent='захвачено фраз: '+ph.length; $('#calLast').textContent=ph.length?'последняя: «'+ph[ph.length-1]+'»':''; }
-      listen('reever://calibrated', async ()=>{ await loadActions(); renderCalCount(); });
+      subscribe('reever://calibrated', async ()=>{ await loadActions(); renderCalCount(); });
 
-      function appendLog(t){ const d=el('div',{className:'l'+(/^(RU model:|EN model:|everything:|режим)/.test(t)?' dim':'')}); d.textContent=t; const L=$('#log'); L.append(d); while(L.childNodes.length>250)L.removeChild(L.firstChild); L.scrollTop=L.scrollHeight; }
-      function onLogLine(t){
-        if(/Everything HTTP доступен/.test(t)) $('#t-ev').innerHTML='<span class="pill ok">подключён</span>';
-        else if(/Everything HTTP НЕ доступен/.test(t)) $('#t-ev').innerHTML='<span class="pill bad">нет связи</span>';
-        if(/^📝 RU/.test(t)) $('#lastCmd').textContent=t;
-        if(/^(↪|▶|📁|⚙|🔎|∅|🌐)/.test(t)) $('#lastCmd').textContent=t;
+      function appendLog(t){ const d=el('div',{className:'l',textContent:t}); const L=$('#log'); L.append(d); while(L.childNodes.length>250)L.removeChild(L.firstChild); L.scrollTop=L.scrollHeight; }
+      function applyStatus(payload){
+        let status=payload;
+        if(typeof status==='string'){ try{status=JSON.parse(status);}catch(e){reportError('разбора статуса',e);return;} }
+        if(!status||typeof status!=='object') return;
+        const asr=status.asr;
+        const asrLabel=asr==='ready'?'готова':asr==='error'?'ошибка':asr==='loading'?'загрузка…':'—';
+        const asrClass=asr==='ready'?'ok':asr==='error'?'bad':'';
+        $('#t-asr').innerHTML=`<span class="pill ${asrClass}">${asrLabel}</span>`;
+        $('#t-model').replaceChildren(el('span',{textContent:status.model||'—'}));
+        if(settingsObj?.offline_mode) $('#t-ev').innerHTML='<span class="pill">офлайн</span>';
+        else if(status.everything===true) $('#t-ev').innerHTML='<span class="pill ok">подключён</span>';
+        else if(status.everything===false) $('#t-ev').innerHTML='<span class="pill bad">нет связи</span>';
+        else $('#t-ev').innerHTML='<span class="pill">не проверено</span>';
       }
 
-      let actions=[], selId=null, filter='all', query='';
-      async function loadActions(){ actions=await invoke('list_actions'); $('#t-count').textContent=actions.length; renderRows(); renderEditor(); }
+      let actions=[], selId=null, filter='all', query='', editorDirty=false;
+      async function loadActions(){ actions=await invoke('list_actions'); editorDirty=false; $('#t-count').textContent=actions.length; renderRows(); renderEditor(); }
+      async function confirmDiscardActionEdits(){
+        if(!editorDirty) return true;
+        if(!confirm('Есть несохранённые изменения действия. Отбросить их?')) return false;
+        const previousId=selId;
+        await loadActions();
+        selId=previousId;
+        return true;
+      }
       $('#search').oninput=()=>{ query=$('#search').value.toLowerCase(); renderRows(); };
       document.querySelectorAll('#filters .chip').forEach(c=>{
         const pick=()=>{ document.querySelectorAll('#filters .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); filter=c.dataset.f; renderRows(); };
@@ -213,7 +264,11 @@
           row.append(el('div',{className:'ai',textContent:KIND_ICON[a.kind||'shell']||'▶'}));
           row.append(el('div',{className:'an',textContent:a.label||'(без имени)'}));
           row.append(el('div',{className:'ac',textContent:(a.phrases||[]).length+' фр.'}));
-          row.onclick=()=>{ selId=a.id; renderRows(); renderEditor(); };
+          row.onclick=async()=>{
+            if(a.id===selId) return;
+            if(!await confirmDiscardActionEdits()) return;
+            selId=a.id; renderRows(); renderEditor();
+          };
           R.append(row);
         }
       }
@@ -223,22 +278,22 @@
         if(!a){ E.innerHTML='<div class="empty">Выбери действие слева<br/>или создай новое</div>'; return; }
         E.innerHTML='';
         const head=el('div',{className:'editrow'});
-        const label=el('input',{value:a.label||'',placeholder:'Название'}); label.className='grow'; label.oninput=()=>{a.label=label.value;};
-        const kind=el('select'); kind.style.width='auto'; for(const[k,l]of Object.entries(KINDS)){const o=el('option',{value:k,textContent:l});if((a.kind||'shell')===k)o.selected=true;kind.append(o);} kind.onchange=()=>{a.kind=kind.value;};
+        const label=el('input',{value:a.label||'',placeholder:'Название'}); label.className='grow'; label.oninput=()=>{a.label=label.value; editorDirty=true;};
+        const kind=el('select'); kind.style.width='auto'; for(const[k,l]of Object.entries(KINDS)){const o=el('option',{value:k,textContent:l});if((a.kind||'shell')===k)o.selected=true;kind.append(o);} kind.onchange=()=>{a.kind=kind.value; editorDirty=true;};
         head.append(label,kind); E.append(head);
 
         E.append(el('label',{className:'fld',textContent:'Target — путь к файлу, ссылка, протокол или AUMID'}));
-        const target=el('input',{value:a.target||'',placeholder:'steam://rungameid/570'}); target.oninput=()=>{a.target=target.value;}; E.append(target);
+        const target=el('input',{value:a.target||'',placeholder:'steam://rungameid/570'}); target.oninput=()=>{a.target=target.value; editorDirty=true;}; E.append(target);
         E.append(el('div',{className:'hint',style:'margin-top:3px;',textContent:'Для веб-поиска впиши {q} — на это место встанет сказанный запрос.'}));
         const pick=el('button',{className:'sm',textContent:'Выбрать Windows-приложение…'}); pick.style.marginTop='6px'; pick.onclick=()=>openAppPicker(a,target); E.append(pick);
 
         E.append(el('label',{className:'fld',textContent:`Фразы (${(a.phrases||[]).length}) — захват калибровкой или вручную`}));
         const chips=el('div',{className:'phrases'});
-        for(const p of (a.phrases||[])){ const x=el('b',{textContent:'✕',title:'Удалить фразу'}); x.onclick=async()=>{await invoke('remove_phrase',{id:a.id,phrase:p});loadActions();}; chips.append(el('span',{className:'pchip'},[document.createTextNode(p),x])); }
+        for(const p of (a.phrases||[])){ const x=el('b',{textContent:'✕',title:'Удалить фразу'}); x.onclick=async()=>{if(!await confirmDiscardActionEdits())return;await invoke('remove_phrase',{id:a.id,phrase:p});await loadActions();}; chips.append(el('span',{className:'pchip'},[document.createTextNode(p),x])); }
         E.append(chips);
         const addRow=el('div',{className:'editrow',style:'margin-top:7px;'});
         const pInp=el('input',{placeholder:'вписать фразу…'}); pInp.className='grow';
-        const doAdd=async()=>{const v=pInp.value.trim();if(!v)return; await invoke('save_action',{action:a}); await invoke('add_phrase',{id:a.id,phrase:v}); pInp.value=''; loadActions();};
+        const doAdd=async()=>{const v=pInp.value.trim();if(!v)return; await invoke('save_action',{action:a}); editorDirty=false; await invoke('add_phrase',{id:a.id,phrase:v}); pInp.value=''; await loadActions();};
         const pAdd=el('button',{className:'sm',textContent:'Добавить'}); pAdd.onclick=doAdd; pInp.onkeydown=(e)=>{if(e.key==='Enter'){e.preventDefault();doAdd();}};
         addRow.append(pInp,pAdd); E.append(addRow);
 
@@ -246,24 +301,24 @@
         // Один акцент и одно разрушающее действие: три цветные кнопки подряд
         // в семёрке невозможны и просто шумят.
         const cal=el('button',{textContent:'Калибровать'}); cal.onclick=()=>calibrate(a);
-        const save=el('button',{className:'default',textContent:'Сохранить'}); save.onclick=async()=>{ if(!(a.label||'').trim()){alert('Укажи название');return;} await invoke('save_action',{action:a}); await loadActions(); };
-        const del=el('button',{className:'danger',textContent:'Удалить'}); del.onclick=async()=>{ if(confirm('Удалить действие?')){await invoke('delete_action',{id:a.id}); selId=null; loadActions();} };
+        const save=el('button',{className:'default',textContent:'Сохранить'}); save.onclick=async()=>{ if(!(a.label||'').trim()){alert('Укажи название');return;} await invoke('save_action',{action:a}); editorDirty=false; await loadActions(); };
+        const del=el('button',{className:'danger',textContent:'Удалить'}); del.onclick=async()=>{ if(!await confirmDiscardActionEdits())return; if(confirm('Удалить действие?')){await invoke('delete_action',{id:a.id}); selId=null; await loadActions();} };
         foot.append(cal,save,del); E.append(foot);
       }
-      $('#addBtn').onclick=()=>{ const id='act_'+Date.now().toString(36); actions.push({id,label:'',kind:'shell',target:'',verbs:[],phrases:[]}); selId=id; renderRows(); renderEditor(); };
+      $('#addBtn').onclick=async()=>{ if(!await confirmDiscardActionEdits())return; const id='act_'+Date.now().toString(36); actions.push({id,label:'',kind:'shell',target:'',verbs:[],phrases:[]}); selId=id; editorDirty=true; renderRows(); renderEditor(); };
 
-      async function calibrate(a){ await invoke('save_action',{action:a}); await invoke('start_calibration',{id:a.id}); calId=a.id; $('#calLabel').textContent=a.label||a.id; renderCalCount(); $('#calOverlay').classList.add('on'); }
-      $('#calDone').onclick=async()=>{ try{await invoke('cancel_calibration');}catch(e){} calId=null; $('#calOverlay').classList.remove('on'); };
+      async function calibrate(a){ await invoke('save_action',{action:a}); editorDirty=false; await invoke('start_calibration',{id:a.id}); calId=a.id; $('#calLabel').textContent=a.label||a.id; renderCalCount(); $('#calOverlay').classList.add('on'); }
+      $('#calDone').onclick=async()=>{ try{await invoke('cancel_calibration');}catch(e){ reportError('отмены калибровки',e); } calId=null; $('#calOverlay').classList.remove('on'); };
 
       let appsCache=null;
       async function openAppPicker(a,targetInput){
         const list=$('#appList'); $('#appPicker').classList.add('on'); $('#appSearch').value='';
         list.innerHTML='<div class="hint">Загрузка…</div>';
-        if(!appsCache){ try{appsCache=await invoke('list_apps');}catch(e){appsCache=[];} }
+        if(!appsCache){ try{appsCache=await invoke('list_apps');}catch(e){appsCache=[];reportError('загрузки списка приложений',e);} }
         const render=(f)=>{ list.innerHTML=''; const q=(f||'').toLowerCase();
           for(const ap of appsCache){ if(q&&!ap.name.toLowerCase().includes(q))continue;
             const it=el('div',{className:'appitem',textContent:ap.name});
-            it.onclick=()=>{ a.kind='uwp'; a.target=ap.aumid; if(!a.label)a.label=ap.name; targetInput.value=ap.aumid; $('#appPicker').classList.remove('on'); renderEditor(); renderRows(); };
+            it.onclick=()=>{ a.kind='uwp'; a.target=ap.aumid; if(!a.label)a.label=ap.name; editorDirty=true; targetInput.value=ap.aumid; $('#appPicker').classList.remove('on'); renderEditor(); renderRows(); };
             list.append(it); }
           if(!list.childNodes.length) list.append(el('div',{className:'hint',textContent:'Ничего не найдено'}));
         };
@@ -279,11 +334,11 @@
 
       let settingsObj={};
       const GROUPS=[
-        ['Активация',[['activation_mode','Режим (рестарт)','select',['both','wake','hotkey']],['hotkey','Хоткей push-to-talk (применяется сразу)','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» (panic-mute, сразу)','hotkey'],['wake_words','Wake-слова (через запятую)','list']]],
-        ['Приватность',[['private_log','Приватный лог — не показывать распознанный текст и запросы','bool'],['offline_mode','Офлайн-режим — без веб-поиска и Everything (рестарт)','bool']]],
-        ['Распознавание',[['endpoint_ms','Пауза конца фразы, мс (меньше = быстрее, рискует обрезать) — рестарт','number'],['match_threshold','Порог совпадения действия 0..1','number'],['open_min_similarity','Порог «открой папку» 0..1','number'],['english_enabled','Английская модель (on-demand)','bool'],['cancel_words','Слова отмены (через запятую)','list']]],
-        ['Everything',[['everything_host','Host','text'],['everything_port','Port','number'],['launch_everything_fallback','«Запусти»: страховка через Everything','bool']]],
-        ['Система',[['confirm_dangerous','Подтверждать выключение и перезагрузку','bool'],['raise_result','Поднимать открытое окно на передний план','bool']]],
+        ['Активация',[['activation_mode','Режим — рестарт','select',['both','wake','hotkey']],['hotkey','Хоткей push-to-talk — сразу','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» — сразу','hotkey'],['wake_words','Wake-слова (через запятую) — рестарт','list']]],
+        ['Приватность',[['private_log','Приватный лог — рестарт','bool'],['offline_mode','Офлайн-режим — рестарт','bool']]],
+        ['Распознавание',[['asr_model','Модель ASR — рестарт','model'],['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после «ривер», мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number'],['cancel_words','Слова отмены (через запятую) — рестарт','list']]],
+        ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],
+        ['Система',[['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],['raise_result','Поднимать открытое окно на передний план — рестарт','bool']]],
       ];
       let cbSeq=0;
       function fieldEl(key,lbl,type,opts){
@@ -299,6 +354,19 @@
         const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
         let inp;
         if(type==='list'){ inp=el('input',{value:(settingsObj[key]||[]).join(', ')}); inp.oninput=()=>settingsObj[key]=inp.value.split(',').map(s=>s.trim()).filter(Boolean); }
+        else if(type==='model'){
+          inp=el('select');
+          const models=Array.isArray(opts)?opts.slice():[];
+          const selected=settingsObj[key]||'';
+          if(selected&&!models.includes(selected)) models.unshift(selected);
+          for(const model of models){
+            const missing=model===selected&&!(opts||[]).includes(model);
+            const op=el('option',{value:model,textContent:missing?`${model} (папка не найдена)`:model});
+            if(model===selected) op.selected=true;
+            inp.append(op);
+          }
+          inp.onchange=()=>settingsObj[key]=inp.value;
+        }
         else if(type==='select'){ inp=el('select'); for(const o of opts){const op=el('option',{value:o,textContent:o});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }
         else if(type==='hotkey'){
           inp=el('button',{type:'button',className:'sm'}); inp.style.minWidth='150px';
@@ -327,50 +395,48 @@
               const combo=[...mods,main].join('+');
               settingsObj[key]=combo; stop(); render();
               const cmd = key==='mute_hotkey' ? 'set_mute_hotkey' : 'set_hotkey';
-              try{ await invoke(cmd,{hotkey:combo}); await invoke('save_settings',{settings:settingsObj}); $('#settingsMsg').textContent='хоткей применён: '+combo; }
-              catch(e){ $('#settingsMsg').textContent='хоткей: '+e; }
+              try{ await invoke(cmd,{hotkey:combo,activationMode:settingsObj.activation_mode||'both'}); $('#settingsMsg').textContent='хоткей применён: '+combo; }
+              catch(e){ $('#settingsMsg').textContent='хоткей: '+e; reportError('применения хоткея',e); }
             };
             window.addEventListener('keydown',onKey,true);
           };
         }
-        else { inp=el('input',{type,value:settingsObj[key]??''}); inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
+        else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold','open_min_similarity'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
         wrap.append(inp); return wrap;
       }
       async function loadSettings(){
-        settingsObj=await invoke('get_settings');
+        try{ settingsObj=await invoke('get_settings'); }
+        catch(e){ reportError('загрузки настроек',e); settingsObj={...previewSettings}; }
+        let models=[];
+        try{ models=await invoke('list_asr_models'); }
+        catch(e){ reportError('загрузки списка моделей',e); }
         const F=$('#settingsForm'); F.innerHTML='';
         // Каждая группа — настоящий группбокс с легендой, как в панели
         // управления семёрки.
         for(const [title,fields] of GROUPS){
           const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:title}));
-          for(const f of fields) g.append(fieldEl(...f));
+          for(const f of fields){
+            const field=f.slice();
+            if(field[0]==='asr_model') field.push(models);
+            g.append(fieldEl(...field));
+          }
           F.append(g);
         }
         const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:'ОС и звук'}));
         const asRow=el('div',{className:'cbrow'});
-        const asCb=el('input',{type:'checkbox',id:'cbAuto'}); try{asCb.checked=await invoke('get_autostart');}catch(e){}
-        asCb.onchange=async()=>{ try{await invoke('set_autostart',{on:asCb.checked}); $('#settingsMsg').textContent='автозапуск: '+(asCb.checked?'вкл':'выкл');}catch(e){$('#settingsMsg').textContent='ошибка: '+e;} };
-        asRow.append(asCb, el('label',{htmlFor:'cbAuto',textContent:'Автозапуск с Windows (применяется сразу)'}));
+        const asCb=el('input',{type:'checkbox',id:'cbAuto'}); try{asCb.checked=await invoke('get_autostart');}catch(e){reportError('чтения автозапуска',e);}
+        asCb.onchange=async()=>{ try{await invoke('set_autostart',{on:asCb.checked}); $('#settingsMsg').textContent='автозапуск: '+(asCb.checked?'вкл':'выкл');}catch(e){$('#settingsMsg').textContent='ошибка: '+e;reportError('переключения автозапуска',e);} };
+        asRow.append(asCb, el('label',{htmlFor:'cbAuto',textContent:'Автозапуск с Windows — сразу'}));
         g.append(asRow);
-        const spWrap=el('div'); spWrap.append(el('label',{className:'fld',textContent:'Набор звуков (рестарт)'}));
-        const sp=el('select'); try{const packs=await invoke('list_sound_packs'); for(const p of packs){const o=el('option',{value:p,textContent:p});if((settingsObj.sound_pack??'default')===p)o.selected=true;sp.append(o);}}catch(e){}
+        const spWrap=el('div'); spWrap.append(el('label',{className:'fld',textContent:'Набор звуков — рестарт'}));
+        const sp=el('select'); try{const packs=await invoke('list_sound_packs'); for(const p of packs){const o=el('option',{value:p,textContent:p});if((settingsObj.sound_pack??'default')===p)o.selected=true;sp.append(o);}}catch(e){reportError('загрузки наборов звуков',e);}
         sp.onchange=()=>settingsObj.sound_pack=sp.value; spWrap.append(sp); g.append(spWrap);
         F.append(g);
         $('#t-mode').textContent=settingsObj.activation_mode||'both';
         $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'—':(settingsObj.hotkey||'—');
         if(settingsObj.offline_mode) $('#t-ev').innerHTML='<span class="pill">офлайн</span>';
       }
-      $('#saveSettingsBtn').onclick=async()=>{ try{await invoke('save_settings',{settings:settingsObj}); $('#settingsMsg').textContent='Сохранено. Перезапусти для применения.';}catch(e){$('#settingsMsg').textContent='Ошибка: '+e;} };
-
-      async function checkEverything(){
-        const offline=()=>settingsObj&&settingsObj.offline_mode;
-        try{
-          if(offline()){ $('#t-ev').innerHTML='<span class="pill">офлайн</span>'; return; }
-          const ok=await invoke('check_everything');
-          if(offline()){ $('#t-ev').innerHTML='<span class="pill">офлайн</span>'; return; }
-          $('#t-ev').innerHTML = ok ? '<span class="pill ok">подключён</span>' : '<span class="pill bad">нет связи</span>';
-        }catch(e){}
-      }
+      $('#saveSettingsBtn').onclick=async()=>{ try{await invoke('save_settings',{settings:settingsObj}); $('#settingsMsg').textContent='Сохранено. Перезапусти для применения.';}catch(e){$('#settingsMsg').textContent='Ошибка: '+e;reportError('сохранения настроек',e);} };
 
       // Обои клиентской области. Файл заменяем в %APPDATA%\com.troid.reever\
       // wallpaper.png — Rust отдаёт его как data-URL.
@@ -378,10 +444,10 @@
         try{
           const url = await invoke('get_wallpaper');
           if(url){ const w=$('#wallpaper'); w.style.backgroundImage='url("'+url+'")'; w.classList.add('on'); }
-        }catch(e){}
+        }catch(e){ reportError('загрузки обоев',e); }
       }
 
-      loadWallpaper(); loadActions(); loadSettings(); refreshPause(); checkEverything();
+      loadWallpaper(); loadActions().catch(e=>reportError('загрузки действий',e)); loadSettings(); refreshPause();
     </script>
   </body>
 </html>
