@@ -642,6 +642,9 @@ fieldset.grp > legend {
 .grammar-enabled { margin: 0 0 5px; align-items: center; white-space: nowrap; }
 .grammar-label-field, .grammar-url-field { display: block; min-width: 0; }
 .grammar-label-field .fld, .grammar-url-field .fld, .grammar-field-label { display: block; margin: 3px 0; }
+.grammar-lang-field { margin-top: 7px; }
+.grammar-lang-field select { max-width: 240px; }
+.grammar-language-help { margin-top: 3px; max-width: 580px; line-height: 1.35; }
 .grammar-delete-intent { margin-bottom: 4px; }
 .grammar-bare-launch { margin-bottom: 1px; }
 .grammar-bare-launch span { flex: 1; }

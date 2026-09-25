@@ -1,10 +1,11 @@
 //! Автомат прослушивания без Tauri: wake → команда / подтверждение / калибровка.
 //! Владелец: воркер `engine`.
 
+use crate::bilingual::{self, LangMode, Resolved};
 use crate::commands::is_bare_verb;
 use crate::grammar::Grammar;
 use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
-use crate::speech::{samples, Transcriber, VoiceDetector};
+use crate::speech::{samples, LanguageId, Timed, Transcriber, VoiceDetector};
 use crate::textnorm::{is_yes, starts_with_wake, strip_wake};
 
 #[derive(Clone, Debug)]
@@ -49,9 +50,9 @@ pub enum EngineEvent {
     /// Промежуточный текст текущей фразы — для `reever://partial`.
     Partial(String),
     /// Готовая команда без wake-слова (нормализованная).
-    Command(String),
+    Command { text: String, alt: Option<String> },
     /// Фраза, сказанная в режиме калибровки (без wake-слова).
-    Calibration(String),
+    Calibration { text: String, alt: Option<String> },
     /// Ответ на подтверждение: true — «да».
     Confirm(bool),
     /// После wake/хоткея команды не дождались.
@@ -125,6 +126,9 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     /// Пользовательская грамматика: какие фразы — «незаконченная команда». Пока её нет
     /// (тесты, старт) — встроенный список глаголов `commands::is_bare_verb`.
     grammar: Option<Grammar>,
+    second: Option<Box<dyn Transcriber + Send>>,
+    lid: Option<Box<dyn LanguageId + Send>>,
+    lang_mode: LangMode,
 }
 
 impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
@@ -148,7 +152,22 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             pending_events: Vec::new(),
             mode_epoch: 0,
             grammar: None,
+            second: None,
+            lid: None,
+            lang_mode: LangMode::Auto,
         }
+    }
+
+    /// Подключает второй ASR и необязательный определитель языка цели.
+    pub fn set_bilingual(
+        &mut self,
+        second: Option<Box<dyn Transcriber + Send>>,
+        lid: Option<Box<dyn LanguageId + Send>>,
+        mode: LangMode,
+    ) {
+        self.second = second;
+        self.lid = lid;
+        self.lang_mode = mode;
     }
 
     /// Главный вход: очередной кусок 16 кГц mono из микрофона.
@@ -409,23 +428,30 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 let mode = std::mem::replace(&mut self.mode, Mode::Idle);
                 match mode {
                     Mode::Idle => {
-                        let result = self.asr.transcribe(&audio);
-                        audio.fill(0);
+                        let result = self.asr.transcribe_timed(&audio);
                         self.prepare_segmenter(self.cfg.wake_pause_ms);
                         if self.cfg.wake_enabled {
-                            self.handle_idle_transcript(result, out);
+                            self.handle_idle_transcript(result, &audio, out);
                         }
+                        audio.fill(0);
                     }
                     Mode::Listening(state) => {
                         out.push(EngineEvent::State("busy"));
-                        let result = self.asr.transcribe(&audio);
-                        audio.fill(0);
+                        let result = match state.kind {
+                            ListenKind::Command => self.asr.transcribe_timed(&audio).map(|timed| {
+                                self.second_language_only(&audio, timed)
+                            }),
+                            ListenKind::Confirm => self.asr.transcribe(&audio).map(|text| Timed {
+                                text,
+                                words: Vec::new(),
+                            }),
+                        };
                         match result {
                             // Пустая фраза — не ответ, а шум: ждём дальше с новым окном
                             // ожидания. Так сигнал «слушаю», пойманный микрофоном, не
                             // обрывает команду, и глушить аудио после сигнала не нужно.
-                            Ok(text)
-                                if self.strip_repeated_wake(&text).trim().is_empty()
+                            Ok(timed)
+                                if self.strip_repeated_wake(&timed.text).trim().is_empty()
                                     && state.empty_segments < MAX_EMPTY_SEGMENTS =>
                             {
                                 self.prepare_segmenter(self.cfg.command_pause_ms);
@@ -438,23 +464,27 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 });
                                 out.push(EngineEvent::State("listening"));
                             }
-                            Ok(text) => match state.kind {
+                            Ok(timed) => match state.kind {
                                 ListenKind::Command => {
-                                    let text = self.strip_repeated_wake(&text);
+                                    let text = self.strip_repeated_wake(&timed.text);
                                     if text.trim().is_empty() {
                                         out.push(EngineEvent::Timeout);
                                     } else {
-                                        let command = join_command(&state.prefix, &text);
-                                        if command.is_empty() {
+                                        let resolved =
+                                            self.resolve_command(&audio, &timed, &state.prefix);
+                                        if resolved.text.trim().is_empty() {
                                             out.push(EngineEvent::Timeout);
                                         } else {
-                                            out.push(EngineEvent::Command(command));
+                                            out.push(EngineEvent::Command {
+                                                text: resolved.text,
+                                                alt: resolved.alt,
+                                            });
                                         }
                                     }
                                     self.return_to_idle(true, out);
                                 }
                                 ListenKind::Confirm => {
-                                    let text = self.strip_repeated_wake(&text);
+                                    let text = self.strip_repeated_wake(&timed.text);
                                     out.push(EngineEvent::Confirm(is_yes(&text)));
                                     self.return_to_idle(true, out);
                                 }
@@ -466,14 +496,18 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 self.return_to_idle(true, out);
                             }
                         }
+                        audio.fill(0);
                     }
                     Mode::Calibrating => {
-                        let result = self.asr.transcribe(&audio);
-                        audio.fill(0);
+                        let result = self.asr.transcribe_timed(&audio);
                         self.prepare_segmenter(self.cfg.command_pause_ms);
                         match result {
-                            Ok(text) => {
-                                out.push(EngineEvent::Calibration(self.strip_repeated_wake(&text)));
+                            Ok(timed) => {
+                                let resolved = self.resolve_command(&audio, &timed, "");
+                                out.push(EngineEvent::Calibration {
+                                    text: resolved.text,
+                                    alt: resolved.alt,
+                                });
                                 self.mode = Mode::Calibrating;
                             }
                             Err(error) => {
@@ -483,6 +517,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 self.return_to_idle(true, out);
                             }
                         }
+                        audio.fill(0);
                     }
                 }
             }
@@ -491,18 +526,19 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
 
     fn handle_idle_transcript(
         &mut self,
-        result: anyhow::Result<String>,
+        result: anyhow::Result<Timed>,
+        audio: &[i16],
         out: &mut Vec<EngineEvent>,
     ) {
-        let text = match result {
-            Ok(text) => text,
+        let timed = match result {
+            Ok(timed) => timed,
             Err(error) => {
                 out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
                 return;
             }
         };
 
-        let Some(rest) = strip_initial_wake(&text, &self.cfg.wake_words) else {
+        let Some(rest) = strip_initial_wake(&timed.text, &self.cfg.wake_words) else {
             return;
         };
         let rest = rest.trim();
@@ -512,9 +548,49 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             out.push(EngineEvent::State("listening"));
         } else {
             out.push(EngineEvent::State("busy"));
-            out.push(EngineEvent::Command(rest.to_string()));
+            let resolved = self.resolve_command(audio, &timed, "");
+            out.push(EngineEvent::Command {
+                text: resolved.text,
+                alt: resolved.alt,
+            });
             out.push(EngineEvent::State("idle"));
         }
+    }
+
+    /// Русская модель на чисто английском сегменте («ривер поиск ютуб» + пауза +
+    /// «never gonna give you up») часто возвращает пустоту — и пустая фраза была бы принята
+    /// за эхо сигнала. Прежде чем так решить, сегмент слушает вторая модель; её текст
+    /// становится результатом без тайминга, и `resolve` берёт цель целиком.
+    fn second_language_only(&mut self, audio: &[i16], timed: Timed) -> Timed {
+        if !self.strip_repeated_wake(&timed.text).trim().is_empty() {
+            return timed;
+        }
+        let Some(second) = self.second.as_deref_mut() else {
+            return timed;
+        };
+        match second.transcribe(audio) {
+            Ok(text) if !text.trim().is_empty() => Timed { text, words: Vec::new() },
+            _ => timed,
+        }
+    }
+
+    fn resolve_command(&mut self, audio: &[i16], timed: &Timed, prefix: &str) -> Resolved {
+        let fallback_grammar = Grammar::default();
+        let grammar = self.grammar.as_ref().unwrap_or(&fallback_grammar).clone();
+        bilingual::resolve(
+            audio,
+            timed,
+            prefix,
+            &self.cfg.wake_words,
+            &grammar,
+            self.second
+                .as_deref_mut()
+                .map(|transcriber| transcriber as &mut dyn Transcriber),
+            self.lid
+                .as_deref_mut()
+                .map(|language_id| language_id as &mut dyn LanguageId),
+            self.lang_mode,
+        )
     }
 
     fn strip_repeated_wake(&self, text: &str) -> String {
@@ -574,6 +650,8 @@ mod tests {
     use std::cell::{Cell, RefCell};
     use std::collections::VecDeque;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     struct MockTranscriber {
         texts: VecDeque<String>,
@@ -602,6 +680,33 @@ mod tests {
             self.calls.set(self.calls.get() + 1);
             self.inputs.borrow_mut().push(pcm.to_vec());
             Ok(self.texts.pop_front().unwrap_or_default())
+        }
+    }
+
+    struct FixedTranscriber {
+        texts: VecDeque<String>,
+    }
+
+    impl FixedTranscriber {
+        fn new(texts: &[&str]) -> Self {
+            Self {
+                texts: texts.iter().map(|text| (*text).to_string()).collect(),
+            }
+        }
+    }
+
+    impl Transcriber for FixedTranscriber {
+        fn transcribe(&mut self, _pcm: &[i16]) -> anyhow::Result<String> {
+            Ok(self.texts.pop_front().unwrap_or_default())
+        }
+    }
+
+    struct CountingTranscriber(Arc<AtomicUsize>);
+
+    impl Transcriber for CountingTranscriber {
+        fn transcribe(&mut self, _pcm: &[i16]) -> anyhow::Result<String> {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Ok("unused".into())
         }
     }
 
@@ -687,7 +792,13 @@ mod tests {
         let mut events = engine.push_audio(&phrase(123, 700));
         assert!(contains(&events, &EngineEvent::WakeHeard));
         events.extend(engine.push_audio(&phrase(123, 1_000)));
-        assert!(contains(&events, &EngineEvent::Command("папка загрузки".into())));
+        assert!(contains(
+            &events,
+            &EngineEvent::Command {
+                text: "папка загрузки".into(),
+                alt: None
+            }
+        ));
     }
 
     #[test]
@@ -732,13 +843,16 @@ mod tests {
 
         assert!(contains(
             &events,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert!(!contains(&events, &EngineEvent::WakeHeard));
         assert_eq!(
             events
                 .iter()
-                .filter(|event| matches!(event, EngineEvent::Command(_)))
+                .filter(|event| matches!(event, EngineEvent::Command { .. }))
                 .count(),
             1
         );
@@ -754,7 +868,10 @@ mod tests {
         let command = engine.push_audio(&phrase(123, 120));
         assert!(contains(
             &command,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert_eq!(
             wake.iter()
@@ -772,12 +889,15 @@ mod tests {
         assert!(contains(&prefix, &EngineEvent::WakeHeard));
         assert!(!prefix
             .iter()
-            .any(|event| matches!(event, EngineEvent::Command(_))));
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
 
         let continuation = engine.push_audio(&phrase(123, 120));
         assert!(contains(
             &continuation,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
     }
 
@@ -790,7 +910,10 @@ mod tests {
         let command = engine.push_audio(&phrase(123, 120));
         assert!(contains(
             &command,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
     }
 
@@ -821,7 +944,10 @@ mod tests {
         let events = engine.push_audio(&phrase(123, 120));
         assert!(contains(
             &events,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert!(!contains(&events, &EngineEvent::Timeout));
     }
@@ -834,7 +960,10 @@ mod tests {
 
         assert!(contains(
             &events,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert!(contains(&events, &EngineEvent::State("listening")));
     }
@@ -849,7 +978,13 @@ mod tests {
         assert!(!contains(&events, &EngineEvent::Timeout));
         events.extend(engine.push_audio(&phrase(123, 120)));
 
-        assert!(contains(&events, &EngineEvent::Command("открой загрузки".into())));
+        assert!(contains(
+            &events,
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
+        ));
         assert!(!contains(&events, &EngineEvent::Timeout));
     }
 
@@ -866,7 +1001,7 @@ mod tests {
         assert!(contains(&events, &EngineEvent::State("idle")));
         assert!(!events
             .iter()
-            .any(|event| matches!(event, EngineEvent::Command(_))));
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
     }
 
     #[test]
@@ -898,11 +1033,17 @@ mod tests {
 
         assert!(contains(
             &first,
-            &EngineEvent::Calibration("открой загрузки".into())
+            &EngineEvent::Calibration {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert!(contains(
             &second,
-            &EngineEvent::Calibration("файл студио".into())
+            &EngineEvent::Calibration {
+                text: "файл студио".into(),
+                alt: None
+            }
         ));
         engine.stop_calibration();
         assert!(contains(
@@ -923,7 +1064,7 @@ mod tests {
         let ignored = engine.push_audio(&phrase(123, 120));
         assert!(!ignored
             .iter()
-            .any(|event| matches!(event, EngineEvent::Command(_))));
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
     }
 
     #[test]
@@ -937,7 +1078,7 @@ mod tests {
 
         assert!(!events
             .iter()
-            .any(|event| matches!(event, EngineEvent::Command(_))));
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
         assert!(!events
             .iter()
             .any(|event| matches!(event, EngineEvent::WakeHeard)));
@@ -959,7 +1100,10 @@ mod tests {
             .any(|event| matches!(event, EngineEvent::Partial(text) if !text.is_empty())));
         assert!(contains(
             &events,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
     }
 
@@ -976,11 +1120,14 @@ mod tests {
         let muted_events = engine.push_audio(&muted);
         assert!(!muted_events
             .iter()
-            .any(|event| matches!(event, EngineEvent::Command(_))));
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
         let command = engine.push_audio(&phrase(222, 120));
         assert!(contains(
             &command,
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert!(!inputs.borrow()[1].contains(&111));
     }
@@ -995,10 +1142,13 @@ mod tests {
         let muted_events = command_engine.push_audio(&vec![111; samples(100)]);
         assert!(!muted_events
             .iter()
-            .any(|event| matches!(event, EngineEvent::Command(_) | EngineEvent::Timeout)));
+            .any(|event| matches!(event, EngineEvent::Command { .. } | EngineEvent::Timeout)));
         assert!(contains(
             &command_engine.push_audio(&phrase(222, 120)),
-            &EngineEvent::Command("открой загрузки".into())
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
         ));
         assert!(!command_inputs.borrow()[0].contains(&111));
 
@@ -1019,10 +1169,13 @@ mod tests {
         let muted_events = calibration_engine.push_audio(&vec![111; samples(100)]);
         assert!(!muted_events
             .iter()
-            .any(|event| matches!(event, EngineEvent::Calibration(_))));
+            .any(|event| matches!(event, EngineEvent::Calibration { .. })));
         assert!(contains(
             &calibration_engine.push_audio(&phrase(222, 120)),
-            &EngineEvent::Calibration("файл студио".into())
+            &EngineEvent::Calibration {
+                text: "файл студио".into(),
+                alt: None
+            }
         ));
         assert!(!calibration_inputs.borrow()[0].contains(&111));
     }
@@ -1046,5 +1199,82 @@ mod tests {
         ));
         assert!(contains(&events, &EngineEvent::State("idle")));
         assert!(!contains(&events, &EngineEvent::Timeout));
+    }
+
+    #[test]
+    fn second_transcriber_populates_alt_for_command() {
+        let (mut engine, _, _, _) = engine(test_config(), &["ривер открой загрузки"]);
+        engine.set_bilingual(
+            Some(Box::new(FixedTranscriber::new(&["downloads"]))),
+            None,
+            LangMode::En,
+        );
+
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(events.iter().any(|event| matches!(event,
+            EngineEvent::Command { text, alt: Some(alt) }
+                if text == "открой downloads" && alt == "открой загрузки"
+        )));
+    }
+
+    #[test]
+    fn second_transcriber_populates_alt_for_hotkey_command() {
+        let (mut engine, _, _, _) = engine(test_config(), &["открой загрузки"]);
+        engine.set_bilingual(
+            Some(Box::new(FixedTranscriber::new(&["downloads"]))),
+            None,
+            LangMode::En,
+        );
+        engine.listen_command();
+
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(events.iter().any(|event| matches!(event,
+            EngineEvent::Command { text, alt: Some(alt) }
+                if text == "открой downloads" && alt == "открой загрузки"
+        )));
+    }
+
+    #[test]
+    fn missing_second_transcriber_leaves_alt_empty() {
+        let (mut engine, _, _, _) = engine(test_config(), &["ривер открой загрузки"]);
+        engine.set_bilingual(None, None, LangMode::En);
+
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(events.iter().any(|event| matches!(event,
+            EngineEvent::Command { text, alt: None } if text == "открой загрузки"
+        )));
+    }
+
+    #[test]
+    fn calibration_also_emits_the_resolved_alternate() {
+        let (mut engine, _, _, _) = engine(test_config(), &["открой загрузки"]);
+        engine.start_calibration();
+        engine.set_bilingual(
+            Some(Box::new(FixedTranscriber::new(&["downloads"]))),
+            None,
+            LangMode::En,
+        );
+
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(events.iter().any(|event| matches!(event,
+            EngineEvent::Calibration { text, alt: Some(alt) }
+                if text == "открой downloads" && alt == "открой загрузки"
+        )));
+    }
+
+    #[test]
+    fn confirm_never_calls_the_second_transcriber() {
+        let (mut engine, _, _, _) = engine(test_config(), &["да"]);
+        let calls = Arc::new(AtomicUsize::new(0));
+        engine.set_bilingual(
+            Some(Box::new(CountingTranscriber(calls.clone()))),
+            None,
+            LangMode::En,
+        );
+        engine.listen_confirm();
+
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(contains(&events, &EngineEvent::Confirm(true)));
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
     }
 }

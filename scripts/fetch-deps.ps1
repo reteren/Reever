@@ -7,7 +7,7 @@
     sherpa-onnx) в src-tauri/resources/model/. Сама библиотека sherpa-onnx
     линкуется статически и скачивается сборкой cargo, здесь её нет.
 
-    Около 225 МБ на диске (~200 МБ загрузки).
+    Загружает русскую GigaAM v3, английскую Parakeet и Silero VAD.
     Скрипт идемпотентен: уже установленное пропускается, если не задан -Force.
 
 .PARAMETER Force
@@ -20,16 +20,23 @@
     Имя sherpa-onnx ASR-модели из GitHub release asr-models.
     По умолчанию sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16.
 
+.PARAMETER SecondModel
+    Имя дополнительной sherpa-onnx ASR-модели из GitHub release asr-models.
+    По умолчанию sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.
+
 .EXAMPLE
     pwsh scripts/fetch-deps.ps1
     pwsh scripts/fetch-deps.ps1 -Force
     pwsh scripts/fetch-deps.ps1 -AsrModel sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16
+    pwsh scripts/fetch-deps.ps1 -SecondModel sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8
 #>
 [CmdletBinding()]
 param(
     [switch]$Force,
     [switch]$SkipModels,
-    [string]$AsrModel = 'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16'
+    [string]$AsrModel = 'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',
+    [string]$SecondModel = 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
+    [string]$LidModel = 'sherpa-onnx-whisper-base'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -42,6 +49,9 @@ $SileroName = 'silero_vad.onnx'
 
 if ([IO.Path]::GetFileName($AsrModel) -ne $AsrModel -or [string]::IsNullOrWhiteSpace($AsrModel)) {
     throw "-AsrModel должен быть именем модели без пути: $AsrModel"
+}
+if ([IO.Path]::GetFileName($SecondModel) -ne $SecondModel -or [string]::IsNullOrWhiteSpace($SecondModel)) {
+    throw "-SecondModel должен быть именем модели без пути: $SecondModel"
 }
 
 # --- вспомогательное ---------------------------------------------------------
@@ -62,17 +72,71 @@ function Test-SherpaModel {
     if (-not (Test-Path (Join-Path $Path 'tokens.txt') -PathType Leaf)) { return $false }
 
     $onnx = @(Get-ChildItem -LiteralPath $Path -Filter '*.onnx' -File -ErrorAction SilentlyContinue)
-    $hasTransducer = ($onnx.Name -like 'encoder*.onnx') -and
-        (Test-Path (Join-Path $Path 'decoder.onnx') -PathType Leaf) -and
-        (Test-Path (Join-Path $Path 'joiner.onnx') -PathType Leaf)
+    $hasEncoder = @($onnx | Where-Object { $_.Name -like 'encoder*.onnx' }).Count -gt 0
+    $hasDecoder = @($onnx | Where-Object { $_.Name -like 'decoder*.onnx' }).Count -gt 0
+    $hasJoiner = @($onnx | Where-Object { $_.Name -like 'joiner*.onnx' }).Count -gt 0
+    $hasTransducer = $hasEncoder -and $hasDecoder -and $hasJoiner
     $hasCtc = ($onnx.Name -like 'model*.onnx')
     return ($hasTransducer -or $hasCtc)
+}
+
+# Whisper-модель определителя языка: <имя>-encoder*.onnx, <имя>-decoder*.onnx, <имя>-tokens.txt.
+function Test-WhisperModel {
+    param([string]$Path)
+    $files = @(Get-ChildItem -LiteralPath $Path -File -ErrorAction SilentlyContinue)
+    $hasEncoder = @($files | Where-Object { $_.Name -like '*-encoder*.onnx' }).Count -gt 0
+    $hasDecoder = @($files | Where-Object { $_.Name -like '*-decoder*.onnx' }).Count -gt 0
+    $hasTokens = @($files | Where-Object { $_.Name -like '*tokens.txt' }).Count -gt 0
+    return ($hasEncoder -and $hasDecoder -and $hasTokens)
+}
+
+function Install-WhisperModel {
+    param([string]$Name)
+    $target = Join-Path $ModelDir $Name
+    if ((Test-WhisperModel $target) -and -not $Force) {
+        Write-Skip $Name
+        return
+    }
+    $archive = Join-Path ([System.IO.Path]::GetTempPath()) "$Name.tar.bz2"
+    try {
+        Get-Archive -Url "$SherpaReleaseUrl/$Name.tar.bz2" -Destination $archive
+        if (Test-Path $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+        & tar.exe -xjf $archive -C $ModelDir
+        if ($LASTEXITCODE -ne 0) { throw "tar.exe завершился с кодом $LASTEXITCODE при распаковке $Name" }
+        if (-not (Test-WhisperModel $target)) { throw "после распаковки $Name не найдены encoder/decoder/tokens Whisper" }
+        Write-Ok $Name
+    } finally {
+        if (Test-Path $archive) { Remove-Item -LiteralPath $archive -Force }
+    }
+}
+
+function Install-SherpaModel {
+    param([string]$Name)
+    $target = Join-Path $ModelDir $Name
+    if ((Test-SherpaModel $target) -and -not $Force) {
+        Write-Skip $Name
+        return
+    }
+
+    $archive = Join-Path ([System.IO.Path]::GetTempPath()) "$Name.tar.bz2"
+    try {
+        Get-Archive -Url "$SherpaReleaseUrl/$Name.tar.bz2" -Destination $archive
+        if (Test-Path $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+        & tar.exe -xjf $archive -C $ModelDir
+        if ($LASTEXITCODE -ne 0) { throw "tar.exe завершился с кодом $LASTEXITCODE при распаковке $Name" }
+        if (-not (Test-SherpaModel $target)) {
+            throw "после распаковки $Name не найдены tokens.txt и ожидаемые ONNX-файлы"
+        }
+        Write-Ok $Name
+    } finally {
+        if (Test-Path $archive) { Remove-Item -LiteralPath $archive -Force }
+    }
 }
 
 # --- 1. модели ---------------------------------------------------------------
 if (-not $SkipModels) {
     New-Item -ItemType Directory -Force -Path $ModelDir | Out-Null
-    Write-Step 'Модели sherpa-onnx (GigaAM v3 + Silero VAD)'
+    Write-Step "Модели sherpa-onnx (GigaAM v3 + $SecondModel + $LidModel + Silero VAD)"
     $sileroPath = Join-Path $ModelDir $SileroName
     if ((Test-Path $sileroPath -PathType Leaf) -and -not $Force) {
         Write-Skip $SileroName
@@ -87,23 +151,15 @@ if (-not $SkipModels) {
         }
     }
 
-    $asrTarget = Join-Path $ModelDir $AsrModel
-    if ((Test-SherpaModel $asrTarget) -and -not $Force) {
-        Write-Skip $AsrModel
+    Install-SherpaModel -Name $AsrModel
+    if ($SecondModel -ne $AsrModel) {
+        Install-SherpaModel -Name $SecondModel
     } else {
-        $tmpAsr = Join-Path ([System.IO.Path]::GetTempPath()) "$AsrModel.tar.bz2"
-        try {
-            Get-Archive -Url "$SherpaReleaseUrl/$AsrModel.tar.bz2" -Destination $tmpAsr
-            if (Test-Path $asrTarget) { Remove-Item -LiteralPath $asrTarget -Recurse -Force }
-            & tar.exe -xjf $tmpAsr -C $ModelDir
-            if ($LASTEXITCODE -ne 0) { throw "tar.exe завершился с кодом $LASTEXITCODE при распаковке $AsrModel" }
-            if (-not (Test-SherpaModel $asrTarget)) {
-                throw "после распаковки $AsrModel не найдены tokens.txt и ожидаемые ONNX-файлы"
-            }
-            Write-Ok $AsrModel
-        } finally {
-            if (Test-Path $tmpAsr) { Remove-Item -LiteralPath $tmpAsr -Force }
-        }
+        Write-Skip "$SecondModel (совпадает с -AsrModel)"
+    }
+    # Определитель языка цели команды (docs/bilingual.md); пустое имя — без него.
+    if (-not [string]::IsNullOrWhiteSpace($LidModel)) {
+        Install-WhisperModel -Name $LidModel
     }
 } else {
     Write-Step 'Модели — пропущено (-SkipModels)'
@@ -119,6 +175,12 @@ if (-not $SkipModels) {
     }
     if (-not (Test-SherpaModel (Join-Path $ModelDir $AsrModel))) {
         $missing += "resources/model/$AsrModel (tokens.txt и encoder/decoder/joiner либо model*.onnx)"
+    }
+    if ($SecondModel -ne $AsrModel -and -not (Test-SherpaModel (Join-Path $ModelDir $SecondModel))) {
+        $missing += "resources/model/$SecondModel (tokens.txt и encoder/decoder/joiner либо model*.onnx)"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($LidModel) -and -not (Test-WhisperModel (Join-Path $ModelDir $LidModel))) {
+        $missing += "resources/model/$LidModel (Whisper encoder/decoder/tokens)"
     }
 }
 

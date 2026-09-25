@@ -146,6 +146,8 @@
         everything_host:'127.0.0.1',everything_port:8011,wake_words:['ривер','ревер','ривьер'],
         launch_everything_fallback:false,match_threshold:0.7,
         asr_model:'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',asr_threads:4,
+        english_enabled:true,second_asr_model:'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
+        lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
         vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
         partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
         raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,
@@ -155,10 +157,10 @@
         wake_words:['ривер','ревер','ривьер','ливер'],
         cancel_words:['отмена','стоп','отбой','забудь'],
         intents:[
-          {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true},
-          {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку'],url:'',enabled:true},
-          {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли'],url:'https://www.google.com/search?q={q}',enabled:true},
-          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true}
+          {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true,lang:'auto'},
+          {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку'],url:'',enabled:true,lang:'auto'},
+          {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли'],url:'https://www.google.com/search?q={q}',enabled:true,lang:'auto'},
+          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'}
         ]
       });
       let previewGrammar=defaultGrammarPreview();
@@ -190,7 +192,7 @@
           case 'list_actions': return [];
           case 'list_apps': return [];
           case 'list_sound_packs': return ['default'];
-          case 'list_asr_models': return [previewSettings.asr_model];
+          case 'list_asr_models': return [...new Set([previewSettings.asr_model,previewSettings.second_asr_model,previewSettings.lid_model].filter(Boolean))];
           case 'get_paused': case 'get_autostart': return false;
           case 'check_everything': return false;
           case 'get_wallpaper': return null;
@@ -460,6 +462,17 @@
             const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
             intent.triggers=hasBare?['',...values]:values;
           },'фразу');
+          const langWrap=el('div',{className:'grammar-lang-field'});
+          langWrap.append(el('span',{className:'fld',textContent:'Язык цели'}));
+          const langSelect=el('select');
+          for(const [value,label] of [['auto','Авто'],['ru','Русский'],['en','Английский']]){
+            const option=el('option',{value,textContent:label});
+            if((intent.lang||'auto')===value) option.selected=true;
+            langSelect.append(option);
+          }
+          langSelect.onchange=()=>intent.lang=langSelect.value;
+          langWrap.append(langSelect,el('div',{className:'hint grammar-language-help',textContent:'Авто — общий режим; например, для «папка» выбери английский, если имена папок английские.'}));
+          group.append(langWrap);
           if(intent.kind==='launch'){
             const bareRow=el('label',{className:'cbrow grammar-bare-launch'});
             const bare=el('input',{type:'checkbox'}); bare.checked=getTriggers().some(value=>!String(value).trim());
@@ -481,7 +494,7 @@
           let timestamp=Date.now();
           while(grammarDraft.intents.some(intent=>intent.id===`search_${timestamp}`)) timestamp++;
           const id=`search_${timestamp}`;
-          grammarDraft.intents.push({id,kind:'search',label:'Новый поиск',triggers:['поиск'],url:'https://example.com/?q={q}',enabled:true});
+          grammarDraft.intents.push({id,kind:'search',label:'Новый поиск',triggers:['поиск'],url:'https://example.com/?q={q}',enabled:true,lang:'auto'});
           renderGrammarEditor();
         };
         grammarEditor.append(addSearch);
@@ -536,7 +549,13 @@
       const GROUPS=[
         ['Активация',[['activation_mode','Режим — рестарт','select',['both','wake','hotkey']],['hotkey','Хоткей push-to-talk — сразу','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» — сразу','hotkey']]],
         ['Приватность',[['private_log','Приватный лог — рестарт','bool'],['offline_mode','Офлайн-режим — рестарт','bool']]],
-        ['Распознавание',[['asr_model','Модель ASR — рестарт','model'],['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после wake, мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number']]],
+        ['Распознавание',[
+          ['asr_model','Русская модель распознавания — рестарт','model'],
+          ['english_enabled','Второй язык (английский) — рестарт','bool'],
+          ['second_asr_model','Модель второго языка — рестарт','model'],
+          ['lid_model','Определитель языка — рестарт','model_optional'],
+          ['payload_language','Язык цели команды по умолчанию — рестарт','language'],
+          ['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после wake, мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number']]],
         ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],
         ['Система',[['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],['raise_result','Поднимать открытое окно на передний план — рестарт','bool']]],
       ];
@@ -554,10 +573,15 @@
         const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
         let inp;
         if(type==='list'){ inp=el('input',{value:(settingsObj[key]||[]).join(', ')}); inp.oninput=()=>settingsObj[key]=inp.value.split(',').map(s=>s.trim()).filter(Boolean); }
-        else if(type==='model'){
+        else if(type==='model'||type==='model_optional'){
           inp=el('select');
           const models=Array.isArray(opts)?opts.slice():[];
           const selected=settingsObj[key]||'';
+          if(type==='model_optional'){
+            const noModel=el('option',{value:'',textContent:'Без модели, только эвристика'});
+            if(!selected) noModel.selected=true;
+            inp.append(noModel);
+          }
           if(selected&&!models.includes(selected)) models.unshift(selected);
           for(const model of models){
             const missing=model===selected&&!(opts||[]).includes(model);
@@ -566,6 +590,17 @@
             inp.append(op);
           }
           inp.onchange=()=>settingsObj[key]=inp.value;
+        }
+        else if(type==='language'){
+          inp=el('select');
+          for(const [value,label] of [['auto','Авто'],['ru','Русский'],['en','Английский']]){
+            const option=el('option',{value,textContent:label});
+            if((settingsObj[key]||'auto')===value) option.selected=true;
+            inp.append(option);
+          }
+          inp.onchange=()=>settingsObj[key]=inp.value;
+          wrap.append(inp,el('div',{className:'hint grammar-language-help',textContent:'Авто: русская команда, а название — на том языке, на котором сказано: «ривер поиск ютуб never gonna give you up».'}));
+          return wrap;
         }
         else if(type==='select'){ inp=el('select'); for(const o of opts){const op=el('option',{value:o,textContent:o});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }
         else if(type==='hotkey'){
@@ -617,7 +652,7 @@
           const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:title}));
           for(const f of fields){
             const field=f.slice();
-            if(field[0]==='asr_model') field.push(models);
+            if(['asr_model','second_asr_model','lid_model'].includes(field[0])) field.push(models);
             g.append(fieldEl(...field));
           }
           F.append(g);

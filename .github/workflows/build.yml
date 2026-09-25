@@ -20,8 +20,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # Модель GigaAM и Silero VAD не хранятся в git (~225 МБ).
-      # Скрипт фиксирует имена, версии и URL; конфиг фиксирует состав ресурсов.
+      # GigaAM, Parakeet и Silero VAD не хранятся в git.
+      # Скрипт фиксирует имена, версии и URL; конфиг фиксирует состав ресурсов,
+      # поэтому оба файла обновляют ключ кеша при смене состава speech-моделей.
       - name: Cache speech dependencies
         id: cache-speech
         uses: actions/cache@v4

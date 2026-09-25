@@ -30,7 +30,7 @@ pub enum Route {
     /// Ни одно действие не подошло — искать программу через Everything (если включено).
     LaunchFallback(String),
     /// Динамический поиск папки через Everything.
-    Folder(String),
+    Folder(Vec<String>),
     /// Веб-поиск: готовый URL и подпись намерения.
     Search { label: String, url: String },
     /// Ничего не подошло.
@@ -39,28 +39,44 @@ pub enum Route {
 
 /// Разбирает нормализованный текст после wake; ведущие слова-паразиты снимаются здесь,
 /// чтобы одинаково обрабатывались вызовы из движка и прямые route-тесты.
-pub fn route(text: &str, grammar: &Grammar, actions: &[Action], match_threshold: f64) -> Route {
+pub fn route(
+    text: &str,
+    alt: Option<&str>,
+    grammar: &Grammar,
+    actions: &[Action],
+    match_threshold: f64,
+) -> Route {
     let text = strip_leading_fillers(&normalize(text));
     if text.is_empty() {
         return Route::Unknown;
     }
 
     if let Some(trigger) = grammar.match_trigger(&text) {
-        let payload = trigger.payload.trim();
-        if payload.is_empty() {
+        let mut payloads = vec![trigger.payload.trim().to_string()];
+        if trigger.intent.kind != IntentKind::Search {
+            if let Some(alt) = alt.map(|alt| strip_leading_fillers(&normalize(alt))) {
+                if let Some(alt_trigger) = grammar
+                    .match_trigger(&alt)
+                    .filter(|matched| matched.intent.id == trigger.intent.id)
+                {
+                    push_unique(&mut payloads, alt_trigger.payload.trim());
+                }
+            }
+        }
+        if payloads[0].is_empty() {
             return Route::Unknown;
         }
 
         return match trigger.intent.kind {
-            IntentKind::Folder => Route::Folder(payload.to_owned()),
+            IntentKind::Folder => Route::Folder(payloads),
             IntentKind::Search => Route::Search {
                 label: trigger.intent.label.clone(),
-                url: trigger.intent.url.replace("{q}", &urlencode(payload)),
+                url: trigger.intent.url.replace("{q}", &urlencode(&payloads[0])),
             },
             IntentKind::Launch => {
-                let matched = match_launch_targets(payload, actions, match_threshold);
+                let matched = match_launch_targets(&payloads, actions, match_threshold);
                 if matched.is_empty() {
-                    Route::LaunchFallback(payload.to_owned())
+                    Route::LaunchFallback(payloads[0].clone())
                 } else {
                     Route::Launch(matched)
                 }
@@ -69,9 +85,12 @@ pub fn route(text: &str, grammar: &Grammar, actions: &[Action], match_threshold:
     }
 
     if grammar.allows_bare_launch() {
-        if let Some((action, _score)) = best_action(&text, actions, match_threshold, |action| {
-            action.kind != "search"
-        }) {
+        let candidates = command_candidates(&text, alt);
+        if let Some((action, _score)) =
+            best_action(&candidates, actions, match_threshold, |action| {
+                action.kind != "search"
+            })
+        {
             return if action.kind == "system" {
                 Route::System(action.clone())
             } else {
@@ -81,88 +100,132 @@ pub fn route(text: &str, grammar: &Grammar, actions: &[Action], match_threshold:
 
         // При bare-launch разрешены и короткие имена нескольких действий; сначала
         // проверяем, что каждый фрагмент разрешается в пользовательское действие.
-        let targets = split_targets(&text);
-        if targets.len() > 1 {
-            let mut matched = Vec::with_capacity(targets.len());
-            for target in &targets {
-                let Some((action, _score)) =
-                    best_action(target, actions, match_threshold, |action| {
-                        action.kind != "system" && action.kind != "search"
-                    })
-                else {
-                    matched.clear();
-                    break;
-                };
-                matched.push(action.clone());
-            }
-            if !matched.is_empty() {
-                return Route::Launch(matched);
+        for candidate in &candidates {
+            let targets = split_targets(candidate);
+            if targets.len() > 1 {
+                let mut matched = Vec::with_capacity(targets.len());
+                for target in &targets {
+                    let Some((action, _score)) = best_action(
+                        std::slice::from_ref(target),
+                        actions,
+                        match_threshold,
+                        |action| action.kind != "system" && action.kind != "search",
+                    ) else {
+                        matched.clear();
+                        break;
+                    };
+                    if !matched
+                        .iter()
+                        .any(|previous: &Action| previous.id == action.id)
+                    {
+                        matched.push(action.clone());
+                    }
+                }
+                if !matched.is_empty() {
+                    return Route::Launch(matched);
+                }
             }
         }
 
         Route::LaunchFallback(text)
     } else {
-        best_action(&text, actions, match_threshold, |action| {
-            action.kind == "system"
-        })
+        best_action(
+            std::slice::from_ref(&text),
+            actions,
+            match_threshold,
+            |action| action.kind == "system",
+        )
         .map(|(action, _score)| Route::System(action.clone()))
         .unwrap_or(Route::Unknown)
     }
 }
 
-fn match_launch_targets(payload: &str, actions: &[Action], threshold: f64) -> Vec<Action> {
-    split_targets(payload)
-        .iter()
-        .filter_map(|target| {
-            best_action(target, actions, threshold, |action| {
-                action.kind != "system" && action.kind != "search"
-            })
-            .map(|(action, _score)| action.clone())
-        })
-        .collect()
+fn match_launch_targets(payloads: &[String], actions: &[Action], threshold: f64) -> Vec<Action> {
+    let mut matched = Vec::new();
+    for payload in payloads {
+        for target in split_targets(payload) {
+            if let Some((action, _score)) = best_action(
+                std::slice::from_ref(&target),
+                actions,
+                threshold,
+                |action| action.kind != "system" && action.kind != "search",
+            ) {
+                if !matched
+                    .iter()
+                    .any(|previous: &Action| previous.id == action.id)
+                {
+                    matched.push(action.clone());
+                }
+            }
+        }
+    }
+    matched
 }
 
 fn best_action<'a>(
-    text: &str,
+    candidates: &[String],
     actions: &'a [Action],
     threshold: f64,
     eligible: impl Fn(&Action) -> bool,
 ) -> Option<(&'a Action, f64)> {
-    let candidate = text.to_owned();
     actions
         .iter()
         .filter(|action| eligible(action))
-        .map(|action| (action, action.score(std::slice::from_ref(&candidate))))
+        .map(|action| (action, action.score(candidates)))
         .filter(|(_, score)| *score >= threshold)
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
 }
 
-fn launch_action_score(action: &Action, text: &str, grammar: &Grammar) -> f64 {
-    let normalized = strip_leading_fillers(&normalize(text));
-    let payload = grammar
-        .match_trigger(&normalized)
-        .filter(|matched| matched.intent.kind == IntentKind::Launch)
-        .map(|matched| matched.payload)
-        .unwrap_or(normalized);
-    split_targets(&payload)
+fn launch_action_score(action: &Action, texts: &[&str], grammar: &Grammar) -> f64 {
+    texts
         .iter()
-        .map(|target| action.score(std::slice::from_ref(target)))
+        .flat_map(|text| {
+            let normalized = strip_leading_fillers(&normalize(text));
+            let payload = grammar
+                .match_trigger(&normalized)
+                .filter(|matched| matched.intent.kind == IntentKind::Launch)
+                .map(|matched| matched.payload)
+                .unwrap_or(normalized);
+            split_targets(&payload)
+        })
+        .map(|target| action.score(std::slice::from_ref(&target)))
         .fold(0.0, f64::max)
+}
+
+fn command_candidates(text: &str, alt: Option<&str>) -> Vec<String> {
+    let mut candidates = vec![text.to_string()];
+    if let Some(alt) = alt {
+        push_unique(
+            &mut candidates,
+            strip_leading_fillers(&normalize(alt)).trim(),
+        );
+    }
+    candidates
+}
+
+fn push_unique(candidates: &mut Vec<String>, candidate: &str) {
+    let candidate = candidate.trim();
+    if !candidate.is_empty()
+        && !candidates
+            .iter()
+            .any(|existing| normalize(existing) == normalize(candidate))
+    {
+        candidates.push(candidate.to_string());
+    }
 }
 
 pub fn dispatch(
     app: &AppHandle,
     cfg: &ReeverConfig,
     shared: &Arc<SharedState>,
-    ru_text: &str,
-    en_text: Option<&str>,
+    text: &str,
+    alt: Option<&str>,
 ) -> DispatchResult {
     // Копируем снапшоты под короткими локами; Everything и запуск приложений идут
     // уже без удержания общих mutex, чтобы не задерживать обновления грамматики/UI.
     let grammar = shared.grammar.lock().unwrap().clone();
     let actions = shared.actions.lock().unwrap().clone();
-    let _ = en_text; // EN-транскрипция больше не используется для папок и запуска.
-    let route = route(ru_text, &grammar, &actions, cfg.settings.match_threshold);
+    let route = route(text, alt, &grammar, &actions, cfg.settings.match_threshold);
 
     match route {
         Route::System(action) => {
@@ -174,7 +237,7 @@ pub fn dispatch(
                 );
                 return DispatchResult::Confirm(op);
             }
-            let normalized = strip_leading_fillers(&normalize(ru_text));
+            let normalized = strip_leading_fillers(&normalize(text));
             let score = action.score(&[normalized]);
             ui_log(
                 app,
@@ -185,7 +248,7 @@ pub fn dispatch(
         Route::Launch(actions) => {
             let mut any = false;
             for action in &actions {
-                let score = launch_action_score(action, ru_text, &grammar);
+                let score = launch_action_score(action, &[text, alt.unwrap_or("")], &grammar);
                 ui_log(
                     app,
                     format!("↪ действие «{}» (score {score:.2})", action.label),
@@ -219,7 +282,7 @@ pub fn dispatch(
             );
             DispatchResult::Done(handle_launch(app, cfg, outcome, &query))
         }
-        Route::Folder(target) => DispatchResult::Done(open_via_everything(app, cfg, &target)),
+        Route::Folder(targets) => DispatchResult::Done(open_via_everything(app, cfg, &targets)),
         Route::Search { label, url } => {
             if cfg.settings.offline_mode {
                 ui_log(app, "🔒 офлайн-режим: веб-поиск отключён");
@@ -297,7 +360,7 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
     }
 }
 
-fn open_via_everything(app: &AppHandle, cfg: &ReeverConfig, target: &str) -> bool {
+fn open_via_everything(app: &AppHandle, cfg: &ReeverConfig, targets: &[String]) -> bool {
     if cfg.settings.offline_mode {
         ui_log(app, "🔒 офлайн-режим: поиск папок (Everything) отключён");
         return false;
@@ -305,41 +368,78 @@ fn open_via_everything(app: &AppHandle, cfg: &ReeverConfig, target: &str) -> boo
     let host = &cfg.settings.everything_host;
     let port = cfg.settings.everything_port;
 
-    let query = cfg
-        .aliases
-        .folder(target)
-        .unwrap_or_else(|| target.to_string());
+    let mut queries = Vec::new();
+    for target in targets {
+        let query = cfg
+            .aliases
+            .folder(target)
+            .unwrap_or_else(|| target.to_string());
+        push_unique(&mut queries, &query);
+    }
+    if queries.is_empty() {
+        ui_log(app, "∅ пустой запрос папки");
+        return false;
+    }
     if cfg.settings.private_log {
-        ui_log(app, "🔎 поиск папок…");
+        ui_log(
+            app,
+            format!("🔎 поиск папок по {} вариантам…", queries.len()),
+        );
     } else {
-        ui_log(app, format!("🔎 поиск папок: «{query}»"));
+        ui_log(
+            app,
+            format!(
+                "🔎 поиск папок: {}",
+                queries
+                    .iter()
+                    .map(|q| format!("«{q}»"))
+                    .collect::<Vec<_>>()
+                    .join(" / ")
+            ),
+        );
     }
-    let outcome = everything::find_folders(host, port, &query);
-    handle_open(app, cfg, outcome, &query)
-}
 
-fn handle_open(app: &AppHandle, cfg: &ReeverConfig, outcome: SearchOutcome, probe: &str) -> bool {
-    if let Some(error) = outcome.error {
-        ui_log(app, format!("⚠ {error}"));
-        return false;
+    let mut errors = Vec::new();
+    let mut best: Option<(std::path::PathBuf, String, usize, f64)> = None;
+    for (index, query) in queries.iter().enumerate() {
+        let outcome = everything::find_folders(host, port, query);
+        if let Some(error) = outcome.error {
+            errors.push(error);
+        }
+        for path in outcome.paths {
+            let base = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("");
+            let similarity = jaro_winkler(&normalize(query), &normalize(base));
+            if best
+                .as_ref()
+                .is_none_or(|(_, _, _, score)| similarity > *score)
+            {
+                best = Some((path, query.clone(), index, similarity));
+            }
+        }
     }
-    if outcome.paths.is_empty() {
-        ui_log(app, "∅ папки не найдены");
+    let Some((best, query, variant_index, similarity)) = best else {
+        if let Some(error) = errors.first() {
+            ui_log(app, format!("⚠ {error}"));
+        } else {
+            ui_log(app, "∅ папки не найдены");
+        }
         return false;
-    }
-    let best = outcome.paths[0].clone();
+    };
     let base = best
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("")
-        .to_lowercase();
+        .to_string();
 
-    let similarity = jaro_winkler(&probe.to_lowercase(), &base);
     if similarity < cfg.settings.open_min_similarity {
         ui_log(
             app,
             format!(
-                "∅ не уверен ({similarity:.2} < {:.2}) — пропускаю «{}»",
+                "∅ вариант {} не уверен ({similarity:.2} < {:.2}) — пропускаю «{}»",
+                variant_index + 1,
                 cfg.settings.open_min_similarity,
                 best.display()
             ),
@@ -347,11 +447,22 @@ fn handle_open(app: &AppHandle, cfg: &ReeverConfig, outcome: SearchOutcome, prob
         return false;
     }
 
-    ui_log(app, format!("📁 {}", best.display()));
-    if outcome.paths.len() > 1 {
+    if cfg.settings.private_log {
         ui_log(
             app,
-            format!("(+{} др. — открываю лучшее)", outcome.paths.len() - 1),
+            format!(
+                "📁 победил вариант {} (похожесть {similarity:.2})",
+                variant_index + 1
+            ),
+        );
+    } else {
+        ui_log(
+            app,
+            format!(
+                "📁 победил вариант {} «{query}» (похожесть {similarity:.2}): {}",
+                variant_index + 1,
+                best.display()
+            ),
         );
     }
     let hint = base;
@@ -391,11 +502,15 @@ fn launch_with_raise(cfg: &ReeverConfig, hint: &str, f: impl FnOnce() -> bool) -
 
 #[cfg(test)]
 mod tests {
-    use super::{route, Route};
+    use super::{route as route_with_alt, Route};
     use crate::actions::Action;
     use crate::grammar::Grammar;
 
     const THRESHOLD: f64 = 0.7;
+
+    fn route(text: &str, grammar: &Grammar, actions: &[Action], threshold: f64) -> Route {
+        route_with_alt(text, None, grammar, actions, threshold)
+    }
 
     fn actions() -> Vec<Action> {
         serde_json::from_str(include_str!("../resources/actions.json"))
@@ -511,11 +626,11 @@ mod tests {
         );
         assert_eq!(
             route("папка загрузки", &grammar, &actions, THRESHOLD),
-            Route::Folder("загрузки".into())
+            Route::Folder(vec!["загрузки".into()])
         );
         assert_eq!(
             route("открой папку загрузки", &grammar, &actions, THRESHOLD),
-            Route::Folder("загрузки".into())
+            Route::Folder(vec!["загрузки".into()])
         );
         assert_eq!(
             action_id(route("запусти доту два", &grammar, &actions, THRESHOLD)),
@@ -562,6 +677,91 @@ mod tests {
         assert_eq!(
             action_id(route("открой фотошоп", &grammar, &actions, THRESHOLD)),
             "act_mqlpel49"
+        );
+    }
+
+    #[test]
+    fn search_uses_primary_text_and_ignores_alt() {
+        let grammar = Grammar::defaults();
+        let actions = actions();
+        let result = route_with_alt(
+            "поиск ютуб sinksaiko i'm sloth",
+            Some("поиск ютуб смешные коты"),
+            &grammar,
+            &actions,
+            THRESHOLD,
+        );
+        assert_eq!(
+            result,
+            Route::Search {
+                label: "поиск на YouTube".into(),
+                url: format!(
+                    "https://www.youtube.com/results?search_query={}",
+                    super::urlencode(&crate::textnorm::normalize("sinksaiko i'm sloth"))
+                ),
+            }
+        );
+    }
+
+    #[test]
+    fn folder_route_keeps_distinct_primary_and_english_targets() {
+        let grammar = Grammar::defaults();
+        let actions = actions();
+        assert_eq!(
+            route_with_alt(
+                "открой папку загрузки",
+                Some("открой папку downloads"),
+                &grammar,
+                &actions,
+                THRESHOLD,
+            ),
+            Route::Folder(vec!["загрузки".into(), "downloads".into()])
+        );
+    }
+
+    #[test]
+    fn explicit_launch_can_match_an_action_found_only_in_alt() {
+        let grammar = Grammar::defaults();
+        let actions = vec![Action {
+            id: "fl-studio".into(),
+            label: "FL Studio".into(),
+            kind: "shell".into(),
+            target: "fl-studio.exe".into(),
+            verbs: Vec::new(),
+            phrases: vec!["fl studio".into()],
+        }];
+        assert_eq!(
+            route_with_alt(
+                "открой файл студио",
+                Some("открой fl studio"),
+                &grammar,
+                &actions,
+                THRESHOLD,
+            ),
+            Route::Launch(vec![actions[0].clone()])
+        );
+    }
+
+    #[test]
+    fn bare_launch_can_match_an_action_found_only_in_alt() {
+        let grammar = Grammar::defaults();
+        let actions = vec![Action {
+            id: "fl-studio".into(),
+            label: "FL Studio".into(),
+            kind: "shell".into(),
+            target: "fl-studio.exe".into(),
+            verbs: Vec::new(),
+            phrases: vec!["fl studio".into()],
+        }];
+        assert_eq!(
+            route_with_alt(
+                "файл студио",
+                Some("fl studio"),
+                &grammar,
+                &actions,
+                THRESHOLD,
+            ),
+            Route::Launch(vec![actions[0].clone()])
         );
     }
 }

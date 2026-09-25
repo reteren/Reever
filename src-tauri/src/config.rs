@@ -51,6 +51,15 @@ pub struct Settings {
     /// Папка sherpa-onnx модели относительно resources/model/.
     #[serde(default = "default_asr_model")]
     pub asr_model: String,
+    /// Папка второй модели для распознавания цели команды (английская/мультиязычная).
+    #[serde(default = "default_second_asr_model")]
+    pub second_asr_model: String,
+    /// Папка модели LID; пустая строка отключает модель и оставляет текстовые эвристики.
+    #[serde(default = "default_lid_model")]
+    pub lid_model: String,
+    /// Язык цели команды по умолчанию: `auto`, `ru` или `en`.
+    #[serde(default = "default_payload_language")]
+    pub payload_language: String,
     /// Число потоков ONNX Runtime для распознавания.
     #[serde(default = "default_asr_threads")]
     pub asr_threads: u32,
@@ -111,6 +120,15 @@ fn default_endpoint_ms() -> u64 {
 
 fn default_asr_model() -> String {
     "sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16".into()
+}
+fn default_second_asr_model() -> String {
+    "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8".into()
+}
+fn default_lid_model() -> String {
+    "sherpa-onnx-whisper-base".into()
+}
+fn default_payload_language() -> String {
+    "auto".into()
 }
 fn default_asr_threads() -> u32 {
     4
@@ -205,6 +223,9 @@ fn parse_settings(text: &str) -> Settings {
     restore!("match_threshold", match_threshold, f64);
     restore!("english_enabled", english_enabled, bool);
     restore!("asr_model", asr_model, String);
+    restore!("second_asr_model", second_asr_model, String);
+    restore!("lid_model", lid_model, String);
+    restore!("payload_language", payload_language, String);
     restore!("asr_threads", asr_threads, u32);
     restore!("vad_threshold", vad_threshold, f32);
     restore!("wake_pause_ms", wake_pause_ms, u32);
@@ -242,6 +263,9 @@ impl Default for Settings {
             match_threshold: default_match_threshold(),
             english_enabled: true,
             asr_model: default_asr_model(),
+            second_asr_model: default_second_asr_model(),
+            lid_model: default_lid_model(),
+            payload_language: default_payload_language(),
             asr_threads: default_asr_threads(),
             vad_threshold: default_vad_threshold(),
             wake_pause_ms: default_wake_pause_ms(),
@@ -267,6 +291,9 @@ impl Default for Settings {
 #[derive(Clone)]
 pub struct ReeverConfig {
     pub asr_model_dir: PathBuf,
+    pub second_model_dir: PathBuf,
+    /// `None` означает режим LID только по текстовым эвристикам.
+    pub lid_model_dir: Option<PathBuf>,
     pub vad_model_path: PathBuf,
     pub sounds_dir: PathBuf,
     pub settings_path: PathBuf,
@@ -287,8 +314,16 @@ impl ReeverConfig {
             .map(|s| parse_settings(&s))
             .unwrap_or_default();
 
+        let lid_model_dir = if settings.lid_model.trim().is_empty() {
+            None
+        } else {
+            Some(resource(app, &format!("model/{}", settings.lid_model)))
+        };
+
         Ok(Self {
             asr_model_dir: resource(app, &format!("model/{}", settings.asr_model)),
+            second_model_dir: resource(app, &format!("model/{}", settings.second_asr_model)),
+            lid_model_dir,
             vad_model_path: resource(app, "model/silero_vad.onnx"),
             sounds_dir: user_config_dir(app, "sounds"),
             settings_path,

@@ -22,6 +22,13 @@ Reever распространяется вместе со сторонними �
 - **Авторское право**: Copyright (c) 2020-present Silero Team.
 - **Источник**: https://github.com/snakers4/silero-vad/blob/master/LICENSE
 
+## NVIDIA Parakeet TDT 0.6B v2
+
+- **Компонент**: `sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8` (ONNX-конверсия NVIDIA `parakeet-tdt-0.6b-v2`)
+- **Лицензия**: Creative Commons Attribution 4.0 International (CC BY 4.0), согласно карточке модели NVIDIA.
+- **Источник**: https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2
+- **ONNX-пакет**: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+
 ## Rust-зависимости
 
 Полный список с версиями — `src-tauri/Cargo.lock`. Ключевые: `tauri` (Apache-2.0 / MIT), `sherpa-onnx`, `cpal`, `rodio`, `rubato`, `strsim`, `serde`, `windows`, `lnk`. Проверить лицензии всего дерева разом:

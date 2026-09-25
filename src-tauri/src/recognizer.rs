@@ -12,6 +12,9 @@ use tauri::{AppHandle, Emitter};
 
 use crate::actions::SharedState;
 use crate::asr::{Asr, AsrConfig};
+use crate::bilingual::LangMode;
+use crate::langid::SpeechLid;
+use crate::speech::LanguageId;
 use crate::audio::{start_capture, Player};
 use crate::config::ReeverConfig;
 use crate::dispatch::{dispatch, DispatchResult};
@@ -121,6 +124,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         asr,
         vad,
     );
+    enable_second_language(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
 
     let (tx, rx) = sync_channel::<Vec<i16>>(AUDIO_QUEUE);
@@ -184,6 +188,56 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         }
     }
     Ok(())
+}
+
+/// Второй язык цели команды («ривер поиск ютуб never gonna give you up»): вторая модель
+/// распознаёт вырезанную цель, определитель языка выбирает вариант (docs/bilingual.md).
+/// Нет модели на диске — не фатально: работаем только по-русски и пишем об этом в лог.
+fn enable_second_language<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
+where
+    T: crate::speech::Transcriber,
+    V: crate::speech::VoiceDetector,
+{
+    let s = &cfg.settings;
+    if !s.english_enabled {
+        ui_log(app, "второй язык выключен — только русский");
+        return;
+    }
+    let second = match Asr::new(&AsrConfig {
+        model_dir: cfg.second_model_dir.clone(),
+        num_threads: s.asr_threads.max(1) as i32,
+    }) {
+        Ok(asr) => asr,
+        Err(e) => {
+            ui_log(app, format!("⚠ второй язык недоступен: {e:#}"));
+            return;
+        }
+    };
+    let lid: Option<Box<dyn LanguageId + Send>> = match &cfg.lid_model_dir {
+        Some(dir) => match SpeechLid::new(dir, 1) {
+            Ok(lid) => Some(Box::new(lid)),
+            Err(e) => {
+                ui_log(app, format!("⚠ определитель языка недоступен ({e:#}) — только эвристика"));
+                None
+            }
+        },
+        None => None,
+    };
+    let mode = match s.payload_language.as_str() {
+        "ru" => LangMode::Ru,
+        "en" => LangMode::En,
+        _ => LangMode::Auto,
+    };
+    ui_log(
+        app,
+        format!(
+            "✓ второй язык: {} · определитель: {} · язык цели: {}",
+            s.second_asr_model,
+            if lid.is_some() { s.lid_model.as_str() } else { "эвристика" },
+            s.payload_language
+        ),
+    );
+    engine.set_bilingual(Some(Box::new(second)), lid, mode);
 }
 
 /// Побочные эффекты событий Engine. Отдельная структура, чтобы не таскать пять
@@ -286,9 +340,9 @@ impl Worker<'_> {
                     let _ = self.app.emit("reever://partial", t);
                 }
             }
-            EngineEvent::Command(text) => self.command(engine, &text),
+            EngineEvent::Command { text, alt } => self.command(engine, &text, alt.as_deref()),
             EngineEvent::Confirm(yes) => self.confirm(yes),
-            EngineEvent::Calibration(text) => self.calibration(&text),
+            EngineEvent::Calibration { text, alt } => self.calibration(&text, alt.as_deref()),
             EngineEvent::Timeout => {
                 if self.confirm_op.take().is_some() {
                     ui_log(self.app, "↩ не дождался подтверждения — отменено");
@@ -303,7 +357,7 @@ impl Worker<'_> {
         }
     }
 
-    fn command<T, V>(&mut self, engine: &mut Engine<T, V>, text: &str)
+    fn command<T, V>(&mut self, engine: &mut Engine<T, V>, text: &str, alt: Option<&str>)
     where
         T: crate::speech::Transcriber,
         V: crate::speech::VoiceDetector,
@@ -323,7 +377,7 @@ impl Worker<'_> {
         }
         self.sound("received.wav");
         set_state(self.app, "busy");
-        match dispatch(self.app, self.cfg, self.shared, text, None) {
+        match dispatch(self.app, self.cfg, self.shared, text, alt) {
             DispatchResult::Done(ok) => {
                 self.sound(if ok { "success.wav" } else { "error.wav" });
                 set_state(self.app, "idle");
@@ -349,10 +403,15 @@ impl Worker<'_> {
         set_state(self.app, "idle");
     }
 
-    fn calibration(&mut self, text: &str) {
+    fn calibration(&mut self, text: &str, alt: Option<&str>) {
         let Some(id) = self.calibrating.clone() else { return };
         let phrase = text.trim();
-        if phrase.is_empty() {
+        let mut candidates = vec![phrase.to_string()];
+        if let Some(alt) = alt.map(str::trim).filter(|alt| !alt.is_empty()) {
+            candidates.push(alt.to_string());
+        }
+        candidates.retain(|candidate| !candidate.is_empty());
+        if candidates.is_empty() {
             ui_log(self.app, "⚠ калибровка: ничего не распознано, повтори");
             let _ = self.app.emit("reever://calibrated", id);
             return;
@@ -360,9 +419,20 @@ impl Worker<'_> {
         let added = {
             let mut actions = self.shared.actions.lock().unwrap();
             match actions.iter_mut().find(|a| a.id == id) {
-                Some(a) if !a.phrases.iter().any(|p| textnorm::normalize(p) == phrase) => {
-                    a.phrases.push(phrase.to_string());
-                    true
+                Some(action) => {
+                    let mut added = false;
+                    for candidate in &candidates {
+                        let normalized = textnorm::normalize(candidate);
+                        if !action
+                            .phrases
+                            .iter()
+                            .any(|existing| textnorm::normalize(existing) == normalized)
+                        {
+                            action.phrases.push(candidate.clone());
+                            added = true;
+                        }
+                    }
+                    added
                 }
                 _ => false,
             }

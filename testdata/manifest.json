@@ -1,742 +1,1504 @@
 [
-    {
-        "file":  "000_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер фотошоп",
-        "expected":  [
-                         "фотошоп"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "001_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер фотошоп",
-        "expected":  [
-                         "фотошоп"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "002_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер дискорд",
-        "expected":  [
-                         "дискорд"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "003_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер дискорд",
-        "expected":  [
-                         "дискорд"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "004_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер стим",
-        "expected":  [
-                         "стим"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "005_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер стим",
-        "expected":  [
-                         "стим"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "006_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер спотифай",
-        "expected":  [
-                         "спотифай"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "007_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер спотифай",
-        "expected":  [
-                         "спотифай"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "008_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер юнити хаб",
-        "expected":  [
-                         "юнити хаб"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "009_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер юнити хаб",
-        "expected":  [
-                         "юнити хаб"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "010_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер дота два",
-        "expected":  [
-                         "дота два"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "011_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер дота два",
-        "expected":  [
-                         "дота два"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "012_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер открой фотошоп",
-        "expected":  [
-                         "открой фотошоп"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "013_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер открой фотошоп",
-        "expected":  [
-                         "открой фотошоп"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "014_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер запусти доту два",
-        "expected":  [
-                         "запусти доту два"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "015_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер запусти доту два",
-        "expected":  [
-                         "запусти доту два"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "016_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер папка загрузки",
-        "expected":  [
-                         "папка загрузки"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "017_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер папка загрузки",
-        "expected":  [
-                         "папка загрузки"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "018_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер открой папку документы",
-        "expected":  [
-                         "открой папку документы"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "019_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер открой папку документы",
-        "expected":  [
-                         "открой папку документы"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "020_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер папка рабочий стол",
-        "expected":  [
-                         "папка рабочий стол"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "021_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер папка рабочий стол",
-        "expected":  [
-                         "папка рабочий стол"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "022_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер загугли погода в москве",
-        "expected":  [
-                         "загугли погода в москве"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "023_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер загугли погода в москве",
-        "expected":  [
-                         "загугли погода в москве"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "024_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер поиск ютуб смешные коты",
-        "expected":  [
-                         "поиск ютуб смешные коты"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "025_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер поиск ютуб смешные коты",
-        "expected":  [
-                         "поиск ютуб смешные коты"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "026_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер выключи звук",
-        "expected":  [
-                         "выключи звук"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "027_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер выключи звук",
-        "expected":  [
-                         "выключи звук"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "028_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер следующий трек",
-        "expected":  [
-                         "следующий трек"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "029_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер следующий трек",
-        "expected":  [
-                         "следующий трек"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "030_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер пауза",
-        "expected":  [
-                         "пауза"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "031_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер пауза",
-        "expected":  [
-                         "пауза"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "032_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер плей",
-        "expected":  [
-                         "плей"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "033_continuous.wav",
-        "scenario":  "continuous",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер плей",
-        "expected":  [
-                         "плей"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "034_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер / фотошоп",
-        "expected":  [
-                         "фотошоп"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "035_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер / фотошоп",
-        "expected":  [
-                         "фотошоп"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "036_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер / папка загрузки",
-        "expected":  [
-                         "папка загрузки"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "037_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер / папка загрузки",
-        "expected":  [
-                         "папка загрузки"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "038_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер / загугли погода в москве",
-        "expected":  [
-                         "загугли погода в москве"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "039_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер / загугли погода в москве",
-        "expected":  [
-                         "загугли погода в москве"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "040_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер / поиск ютуб смешные коты",
-        "expected":  [
-                         "поиск ютуб смешные коты"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "041_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер / поиск ютуб смешные коты",
-        "expected":  [
-                         "поиск ютуб смешные коты"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "042_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер / выключи звук",
-        "expected":  [
-                         "выключи звук"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "043_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер / выключи звук",
-        "expected":  [
-                         "выключи звук"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "044_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер / дискорд",
-        "expected":  [
-                         "дискорд"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "045_wake_pause.wav",
-        "scenario":  "wake_pause",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер / дискорд",
-        "expected":  [
-                         "дискорд"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "046_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер папка / загрузки",
-        "expected":  [
-                         "папка загрузки"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "047_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер папка / загрузки",
-        "expected":  [
-                         "папка загрузки"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "048_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "ривер поиск ютуб / смешные коты",
-        "expected":  [
-                         "поиск ютуб смешные коты"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "049_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер поиск ютуб / смешные коты",
-        "expected":  [
-                         "поиск ютуб смешные коты"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "050_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривер загугли / рецепт блинов",
-        "expected":  [
-                         "загугли рецепт блинов"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "051_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер загугли / рецепт блинов",
-        "expected":  [
-                         "загугли рецепт блинов"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "052_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривер открой / фотошоп",
-        "expected":  [
-                         "открой фотошоп"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "053_verb_pause.wav",
-        "scenario":  "verb_pause",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер открой / фотошоп",
-        "expected":  [
-                         "открой фотошоп"
-                     ],
-        "wake_heard":  true
-    },
-    {
-        "file":  "054_inner_pause.wav",
-        "scenario":  "inner_pause",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "ривер открой папку / документы",
-        "expected":  [
-                         "открой папку документы"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "055_inner_pause.wav",
-        "scenario":  "inner_pause",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер открой папку / документы",
-        "expected":  [
-                         "открой папку документы"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "056_inner_pause.wav",
-        "scenario":  "inner_pause",
-        "voice":  "Vika (Russian)",
-        "text":  "ривер загугли / рецепт блинов",
-        "expected":  [
-                         "загугли рецепт блинов"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "057_inner_pause.wav",
-        "scenario":  "inner_pause",
-        "voice":  "Roman (Russian)",
-        "text":  "ривер загугли / рецепт блинов",
-        "expected":  [
-                         "загугли рецепт блинов"
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "058_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Roman (Russian)",
-        "text":  "я сегодня ходил в магазин за хлебом",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "059_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "я сегодня ходил в магазин за хлебом",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "060_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "включи реверс на гитаре",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "061_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Alexandr (Russian)",
-        "text":  "включи реверс на гитаре",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "062_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Alexandr (Russian)",
-        "text":  "ривьера это курорт на море",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "063_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "ривьера это курорт на море",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "064_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Ekaterina (Russian)",
-        "text":  "поставь чайник пожалуйста",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "065_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "поставь чайник пожалуйста",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "066_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Dmitriy (Russian)",
-        "text":  "открой окно в комнате",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "067_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Vika (Russian)",
-        "text":  "открой окно в комнате",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "068_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Vika (Russian)",
-        "text":  "где мой телефон",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "069_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Roman (Russian)",
-        "text":  "где мой телефон",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "070_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Roman (Russian)",
-        "text":  "мотор ревёт за окном",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "071_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "мотор ревёт за окном",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "072_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Microsoft Irina Desktop",
-        "text":  "давай поиграем вечером",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    },
-    {
-        "file":  "073_negative.wav",
-        "scenario":  "negative",
-        "voice":  "Alexandr (Russian)",
-        "text":  "давай поиграем вечером",
-        "expected":  [
-
-                     ],
-        "wake_heard":  false
-    }
+  {
+    "file": "000_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер фотошоп",
+    "expected": [
+      "фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "001_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер фотошоп",
+    "expected": [
+      "фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "002_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер дискорд",
+    "expected": [
+      "дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "003_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер дискорд",
+    "expected": [
+      "дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "004_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер стим",
+    "expected": [
+      "стим"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "005_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер стим",
+    "expected": [
+      "стим"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "006_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер спотифай",
+    "expected": [
+      "спотифай"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "007_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Vika (Russian)",
+    "text": "ривер спотифай",
+    "expected": [
+      "спотифай"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "008_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Vika (Russian)",
+    "text": "ривер юнити хаб",
+    "expected": [
+      "юнити хаб"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "009_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Roman (Russian)",
+    "text": "ривер юнити хаб",
+    "expected": [
+      "юнити хаб"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "010_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Roman (Russian)",
+    "text": "ривер дота два",
+    "expected": [
+      "дота два"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "011_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер дота два",
+    "expected": [
+      "дота два"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "012_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер открой фотошоп",
+    "expected": [
+      "открой фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "013_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер открой фотошоп",
+    "expected": [
+      "открой фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "014_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер запусти доту два",
+    "expected": [
+      "запусти доту два"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "015_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер запусти доту два",
+    "expected": [
+      "запусти доту два"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "016_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер папка загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "017_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер папка загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "018_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер открой папку документы",
+    "expected": [
+      "открой папку документы"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "019_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Vika (Russian)",
+    "text": "ривер открой папку документы",
+    "expected": [
+      "открой папку документы"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "020_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Vika (Russian)",
+    "text": "ривер папка рабочий стол",
+    "expected": [
+      "папка рабочий стол"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "021_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Roman (Russian)",
+    "text": "ривер папка рабочий стол",
+    "expected": [
+      "папка рабочий стол"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "022_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Roman (Russian)",
+    "text": "ривер загугли погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "023_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер загугли погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "024_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер поиск ютуб смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "025_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер поиск ютуб смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "026_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер выключи звук",
+    "expected": [
+      "выключи звук"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "027_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер выключи звук",
+    "expected": [
+      "выключи звук"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "028_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер следующий трек",
+    "expected": [
+      "следующий трек"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "029_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер следующий трек",
+    "expected": [
+      "следующий трек"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "030_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер пауза",
+    "expected": [
+      "пауза"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "031_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Vika (Russian)",
+    "text": "ривер пауза",
+    "expected": [
+      "пауза"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "032_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Vika (Russian)",
+    "text": "ривер плей",
+    "expected": [
+      "плей"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "033_continuous.wav",
+    "scenario": "continuous",
+    "voice": "Roman (Russian)",
+    "text": "ривер плей",
+    "expected": [
+      "плей"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "034_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Roman (Russian)",
+    "text": "ривер / фотошоп",
+    "expected": [
+      "фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "035_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер / фотошоп",
+    "expected": [
+      "фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "036_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер / папка загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "037_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер / папка загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "038_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер / загугли погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "039_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер / загугли погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "040_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер / поиск ютуб смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "041_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер / поиск ютуб смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "042_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер / выключи звук",
+    "expected": [
+      "выключи звук"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "043_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Vika (Russian)",
+    "text": "ривер / выключи звук",
+    "expected": [
+      "выключи звук"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "044_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Vika (Russian)",
+    "text": "ривер / дискорд",
+    "expected": [
+      "дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "045_wake_pause.wav",
+    "scenario": "wake_pause",
+    "voice": "Roman (Russian)",
+    "text": "ривер / дискорд",
+    "expected": [
+      "дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "046_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Roman (Russian)",
+    "text": "ривер папка / загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "047_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер папка / загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "048_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер поиск ютуб / смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "049_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер поиск ютуб / смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "050_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер загугли / рецепт блинов",
+    "expected": [
+      "загугли рецепт блинов"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "051_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер загугли / рецепт блинов",
+    "expected": [
+      "загугли рецепт блинов"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "052_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер открой / фотошоп",
+    "expected": [
+      "открой фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "053_verb_pause.wav",
+    "scenario": "verb_pause",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер открой / фотошоп",
+    "expected": [
+      "открой фотошоп"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": true
+  },
+  {
+    "file": "054_inner_pause.wav",
+    "scenario": "inner_pause",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер открой папку / документы",
+    "expected": [
+      "открой папку документы"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "055_inner_pause.wav",
+    "scenario": "inner_pause",
+    "voice": "Vika (Russian)",
+    "text": "ривер открой папку / документы",
+    "expected": [
+      "открой папку документы"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "056_inner_pause.wav",
+    "scenario": "inner_pause",
+    "voice": "Vika (Russian)",
+    "text": "ривер загугли / рецепт блинов",
+    "expected": [
+      "загугли рецепт блинов"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "057_inner_pause.wav",
+    "scenario": "inner_pause",
+    "voice": "Roman (Russian)",
+    "text": "ривер загугли / рецепт блинов",
+    "expected": [
+      "загугли рецепт блинов"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "058_negative.wav",
+    "scenario": "negative",
+    "voice": "Roman (Russian)",
+    "text": "я сегодня ходил в магазин за хлебом",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "059_negative.wav",
+    "scenario": "negative",
+    "voice": "Microsoft Irina Desktop",
+    "text": "я сегодня ходил в магазин за хлебом",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "060_negative.wav",
+    "scenario": "negative",
+    "voice": "Microsoft Irina Desktop",
+    "text": "включи реверс на гитаре",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "061_negative.wav",
+    "scenario": "negative",
+    "voice": "Alexandr (Russian)",
+    "text": "включи реверс на гитаре",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "062_negative.wav",
+    "scenario": "negative",
+    "voice": "Alexandr (Russian)",
+    "text": "ривьера это курорт на море",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "063_negative.wav",
+    "scenario": "negative",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривьера это курорт на море",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "064_negative.wav",
+    "scenario": "negative",
+    "voice": "Ekaterina (Russian)",
+    "text": "поставь чайник пожалуйста",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "065_negative.wav",
+    "scenario": "negative",
+    "voice": "Dmitriy (Russian)",
+    "text": "поставь чайник пожалуйста",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "066_negative.wav",
+    "scenario": "negative",
+    "voice": "Dmitriy (Russian)",
+    "text": "открой окно в комнате",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "067_negative.wav",
+    "scenario": "negative",
+    "voice": "Vika (Russian)",
+    "text": "открой окно в комнате",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "068_negative.wav",
+    "scenario": "negative",
+    "voice": "Vika (Russian)",
+    "text": "где мой телефон",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "069_negative.wav",
+    "scenario": "negative",
+    "voice": "Roman (Russian)",
+    "text": "где мой телефон",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "070_negative.wav",
+    "scenario": "negative",
+    "voice": "Roman (Russian)",
+    "text": "мотор ревёт за окном",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "071_negative.wav",
+    "scenario": "negative",
+    "voice": "Microsoft Irina Desktop",
+    "text": "мотор ревёт за окном",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "072_negative.wav",
+    "scenario": "negative",
+    "voice": "Microsoft Irina Desktop",
+    "text": "давай поиграем вечером",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "073_negative.wav",
+    "scenario": "negative",
+    "voice": "Alexandr (Russian)",
+    "text": "давай поиграем вечером",
+    "expected": [],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "wake_heard": false
+  },
+  {
+    "file": "074_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер поиск ютуб / sinksaiko i'm sloth",
+    "expected": [
+      "поиск ютуб sinksaiko i'm sloth"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "sinksaiko i'm sloth",
+    "wake_heard": true
+  },
+  {
+    "file": "075_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер поиск ютуб / sinksaiko i'm sloth",
+    "expected": [
+      "поиск ютуб sinksaiko i'm sloth"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "sinksaiko i'm sloth",
+    "wake_heard": true
+  },
+  {
+    "file": "076_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер поиск ютуб / sinksaiko i'm sloth",
+    "expected": [
+      "поиск ютуб sinksaiko i'm sloth"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "sinksaiko i'm sloth",
+    "wake_heard": true
+  },
+  {
+    "file": "077_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер поиск ютуб / sinksaiko i'm sloth",
+    "expected": [
+      "поиск ютуб sinksaiko i'm sloth"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "sinksaiko i'm sloth",
+    "wake_heard": true
+  },
+  {
+    "file": "078_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер поиск ютуб / never gonna give you up",
+    "expected": [
+      "поиск ютуб never gonna give you up"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "never gonna give you up",
+    "wake_heard": true
+  },
+  {
+    "file": "079_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Vika (Russian)",
+    "text": "ривер поиск ютуб / never gonna give you up",
+    "expected": [
+      "поиск ютуб never gonna give you up"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "never gonna give you up",
+    "wake_heard": true
+  },
+  {
+    "file": "080_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Vika (Russian)",
+    "text": "ривер поиск ютуб / never gonna give you up",
+    "expected": [
+      "поиск ютуб never gonna give you up"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "never gonna give you up",
+    "wake_heard": true
+  },
+  {
+    "file": "081_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Roman (Russian)",
+    "text": "ривер поиск ютуб / never gonna give you up",
+    "expected": [
+      "поиск ютуб never gonna give you up"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "never gonna give you up",
+    "wake_heard": true
+  },
+  {
+    "file": "082_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Roman (Russian)",
+    "text": "ривер поиск ютуб / lofi hip hop radio",
+    "expected": [
+      "поиск ютуб lofi hip hop radio"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "lofi hip hop radio",
+    "wake_heard": true
+  },
+  {
+    "file": "083_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер поиск ютуб / lofi hip hop radio",
+    "expected": [
+      "поиск ютуб lofi hip hop radio"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "lofi hip hop radio",
+    "wake_heard": true
+  },
+  {
+    "file": "084_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер поиск ютуб / lofi hip hop radio",
+    "expected": [
+      "поиск ютуб lofi hip hop radio"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "lofi hip hop radio",
+    "wake_heard": true
+  },
+  {
+    "file": "085_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер поиск ютуб / lofi hip hop radio",
+    "expected": [
+      "поиск ютуб lofi hip hop radio"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "lofi hip hop radio",
+    "wake_heard": true
+  },
+  {
+    "file": "086_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер загугли / how to cook pasta",
+    "expected": [
+      "загугли how to cook pasta"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "how to cook pasta",
+    "wake_heard": true
+  },
+  {
+    "file": "087_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер загугли / how to cook pasta",
+    "expected": [
+      "загугли how to cook pasta"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "how to cook pasta",
+    "wake_heard": true
+  },
+  {
+    "file": "088_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер загугли / how to cook pasta",
+    "expected": [
+      "загугли how to cook pasta"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "how to cook pasta",
+    "wake_heard": true
+  },
+  {
+    "file": "089_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер загугли / how to cook pasta",
+    "expected": [
+      "загугли how to cook pasta"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "how to cook pasta",
+    "wake_heard": true
+  },
+  {
+    "file": "090_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер загугли / rust borrow checker",
+    "expected": [
+      "загугли rust borrow checker"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "rust borrow checker",
+    "wake_heard": true
+  },
+  {
+    "file": "091_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Vika (Russian)",
+    "text": "ривер загугли / rust borrow checker",
+    "expected": [
+      "загугли rust borrow checker"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "rust borrow checker",
+    "wake_heard": true
+  },
+  {
+    "file": "092_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Vika (Russian)",
+    "text": "ривер загугли / rust borrow checker",
+    "expected": [
+      "загугли rust borrow checker"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "rust borrow checker",
+    "wake_heard": true
+  },
+  {
+    "file": "093_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Roman (Russian)",
+    "text": "ривер загугли / rust borrow checker",
+    "expected": [
+      "загугли rust borrow checker"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "загугли",
+    "expected_payload": "rust borrow checker",
+    "wake_heard": true
+  },
+  {
+    "file": "094_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Roman (Russian)",
+    "text": "ривер папка / downloads",
+    "expected": [
+      "папка downloads"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "downloads",
+    "wake_heard": true
+  },
+  {
+    "file": "095_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер папка / downloads",
+    "expected": [
+      "папка downloads"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "downloads",
+    "wake_heard": true
+  },
+  {
+    "file": "096_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер папка / downloads",
+    "expected": [
+      "папка downloads"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "downloads",
+    "wake_heard": true
+  },
+  {
+    "file": "097_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер папка / downloads",
+    "expected": [
+      "папка downloads"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "downloads",
+    "wake_heard": true
+  },
+  {
+    "file": "098_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер папка / documents",
+    "expected": [
+      "папка documents"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "documents",
+    "wake_heard": true
+  },
+  {
+    "file": "099_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер папка / documents",
+    "expected": [
+      "папка documents"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "documents",
+    "wake_heard": true
+  },
+  {
+    "file": "100_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер папка / documents",
+    "expected": [
+      "папка documents"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "documents",
+    "wake_heard": true
+  },
+  {
+    "file": "101_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер папка / documents",
+    "expected": [
+      "папка documents"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "documents",
+    "wake_heard": true
+  },
+  {
+    "file": "102_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер папка / screenshots",
+    "expected": [
+      "папка screenshots"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "screenshots",
+    "wake_heard": true
+  },
+  {
+    "file": "103_en_payload.wav",
+    "scenario": "en_payload",
+    "voice": "Vika (Russian)",
+    "text": "ривер папка / screenshots",
+    "expected": [
+      "папка screenshots"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "screenshots",
+    "wake_heard": true
+  },
+  {
+    "file": "104_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Vika (Russian)",
+    "text": "ривер папка / screenshots",
+    "expected": [
+      "папка screenshots"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "screenshots",
+    "wake_heard": true
+  },
+  {
+    "file": "105_en_accent.wav",
+    "scenario": "en_accent",
+    "voice": "Roman (Russian)",
+    "text": "ривер папка / screenshots",
+    "expected": [
+      "папка screenshots"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "папка",
+    "expected_payload": "screenshots",
+    "wake_heard": true
+  },
+  {
+    "file": "106_en_bare.wav",
+    "scenario": "en_bare",
+    "voice": "Roman (Russian)",
+    "text": "ривер / minecraft",
+    "expected": [
+      "minecraft"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "minecraft",
+    "wake_heard": true
+  },
+  {
+    "file": "107_en_bare.wav",
+    "scenario": "en_bare",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер / minecraft",
+    "expected": [
+      "minecraft"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "minecraft",
+    "wake_heard": true
+  },
+  {
+    "file": "108_en_bare.wav",
+    "scenario": "en_bare",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер / discord",
+    "expected": [
+      "discord"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "discord",
+    "wake_heard": true
+  },
+  {
+    "file": "109_en_bare.wav",
+    "scenario": "en_bare",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер / discord",
+    "expected": [
+      "discord"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "discord",
+    "wake_heard": true
+  },
+  {
+    "file": "110_en_bare.wav",
+    "scenario": "en_bare",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер / photoshop",
+    "expected": [
+      "photoshop"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "photoshop",
+    "wake_heard": true
+  },
+  {
+    "file": "111_en_bare.wav",
+    "scenario": "en_bare",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер / photoshop",
+    "expected": [
+      "photoshop"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "photoshop",
+    "wake_heard": true
+  },
+  {
+    "file": "112_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер поиск ютуб / смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "смешные коты",
+    "wake_heard": true
+  },
+  {
+    "file": "113_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер поиск ютуб / смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "смешные коты",
+    "wake_heard": true
+  },
+  {
+    "file": "114_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер загугли / погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "загугли",
+    "expected_payload": "погода в москве",
+    "wake_heard": true
+  },
+  {
+    "file": "115_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Vika (Russian)",
+    "text": "ривер загугли / погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "загугли",
+    "expected_payload": "погода в москве",
+    "wake_heard": true
+  },
+  {
+    "file": "116_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Vika (Russian)",
+    "text": "ривер папка / загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "папка",
+    "expected_payload": "загрузки",
+    "wake_heard": true
+  },
+  {
+    "file": "117_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Roman (Russian)",
+    "text": "ривер папка / загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "папка",
+    "expected_payload": "загрузки",
+    "wake_heard": true
+  }
 ]

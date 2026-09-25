@@ -39,6 +39,10 @@ pub struct Intent {
     pub url: String,
     #[serde(default = "yes")]
     pub enabled: bool,
+    /// Язык цели команды для этого намерения: `auto` — решает определитель языка
+    /// (и глобальная настройка `payload_language`), `ru`/`en` — всегда этот язык.
+    #[serde(default)]
+    pub lang: crate::bilingual::LangMode,
 }
 
 impl Default for Intent {
@@ -50,6 +54,7 @@ impl Default for Intent {
             triggers: Vec::new(),
             url: String::new(),
             enabled: true,
+            lang: crate::bilingual::LangMode::Auto,
         }
     }
 }
@@ -92,6 +97,7 @@ fn intent(id: &str, kind: IntentKind, label: &str, triggers: &[&str], url: &str)
         triggers: triggers.iter().map(|s| s.to_string()).collect(),
         url: url.into(),
         enabled: true,
+        lang: crate::bilingual::LangMode::Auto,
     }
 }
 
@@ -247,6 +253,7 @@ impl Grammar {
                     triggers: action.phrases,
                     url: action.target,
                     enabled: true,
+                    lang: crate::bilingual::LangMode::Auto,
                 });
             }
         }
@@ -632,6 +639,7 @@ mod tests {
             triggers: vec!["новая фраза".into()],
             url: String::new(),
             enabled: true,
+            lang: crate::bilingual::LangMode::Auto,
         });
         grammar.intents.push(Intent {
             id: "launch".into(),
@@ -640,6 +648,7 @@ mod tests {
             triggers: vec!["другая фраза".into()],
             url: String::new(),
             enabled: true,
+            lang: crate::bilingual::LangMode::Auto,
         });
 
         let errors = grammar.validate().unwrap_err().join("\n");

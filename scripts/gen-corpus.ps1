@@ -29,6 +29,8 @@ Get-ChildItem -LiteralPath $OutDir -Filter '*.wav' | Remove-Item -Force
 # Предпочтительные голоса: мужские и женские, разные движки.
 $Preferred = @('Microsoft Irina Desktop', 'Alexandr (Russian)', 'Ekaterina (Russian)',
                'Dmitriy (Russian)', 'Vika (Russian)', 'Roman (Russian)')
+$RhvoicePreferred = @('Alexandr (Russian)', 'Ekaterina (Russian)', 'Dmitriy (Russian)',
+                      'Vika (Russian)', 'Roman (Russian)')
 
 # System.Speech (.NET) с голосами RHVoice пишет только первые ~0,1 с фразы —
 # поэтому синтез идёт напрямую через COM SAPI, где RHVoice работает целиком.
@@ -36,14 +38,18 @@ $voice = New-Object -ComObject SAPI.SpVoice
 # Через COM описание голоса длиннее, чем в .NET («Microsoft Irina Desktop - Russian»),
 # поэтому сопоставляем по префиксу; «Alexandr (Erzya)» при этом не подходит под «Alexandr (Russian)».
 $tokens = @{}
-foreach ($name in $Preferred) {
+foreach ($name in ($Preferred + @('Microsoft Zira Desktop'))) {
     foreach ($t in $voice.GetVoices()) {
         if ($t.GetDescription() -like "$name*") { $tokens[$name] = $t; break }
     }
 }
 $pool = @($Preferred | Where-Object { $tokens.ContainsKey($_) })
 if ($pool.Count -eq 0) { throw 'не найдено ни одного русского голоса SAPI' }
+$rhvoicePool = @($RhvoicePreferred | Where-Object { $tokens.ContainsKey($_) })
+if ($rhvoicePool.Count -eq 0) { throw 'не найдено ни одного русского голоса RHVoice SAPI' }
+if (-not $tokens.ContainsKey('Microsoft Zira Desktop')) { throw 'не найден голос Microsoft Zira Desktop SAPI' }
 Write-Host "голоса: $($pool -join ', ')"
+Write-Host "RHVoice для английской цели: $($rhvoicePool -join ', ')"
 
 $SAFT16kHz16BitMono = 18
 $SSFMCreateForWrite = 3
@@ -91,9 +97,15 @@ function Write-Wav([string]$path, [byte[]]$pcm) {
 # Сценарий: части фразы и паузы между ними (мс); expected — ожидаемые команды
 # Engine (текст без wake-слова); wake_heard — ждём ли сигнал «слушаю».
 $cases = New-Object System.Collections.Generic.List[object]
-function Add-Case($scenario, $parts, $pauses, $expected, $wakeHeard) {
+function Add-Case($scenario, $parts, $pauses, $expected, $wakeHeard, $expectedLang = 'ru', $expectedPrefix = '', $expectedPayload = '') {
     $cases.Add([pscustomobject]@{ scenario = $scenario; parts = $parts; pauses = $pauses;
-                                  expected = $expected; wake_heard = $wakeHeard })
+                                  expected = $expected; expected_lang = $expectedLang;
+                                  expected_prefix = $expectedPrefix; expected_payload = $expectedPayload;
+                                  wake_heard = $wakeHeard })
+}
+
+function New-Part([string]$text, [string]$voiceName = '') {
+    [pscustomobject]@{ text = $text; voice = $voiceName }
 }
 
 # Раскладка по умолчанию (docs/grammar.md): программа — без глагола, папка — «папка» /
@@ -121,6 +133,43 @@ $negatives = @('я сегодня ходил в магазин за хлебом
                'давай поиграем вечером')
 foreach ($n in $negatives) { Add-Case 'negative' @($n) @() @() $false }
 
+# Английскую цель читаем Zira, сохраняя русскую фразу-триггер в русском голосе.
+$englishPayloads = @(
+    [pscustomobject]@{ prefix = 'ривер поиск ютуб'; trigger = 'поиск ютуб'; payload = "sinksaiko i'm sloth" },
+    [pscustomobject]@{ prefix = 'ривер поиск ютуб'; trigger = 'поиск ютуб'; payload = 'never gonna give you up' },
+    [pscustomobject]@{ prefix = 'ривер поиск ютуб'; trigger = 'поиск ютуб'; payload = 'lofi hip hop radio' },
+    [pscustomobject]@{ prefix = 'ривер загугли'; trigger = 'загугли'; payload = 'how to cook pasta' },
+    [pscustomobject]@{ prefix = 'ривер загугли'; trigger = 'загугли'; payload = 'rust borrow checker' },
+    [pscustomobject]@{ prefix = 'ривер папка'; trigger = 'папка'; payload = 'downloads' },
+    [pscustomobject]@{ prefix = 'ривер папка'; trigger = 'папка'; payload = 'documents' },
+    [pscustomobject]@{ prefix = 'ривер папка'; trigger = 'папка'; payload = 'screenshots' }
+)
+foreach ($c in $englishPayloads) {
+    $expected = "$($c.trigger) $($c.payload)"
+    Add-Case 'en_payload' @((New-Part $c.prefix), (New-Part $c.payload 'Microsoft Zira Desktop')) `
+        @(900) @($expected) $true 'en' $c.trigger $c.payload
+    Add-Case 'en_accent' @((New-Part $c.prefix), (New-Part $c.payload '__rhvoice__')) `
+        @(900) @($expected) $true 'en' $c.trigger $c.payload
+}
+
+# Bare-launch: после «ривер» ключевая фраза не нужна, цель произносит Zira.
+foreach ($app in @('minecraft', 'discord', 'photoshop')) {
+    Add-Case 'en_bare' @((New-Part 'ривер'), (New-Part $app 'Microsoft Zira Desktop')) `
+        @(900) @($app) $true 'en' '' $app
+}
+
+# Русский контроль: второй язык не должен переключать цель на английский.
+$russianControls = @(
+    [pscustomobject]@{ prefix = 'ривер поиск ютуб'; trigger = 'поиск ютуб'; payload = 'смешные коты' },
+    [pscustomobject]@{ prefix = 'ривер загугли'; trigger = 'загугли'; payload = 'погода в москве' },
+    [pscustomobject]@{ prefix = 'ривер папка'; trigger = 'папка'; payload = 'загрузки' }
+)
+foreach ($c in $russianControls) {
+    $expected = "$($c.trigger) $($c.payload)"
+    Add-Case 'ru_payload_control' @((New-Part $c.prefix), (New-Part $c.payload)) `
+        @(900) @($expected) $true 'ru' $c.trigger $c.payload
+}
+
 $rows = New-Object System.Collections.Generic.List[object]
 $i = 0
 foreach ($case in $cases) {
@@ -130,11 +179,26 @@ foreach ($case in $cases) {
         $pcm = New-Object System.Collections.Generic.List[byte]
         for ($p = 0; $p -lt $case.parts.Count; $p++) {
             if ($p -gt 0) { $pcm.AddRange([byte[]]::new(32 * $case.pauses[$p - 1])) }
-            $pcm.AddRange((Get-Pcm $case.parts[$p] $voiceName ($rows.Count % 3)))
+            $part = $case.parts[$p]
+            if ($part -is [string]) {
+                $partText = $part
+                $partVoice = $voiceName
+            } else {
+                $partText = [string]$part.text
+                $partVoice = [string]$part.voice
+                if ([string]::IsNullOrWhiteSpace($partVoice)) { $partVoice = $voiceName }
+                elseif ($partVoice -eq '__rhvoice__') {
+                    $partVoice = $rhvoicePool[$rows.Count % $rhvoicePool.Count]
+                }
+            }
+            $pcm.AddRange((Get-Pcm $partText $partVoice ($rows.Count % 3)))
         }
         Write-Wav (Join-Path $OutDir $file) $pcm.ToArray()
+        $spokenParts = @($case.parts | ForEach-Object { if ($_ -is [string]) { $_ } else { $_.text } })
         $rows.Add([pscustomobject]@{ file = $file; scenario = $case.scenario; voice = $voiceName;
-                                     text = ($case.parts -join ' / '); expected = @($case.expected);
+                                     text = ($spokenParts -join ' / '); expected = @($case.expected);
+                                     expected_lang = $case.expected_lang; expected_prefix = $case.expected_prefix;
+                                     expected_payload = $case.expected_payload;
                                      wake_heard = $case.wake_heard })
     }
     $i++
