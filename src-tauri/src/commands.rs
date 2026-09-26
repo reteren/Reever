@@ -74,12 +74,19 @@ pub fn parse(text: &str) -> Option<ReeverCommand> {
 /// Поисковые триггеры, после которых обязательно идёт запрос. Дублируют фразы
 /// дефолтных search-действий: Engine решает «команда ещё не договорена» без реестра.
 const SEARCH_TRIGGERS: &[&str] = &[
-    "загугли", "погугли", "гугл", "поищи", "найди в интернете", "ютуб", "на ютубе", "в ютубе",
+    "загугли",
+    "погугли",
+    "гугл",
+    "поищи",
+    "найди в интернете",
+    "ютуб",
+    "на ютубе",
+    "в ютубе",
 ];
 
 /// `true`, если фраза — начало команды без цели: голый глагол («открой»), глагол +
-/// «папку» («открой папку») или поисковый триггер без запроса («загугли»). После
-/// такого Engine дослушивает продолжение, а не выполняет обрубок.
+/// «папку» («открой папку»), поисковый триггер без запроса («загугли») или калькулятор
+/// без выражения («посчитай»). После такого Engine дослушивает продолжение.
 pub fn is_bare_verb(text: &str) -> bool {
     let command = clean_command_text(text);
     let is_verb = |t: &str| {
@@ -88,7 +95,11 @@ pub fn is_bare_verb(text: &str) -> bool {
             .chain(LAUNCH_VERBS)
             .any(|verb| t == normalize(verb))
     };
-    if is_verb(&command) || SEARCH_TRIGGERS.iter().any(|t| command == normalize(t)) {
+    const CALC_TRIGGERS: &[&str] = &["посчитай", "сколько будет"];
+    if is_verb(&command)
+        || SEARCH_TRIGGERS.iter().any(|t| command == normalize(t))
+        || CALC_TRIGGERS.iter().any(|t| command == normalize(t))
+    {
         return true;
     }
     // «открой папку» — цель ещё впереди
@@ -235,6 +246,9 @@ mod tests {
         // незаконченные поиск и папка тоже ждут продолжения
         assert!(is_bare_verb("загугли"));
         assert!(is_bare_verb("ютуб"));
+        assert!(is_bare_verb("посчитай"));
+        assert!(is_bare_verb("сколько будет"));
+        assert!(!is_bare_verb("посчитай 33 умножить на 78"));
         assert!(is_bare_verb("открой папку"));
         assert!(!is_bare_verb("загугли рецепт блинов"));
         assert!(!is_bare_verb("открой папку документы"));

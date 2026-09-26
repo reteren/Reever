@@ -441,10 +441,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                             ListenKind::Command => self.asr.transcribe_timed(&audio).map(|timed| {
                                 self.second_language_only(&audio, timed)
                             }),
-                            ListenKind::Confirm => self.asr.transcribe(&audio).map(|text| Timed {
-                                text,
-                                words: Vec::new(),
-                            }),
+                            // Английское «yes/no» русская модель не слышит вовсе (пустой
+                            // текст) — тогда ответ слушает вторая модель, как и английскую цель.
+                            ListenKind::Confirm => self
+                                .asr
+                                .transcribe(&audio)
+                                .map(|text| Timed { text, words: Vec::new() })
+                                .map(|timed| self.second_language_only(&audio, timed)),
                         };
                         match result {
                             // Пустая фраза — не ответ, а шум: ждём дальше с новым окном
@@ -485,7 +488,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 }
                                 ListenKind::Confirm => {
                                     let text = self.strip_repeated_wake(&timed.text);
-                                    out.push(EngineEvent::Confirm(is_yes(&text)));
+                                    let yes = is_yes(&text) || self.second_says_yes(&audio);
+                                    out.push(EngineEvent::Confirm(yes));
                                     self.return_to_idle(true, out);
                                 }
                             },
@@ -572,6 +576,17 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             Ok(text) if !text.trim().is_empty() => Timed { text, words: Vec::new() },
             _ => timed,
         }
+    }
+
+    /// Английское «yes» русская модель слышит как «яс»/«ес»/пустоту, а вторая — чётко.
+    /// Согласие засчитывается, если «да» услышала любая из моделей; «нет» и всё прочее —
+    /// отказ, так что лишняя проверка не может превратить отказ в согласие по ошибке ASR
+    /// одной модели сильнее, чем это уже делает is_yes.
+    fn second_says_yes(&mut self, audio: &[i16]) -> bool {
+        let Some(second) = self.second.as_deref_mut() else {
+            return false;
+        };
+        second.transcribe(audio).map(|text| is_yes(&text)).unwrap_or(false)
     }
 
     fn resolve_command(&mut self, audio: &[i16], timed: &Timed, prefix: &str) -> Resolved {

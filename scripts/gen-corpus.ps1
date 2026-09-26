@@ -97,10 +97,13 @@ function Write-Wav([string]$path, [byte[]]$pcm) {
 # Сценарий: части фразы и паузы между ними (мс); expected — ожидаемые команды
 # Engine (текст без wake-слова); wake_heard — ждём ли сигнал «слушаю».
 $cases = New-Object System.Collections.Generic.List[object]
-function Add-Case($scenario, $parts, $pauses, $expected, $wakeHeard, $expectedLang = 'ru', $expectedPrefix = '', $expectedPayload = '') {
+function Add-Case($scenario, $parts, $pauses, $expected, $wakeHeard, $expectedLang = 'ru', $expectedPrefix = '', $expectedPayload = '', $expectedApp = '', $expectedConfirm = $null, $commandEndParts = 0, $expectedValue = $null) {
     $cases.Add([pscustomobject]@{ scenario = $scenario; parts = $parts; pauses = $pauses;
                                   expected = $expected; expected_lang = $expectedLang;
                                   expected_prefix = $expectedPrefix; expected_payload = $expectedPayload;
+                                  expected_app = $expectedApp; expected_confirm = $expectedConfirm;
+                                  value = $expectedValue;
+                                  command_end_parts = $commandEndParts;
                                   wake_heard = $wakeHeard })
 }
 
@@ -158,6 +161,49 @@ foreach ($app in @('minecraft', 'discord', 'photoshop')) {
         @(900) @($app) $true 'en' '' $app
 }
 
+# Закрытие и принудительное завершение программ: для проверки маршрута ожидаемая цель
+# хранится отдельно, а eval сопоставляет кандидатов только с подставными RunningApp.
+$closeApps = @(
+    [pscustomobject]@{ spoken = 'хром'; app = 'chrome' },
+    [pscustomobject]@{ spoken = 'телеграм'; app = 'telegram' },
+    [pscustomobject]@{ spoken = 'дискорд'; app = 'discord' },
+    [pscustomobject]@{ spoken = 'блокнот'; app = 'notepad' },
+    [pscustomobject]@{ spoken = 'стим'; app = 'steam' }
+)
+foreach ($app in $closeApps) {
+    $command = "закрой $($app.spoken)"
+    Add-Case 'app_close' @("ривер $command") @() @($command) $false 'ru' '' '' $app.app
+}
+
+foreach ($app in $closeApps | Where-Object { $_.app -in @('chrome', 'telegram', 'discord') }) {
+    $command = "заверши $($app.spoken)"
+    Add-Case 'app_kill' @("ривер $command") @() @($command) $false 'ru' '' '' $app.app
+}
+
+# «Закрой» без цели должно открыть окно дослушивания; английские цели произносит Zira.
+Add-Case 'app_pause' @('ривер закрой', 'хром') @(900) @('закрой хром') $true 'ru' '' '' 'chrome'
+foreach ($app in @(
+    [pscustomobject]@{ spoken = 'chrome'; app = 'chrome' },
+    [pscustomobject]@{ spoken = 'discord'; app = 'discord' },
+    [pscustomobject]@{ spoken = 'telegram'; app = 'telegram' }
+)) {
+    $command = "закрой $($app.spoken)"
+    Add-Case 'app_en' @((New-Part 'ривер закрой'), (New-Part $app.spoken 'Microsoft Zira Desktop')) `
+        @(900) @($command) $true 'en' 'закрой' $app.spoken $app.app
+}
+
+# Ответ произносится после паузы; eval включает listen_confirm по событию Command и
+# отдельно проверяет результат без обращения к настоящим процессам машины.
+foreach ($answer in @(
+    [pscustomobject]@{ text = 'да'; voice = ''; expected = $true },
+    [pscustomobject]@{ text = 'нет'; voice = ''; expected = $false },
+    [pscustomobject]@{ text = 'yes'; voice = 'Microsoft Zira Desktop'; expected = $true },
+    [pscustomobject]@{ text = 'no'; voice = 'Microsoft Zira Desktop'; expected = $false }
+)) {
+    Add-Case 'app_confirm' @((New-Part 'ривер закрой хром'), (New-Part $answer.text $answer.voice)) `
+        @(1500) @('закрой хром') $false 'ru' '' '' 'chrome' $answer.expected 1
+}
+
 # Русский контроль: второй язык не должен переключать цель на английский.
 $russianControls = @(
     [pscustomobject]@{ prefix = 'ривер поиск ютуб'; trigger = 'поиск ютуб'; payload = 'смешные коты' },
@@ -170,6 +216,23 @@ foreach ($c in $russianControls) {
         @(900) @($expected) $true 'ru' $c.trigger $c.payload
 }
 
+# Арифметика: value — эталон parse_expression; expected — команда Engine до маршрутизации.
+$calcCases = @(
+    [pscustomobject]@{ spoken = 'ривер посчитай тридцать три умножить на семьдесят восемь'; expected = 'посчитай тридцать три умножить на семьдесят восемь'; value = 2574 },
+    [pscustomobject]@{ spoken = 'ривер сколько будет два плюс два'; expected = 'сколько будет два плюс два'; value = 4 },
+    [pscustomobject]@{ spoken = 'ривер посчитай сто двадцать пять разделить на пять'; expected = 'посчитай сто двадцать пять разделить на пять'; value = 25 },
+    [pscustomobject]@{ spoken = 'ривер посчитай пятнадцать процентов от двухсот'; expected = 'посчитай пятнадцать процентов от двухсот'; value = 30 },
+    [pscustomobject]@{ spoken = 'ривер посчитай тысяча минус триста сорок'; expected = 'посчитай тысяча минус триста сорок'; value = 660 },
+    [pscustomobject]@{ spoken = 'ривер посчитай семь в квадрате'; expected = 'посчитай семь в квадрате'; value = 49 }
+)
+foreach ($c in $calcCases) {
+    Add-Case 'calc' @($c.spoken) @() @($c.expected) $false 'ru' '' '' '' $null 0 $c.value
+}
+Add-Case 'calc_pause' @('ривер посчитай', 'двенадцать умножить на двенадцать') `
+    @(900) @('посчитай двенадцать умножить на двенадцать') $true 'ru' '' '' '' $null 0 144
+Add-Case 'calc_en' @((New-Part 'ривер посчитай'), (New-Part 'thirty three times seventy eight' 'Microsoft Zira Desktop')) `
+    @(900) @('посчитай thirty three times seventy eight') $true 'en' '' '' '' $null 0 2574
+
 $rows = New-Object System.Collections.Generic.List[object]
 $i = 0
 foreach ($case in $cases) {
@@ -177,6 +240,7 @@ foreach ($case in $cases) {
         $voiceName = $pool[($i + $v) % $pool.Count]
         $file = '{0:D3}_{1}.wav' -f $rows.Count, $case.scenario
         $pcm = New-Object System.Collections.Generic.List[byte]
+        $commandEndBytes = 0
         for ($p = 0; $p -lt $case.parts.Count; $p++) {
             if ($p -gt 0) { $pcm.AddRange([byte[]]::new(32 * $case.pauses[$p - 1])) }
             $part = $case.parts[$p]
@@ -192,13 +256,19 @@ foreach ($case in $cases) {
                 }
             }
             $pcm.AddRange((Get-Pcm $partText $partVoice ($rows.Count % 3)))
+            if ($case.command_end_parts -gt 0 -and ($p + 1) -eq $case.command_end_parts) {
+                $commandEndBytes = $pcm.Count
+            }
         }
         Write-Wav (Join-Path $OutDir $file) $pcm.ToArray()
         $spokenParts = @($case.parts | ForEach-Object { if ($_ -is [string]) { $_ } else { $_.text } })
         $rows.Add([pscustomobject]@{ file = $file; scenario = $case.scenario; voice = $voiceName;
                                      text = ($spokenParts -join ' / '); expected = @($case.expected);
                                      expected_lang = $case.expected_lang; expected_prefix = $case.expected_prefix;
-                                     expected_payload = $case.expected_payload;
+                                     expected_payload = $case.expected_payload; expected_app = $case.expected_app;
+                                     expected_confirm = $case.expected_confirm;
+                                     value = $case.value;
+                                     command_end_bytes = $commandEndBytes;
                                      wake_heard = $case.wake_heard })
     }
     $i++

@@ -12,11 +12,78 @@ use crate::events::ui_log;
 use crate::everything::{self, SearchOutcome};
 use crate::grammar::{Grammar, IntentKind};
 use crate::textnorm::{normalize, strip_leading_fillers};
-use crate::{launcher, system, winutil};
+use crate::{calc, calcapp, launcher, system, winutil};
 
 pub enum DispatchResult {
     Done(bool),
-    Confirm(String),
+    /// Выполнить только после голосового «да» (docs/app-control.md).
+    Confirm(PendingAction),
+}
+
+/// Действие, которое ждёт подтверждения голосом.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PendingAction {
+    /// Опасная системная операция (`system::run_system`).
+    System(String),
+    /// Мягко закрыть программу.
+    Close(crate::procs::RunningApp),
+    /// Завершить программу принудительно.
+    Kill(crate::procs::RunningApp),
+}
+
+impl PendingAction {
+    /// Что сказать в лог при вопросе «подтверди».
+    pub fn describe(&self) -> String {
+        match self {
+            PendingAction::System(op) => op.clone(),
+            PendingAction::Close(app) => format!("закрыть {}", app_title(app)),
+            PendingAction::Kill(app) => format!("завершить {}", app_title(app)),
+        }
+    }
+}
+
+fn app_title(app: &crate::procs::RunningApp) -> String {
+    if app.description.trim().is_empty() {
+        app.exe_name.clone()
+    } else {
+        app.description.clone()
+    }
+}
+
+/// Выполнить подтверждённое действие. Возвращает успех.
+pub fn execute_pending(app: &AppHandle, pending: &PendingAction) -> bool {
+    match pending {
+        PendingAction::System(op) => system::run_system(op),
+        PendingAction::Close(target) => match crate::procs::close_app(target) {
+            Ok(n) => {
+                ui_log(app, format!("✕ закрываю {} (окон: {n})", app_title(target)));
+                n > 0
+            }
+            Err(e) => {
+                ui_log(
+                    app,
+                    format!("⚠ не удалось закрыть {}: {e:#}", app_title(target)),
+                );
+                false
+            }
+        },
+        PendingAction::Kill(target) => match crate::procs::kill_app(target) {
+            Ok(n) => {
+                ui_log(
+                    app,
+                    format!("☠ завершено {} (процессов: {n})", app_title(target)),
+                );
+                n > 0
+            }
+            Err(e) => {
+                ui_log(
+                    app,
+                    format!("⚠ не удалось завершить {}: {e:#}", app_title(target)),
+                );
+                false
+            }
+        },
+    }
 }
 
 /// Куда ведёт команда — чистое решение без побочных эффектов (тестируется без Tauri,
@@ -33,6 +100,12 @@ pub enum Route {
     Folder(Vec<String>),
     /// Веб-поиск: готовый URL и подпись намерения.
     Search { label: String, url: String },
+    /// Закрыть запущенную программу: кандидаты названия по порядку предпочтения.
+    Close(Vec<String>),
+    /// Завершить запущенную программу: кандидаты названия по порядку предпочтения.
+    Kill(Vec<String>),
+    /// Посчитать в калькуляторе: кандидаты выражения (русский и английский варианты).
+    Calc(Vec<String>),
     /// Ничего не подошло.
     Unknown,
 }
@@ -69,6 +142,9 @@ pub fn route(
 
         return match trigger.intent.kind {
             IntentKind::Folder => Route::Folder(payloads),
+            IntentKind::Close => Route::Close(payloads),
+            IntentKind::Kill => Route::Kill(payloads),
+            IntentKind::Calc => Route::Calc(payloads),
             IntentKind::Search => Route::Search {
                 label: trigger.intent.label.clone(),
                 url: trigger.intent.url.replace("{q}", &urlencode(&payloads[0])),
@@ -235,7 +311,7 @@ pub fn dispatch(
                     app,
                     format!("⚙ {} — подтверди голосом: «да» / «отмена»", action.label),
                 );
-                return DispatchResult::Confirm(op);
+                return DispatchResult::Confirm(PendingAction::System(op));
             }
             let normalized = strip_leading_fillers(&normalize(text));
             let score = action.score(&[normalized]);
@@ -283,6 +359,53 @@ pub fn dispatch(
             DispatchResult::Done(handle_launch(app, cfg, outcome, &query))
         }
         Route::Folder(targets) => DispatchResult::Done(open_via_everything(app, cfg, &targets)),
+        Route::Calc(candidates) => {
+            let expression = candidates
+                .iter()
+                .find_map(|candidate| calc::parse_expression(candidate));
+            let Some(expression) = expression else {
+                if cfg.settings.private_log {
+                    ui_log(app, "⚠ не понял выражение (частный режим)");
+                } else {
+                    ui_log(
+                        app,
+                        format!("⚠ не понял выражение «{}»", candidates.join(" / ")),
+                    );
+                }
+                return DispatchResult::Done(false);
+            };
+
+            match calcapp::open_and_type(&expression.keys) {
+                Ok(()) => {
+                    if cfg.settings.private_log {
+                        ui_log(app, "🧮 считаю");
+                    } else if let Some(value) = expression.value {
+                        ui_log(app, format!("🧮 {} = {value}", expression.pretty));
+                    } else {
+                        ui_log(app, format!("🧮 {}", expression.pretty));
+                    }
+                    DispatchResult::Done(true)
+                }
+                Err(error) => {
+                    if cfg.settings.private_log {
+                        ui_log(
+                            app,
+                            "⚠ не удалось ввести выражение в калькулятор (частный режим)",
+                        );
+                    } else {
+                        ui_log(
+                            app,
+                            format!("⚠ не удалось ввести выражение в калькулятор: {error:#}"),
+                        );
+                    }
+                    DispatchResult::Done(false)
+                }
+            }
+        }
+        Route::Close(candidates) => {
+            dispatch_process_control(app, cfg, &actions, &candidates, false)
+        }
+        Route::Kill(candidates) => dispatch_process_control(app, cfg, &actions, &candidates, true),
         Route::Search { label, url } => {
             if cfg.settings.offline_mode {
                 ui_log(app, "🔒 офлайн-режим: веб-поиск отключён");
@@ -293,7 +416,7 @@ pub fn dispatch(
             } else {
                 ui_log(app, format!("🔎 {label}: {url}"));
             }
-            DispatchResult::Done(launch_with_raise(cfg, &label, || {
+            DispatchResult::Done(open_url(cfg, &label, &url, || {
                 launcher::shell_open(&url)
             }))
         }
@@ -301,6 +424,103 @@ pub fn dispatch(
             ui_log(app, "⚠ не распознал команду");
             DispatchResult::Done(false)
         }
+    }
+}
+
+fn dispatch_process_control(
+    app: &AppHandle,
+    cfg: &ReeverConfig,
+    actions: &[Action],
+    candidates: &[String],
+    kill: bool,
+) -> DispatchResult {
+    let apps = crate::procs::running_apps();
+    let Some(found) =
+        crate::procs::match_app(candidates, &apps, actions, cfg.settings.match_threshold)
+    else {
+        if cfg.settings.private_log {
+            ui_log(app, "∅ не нашёл открытую программу (частный режим)");
+        } else {
+            ui_log(
+                app,
+                format!("∅ не нашёл открытую программу «{}»", candidates.join(" / ")),
+            );
+        }
+        return DispatchResult::Done(false);
+    };
+
+    let title = app_title(&found.app);
+    if cfg.settings.private_log {
+        ui_log(
+            app,
+            format!(
+                "🔎 найдена открытая программа (совпадение: {}, score {:.2})",
+                private_match_source(&found.matched_by),
+                found.score
+            ),
+        );
+    } else {
+        ui_log(
+            app,
+            format!(
+                "🔎 найдена открытая программа «{title}» по {} (score {:.2})",
+                found.matched_by, found.score
+            ),
+        );
+    }
+
+    if kill && crate::procs::is_protected(&found.app.exe_name) {
+        if cfg.settings.private_log {
+            ui_log(
+                app,
+                "⚠ отказ: нельзя завершить защищённый системный процесс",
+            );
+        } else {
+            ui_log(
+                app,
+                format!("⚠ отказ: «{title}» — защищённый системный процесс"),
+            );
+        }
+        return DispatchResult::Done(false);
+    }
+
+    let pending = if kill {
+        PendingAction::Kill(found.app)
+    } else {
+        PendingAction::Close(found.app)
+    };
+    if cfg.settings.confirm_close {
+        if cfg.settings.private_log {
+            ui_log(
+                app,
+                "❔ подтверди закрытие найденной программы голосом: «да» / «нет»",
+            );
+        } else {
+            ui_log(
+                app,
+                format!(
+                    "❔ {} — подтверди голосом: «да» / «нет»",
+                    pending.describe()
+                ),
+            );
+        }
+        DispatchResult::Confirm(pending)
+    } else {
+        DispatchResult::Done(execute_pending(app, &pending))
+    }
+}
+
+fn private_match_source(matched_by: &str) -> &'static str {
+    if matched_by.starts_with("действие") {
+        "действие"
+    } else if matched_by.starts_with("заголовок окна") {
+        "заголовок окна"
+    } else if matched_by.starts_with("описание") {
+        "описание"
+    } else if matched_by.starts_with("exe") {
+        "имя exe"
+    } else {
+        "название программы"
     }
 }
 
@@ -352,6 +572,10 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
         "uwp" => {
             ui_log(app, format!("▶ UWP: {target}"));
             launch_with_raise(cfg, &hint, || launcher::launch_uwp(&target))
+        }
+        _ if winutil::is_web_url(&target) => {
+            ui_log(app, format!("🌐 открываю: {target}"));
+            open_url(cfg, &hint, &target, || launcher::shell_open(&target))
         }
         _ => {
             ui_log(app, format!("▶ запуск: {target}"));
@@ -484,6 +708,30 @@ fn handle_launch(app: &AppHandle, cfg: &ReeverConfig, outcome: SearchOutcome, hi
     ui_log(app, format!("▶ запуск: {}", target.display()));
     let hint = hint.to_string();
     launch_with_raise(cfg, &hint, || launcher::launch(&target))
+}
+
+/// Открыть ссылку и вывести браузер на передний план — в том числе свёрнутый: вкладка
+/// создаётся в уже открытом окне, и `raise_new` (только новые окна) его не поднимет.
+/// Браузер обрабатывает ссылку асинхронно, поэтому окно ищется несколько раз.
+fn open_url(cfg: &ReeverConfig, hint: &str, url: &str, f: impl FnOnce() -> bool) -> bool {
+    let _ = url;
+    if !cfg.settings.raise_result {
+        return f();
+    }
+    let before = winutil::snapshot();
+    let ok = f();
+    if !ok {
+        return false;
+    }
+    for delay in [250, 400, 600] {
+        std::thread::sleep(std::time::Duration::from_millis(delay));
+        if winutil::raise_default_browser() {
+            return true;
+        }
+    }
+    // Браузер по умолчанию не определился — хотя бы новое окно (браузер был закрыт).
+    winutil::raise_new(&before, hint);
+    true
 }
 
 fn launch_with_raise(cfg: &ReeverConfig, hint: &str, f: impl FnOnce() -> bool) -> bool {
@@ -763,5 +1011,80 @@ mod tests {
             ),
             Route::Launch(vec![actions[0].clone()])
         );
+    }
+
+    #[test]
+    fn close_and_kill_routes_keep_unique_language_candidates() {
+        let grammar = Grammar::defaults();
+        let actions = actions();
+
+        assert_eq!(
+            route("закрой хром", &grammar, &actions, THRESHOLD),
+            Route::Close(vec!["хром".into()])
+        );
+        assert_eq!(
+            route_with_alt(
+                "закрой хром",
+                Some("закрой chrome"),
+                &grammar,
+                &actions,
+                THRESHOLD,
+            ),
+            Route::Close(vec!["хром".into(), "chrome".into()])
+        );
+        assert_eq!(
+            route_with_alt(
+                "закрой хром",
+                Some("закрой хром"),
+                &grammar,
+                &actions,
+                THRESHOLD,
+            ),
+            Route::Close(vec!["хром".into()])
+        );
+        assert_eq!(
+            route("заверши телеграм", &grammar, &actions, THRESHOLD),
+            Route::Kill(vec!["телеграм".into()])
+        );
+    }
+
+    #[test]
+    fn close_trigger_precedes_bare_launch_and_folder_trigger() {
+        let grammar = Grammar::defaults();
+        let actions = actions();
+
+        assert_eq!(
+            route("закрой папку загрузки", &grammar, &actions, THRESHOLD),
+            Route::Close(vec!["папку загрузки".into()])
+        );
+        assert_eq!(
+            route("закрой", &grammar, &actions, THRESHOLD),
+            Route::Unknown
+        );
+        assert!(grammar.is_incomplete("закрой"));
+    }
+
+    #[test]
+    fn calculator_triggers_precede_bare_launch_and_keep_expression_candidates() {
+        let grammar = Grammar::defaults();
+        let actions = actions();
+
+        assert_eq!(
+            route("посчитай 33 умножить на 78", &grammar, &actions, THRESHOLD),
+            Route::Calc(vec!["33 умножить на 78".into()])
+        );
+        assert_eq!(
+            route("сколько будет 2 плюс 2", &grammar, &actions, THRESHOLD),
+            Route::Calc(vec!["2 плюс 2".into()])
+        );
+        assert_eq!(
+            route("посчитай minecraft", &grammar, &actions, THRESHOLD),
+            Route::Calc(vec!["minecraft".into()])
+        );
+        assert_eq!(
+            route("посчитай", &grammar, &actions, THRESHOLD),
+            Route::Unknown
+        );
+        assert!(grammar.is_incomplete("посчитай"));
     }
 }

@@ -10,6 +10,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -23,6 +27,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -36,6 +44,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -49,6 +61,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -62,6 +78,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -75,6 +95,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -88,6 +112,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -101,6 +129,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -114,6 +146,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -127,6 +163,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -140,6 +180,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -153,6 +197,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -166,6 +214,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -179,6 +231,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -192,6 +248,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -205,6 +265,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -218,6 +282,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -231,6 +299,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -244,6 +316,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -257,6 +333,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -270,6 +350,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -283,6 +367,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -296,6 +384,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -309,6 +401,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -322,6 +418,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -335,6 +435,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -348,6 +452,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -361,6 +469,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -374,6 +486,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -387,6 +503,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -400,6 +520,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -413,6 +537,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -426,6 +554,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -439,6 +571,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -452,6 +588,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -465,6 +605,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -478,6 +622,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -491,6 +639,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -504,6 +656,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -517,6 +673,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -530,6 +690,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -543,6 +707,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -556,6 +724,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -569,6 +741,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -582,6 +758,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -595,6 +775,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -608,6 +792,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -621,6 +809,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -634,6 +826,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -647,6 +843,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -660,6 +860,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -673,6 +877,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -686,6 +894,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -699,6 +911,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -712,6 +928,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -725,6 +945,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -738,6 +962,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -751,6 +979,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -762,6 +994,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -773,6 +1009,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -784,6 +1024,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -795,6 +1039,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -806,6 +1054,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -817,6 +1069,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -828,6 +1084,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -839,6 +1099,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -850,6 +1114,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -861,6 +1129,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -872,6 +1144,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -883,6 +1159,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -894,6 +1174,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -905,6 +1189,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -916,6 +1204,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -927,6 +1219,10 @@
     "expected_lang": "ru",
     "expected_prefix": "",
     "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": false
   },
   {
@@ -940,6 +1236,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "sinksaiko i'm sloth",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -953,6 +1253,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "sinksaiko i'm sloth",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -966,6 +1270,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "sinksaiko i'm sloth",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -979,6 +1287,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "sinksaiko i'm sloth",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -992,6 +1304,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "never gonna give you up",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1005,6 +1321,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "never gonna give you up",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1018,6 +1338,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "never gonna give you up",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1031,6 +1355,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "never gonna give you up",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1044,6 +1372,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "lofi hip hop radio",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1057,6 +1389,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "lofi hip hop radio",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1070,6 +1406,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "lofi hip hop radio",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1083,6 +1423,10 @@
     "expected_lang": "en",
     "expected_prefix": "поиск ютуб",
     "expected_payload": "lofi hip hop radio",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1096,6 +1440,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "how to cook pasta",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1109,6 +1457,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "how to cook pasta",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1122,6 +1474,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "how to cook pasta",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1135,6 +1491,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "how to cook pasta",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1148,6 +1508,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "rust borrow checker",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1161,6 +1525,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "rust borrow checker",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1174,6 +1542,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "rust borrow checker",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1187,6 +1559,10 @@
     "expected_lang": "en",
     "expected_prefix": "загугли",
     "expected_payload": "rust borrow checker",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1200,6 +1576,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "downloads",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1213,6 +1593,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "downloads",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1226,6 +1610,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "downloads",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1239,6 +1627,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "downloads",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1252,6 +1644,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "documents",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1265,6 +1661,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "documents",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1278,6 +1678,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "documents",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1291,6 +1695,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "documents",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1304,6 +1712,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "screenshots",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1317,6 +1729,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "screenshots",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1330,6 +1746,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "screenshots",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1343,6 +1763,10 @@
     "expected_lang": "en",
     "expected_prefix": "папка",
     "expected_payload": "screenshots",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1356,6 +1780,10 @@
     "expected_lang": "en",
     "expected_prefix": "",
     "expected_payload": "minecraft",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1369,6 +1797,10 @@
     "expected_lang": "en",
     "expected_prefix": "",
     "expected_payload": "minecraft",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1382,6 +1814,10 @@
     "expected_lang": "en",
     "expected_prefix": "",
     "expected_payload": "discord",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1395,6 +1831,10 @@
     "expected_lang": "en",
     "expected_prefix": "",
     "expected_payload": "discord",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1408,6 +1848,10 @@
     "expected_lang": "en",
     "expected_prefix": "",
     "expected_payload": "photoshop",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
@@ -1421,38 +1865,611 @@
     "expected_lang": "en",
     "expected_prefix": "",
     "expected_payload": "photoshop",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
-    "file": "112_ru_payload_control.wav",
+    "file": "112_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер закрой хром",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "113_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер закрой хром",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "114_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер закрой телеграм",
+    "expected": [
+      "закрой телеграм"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "telegram",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "115_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Vika (Russian)",
+    "text": "ривер закрой телеграм",
+    "expected": [
+      "закрой телеграм"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "telegram",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "116_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Vika (Russian)",
+    "text": "ривер закрой дискорд",
+    "expected": [
+      "закрой дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "discord",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "117_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Roman (Russian)",
+    "text": "ривер закрой дискорд",
+    "expected": [
+      "закрой дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "discord",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "118_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Roman (Russian)",
+    "text": "ривер закрой блокнот",
+    "expected": [
+      "закрой блокнот"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "notepad",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "119_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер закрой блокнот",
+    "expected": [
+      "закрой блокнот"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "notepad",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "120_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер закрой стим",
+    "expected": [
+      "закрой стим"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "steam",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "121_app_close.wav",
+    "scenario": "app_close",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер закрой стим",
+    "expected": [
+      "закрой стим"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "steam",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "122_app_kill.wav",
+    "scenario": "app_kill",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер заверши хром",
+    "expected": [
+      "заверши хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "123_app_kill.wav",
+    "scenario": "app_kill",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер заверши хром",
+    "expected": [
+      "заверши хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "124_app_kill.wav",
+    "scenario": "app_kill",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер заверши телеграм",
+    "expected": [
+      "заверши телеграм"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "telegram",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "125_app_kill.wav",
+    "scenario": "app_kill",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер заверши телеграм",
+    "expected": [
+      "заверши телеграм"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "telegram",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "126_app_kill.wav",
+    "scenario": "app_kill",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер заверши дискорд",
+    "expected": [
+      "заверши дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "discord",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "127_app_kill.wav",
+    "scenario": "app_kill",
+    "voice": "Vika (Russian)",
+    "text": "ривер заверши дискорд",
+    "expected": [
+      "заверши дискорд"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "discord",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "128_app_pause.wav",
+    "scenario": "app_pause",
+    "voice": "Vika (Russian)",
+    "text": "ривер закрой / хром",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "129_app_pause.wav",
+    "scenario": "app_pause",
+    "voice": "Roman (Russian)",
+    "text": "ривер закрой / хром",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "130_app_en.wav",
+    "scenario": "app_en",
+    "voice": "Roman (Russian)",
+    "text": "ривер закрой / chrome",
+    "expected": [
+      "закрой chrome"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "закрой",
+    "expected_payload": "chrome",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "131_app_en.wav",
+    "scenario": "app_en",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер закрой / chrome",
+    "expected": [
+      "закрой chrome"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "закрой",
+    "expected_payload": "chrome",
+    "expected_app": "chrome",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "132_app_en.wav",
+    "scenario": "app_en",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер закрой / discord",
+    "expected": [
+      "закрой discord"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "закрой",
+    "expected_payload": "discord",
+    "expected_app": "discord",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "133_app_en.wav",
+    "scenario": "app_en",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер закрой / discord",
+    "expected": [
+      "закрой discord"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "закрой",
+    "expected_payload": "discord",
+    "expected_app": "discord",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "134_app_en.wav",
+    "scenario": "app_en",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер закрой / telegram",
+    "expected": [
+      "закрой telegram"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "закрой",
+    "expected_payload": "telegram",
+    "expected_app": "telegram",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "135_app_en.wav",
+    "scenario": "app_en",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер закрой / telegram",
+    "expected": [
+      "закрой telegram"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "закрой",
+    "expected_payload": "telegram",
+    "expected_app": "telegram",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "136_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер закрой хром / да",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": true,
+    "value": null,
+    "command_end_bytes": 54098,
+    "wake_heard": false
+  },
+  {
+    "file": "137_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер закрой хром / да",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": true,
+    "value": null,
+    "command_end_bytes": 47548,
+    "wake_heard": false
+  },
+  {
+    "file": "138_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер закрой хром / нет",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": false,
+    "value": null,
+    "command_end_bytes": 53152,
+    "wake_heard": false
+  },
+  {
+    "file": "139_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Vika (Russian)",
+    "text": "ривер закрой хром / нет",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": false,
+    "value": null,
+    "command_end_bytes": 54676,
+    "wake_heard": false
+  },
+  {
+    "file": "140_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Vika (Russian)",
+    "text": "ривер закрой хром / yes",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": true,
+    "value": null,
+    "command_end_bytes": 43778,
+    "wake_heard": false
+  },
+  {
+    "file": "141_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Roman (Russian)",
+    "text": "ривер закрой хром / yes",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": true,
+    "value": null,
+    "command_end_bytes": 47552,
+    "wake_heard": false
+  },
+  {
+    "file": "142_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Roman (Russian)",
+    "text": "ривер закрой хром / no",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": false,
+    "value": null,
+    "command_end_bytes": 52832,
+    "wake_heard": false
+  },
+  {
+    "file": "143_app_confirm.wav",
+    "scenario": "app_confirm",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер закрой хром / no",
+    "expected": [
+      "закрой хром"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "chrome",
+    "expected_confirm": false,
+    "value": null,
+    "command_end_bytes": 65208,
+    "wake_heard": false
+  },
+  {
+    "file": "144_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер поиск ютуб / смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "смешные коты",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "145_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер поиск ютуб / смешные коты",
+    "expected": [
+      "поиск ютуб смешные коты"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "поиск ютуб",
+    "expected_payload": "смешные коты",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "146_ru_payload_control.wav",
+    "scenario": "ru_payload_control",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер загугли / погода в москве",
+    "expected": [
+      "загугли погода в москве"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "загугли",
+    "expected_payload": "погода в москве",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "147_ru_payload_control.wav",
     "scenario": "ru_payload_control",
     "voice": "Ekaterina (Russian)",
-    "text": "ривер поиск ютуб / смешные коты",
-    "expected": [
-      "поиск ютуб смешные коты"
-    ],
-    "expected_lang": "ru",
-    "expected_prefix": "поиск ютуб",
-    "expected_payload": "смешные коты",
-    "wake_heard": true
-  },
-  {
-    "file": "113_ru_payload_control.wav",
-    "scenario": "ru_payload_control",
-    "voice": "Dmitriy (Russian)",
-    "text": "ривер поиск ютуб / смешные коты",
-    "expected": [
-      "поиск ютуб смешные коты"
-    ],
-    "expected_lang": "ru",
-    "expected_prefix": "поиск ютуб",
-    "expected_payload": "смешные коты",
-    "wake_heard": true
-  },
-  {
-    "file": "114_ru_payload_control.wav",
-    "scenario": "ru_payload_control",
-    "voice": "Dmitriy (Russian)",
     "text": "ривер загугли / погода в москве",
     "expected": [
       "загугли погода в москве"
@@ -1460,25 +2477,16 @@
     "expected_lang": "ru",
     "expected_prefix": "загугли",
     "expected_payload": "погода в москве",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
-    "file": "115_ru_payload_control.wav",
+    "file": "148_ru_payload_control.wav",
     "scenario": "ru_payload_control",
-    "voice": "Vika (Russian)",
-    "text": "ривер загугли / погода в москве",
-    "expected": [
-      "загугли погода в москве"
-    ],
-    "expected_lang": "ru",
-    "expected_prefix": "загугли",
-    "expected_payload": "погода в москве",
-    "wake_heard": true
-  },
-  {
-    "file": "116_ru_payload_control.wav",
-    "scenario": "ru_payload_control",
-    "voice": "Vika (Russian)",
+    "voice": "Ekaterina (Russian)",
     "text": "ривер папка / загрузки",
     "expected": [
       "папка загрузки"
@@ -1486,19 +2494,299 @@
     "expected_lang": "ru",
     "expected_prefix": "папка",
     "expected_payload": "загрузки",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
     "wake_heard": true
   },
   {
-    "file": "117_ru_payload_control.wav",
+    "file": "149_ru_payload_control.wav",
     "scenario": "ru_payload_control",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер папка / загрузки",
+    "expected": [
+      "папка загрузки"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "папка",
+    "expected_payload": "загрузки",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": null,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "150_calc.wav",
+    "scenario": "calc",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер посчитай тридцать три умножить на семьдесят восемь",
+    "expected": [
+      "посчитай тридцать три умножить на семьдесят восемь"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 2574,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "151_calc.wav",
+    "scenario": "calc",
+    "voice": "Vika (Russian)",
+    "text": "ривер посчитай тридцать три умножить на семьдесят восемь",
+    "expected": [
+      "посчитай тридцать три умножить на семьдесят восемь"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 2574,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "152_calc.wav",
+    "scenario": "calc",
+    "voice": "Vika (Russian)",
+    "text": "ривер сколько будет два плюс два",
+    "expected": [
+      "сколько будет два плюс два"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 4,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "153_calc.wav",
+    "scenario": "calc",
     "voice": "Roman (Russian)",
-    "text": "ривер папка / загрузки",
+    "text": "ривер сколько будет два плюс два",
     "expected": [
-      "папка загрузки"
+      "сколько будет два плюс два"
     ],
     "expected_lang": "ru",
-    "expected_prefix": "папка",
-    "expected_payload": "загрузки",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 4,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "154_calc.wav",
+    "scenario": "calc",
+    "voice": "Roman (Russian)",
+    "text": "ривер посчитай сто двадцать пять разделить на пять",
+    "expected": [
+      "посчитай сто двадцать пять разделить на пять"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 25,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "155_calc.wav",
+    "scenario": "calc",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер посчитай сто двадцать пять разделить на пять",
+    "expected": [
+      "посчитай сто двадцать пять разделить на пять"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 25,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "156_calc.wav",
+    "scenario": "calc",
+    "voice": "Microsoft Irina Desktop",
+    "text": "ривер посчитай пятнадцать процентов от двухсот",
+    "expected": [
+      "посчитай пятнадцать процентов от двухсот"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 30,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "157_calc.wav",
+    "scenario": "calc",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер посчитай пятнадцать процентов от двухсот",
+    "expected": [
+      "посчитай пятнадцать процентов от двухсот"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 30,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "158_calc.wav",
+    "scenario": "calc",
+    "voice": "Alexandr (Russian)",
+    "text": "ривер посчитай тысяча минус триста сорок",
+    "expected": [
+      "посчитай тысяча минус триста сорок"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 660,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "159_calc.wav",
+    "scenario": "calc",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер посчитай тысяча минус триста сорок",
+    "expected": [
+      "посчитай тысяча минус триста сорок"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 660,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "160_calc.wav",
+    "scenario": "calc",
+    "voice": "Ekaterina (Russian)",
+    "text": "ривер посчитай семь в квадрате",
+    "expected": [
+      "посчитай семь в квадрате"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 49,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "161_calc.wav",
+    "scenario": "calc",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер посчитай семь в квадрате",
+    "expected": [
+      "посчитай семь в квадрате"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 49,
+    "command_end_bytes": 0,
+    "wake_heard": false
+  },
+  {
+    "file": "162_calc_pause.wav",
+    "scenario": "calc_pause",
+    "voice": "Dmitriy (Russian)",
+    "text": "ривер посчитай / двенадцать умножить на двенадцать",
+    "expected": [
+      "посчитай двенадцать умножить на двенадцать"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 144,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "163_calc_pause.wav",
+    "scenario": "calc_pause",
+    "voice": "Vika (Russian)",
+    "text": "ривер посчитай / двенадцать умножить на двенадцать",
+    "expected": [
+      "посчитай двенадцать умножить на двенадцать"
+    ],
+    "expected_lang": "ru",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 144,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "164_calc_en.wav",
+    "scenario": "calc_en",
+    "voice": "Vika (Russian)",
+    "text": "ривер посчитай / thirty three times seventy eight",
+    "expected": [
+      "посчитай thirty three times seventy eight"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 2574,
+    "command_end_bytes": 0,
+    "wake_heard": true
+  },
+  {
+    "file": "165_calc_en.wav",
+    "scenario": "calc_en",
+    "voice": "Roman (Russian)",
+    "text": "ривер посчитай / thirty three times seventy eight",
+    "expected": [
+      "посчитай thirty three times seventy eight"
+    ],
+    "expected_lang": "en",
+    "expected_prefix": "",
+    "expected_payload": "",
+    "expected_app": "",
+    "expected_confirm": null,
+    "value": 2574,
+    "command_end_bytes": 0,
     "wake_heard": true
   }
 ]

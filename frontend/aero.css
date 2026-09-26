@@ -626,6 +626,7 @@ fieldset.grp > legend {
 .grammar-editor { margin-top: 10px; border-top: 1px solid var(--group-edge); padding-top: 8px; }
 .grammar-editor[hidden] { display: none; }
 .grammar-editor fieldset.grp { margin-bottom: 9px; }
+.grammar-kind-icon { display: inline-block; width: 1.25em; color: var(--ink-legend); font-weight: 700; text-align: center; }
 .grammar-small-note { min-height: 15px; }
 .grammar-chipbox { min-width: 0; }
 .grammar-chips { display: flex; gap: 5px; flex-wrap: wrap; margin: 5px 0; }
@@ -650,6 +651,8 @@ fieldset.grp > legend {
 .grammar-bare-launch span { flex: 1; }
 .grammar-url-field { margin-top: 7px; }
 .grammar-add-search { margin: 0 0 10px; }
+.setting-with-help { margin: 3px 0 7px; }
+.setting-help { margin: 3px 0 0 22px; max-width: 600px; line-height: 1.35; }
 .grammar-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
 .grammar-errors { margin: 7px 0 0; padding: 7px 10px 7px 27px; color: #9b1c14; background: #fff0ef; border: 1px solid #d8a29e; }
 .grammar-errors[hidden] { display: none; }

@@ -6,9 +6,11 @@ use windows::core::PCWSTR;
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, TRUE};
 use windows::Win32::System::Environment::ExpandEnvironmentStringsW;
 use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+use windows::Win32::UI::Shell::{AssocQueryStringW, ASSOCF_NONE, ASSOCSTR_EXECUTABLE};
 use windows::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, EnumWindows, GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW,
-    GetWindowThreadProcessId, IsWindowVisible, SetForegroundWindow, ShowWindow, SW_RESTORE,
+    GetWindowThreadProcessId, IsIconic, IsWindowVisible, SetForegroundWindow, ShowWindow,
+    SW_RESTORE, SW_SHOW,
 };
 
 /// Развернуть %ENV% в строке (полная поддержка через WinAPI).
@@ -124,9 +126,82 @@ fn bring_to_front(hwnd: HWND) {
         let fg_thread = GetWindowThreadProcessId(fg, None);
         let cur = GetCurrentThreadId();
         let _ = AttachThreadInput(cur, fg_thread, TRUE);
-        let _ = ShowWindow(hwnd, SW_RESTORE);
+        // SW_RESTORE только для свёрнутого окна: развёрнутое на весь экран оно вернуло
+        // бы к обычному размеру.
+        let _ = ShowWindow(hwnd, if IsIconic(hwnd).as_bool() { SW_RESTORE } else { SW_SHOW });
         let _ = BringWindowToTop(hwnd);
         let _ = SetForegroundWindow(hwnd);
         let _ = AttachThreadInput(cur, fg_thread, BOOL(0));
     }
+}
+
+/// Exe браузера по умолчанию — того, кто открывает `https`-ссылки (из ассоциаций Windows).
+pub fn default_browser_exe() -> Option<std::path::PathBuf> {
+    let mut len: u32 = 0;
+    unsafe {
+        let _ = AssocQueryStringW(
+            ASSOCF_NONE,
+            ASSOCSTR_EXECUTABLE,
+            windows::core::w!("https"),
+            PCWSTR::null(),
+            windows::core::PWSTR::null(),
+            &mut len,
+        );
+    }
+    if len == 0 {
+        return None;
+    }
+    let mut buf = vec![0u16; len as usize];
+    let ok = unsafe {
+        AssocQueryStringW(
+            ASSOCF_NONE,
+            ASSOCSTR_EXECUTABLE,
+            windows::core::w!("https"),
+            PCWSTR::null(),
+            windows::core::PWSTR(buf.as_mut_ptr()),
+            &mut len,
+        )
+    };
+    if ok.is_err() {
+        return None;
+    }
+    let path = String::from_utf16_lossy(&buf[..(len as usize).saturating_sub(1)]);
+    (!path.trim().is_empty()).then(|| std::path::PathBuf::from(path))
+}
+
+/// Вывести на передний план браузер по умолчанию после открытия ссылки: новая вкладка
+/// часто уходит в уже открытое, но свёрнутое окно — `raise_new` его не видит, окно не новое.
+/// Берётся верхнее (по Z-порядку) окно браузера; свёрнутое — разворачивается.
+/// Сравнение по папке установки: ассоциация может указывать на лаунчер (Opera GX
+/// `launcher.exe`), а окна принадлежат `opera.exe` из той же папки. Best-effort.
+pub fn raise_default_browser() -> bool {
+    let Some(exe) = default_browser_exe() else {
+        return false;
+    };
+    let Some(install_dir) = exe.parent().map(|d| d.to_string_lossy().to_lowercase()) else {
+        return false;
+    };
+    let window = crate::procs::running_apps()
+        .into_iter()
+        .filter(|app| {
+            app.exe_path
+                .parent()
+                .map(|d| d.to_string_lossy().to_lowercase().starts_with(&install_dir))
+                .unwrap_or(false)
+        })
+        .flat_map(|app| app.windows.into_iter())
+        .find(|raw| *raw != 0);
+    match window {
+        Some(raw) => {
+            bring_to_front(hwnd_from(raw));
+            true
+        }
+        None => false,
+    }
+}
+
+/// Похоже ли на веб-ссылку (её откроет браузер по умолчанию).
+pub fn is_web_url(target: &str) -> bool {
+    let t = target.trim().to_ascii_lowercase();
+    t.starts_with("http://") || t.starts_with("https://") || t.starts_with("www.")
 }

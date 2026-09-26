@@ -13,10 +13,12 @@ use std::time::Instant;
 use reever_lib::actions::{load_actions, Action};
 use reever_lib::asr::{Asr, AsrConfig};
 use reever_lib::bilingual::LangMode;
+use reever_lib::calc::parse_expression;
 use reever_lib::dispatch::{route, Route};
 use reever_lib::engine::{Engine, EngineConfig, EngineEvent};
 use reever_lib::grammar::Grammar;
 use reever_lib::langid::SpeechLid;
+use reever_lib::procs::{self, RunningApp};
 use reever_lib::speech::{samples, Lang, LanguageId, Transcriber};
 use reever_lib::textnorm::normalize;
 use reever_lib::vad::SileroVad;
@@ -43,6 +45,15 @@ struct Case {
     expected_prefix: String,
     #[serde(default)]
     expected_payload: String,
+    #[serde(default)]
+    expected_app: String,
+    #[serde(default)]
+    expected_confirm: Option<bool>,
+    #[serde(default)]
+    command_end_bytes: usize,
+    /// Эталон вычисления для calc-сценариев; остальные оставляют поле пустым.
+    #[serde(default)]
+    value: Option<f64>,
 }
 
 fn default_expected_lang() -> String {
@@ -57,6 +68,7 @@ struct Candidate {
 
 struct Outcome {
     commands: Vec<Candidate>,
+    confirmations: Vec<bool>,
     wake_heard: usize,
     /// Задержка последней команды после конца аудиофразы, мс аудио-времени.
     latency_ms: Option<f64>,
@@ -65,8 +77,28 @@ struct Outcome {
 struct Row<'a> {
     case: &'a Case,
     out: Outcome,
+    calc: Option<CalcEvaluation>,
     /// exact — точный текст; close — тот же маршрут / достаточно похожая команда.
     verdict: &'static str,
+}
+
+struct CalcCheck {
+    command: String,
+    expression: String,
+    value: Option<f64>,
+    routed: bool,
+}
+
+struct CalcEvaluation {
+    checks: Vec<CalcCheck>,
+    route_ok: bool,
+    value_ok: bool,
+}
+
+impl CalcEvaluation {
+    fn ok(&self) -> bool {
+        self.route_ok && self.value_ok
+    }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -84,16 +116,17 @@ fn main() -> anyhow::Result<()> {
     let model = arg("--model")
         .unwrap_or_else(|| "sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16".into());
     let model_dir = model_path(&models, &model);
-    let second_model = arg("--second-model")
-        .unwrap_or_else(|| DEFAULT_SECOND_MODEL.into());
+    let second_model = arg("--second-model").unwrap_or_else(|| DEFAULT_SECOND_MODEL.into());
     let lid_model = arg("--lid-model").unwrap_or_else(|| DEFAULT_LID_MODEL.into());
     let second_dir = model_path(&models, &second_model);
     let lid_dir = model_path(&models, &lid_model);
 
     let cases: Vec<Case> =
         serde_json::from_str(&std::fs::read_to_string(testdata.join("manifest.json"))?)?;
-    let wake_words: Vec<String> =
-        ["ривер", "ревер", "ривьер", "ливер"].iter().map(|word| word.to_string()).collect();
+    let wake_words: Vec<String> = ["ривер", "ревер", "ривьер", "ливер"]
+        .iter()
+        .map(|word| word.to_string())
+        .collect();
 
     let asr_started = Instant::now();
     let mut engine = Engine::new(
@@ -186,7 +219,15 @@ fn main() -> anyhow::Result<()> {
             eprintln!("{} [{}] {}", case.file, case.voice, case.text);
         }
         let started = Instant::now();
-        let out = run_case(&mut engine, &speech, noise_db, index as u64, trace);
+        let out = run_case(
+            &mut engine,
+            &speech,
+            noise_db,
+            index as u64,
+            trace,
+            case.scenario == "app_confirm",
+            case.command_end_bytes,
+        );
         compute += started.elapsed().as_secs_f64();
         rows.push(judge(case, out, &routing));
     }
@@ -194,7 +235,11 @@ fn main() -> anyhow::Result<()> {
     let model_label = format!(
         "{} + {}{}",
         model,
-        if has_second { second_model.as_str() } else { "без второго языка" },
+        if has_second {
+            second_model.as_str()
+        } else {
+            "без второго языка"
+        },
         if has_lid { " + LID" } else { "" }
     );
     let report = render(&rows, &model_label, noise_db, compute, audio_s);
@@ -219,7 +264,11 @@ fn model_path(models: &Path, name: &str) -> PathBuf {
 fn read_wav(path: &Path) -> anyhow::Result<Vec<i16>> {
     let wave = sherpa_onnx::Wave::read(path.to_string_lossy().as_ref())
         .ok_or_else(|| anyhow::anyhow!("не прочитан {}", path.display()))?;
-    anyhow::ensure!(wave.sample_rate() == 16_000, "{}: нужен 16 кГц", path.display());
+    anyhow::ensure!(
+        wave.sample_rate() == 16_000,
+        "{}: нужен 16 кГц",
+        path.display()
+    );
     Ok(wave
         .samples()
         .iter()
@@ -233,6 +282,8 @@ fn run_case(
     noise_db: Option<f32>,
     seed: u64,
     trace: bool,
+    listen_for_confirmation: bool,
+    command_end_bytes: usize,
 ) -> Outcome {
     engine.reset();
     let lead = samples(LEAD_MS);
@@ -242,10 +293,16 @@ fn run_case(
     if let Some(db) = noise_db {
         add_noise(&mut audio, db, seed);
     }
-    let speech_end = lead + speech.len();
+    let command_speech_len = if command_end_bytes > 0 {
+        command_end_bytes / std::mem::size_of::<i16>()
+    } else {
+        speech.len()
+    };
+    let speech_end = lead + command_speech_len;
 
     let mut out = Outcome {
         commands: Vec::new(),
+        confirmations: Vec::new(),
         wake_heard: 0,
         latency_ms: None,
     };
@@ -259,8 +316,12 @@ fn run_case(
                     let at = (index + 1) * CHUNK;
                     out.latency_ms = Some((at as f64 - speech_end as f64) / 16.0);
                     out.commands.push(Candidate { text, alt });
+                    if listen_for_confirmation {
+                        engine.listen_confirm();
+                    }
                 }
                 EngineEvent::WakeHeard => out.wake_heard += 1,
+                EngineEvent::Confirm(yes) => out.confirmations.push(yes),
                 _ => {}
             }
         }
@@ -307,26 +368,56 @@ fn judge<'a>(case: &'a Case, out: Outcome, routing: &Routing) -> Row<'a> {
         .map(|command| normalize(command))
         .collect();
     let wake_ok = !case.wake_heard || out.wake_heard == 1;
-    let verdict = if got.len() != want.len() || !wake_ok {
-        "FAIL"
-    } else if got == want {
-        "exact"
-    } else if out.commands.iter().zip(&want).all(|(candidate, expected)| {
-        same_command(&candidate.text, candidate.alt.as_deref(), expected, routing)
-    }) {
-        "close"
-    } else {
-        "FAIL"
-    };
-    Row { case, out, verdict }
+    let confirmation_ok = case
+        .expected_confirm
+        .map_or(true, |expected| out.confirmations.as_slice() == [expected]);
+    let calc = case
+        .value
+        .map(|expected| check_calc(expected, &out.commands, routing));
+    let calc_ok = calc.as_ref().map_or(true, CalcEvaluation::ok);
+    let route_ok = case.expected_app.is_empty()
+        || out
+            .commands
+            .iter()
+            .zip(&case.expected)
+            .all(|(candidate, _)| {
+                app_target_matches(&case.scenario, &case.expected_app, candidate, routing)
+            });
+    let verdict =
+        if got.len() != want.len() || !wake_ok || !confirmation_ok || !route_ok || !calc_ok {
+            "FAIL"
+        } else if got == want {
+            "exact"
+        } else if out
+            .commands
+            .iter()
+            .zip(&want)
+            .all(|(candidate, expected)| same_command(case, candidate, expected, routing))
+        {
+            "close"
+        } else {
+            "FAIL"
+        };
+    Row {
+        case,
+        out,
+        calc,
+        verdict,
+    }
 }
 
 /// Та же ли команда с точки зрения приложения: одинаковый route или похожий текст.
-fn same_command(got: &str, alt: Option<&str>, want: &str, routing: &Routing) -> bool {
+fn same_command(case: &Case, got: &Candidate, want: &str, routing: &Routing) -> bool {
+    if let Some(expected_value) = case.value {
+        return check_calc(expected_value, std::slice::from_ref(got), routing).ok();
+    }
+    if !case.expected_app.is_empty() {
+        return app_target_matches(&case.scenario, &case.expected_app, got, routing);
+    }
     let wanted = routing.route(want, None);
     if wanted != Route::Unknown
         && !matches!(wanted, Route::LaunchFallback(_))
-        && routing.route(got, alt) == wanted
+        && routing.route(&got.text, got.alt.as_deref()) == wanted
     {
         return true;
     }
@@ -338,7 +429,93 @@ fn same_command(got: &str, alt: Option<&str>, want: &str, routing: &Routing) -> 
         verbs: Vec::new(),
         phrases: vec![want.to_string()],
     };
-    action.score(&[normalize(got)]) >= 0.7 || jaro_winkler(&normalize(got), &normalize(want)) >= 0.9
+    action.score(&[normalize(&got.text)]) >= 0.7
+        || jaro_winkler(&normalize(&got.text), &normalize(want)) >= 0.9
+}
+
+/// Проверяет чистую маршрутизацию и разбор результата, не открывая калькулятор.
+fn check_calc(expected_value: f64, commands: &[Candidate], routing: &Routing) -> CalcEvaluation {
+    let mut checks = Vec::new();
+    for command in commands {
+        match routing.route(&command.text, command.alt.as_deref()) {
+            Route::Calc(expressions) => {
+                for expression in expressions {
+                    let value = parse_expression(&expression).and_then(|parsed| parsed.value);
+                    checks.push(CalcCheck {
+                        command: normalize(&command.text),
+                        expression,
+                        value,
+                        routed: true,
+                    });
+                }
+            }
+            _ => checks.push(CalcCheck {
+                command: normalize(&command.text),
+                expression: "— не Route::Calc".into(),
+                value: None,
+                routed: false,
+            }),
+        }
+    }
+    let route_ok = checks.iter().any(|check| check.routed);
+    let value_ok = checks
+        .iter()
+        .filter_map(|check| check.value)
+        .any(|actual| close_value(actual, expected_value));
+    CalcEvaluation {
+        checks,
+        route_ok,
+        value_ok,
+    }
+}
+
+fn close_value(actual: f64, expected: f64) -> bool {
+    actual.is_finite()
+        && expected.is_finite()
+        && (actual - expected).abs() <= 1e-6_f64.max(expected.abs() * 1e-8)
+}
+
+/// Маршрут проверяется на фиксированном списке, не на реальных процессах пользователя.
+fn app_target_matches(
+    scenario: &str,
+    expected_app: &str,
+    candidate: &Candidate,
+    routing: &Routing,
+) -> bool {
+    let route = routing.route(&candidate.text, candidate.alt.as_deref());
+    let targets = match (scenario, route) {
+        ("app_kill", Route::Kill(targets)) => targets,
+        ("app_close" | "app_pause" | "app_en" | "app_confirm", Route::Close(targets)) => targets,
+        _ => return false,
+    };
+    procs::match_app(&targets, &fake_running_apps(), &routing.actions, 0.7)
+        .is_some_and(|matched| normalize(&matched.app.exe_name) == normalize(expected_app))
+}
+
+fn fake_running_apps() -> Vec<RunningApp> {
+    [
+        ("chrome.exe", "chrome", "Google Chrome", "Google Chrome"),
+        (
+            "Telegram.exe",
+            "telegram",
+            "Telegram Desktop",
+            "Telegram Desktop",
+        ),
+        ("Discord.exe", "discord", "Discord", "Discord"),
+        ("notepad.exe", "notepad", "Блокнот", "Блокнот"),
+        ("steam.exe", "steam", "Steam", "Steam"),
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(index, (exe, exe_name, description, title))| RunningApp {
+        exe_path: PathBuf::from(format!(r"C:\Fake\{exe}")),
+        exe_name: exe_name.into(),
+        description: description.into(),
+        titles: vec![title.into()],
+        pids: vec![10_000 + index as u32],
+        windows: Vec::new(),
+    })
+    .collect()
 }
 
 fn target_payload(text: &str, prefix: &str) -> String {
@@ -385,8 +562,8 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
         rows.len(),
         compute / audio_s.max(1e-9)
     );
-    report += "| сценарий | язык цели | всего | exact | close | fail | язык верен | средний CER en | alt точнее text по CER | задержка, мс (сред.) |\n";
-    report += "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n";
+    report += "| сценарий | язык цели | всего | exact | close | fail | язык верен | средний CER en | alt точнее text по CER | подтверждение | задержка, мс (сред.) |\n";
+    report += "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n";
 
     let mut groups: BTreeMap<(&str, &str), Vec<&Row>> = BTreeMap::new();
     for row in rows {
@@ -398,8 +575,7 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
 
     let mut totals = (0, 0, 0);
     let (mut language_hits, mut language_total) = (0, 0);
-    let (mut english_cer, mut alt_cer, mut alt_better, mut english_total) =
-        (0.0, 0.0, 0, 0);
+    let (mut english_cer, mut alt_cer, mut alt_better, mut english_total) = (0.0, 0.0, 0, 0);
     for ((scenario, language), group) in groups {
         let exact = group.iter().filter(|row| row.verdict == "exact").count();
         let close = group.iter().filter(|row| row.verdict == "close").count();
@@ -420,10 +596,7 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
                     .commands
                     .first()
                     .and_then(|candidate| {
-                        output_language(&target_payload(
-                            &candidate.text,
-                            &row.case.expected_prefix,
-                        ))
+                        output_language(&target_payload(&candidate.text, &row.case.expected_prefix))
                     })
                     .is_some_and(|detected| {
                         (language == "en" && detected == Lang::En)
@@ -434,10 +607,7 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
         language_hits += target_lang_hits;
         language_total += target_rows.len();
 
-        let latency: Vec<f64> = group
-            .iter()
-            .filter_map(|row| row.out.latency_ms)
-            .collect();
+        let latency: Vec<f64> = group.iter().filter_map(|row| row.out.latency_ms).collect();
         let average_latency = average(&latency).map_or("—".into(), |value| format!("{value:.0}"));
         let lang_cell = if target_rows.is_empty() {
             "—".into()
@@ -446,6 +616,24 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
         };
         let mut cer_cell = "—".to_string();
         let mut alt_cell = "—".to_string();
+        let confirmation_rows: Vec<&Row> = group
+            .iter()
+            .copied()
+            .filter(|row| row.case.expected_confirm.is_some())
+            .collect();
+        let confirmation_hits = confirmation_rows
+            .iter()
+            .filter(|row| {
+                row.case
+                    .expected_confirm
+                    .is_some_and(|expected| row.out.confirmations.as_slice() == [expected])
+            })
+            .count();
+        let confirmation_cell = if confirmation_rows.is_empty() {
+            "—".into()
+        } else {
+            format!("{confirmation_hits}/{}", confirmation_rows.len())
+        };
 
         if language == "en" && !target_rows.is_empty() {
             let mut main_sum = 0.0;
@@ -457,16 +645,15 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
                     .out
                     .commands
                     .first()
-                    .map(|candidate| {
-                        target_payload(&candidate.text, &row.case.expected_prefix)
-                    })
+                    .map(|candidate| target_payload(&candidate.text, &row.case.expected_prefix))
                     .unwrap_or_default();
                 let selected_cer = cer(&expected, &selected);
                 main_sum += selected_cer;
                 let alternate = row.out.commands.first().and_then(|candidate| {
-                    candidate.alt.as_deref().map(|text| {
-                        target_payload(text, &row.case.expected_prefix)
-                    })
+                    candidate
+                        .alt
+                        .as_deref()
+                        .map(|text| target_payload(text, &row.case.expected_prefix))
                 });
                 let alternate_cer = alternate
                     .as_deref()
@@ -486,7 +673,7 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
             alt_cell = format!("{better_count}/{count}");
         }
         report += &format!(
-            "| {scenario} | {language} | {} | {exact} | {close} | {fail} | {lang_cell} | {cer_cell} | {alt_cell} | {average_latency} |\n",
+            "| {scenario} | {language} | {} | {exact} | {close} | {fail} | {lang_cell} | {cer_cell} | {alt_cell} | {confirmation_cell} | {average_latency} |\n",
             group.len()
         );
     }
@@ -514,24 +701,66 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
             100.0 * alt_better as f64 / english_total as f64
         );
     }
-    let latency: Vec<f64> = rows
-        .iter()
-        .filter_map(|row| row.out.latency_ms)
-        .collect();
+    let latency: Vec<f64> = rows.iter().filter_map(|row| row.out.latency_ms).collect();
     if let Some(value) = average(&latency) {
         report += &format!("Средняя задержка: {value:.0} мс.\n");
     }
 
-    report += "\n## Неточные и провалы\n\n| файл | сценарий | язык цели | голос | сказано | ожидалось | text | alt | wake |\n|---|---|---|---|---|---|---|---|---|\n";
+    let calc_rows: Vec<&Row> = rows.iter().filter(|row| row.case.value.is_some()).collect();
+    if !calc_rows.is_empty() {
+        report += "\n## Проверка калькулятора\n\n";
+        report += "| сценарий | голос | сказано | текст Engine | кандидат Route::Calc | value | ожидалось | route + parse |\n";
+        report += "|---|---|---|---|---|---:|---:|---|\n";
+        for row in calc_rows {
+            let expected = row.case.value.expect("calc row has expected value");
+            if let Some(calc) = &row.calc {
+                if calc.checks.is_empty() {
+                    report += &format!(
+                        "| {} / {} | {} | {} | — | — | — | {} | FAIL |\n",
+                        row.case.scenario,
+                        row.case.file,
+                        row.case.voice,
+                        row.case.text,
+                        format_value(Some(expected))
+                    );
+                }
+                for check in &calc.checks {
+                    let ok = check.routed
+                        && check
+                            .value
+                            .is_some_and(|actual| close_value(actual, expected));
+                    report += &format!(
+                        "| {} / {} | {} | {} | {} | {} | {} | {} | {} |\n",
+                        row.case.scenario,
+                        row.case.file,
+                        row.case.voice,
+                        row.case.text,
+                        check.command,
+                        check.expression,
+                        format_value(check.value),
+                        format_value(Some(expected)),
+                        if ok { "PASS" } else { "FAIL" }
+                    );
+                }
+            }
+        }
+    }
+
+    report += "\n## Неточные и провалы\n\n| файл | сценарий | язык цели | голос | сказано | ожидалось | text | alt | подтверждение | wake |\n|---|---|---|---|---|---|---|---|---|---|\n";
     for row in rows.iter().filter(|row| row.verdict != "exact") {
         let commands: Vec<(&str, &str)> = row
             .out
             .commands
             .iter()
-            .map(|candidate| (candidate.text.as_str(), candidate.alt.as_deref().unwrap_or("")))
+            .map(|candidate| {
+                (
+                    candidate.text.as_str(),
+                    candidate.alt.as_deref().unwrap_or(""),
+                )
+            })
             .collect();
         report += &format!(
-            "| {} {} | {} | {} | {} | {} | {:?} | {:?} | {:?} | {} |\n",
+            "| {} {} | {} | {} | {} | {} | {:?} | {:?} | {:?} | {:?} | {} |\n",
             row.case.file,
             row.verdict,
             row.case.scenario,
@@ -541,10 +770,22 @@ fn render(rows: &[Row], model: &str, noise_db: Option<f32>, compute: f64, audio_
             row.case.expected,
             commands.iter().map(|(text, _)| *text).collect::<Vec<_>>(),
             commands.iter().map(|(_, alt)| *alt).collect::<Vec<_>>(),
+            row.out.confirmations,
             row.out.wake_heard
         );
     }
     report
+}
+
+fn format_value(value: Option<f64>) -> String {
+    match value {
+        None => "—".into(),
+        Some(value) if (value - value.round()).abs() < 1e-9 => format!("{value:.0}"),
+        Some(value) => format!("{value:.6}")
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string(),
+    }
 }
 
 fn average(values: &[f64]) -> Option<f64> {

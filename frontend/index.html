@@ -150,7 +150,7 @@
         lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
         vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
         partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
-        raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,
+        raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
         sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:''
       };
       const defaultGrammarPreview=()=>({
@@ -160,7 +160,10 @@
           {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true,lang:'auto'},
           {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку'],url:'',enabled:true,lang:'auto'},
           {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли'],url:'https://www.google.com/search?q={q}',enabled:true,lang:'auto'},
-          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'}
+          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'},
+          {id:'close',kind:'close',label:'закрыть открытую программу',triggers:['закрой'],url:'',enabled:true,lang:'auto'},
+          {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши'],url:'',enabled:true,lang:'auto'},
+          {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай'],url:'',enabled:true,lang:'auto'}
         ]
       });
       let previewGrammar=defaultGrammarPreview();
@@ -178,6 +181,7 @@
               else if(ids.has(intent.id)) errors.push(`Повторяется id «${intent.id}».`);
               ids.add(intent.id);
               if(intent.kind==='search'&&!String(intent.url||'').includes('{q}')) errors.push(`В URL «${intent.label||intent.id}» должен быть шаблон {q}.`);
+              if(intent.kind==='calc'&&!(intent.triggers||[]).some(phrase=>String(phrase).trim())) errors.push(`Добавь хотя бы одну фразу для «${intent.label||'калькулятора'}».`);
               for(const phrase of intent.triggers||[]){
                 const key=String(phrase).trim().toLocaleLowerCase();
                 if(!key&&intent.kind!=='launch') errors.push(`Пустая фраза доступна только для запуска программ («${intent.label||intent.id}»).`);
@@ -389,6 +393,17 @@
             host.append(grammarExampleRow(`${wake} X`,`${intent.label||'Запуск'} · просто назови программу`));
             continue;
           }
+          if((intent.kind==='close'||intent.kind==='kill')&&trigger){
+            const help=intent.kind==='close'
+              ? 'закрыть открытую программу'
+              : 'как «Снять задачу» в диспетчере';
+            host.append(grammarExampleRow(wake+' '+trigger+' X',help));
+            continue;
+          }
+          if(intent.kind==='calc'&&trigger){
+            host.append(grammarExampleRow(`${wake} ${trigger} X`,'калькулятор: «33 умножить на 78»'));
+            continue;
+          }
           if(trigger) host.append(grammarExampleRow(`${wake} ${trigger} X`,intent.label||'Команда'));
         }
         host.append(grammarExampleRow(`${wake} выключи комп`,'система, с подтверждением'));
@@ -419,7 +434,7 @@
             if(label==='wake-слова'&&index===0) item.classList.add('primary');
             item.lastChild.onclick=()=>{
               const next=getValues().filter((_,i)=>i!==index);
-              if(next.length<minimum){ const hint=parent.querySelector('.grammar-small-note');if(hint)hint.textContent='Нужно оставить хотя бы одно wake-слово.'; return; }
+              if(next.length<minimum){ const hint=parent.querySelector('.grammar-small-note');if(hint)hint.textContent=label==='wake-слова'?'Нужно оставить хотя бы одно wake-слово.':'Нужно оставить хотя бы одну фразу.'; return; }
               setValues(next); refresh();
             };
             chips.append(item);
@@ -440,7 +455,13 @@
         grammarEditor.append(wakeGroup);
         for(const intent of grammarDraft.intents||[]){
           const group=el('fieldset',{className:'grp grammar-intent'});
-          const legend=el('legend',{textContent:intent.kind==='launch'?'Запуск':intent.kind==='folder'?'Папки':'Поиск'}); group.append(legend);
+          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор'};
+          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑'};
+          const legend=el('legend');
+          const icon=el('span',{className:'grammar-kind-icon',textContent:kindIcons[intent.kind]||'•'});
+          icon.setAttribute('aria-hidden','true');
+          legend.append(icon,document.createTextNode(' '+(kindLabels[intent.kind]||'Намерение')));
+          group.append(legend);
           const head=el('div',{className:'grammar-intent-head'});
           const enabledWrap=el('label',{className:'cbrow grammar-enabled'});
           const enabled=el('input',{type:'checkbox'}); enabled.checked=!!intent.enabled; enabled.onchange=()=>intent.enabled=enabled.checked;
@@ -458,10 +479,12 @@
           const setTriggers=values=>intent.triggers=values;
           const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim());
           const triggerHost=el('div'); group.append(triggerHost);
+          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc')?1:0;
+          if(minimumTriggers) triggerHost.append(el('div',{className:'hint grammar-small-note'}));
           addChipEditor(triggerHost,visibleTriggers,values=>{
             const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
             intent.triggers=hasBare?['',...values]:values;
-          },'фразу');
+          },'фразу',minimumTriggers);
           const langWrap=el('div',{className:'grammar-lang-field'});
           langWrap.append(el('span',{className:'fld',textContent:'Язык цели'}));
           const langSelect=el('select');
@@ -557,18 +580,24 @@
           ['payload_language','Язык цели команды по умолчанию — рестарт','language'],
           ['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после wake, мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number']]],
         ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],
-        ['Система',[['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],['raise_result','Поднимать открытое окно на передний план — рестарт','bool']]],
+        ['Система',[
+          ['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],
+          ['confirm_close','Подтверждать закрытие и завершение программ — рестарт','bool',null,'После команды «закрой/заверши …» прозвучит сигнал — ответь «да» или «нет» (yes / no).'],
+          ['raise_result','Поднимать открытое окно на передний план — рестарт','bool']]],
       ];
       let cbSeq=0;
-      function fieldEl(key,lbl,type,opts){
+      function fieldEl(key,lbl,type,opts,help){
         // Чекбокс в семёрке — подпись справа на одной строке, а не сверху.
         if(type==='bool'){
+          const wrap=el('div',{className:help?'setting-with-help':''});
           const row=el('div',{className:'cbrow'});
           const id='cb'+(++cbSeq);
           const inp=el('input',{type:'checkbox',id}); inp.checked=!!settingsObj[key];
           inp.onchange=()=>settingsObj[key]=inp.checked;
           const lab=el('label',{htmlFor:id,textContent:lbl});
-          row.append(inp,lab); return row;
+          row.append(inp,lab); wrap.append(row);
+          if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+          return wrap;
         }
         const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
         let inp;

@@ -96,6 +96,9 @@ pub struct Settings {
     /// Подтверждать опасные системные команды (shutdown/restart) голосом.
     #[serde(default = "default_true")]
     pub confirm_dangerous: bool,
+    /// Спрашивать «да/нет» перед закрытием и завершением программ голосом.
+    #[serde(default)]
+    pub confirm_close: bool,
     /// Активный набор звуков (папка в sounds/).
     #[serde(default = "default_sound_pack")]
     pub sound_pack: String,
@@ -238,6 +241,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("activation_mode", activation_mode, String);
     restore!("hotkey", hotkey, String);
     restore!("confirm_dangerous", confirm_dangerous, bool);
+    restore!("confirm_close", confirm_close, bool);
     restore!("sound_pack", sound_pack, String);
     restore!("private_log", private_log, bool);
     restore!("offline_mode", offline_mode, bool);
@@ -278,6 +282,7 @@ impl Default for Settings {
             activation_mode: default_activation(),
             hotkey: default_hotkey(),
             confirm_dangerous: true,
+            confirm_close: false,
             sound_pack: default_sound_pack(),
             private_log: false,
             offline_mode: false,

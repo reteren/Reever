@@ -12,6 +12,15 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
+const GRAMMAR_VERSION: u32 = 3;
+/// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
+/// после явного удаления намерения из грамматики актуальной версии.
+const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[(2, &["close", "kill"]), (3, &["calc"])];
+
+fn legacy_version() -> u32 {
+    1
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IntentKind {
@@ -21,6 +30,12 @@ pub enum IntentKind {
     Folder,
     /// Веб-поиск по шаблону `url` с `{q}`.
     Search,
+    /// Мягко закрыть запущенную программу (как крестик).
+    Close,
+    /// Завершить программу принудительно (как «Снять задачу»).
+    Kill,
+    /// Посчитать в калькуляторе Windows: «посчитай 33 умножить на 78».
+    Calc,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -70,6 +85,9 @@ pub struct Grammar {
     /// (`textnorm::strip_wake`), остальные — точные варианты произношения.
     pub wake_words: Vec<String>,
     pub cancel_words: Vec<String>,
+    /// Версия схемы для однократного добавления новых дефолтных намерений.
+    #[serde(default = "legacy_version")]
+    pub version: u32,
     pub intents: Vec<Intent>,
 }
 
@@ -108,6 +126,7 @@ impl Grammar {
     /// Глаголы «открой»/«запусти» для программ приняты дополнительно, но не обязательны.
     pub fn defaults() -> Self {
         Self {
+            version: GRAMMAR_VERSION,
             wake_words: vec![
                 "ривер".into(),
                 "ревер".into(),
@@ -149,6 +168,27 @@ impl Grammar {
                     &["поиск ютуб"],
                     "https://www.youtube.com/results?search_query={q}",
                 ),
+                intent(
+                    "close",
+                    IntentKind::Close,
+                    "закрыть открытую программу",
+                    &["закрой"],
+                    "",
+                ),
+                intent(
+                    "calc",
+                    IntentKind::Calc,
+                    "посчитать в калькуляторе",
+                    &["посчитай", "сколько будет"],
+                    "",
+                ),
+                intent(
+                    "kill",
+                    IntentKind::Kill,
+                    "завершить программу (как в диспетчере задач)",
+                    &["заверши"],
+                    "",
+                ),
             ],
         }
     }
@@ -172,6 +212,16 @@ impl Grammar {
                     .retain(|word| !normalize(word).is_empty());
                 if grammar.wake_words.is_empty() {
                     grammar.wake_words = Self::defaults().wake_words;
+                }
+                if grammar.version < GRAMMAR_VERSION {
+                    let old_version = grammar.version;
+                    append_versioned_defaults(&mut grammar);
+                    grammar.version = GRAMMAR_VERSION;
+                    if let Err(error) = grammar.save(path) {
+                        eprintln!(
+                            "[reever] не удалось сохранить миграцию grammar.json v{old_version} → v{GRAMMAR_VERSION}: {error}"
+                        );
+                    }
                 }
                 return (grammar, false);
             }
@@ -406,6 +456,55 @@ impl Grammar {
     }
 }
 
+fn append_versioned_defaults(grammar: &mut Grammar) {
+    let defaults = Grammar::defaults();
+    for (introduced_version, ids) in ADDED_DEFAULT_INTENTS {
+        if grammar.version >= *introduced_version {
+            continue;
+        }
+        for id in *ids {
+            if grammar.intents.iter().any(|existing| existing.id == *id) {
+                continue;
+            }
+            let Some(mut addition) = defaults
+                .intents
+                .iter()
+                .find(|intent| intent.id == *id)
+                .cloned()
+            else {
+                continue;
+            };
+
+            let mut conflicts = Vec::new();
+            addition.triggers.retain(|trigger| {
+                let phrase = normalize(trigger);
+                let conflict = grammar.intents.iter().any(|existing| {
+                    existing
+                        .triggers
+                        .iter()
+                        .any(|existing_trigger| normalize(existing_trigger) == phrase)
+                });
+                if conflict {
+                    conflicts.push(phrase);
+                    false
+                } else {
+                    true
+                }
+            });
+            if !conflicts.is_empty() {
+                eprintln!(
+                    "[reever] не добавляю конфликтующие фразы {:?} для нового намерения {}; его нужно настроить вручную",
+                    conflicts, addition.id
+                );
+            }
+            if addition.triggers.is_empty() || !conflicts.is_empty() {
+                addition.enabled = false;
+            }
+            grammar.intents.push(addition);
+        }
+    }
+}
+
 const TRIGGER_THRESHOLD: f64 = 0.84;
 
 fn display_intent(intent: &Intent) -> &str {
@@ -612,11 +711,26 @@ mod tests {
     #[test]
     fn incomplete_is_only_a_trigger_without_a_payload() {
         let grammar = Grammar::defaults();
-        for phrase in ["папка", "поиск ютуб", "загугли", "открой"] {
+        for phrase in [
+            "папка",
+            "поиск ютуб",
+            "загугли",
+            "посчитай",
+            "сколько будет",
+            "открой",
+            "закрой",
+            "заверши",
+        ] {
             assert!(grammar.is_incomplete(phrase), "{phrase}");
         }
-        for phrase in ["фотошоп", "папка документы", "загугли погода"]
-        {
+        for phrase in [
+            "фотошоп",
+            "папка документы",
+            "загугли погода",
+            "закрой хром",
+            "заверши телеграм",
+            "посчитай 2 плюс 2",
+        ] {
             assert!(!grammar.is_incomplete(phrase), "{phrase}");
         }
     }
@@ -670,7 +784,202 @@ mod tests {
     }
 
     #[test]
+    fn close_and_kill_migration_adds_defaults_once_for_version_one() {
+        let path = temporary_path("v1-control");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 1;
+        legacy
+            .intents
+            .retain(|intent| intent.id != "close" && intent.id != "kill" && intent.id != "calc");
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+
+        let mut actions = Vec::new();
+        let (migrated, actions_changed) =
+            Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+        assert!(!actions_changed);
+        assert_eq!(migrated.version, 3);
+        assert_eq!(
+            migrated
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "close")
+                .count(),
+            1
+        );
+        assert_eq!(
+            migrated
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "kill")
+                .count(),
+            1
+        );
+        assert_eq!(
+            migrated
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "calc")
+                .count(),
+            1
+        );
+        assert!(migrated.intents.iter().any(|intent| {
+            intent.id == "close"
+                && intent.triggers.len() == 1
+                && intent.triggers[0] == "закрой"
+                && intent.enabled
+        }));
+        assert!(migrated.intents.iter().any(|intent| {
+            intent.id == "kill"
+                && intent.triggers.len() == 1
+                && intent.triggers[0] == "заверши"
+                && intent.enabled
+        }));
+        assert!(migrated.intents.iter().any(|intent| {
+            intent.id == "calc"
+                && intent.triggers == ["посчитай", "сколько будет"]
+                && intent.enabled
+        }));
+        assert!(std::fs::read_to_string(&path)
+            .unwrap()
+            .contains("\"version\": 3"));
+
+        let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        assert_eq!(reloaded, migrated);
+        assert_eq!(
+            reloaded
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "close")
+                .count(),
+            1
+        );
+        assert_eq!(
+            reloaded
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "kill")
+                .count(),
+            1
+        );
+        assert_eq!(
+            reloaded
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "calc")
+                .count(),
+            1
+        );
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn migration_disables_a_default_intent_when_its_trigger_conflicts() {
+        let path = temporary_path("v1-conflict");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 1;
+        legacy
+            .intents
+            .retain(|intent| intent.id != "close" && intent.id != "kill");
+        intent_mut(&mut legacy, "launch")
+            .triggers
+            .push("закрой".into());
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+
+        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let close = migrated
+            .intents
+            .iter()
+            .find(|intent| intent.id == "close")
+            .unwrap();
+        assert!(!close.enabled);
+        assert!(close.triggers.is_empty());
+        assert!(migrated
+            .intents
+            .iter()
+            .any(|intent| intent.id == "kill" && intent.enabled));
+        assert!(migrated.validate().is_ok());
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn version_two_migration_adds_calc_and_disables_it_on_phrase_conflict() {
+        let path = temporary_path("v2-calc-conflict");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 2;
+        legacy.intents.retain(|intent| intent.id != "calc");
+        intent_mut(&mut legacy, "launch")
+            .triggers
+            .push("посчитай".into());
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+
+        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        assert_eq!(migrated.version, 3);
+        let calc = migrated
+            .intents
+            .iter()
+            .find(|intent| intent.id == "calc")
+            .unwrap();
+        assert!(!calc.enabled);
+        assert_eq!(calc.triggers, ["сколько будет"]);
+        assert!(migrated.validate().is_ok());
+        let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        assert_eq!(reloaded, migrated);
+        assert_eq!(
+            reloaded
+                .intents
+                .iter()
+                .filter(|intent| intent.id == "calc")
+                .count(),
+            1
+        );
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn current_version_does_not_restore_intents_the_user_removed() {
+        let path = temporary_path("v3-deleted-control");
+        let mut current = Grammar::defaults();
+        current
+            .intents
+            .retain(|intent| intent.id != "close" && intent.id != "kill" && intent.id != "calc");
+        std::fs::write(&path, serde_json::to_string_pretty(&current).unwrap()).unwrap();
+
+        let (loaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        assert_eq!(loaded.version, 3);
+        assert!(!loaded
+            .intents
+            .iter()
+            .any(|intent| intent.id == "close" || intent.id == "kill" || intent.id == "calc"));
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn close_and_kill_reject_empty_key_phrases() {
+        let mut grammar = Grammar::defaults();
+        intent_mut(&mut grammar, "close").triggers = vec![String::new()];
+        intent_mut(&mut grammar, "kill").triggers = vec!["   ".into()];
+        let errors = grammar.validate().unwrap_err().join("\n");
+        assert!(errors.contains("закрыть открытую программу"));
+        assert!(errors.contains("завершить программу"));
+    }
+
+    #[test]
+    fn calc_rejects_empty_key_phrases() {
+        let mut grammar = Grammar::defaults();
+        intent_mut(&mut grammar, "calc").triggers = vec![String::new()];
+        let errors = grammar.validate().unwrap_err().join("\n");
+        assert!(errors.contains("посчитать в калькуляторе"));
+    }
+
+    #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
+        assert_eq!(Grammar::defaults().version, 3);
+        assert_eq!(
+            serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
+                .unwrap()
+                .version,
+            1
+        );
         let path = temporary_path("partial");
         std::fs::write(&path, r#"{"intents":[]}"#).unwrap();
         let (loaded, migrated) =

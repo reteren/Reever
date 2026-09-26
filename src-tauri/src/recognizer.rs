@@ -17,11 +17,11 @@ use crate::langid::SpeechLid;
 use crate::speech::LanguageId;
 use crate::audio::{start_capture, Player};
 use crate::config::ReeverConfig;
-use crate::dispatch::{dispatch, DispatchResult};
+use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
 use crate::engine::{Engine, EngineConfig, EngineEvent};
 use crate::events::{set_state, ui_log};
 use crate::vad::SileroVad;
-use crate::{everything, system, textnorm};
+use crate::{everything, textnorm};
 
 /// Очередь от realtime-колбэка микрофона. Распознавание идёт синхронно в этом
 /// потоке, поэтому запас ~5 с: длинная фраза в простое не должна терять аудио,
@@ -248,7 +248,7 @@ struct Worker<'a> {
     shared: &'a Arc<SharedState>,
     player: &'a Player,
     /// Опасная системная операция, ждущая голосового «да».
-    confirm_op: Option<String>,
+    confirm_op: Option<PendingAction>,
     /// id действия, которое сейчас калибруется.
     calibrating: Option<String>,
     /// Слова отмены из грамматики (редактор меняет их на лету).
@@ -382,19 +382,34 @@ impl Worker<'_> {
                 self.sound(if ok { "success.wav" } else { "error.wav" });
                 set_state(self.app, "idle");
             }
-            DispatchResult::Confirm(op) => {
-                self.sound("received.wav");
-                self.confirm_op = Some(op);
+            DispatchResult::Confirm(pending) => {
+                ui_log(
+                    self.app,
+                    format!("❓ {} — подтверди голосом: «да» / «нет» (yes / no)", pending.describe()),
+                );
+                self.confirm_sound();
+                self.confirm_op = Some(pending);
                 engine.listen_confirm();
             }
         }
     }
 
+    /// Сигнал «жду подтверждения»: `confirm.wav` пака, если он есть, иначе `start.wav` —
+    /// тот же звук «слушаю», что после wake-слова.
+    fn confirm_sound(&self) {
+        let path = self.cfg.sound("confirm.wav");
+        if path.is_file() {
+            self.player.play(&path);
+        } else {
+            self.sound("start.wav");
+        }
+    }
+
     fn confirm(&mut self, yes: bool) {
-        let Some(op) = self.confirm_op.take() else { return };
+        let Some(pending) = self.confirm_op.take() else { return };
         if yes {
-            ui_log(self.app, format!("⚙ выполняю: {op}"));
-            let ok = system::run_system(&op);
+            ui_log(self.app, format!("⚙ выполняю: {}", pending.describe()));
+            let ok = execute_pending(self.app, &pending);
             self.sound(if ok { "success.wav" } else { "error.wav" });
         } else {
             ui_log(self.app, "↩ отменено");
