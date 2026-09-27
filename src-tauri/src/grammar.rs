@@ -12,10 +12,10 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 3;
+const GRAMMAR_VERSION: u32 = 4;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
-const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[(2, &["close", "kill"]), (3, &["calc"])];
+const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[(2, &["close", "kill"]), (3, &["calc"]), (4, &["dictate"])];
 
 fn legacy_version() -> u32 {
     1
@@ -36,6 +36,8 @@ pub enum IntentKind {
     Kill,
     /// Посчитать в калькуляторе Windows: «посчитай 33 умножить на 78».
     Calc,
+    /// Диктовка: «напиши …» — дальше речь печатается в поле с курсором (или в буфер).
+    Dictate,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -85,6 +87,9 @@ pub struct Grammar {
     /// (`textnorm::strip_wake`), остальные — точные варианты произношения.
     pub wake_words: Vec<String>,
     pub cancel_words: Vec<String>,
+    /// Фразы, завершающие диктовку («стоп ввод», «ривер остановись»). Сравниваются
+    /// с фразой целиком — посреди текста они остаются текстом.
+    pub dictation_stop: Vec<String>,
     /// Версия схемы для однократного добавления новых дефолтных намерений.
     #[serde(default = "legacy_version")]
     pub version: u32,
@@ -139,6 +144,7 @@ impl Grammar {
                 "отбой".into(),
                 "забудь".into(),
             ],
+            dictation_stop: vec!["стоп ввод".into(), "ривер остановись".into()],
             intents: vec![
                 intent(
                     "launch",
@@ -180,6 +186,13 @@ impl Grammar {
                     IntentKind::Calc,
                     "посчитать в калькуляторе",
                     &["посчитай", "сколько будет"],
+                    "",
+                ),
+                intent(
+                    "dictate",
+                    IntentKind::Dictate,
+                    "диктовка: ввести текст в поле с курсором",
+                    &["напиши", "диктовка"],
                     "",
                 ),
                 intent(
@@ -797,7 +810,7 @@ mod tests {
         let (migrated, actions_changed) =
             Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
         assert!(!actions_changed);
-        assert_eq!(migrated.version, 3);
+        assert_eq!(migrated.version, super::GRAMMAR_VERSION);
         assert_eq!(
             migrated
                 .intents
@@ -841,7 +854,7 @@ mod tests {
         }));
         assert!(std::fs::read_to_string(&path)
             .unwrap()
-            .contains("\"version\": 3"));
+            .contains(&format!("\"version\": {}", super::GRAMMAR_VERSION)));
 
         let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
         assert_eq!(reloaded, migrated);
@@ -913,7 +926,7 @@ mod tests {
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
 
         let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
-        assert_eq!(migrated.version, 3);
+        assert_eq!(migrated.version, super::GRAMMAR_VERSION);
         let calc = migrated
             .intents
             .iter()
@@ -945,7 +958,7 @@ mod tests {
         std::fs::write(&path, serde_json::to_string_pretty(&current).unwrap()).unwrap();
 
         let (loaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
-        assert_eq!(loaded.version, 3);
+        assert_eq!(loaded.version, super::GRAMMAR_VERSION);
         assert!(!loaded
             .intents
             .iter()
@@ -973,7 +986,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 3);
+        assert_eq!(Grammar::defaults().version, 4);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

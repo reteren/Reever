@@ -175,6 +175,14 @@ impl Transcriber for Asr {
         Ok(textnorm::normalize(&self.transcribe_raw(pcm)?))
     }
 
+    fn transcribe_verbatim(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        Ok(self
+            .transcribe_raw(pcm)?
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" "))
+    }
+
     fn transcribe_timed(&mut self, pcm: &[i16]) -> anyhow::Result<Timed> {
         let Some(result) = self.decode_result(pcm)? else {
             return Ok(Timed::default());

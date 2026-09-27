@@ -14,8 +14,8 @@ const SAMPLE_RATE: usize = 16_000;
 const CROP_MARGIN_MS: f32 = 0.150;
 // Порог и минимальная длина — по бенчмарку langid (whisper-base, 2026-09-24):
 // короче 0,7 с определитель ошибается в половине случаев.
-const MIN_LID_DURATION_MS: f32 = 700.0;
-const LID_CONFIDENCE_THRESHOLD: f32 = 0.55;
+pub(crate) const MIN_LID_DURATION_MS: f32 = 700.0;
+pub(crate) const LID_CONFIDENCE_THRESHOLD: f32 = 0.55;
 
 /// Как выбирать язык цели команды.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

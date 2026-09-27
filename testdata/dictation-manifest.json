@@ -1,0 +1,973 @@
+[
+  {
+    "file": "01_01_joined_natural.wav",
+    "scenario": "01_joined_natural",
+    "start_mode": "joined",
+    "expected_text": "Пожалуйста подготовь подробный ответ для участников проекта чтобы каждый знал какие задачи уже завершены и что еще нужно проверить до пятницы сначала соберем замечания от команды затем распределим их по разделам и назначим ответственных за исправление каждой найденной проблемы после проверки я отправлю короткое резюме с датами ссылками и следующими шагами чтобы никому не пришлось искать решения в старых сообщениях",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши пожалуйста подготовь подробный ответ для участников проекта чтобы каждый знал какие задачи уже завершены и что еще нужно проверить до пятницы",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 1000,
+        "end_ms": 13080,
+        "duration_ms": 12080
+      },
+      {
+        "index": 1,
+        "text": "сначала соберем замечания от команды затем распределим их по разделам и назначим ответственных за исправление каждой найденной проблемы",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 14280,
+        "end_ms": 24700,
+        "duration_ms": 10420
+      },
+      {
+        "index": 2,
+        "text": "после проверки я отправлю короткое резюме с датами ссылками и следующими шагами чтобы никому не пришлось искать решения в старых сообщениях",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 25200,
+        "end_ms": 36515,
+        "duration_ms": 11315
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 13080,
+        "end_ms": 14280,
+        "duration_ms": 1200,
+        "after_part": 0
+      },
+      {
+        "start_ms": 24700,
+        "end_ms": 25200,
+        "duration_ms": 500,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 33815,
+    "pause_ms": 1700,
+    "audio_ms": 48015,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "02_02_wake_pause_natural.wav",
+    "scenario": "02_wake_pause_natural",
+    "start_mode": "wake_pause",
+    "expected_text": "На следующей неделе мы обсудим план поездки заранее забронируем билеты проверим расписание поездов и подготовим список вещей для каждого участника отдельно уточним время сбора адрес гостиницы и порядок связи если кто-то задержится в дороге все важные сведения я внесу в общее письмо и отправлю его команде вечером",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 1000,
+        "end_ms": 1689,
+        "duration_ms": 689
+      },
+      {
+        "index": 1,
+        "text": "напиши на следующей неделе мы обсудим план поездки заранее забронируем билеты проверим расписание поездов и подготовим список вещей для каждого участника",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 2639,
+        "end_ms": 13460,
+        "duration_ms": 10821
+      },
+      {
+        "index": 2,
+        "text": "отдельно уточним время сбора адрес гостиницы и порядок связи если кто-то задержится в дороге",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 15260,
+        "end_ms": 21945,
+        "duration_ms": 6685
+      },
+      {
+        "index": 3,
+        "text": "все важные сведения я внесу в общее письмо и отправлю его команде вечером",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 22545,
+        "end_ms": 27655,
+        "duration_ms": 5110
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 1689,
+        "end_ms": 2639,
+        "duration_ms": 950,
+        "after_part": 0
+      },
+      {
+        "start_ms": 13460,
+        "end_ms": 15260,
+        "duration_ms": 1800,
+        "after_part": 1
+      },
+      {
+        "start_ms": 21945,
+        "end_ms": 22545,
+        "duration_ms": 600,
+        "after_part": 2
+      }
+    ],
+    "speech_ms": 23305,
+    "pause_ms": 3350,
+    "audio_ms": 39155,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "03_03_soft_limit_12s.wav",
+    "scenario": "03_soft_limit_12s",
+    "start_mode": "joined_trigger_only",
+    "expected_text": "Перед началом работы мы внимательно проверим исходные требования уточним порядок согласования распределим подготовительные задачи между участниками и заранее соберем материалы которые понадобятся для первого этапа затем сверим сроки с календарем отметим возможные зависимости и составим общий план проверки чтобы каждая часть результата имела понятного владельца и четкий критерий готовности после этого мы зафиксируем договоренности и поделимся ими со всей командой",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": 1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 1000,
+        "end_ms": 2113,
+        "duration_ms": 1113
+      },
+      {
+        "index": 1,
+        "text": "перед началом работы мы внимательно проверим исходные требования уточним порядок согласования распределим подготовительные задачи между участниками и заранее соберем материалы которые понадобятся для первого этапа затем сверим сроки с календарем отметим возможные зависимости и составим общий план проверки чтобы каждая часть результата имела понятного владельца и четкий критерий готовности",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 3013,
+        "end_ms": 24300,
+        "duration_ms": 21288
+      },
+      {
+        "index": 2,
+        "text": "после этого мы зафиксируем договоренности и поделимся ими со всей командой",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 24600,
+        "end_ms": 28837,
+        "duration_ms": 4236
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 2113,
+        "end_ms": 3013,
+        "duration_ms": 900,
+        "after_part": 0
+      },
+      {
+        "start_ms": 24300,
+        "end_ms": 24600,
+        "duration_ms": 300,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 26637,
+    "pause_ms": 1200,
+    "audio_ms": 40337,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "04_04_pause_3s.wav",
+    "scenario": "04_pause_3s",
+    "start_mode": "joined",
+    "expected_text": "Сегодня я отправлю команде короткое описание результата и список вопросов которые требуют общего решения перед публикацией мы сравним текущую версию с утвержденными требованиями проверим ссылки на документы и убедимся что нужные люди получили уведомление после этого внесем небольшие исправления подготовим чистую сборку и назначим время для совместной проверки всех основных сценариев",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 3000,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши сегодня я отправлю команде короткое описание результата и список вопросов которые требуют общего решения",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 1000,
+        "end_ms": 11036,
+        "duration_ms": 10036
+      },
+      {
+        "index": 1,
+        "text": "перед публикацией мы сравним текущую версию с утвержденными требованиями проверим ссылки на документы и убедимся что нужные люди получили уведомление",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 12236,
+        "end_ms": 24384,
+        "duration_ms": 12148
+      },
+      {
+        "index": 2,
+        "text": "после этого внесем небольшие исправления подготовим чистую сборку и назначим время для совместной проверки всех основных сценариев",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 27384,
+        "end_ms": 37833,
+        "duration_ms": 10448
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 11036,
+        "end_ms": 12236,
+        "duration_ms": 1200,
+        "after_part": 0
+      },
+      {
+        "start_ms": 24384,
+        "end_ms": 27384,
+        "duration_ms": 3000,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 32633,
+    "pause_ms": 4200,
+    "audio_ms": 49333,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "05_05_pause_6s.wav",
+    "scenario": "05_pause_6s",
+    "start_mode": "joined",
+    "expected_text": "В начале дня мы соберем все текущие замечания и подготовим единый список задач для команды затем проверим что каждый пункт понятен и что для его выполнения хватает времени и необходимых материалов после перерыва обсудим результаты распределим оставшуюся работу и заранее сообщим коллегам об изменениях в расписании",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 6000,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши в начале дня мы соберем все текущие замечания и подготовим единый список задач для команды",
+        "voice": "Vika (Russian)",
+        "start_ms": 1000,
+        "end_ms": 9819,
+        "duration_ms": 8819
+      },
+      {
+        "index": 1,
+        "text": "затем проверим что каждый пункт понятен и что для его выполнения хватает времени и необходимых материалов",
+        "voice": "Vika (Russian)",
+        "start_ms": 10419,
+        "end_ms": 19214,
+        "duration_ms": 8795
+      },
+      {
+        "index": 2,
+        "text": "после перерыва обсудим результаты распределим оставшуюся работу и заранее сообщим коллегам об изменениях в расписании",
+        "voice": "Vika (Russian)",
+        "start_ms": 25214,
+        "end_ms": 35190,
+        "duration_ms": 9976
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 9819,
+        "end_ms": 10419,
+        "duration_ms": 600,
+        "after_part": 0
+      },
+      {
+        "start_ms": 19214,
+        "end_ms": 25214,
+        "duration_ms": 6000,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 27590,
+    "pause_ms": 6600,
+    "audio_ms": 46690,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "06_06_stop_standalone.wav",
+    "scenario": "06_stop_standalone",
+    "start_mode": "joined",
+    "expected_text": "Подготовь сообщение о готовности новой версии расскажи что основные проверки завершены и приложи короткий список известных ограничений перед отправкой мы еще раз сверим номера сборок проверим установщик и убедимся что инструкция соответствует фактическому поведению программы",
+    "expected_end": "Stopped",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши подготовь сообщение о готовности новой версии расскажи что основные проверки завершены и приложи короткий список известных ограничений",
+        "voice": "Roman (Russian)",
+        "start_ms": 1000,
+        "end_ms": 9251,
+        "duration_ms": 8251
+      },
+      {
+        "index": 1,
+        "text": "перед отправкой мы еще раз сверим номера сборок проверим установщик и убедимся что инструкция соответствует фактическому поведению программы",
+        "voice": "Roman (Russian)",
+        "start_ms": 10551,
+        "end_ms": 17936,
+        "duration_ms": 7385
+      },
+      {
+        "index": 2,
+        "text": "стоп ввод",
+        "voice": "Roman (Russian)",
+        "start_ms": 19036,
+        "end_ms": 19799,
+        "duration_ms": 763
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 9251,
+        "end_ms": 10551,
+        "duration_ms": 1300,
+        "after_part": 0
+      },
+      {
+        "start_ms": 17936,
+        "end_ms": 19036,
+        "duration_ms": 1100,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 16399,
+    "pause_ms": 2400,
+    "audio_ms": 21599,
+    "final_silence_ms": 1800
+  },
+  {
+    "file": "07_07_stop_at_chunk_end.wav",
+    "scenario": "07_stop_at_chunk_end",
+    "start_mode": "joined",
+    "expected_text": "Пожалуйста обнови план работ укажи какие пункты уже проверены и перечисли оставшиеся вопросы для следующей встречи добавь ссылки на исходные документы и попроси участников прислать замечания сегодня до конца рабочего дня",
+    "expected_end": "Stopped",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши пожалуйста обнови план работ укажи какие пункты уже проверены и перечисли оставшиеся вопросы для следующей встречи",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 1000,
+        "end_ms": 11515,
+        "duration_ms": 10515
+      },
+      {
+        "index": 1,
+        "text": "добавь ссылки на исходные документы и попроси участников прислать замечания сегодня до конца рабочего дня стоп ввод",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 12715,
+        "end_ms": 22235,
+        "duration_ms": 9520
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 11515,
+        "end_ms": 12715,
+        "duration_ms": 1200,
+        "after_part": 0
+      }
+    ],
+    "speech_ms": 20035,
+    "pause_ms": 1200,
+    "audio_ms": 24035,
+    "final_silence_ms": 1800
+  },
+  {
+    "file": "08_08_wake_stop_standalone.wav",
+    "scenario": "08_wake_stop_standalone",
+    "start_mode": "wake_pause",
+    "expected_text": "Нам нужно подготовить к обсуждению полный список изменений описать причины каждого решения и собрать отзывы от команды затем проверим насколько новая версия удобна в повседневной работе и какие инструкции потребуется дополнить",
+    "expected_end": "Stopped",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 1000,
+        "end_ms": 1689,
+        "duration_ms": 689
+      },
+      {
+        "index": 1,
+        "text": "напиши нам нужно подготовить к обсуждению полный список изменений описать причины каждого решения и собрать отзывы от команды",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 2639,
+        "end_ms": 11241,
+        "duration_ms": 8602
+      },
+      {
+        "index": 2,
+        "text": "затем проверим насколько новая версия удобна в повседневной работе и какие инструкции потребуется дополнить",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 12441,
+        "end_ms": 19931,
+        "duration_ms": 7490
+      },
+      {
+        "index": 3,
+        "text": "ривер остановись",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 21331,
+        "end_ms": 22856,
+        "duration_ms": 1524
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 1689,
+        "end_ms": 2639,
+        "duration_ms": 950,
+        "after_part": 0
+      },
+      {
+        "start_ms": 11241,
+        "end_ms": 12441,
+        "duration_ms": 1200,
+        "after_part": 1
+      },
+      {
+        "start_ms": 19931,
+        "end_ms": 21331,
+        "duration_ms": 1400,
+        "after_part": 2
+      }
+    ],
+    "speech_ms": 18306,
+    "pause_ms": 3550,
+    "audio_ms": 24656,
+    "final_silence_ms": 1800
+  },
+  {
+    "file": "09_09_wake_stop_at_chunk_end.wav",
+    "scenario": "09_wake_stop_at_chunk_end",
+    "start_mode": "joined",
+    "expected_text": "После проверки отправь участникам краткий отчет укажи дату запуска и перечисли документы которые надо сохранить также напомни что новые замечания можно добавить в общий список и обсудить на ближайшей встрече",
+    "expected_end": "Stopped",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши после проверки отправь участникам краткий отчет укажи дату запуска и перечисли документы которые надо сохранить",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 1000,
+        "end_ms": 8006,
+        "duration_ms": 7006
+      },
+      {
+        "index": 1,
+        "text": "также напомни что новые замечания можно добавить в общий список и обсудить на ближайшей встрече ривер остановись",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 8906,
+        "end_ms": 15046,
+        "duration_ms": 6140
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 8006,
+        "end_ms": 8906,
+        "duration_ms": 900,
+        "after_part": 0
+      }
+    ],
+    "speech_ms": 13146,
+    "pause_ms": 900,
+    "audio_ms": 16846,
+    "final_silence_ms": 1800
+  },
+  {
+    "file": "10_10_command_mid_dictation.wav",
+    "scenario": "10_command_mid_dictation",
+    "start_mode": "joined",
+    "expected_text": "Сначала собери основные результаты тестирования затем подготовь понятное сообщение с перечислением найденных проблем и предложенных способов исправления перед тем как отправить текст проверь заголовок и добавь дату следующего обсуждения",
+    "expected_end": "Command",
+    "expected_command": "открой блокнот",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши сначала собери основные результаты тестирования затем подготовь понятное сообщение с перечислением найденных проблем и предложенных способов исправления",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 1000,
+        "end_ms": 14511,
+        "duration_ms": 13511
+      },
+      {
+        "index": 1,
+        "text": "перед тем как отправить текст проверь заголовок и добавь дату следующего обсуждения",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 15711,
+        "end_ms": 22334,
+        "duration_ms": 6624
+      },
+      {
+        "index": 2,
+        "text": "ривер открой блокнот",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 23534,
+        "end_ms": 25458,
+        "duration_ms": 1924
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 14511,
+        "end_ms": 15711,
+        "duration_ms": 1200,
+        "after_part": 0
+      },
+      {
+        "start_ms": 22334,
+        "end_ms": 23534,
+        "duration_ms": 1200,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 22058,
+    "pause_ms": 2400,
+    "audio_ms": 27258,
+    "final_silence_ms": 1800
+  },
+  {
+    "file": "11_11_spoken_punctuation.wav",
+    "scenario": "11_spoken_punctuation",
+    "start_mode": "joined",
+    "expected_text": "Первый пункт, сроки согласуем завтра.\r\nВторой пункт, отчет отправим утром.\r\nТретье проверьте источники сравните итоговые цифры и сохраните копию документа.",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши первый пункт запятая сроки согласуем завтра точка",
+        "voice": "Vika (Russian)",
+        "start_ms": 1000,
+        "end_ms": 6575,
+        "duration_ms": 5575
+      },
+      {
+        "index": 1,
+        "text": "новая строка второй пункт запятая отчет отправим утром точка",
+        "voice": "Vika (Russian)",
+        "start_ms": 7775,
+        "end_ms": 13138,
+        "duration_ms": 5364
+      },
+      {
+        "index": 2,
+        "text": "новая строка третье проверьте источники сравните итоговые цифры и сохраните копию документа точка",
+        "voice": "Vika (Russian)",
+        "start_ms": 14038,
+        "end_ms": 22726,
+        "duration_ms": 8687
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 6575,
+        "end_ms": 7775,
+        "duration_ms": 1200,
+        "after_part": 0
+      },
+      {
+        "start_ms": 13138,
+        "end_ms": 14038,
+        "duration_ms": 900,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 19626,
+    "pause_ms": 2100,
+    "audio_ms": 34226,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "12_12_english_review.wav",
+    "scenario": "12_english_review",
+    "start_mode": "joined",
+    "expected_text": "Коллеги мы уже собрали замечания по отчету и подготовили новую редакцию документа с учетом последних предложений команды Please review the final schedule and send your comments before the meeting tomorrow. После этого я объединю ответы проверю все даты и отправлю участникам согласованную версию вместе с кратким описанием изменений",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши коллеги мы уже собрали замечания по отчету и подготовили новую редакцию документа с учетом последних предложений команды",
+        "voice": "Roman (Russian)",
+        "start_ms": 1000,
+        "end_ms": 8309,
+        "duration_ms": 7309
+      },
+      {
+        "index": 1,
+        "text": "please review the final schedule and send your comments before the meeting tomorrow period",
+        "voice": "Microsoft Zira Desktop",
+        "start_ms": 9709,
+        "end_ms": 14274,
+        "duration_ms": 4565
+      },
+      {
+        "index": 2,
+        "text": "после этого я объединю ответы проверю все даты и отправлю участникам согласованную версию вместе с кратким описанием изменений",
+        "voice": "Roman (Russian)",
+        "start_ms": 15874,
+        "end_ms": 22967,
+        "duration_ms": 7093
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 8309,
+        "end_ms": 9709,
+        "duration_ms": 1400,
+        "after_part": 0
+      },
+      {
+        "start_ms": 14274,
+        "end_ms": 15874,
+        "duration_ms": 1600,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 18967,
+    "pause_ms": 3000,
+    "audio_ms": 34467,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "13_13_english_followup.wav",
+    "scenario": "13_english_followup",
+    "start_mode": "joined",
+    "expected_text": "Сначала сохраните исходную таблицу и создайте отдельную копию чтобы изменения можно было проверить без риска потерять предыдущие значения I will send the updated document after the team confirms the delivery date. Если срок изменится сообщите об этом заранее и приложите ссылку на новую версию чтобы все участники открывали один и тот же файл",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши сначала сохраните исходную таблицу и создайте отдельную копию чтобы изменения можно было проверить без риска потерять предыдущие значения",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 1000,
+        "end_ms": 12890,
+        "duration_ms": 11890
+      },
+      {
+        "index": 1,
+        "text": "I will send the updated document after the team confirms the delivery date period",
+        "voice": "Microsoft Zira Desktop",
+        "start_ms": 13790,
+        "end_ms": 18935,
+        "duration_ms": 5145
+      },
+      {
+        "index": 2,
+        "text": "если срок изменится сообщите об этом заранее и приложите ссылку на новую версию чтобы все участники открывали один и тот же файл",
+        "voice": "Microsoft Irina Desktop",
+        "start_ms": 21135,
+        "end_ms": 31490,
+        "duration_ms": 10355
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 12890,
+        "end_ms": 13790,
+        "duration_ms": 900,
+        "after_part": 0
+      },
+      {
+        "start_ms": 18935,
+        "end_ms": 21135,
+        "duration_ms": 2200,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 27390,
+    "pause_ms": 3100,
+    "audio_ms": 42990,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "14_14_english_question.wav",
+    "scenario": "14_english_question",
+    "start_mode": "joined",
+    "expected_text": "Когда подготовка будет закончена отправьте сообщение ответственному и добавьте туда окончательный список материалов для проверки Can we keep the original version and create a separate copy for review? Так мы сможем сравнить старый и новый варианты и быстро найти место где появились неожиданные изменения",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши когда подготовка будет закончена отправьте сообщение ответственному и добавьте туда окончательный список материалов для проверки",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 1000,
+        "end_ms": 10440,
+        "duration_ms": 9440
+      },
+      {
+        "index": 1,
+        "text": "can we keep the original version and create a separate copy for review question mark",
+        "voice": "Microsoft Zira Desktop",
+        "start_ms": 11440,
+        "end_ms": 17175,
+        "duration_ms": 5735
+      },
+      {
+        "index": 2,
+        "text": "так мы сможем сравнить старый и новый варианты и быстро найти место где появились неожиданные изменения",
+        "voice": "Alexandr (Russian)",
+        "start_ms": 18075,
+        "end_ms": 25444,
+        "duration_ms": 7370
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 10440,
+        "end_ms": 11440,
+        "duration_ms": 1000,
+        "after_part": 0
+      },
+      {
+        "start_ms": 17175,
+        "end_ms": 18075,
+        "duration_ms": 900,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 22544,
+    "pause_ms": 1900,
+    "audio_ms": 36944,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "15_15_natural_short_and_long_pauses.wav",
+    "scenario": "15_natural_short_and_long_pauses",
+    "start_mode": "wake_pause",
+    "expected_text": "Сегодня нужно внимательно проверить список участников и убедиться что все получили приглашение на встречу затем подготовить материалы и разослать каждому краткий порядок обсуждения в конце дня мы проверим ответы и внесем изменения в общий календарь чтобы никому не пришлось искать актуальное время отдельно",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 1000,
+        "end_ms": 1681,
+        "duration_ms": 681
+      },
+      {
+        "index": 1,
+        "text": "напиши сегодня нужно внимательно проверить список участников и убедиться что все получили приглашение на встречу",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 2581,
+        "end_ms": 8818,
+        "duration_ms": 6236
+      },
+      {
+        "index": 2,
+        "text": "затем подготовить материалы и разослать каждому краткий порядок обсуждения",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 9118,
+        "end_ms": 13584,
+        "duration_ms": 4466
+      },
+      {
+        "index": 3,
+        "text": "в конце дня мы проверим ответы и внесем изменения в общий календарь чтобы никому не пришлось искать актуальное время отдельно",
+        "voice": "Ekaterina (Russian)",
+        "start_ms": 16084,
+        "end_ms": 22774,
+        "duration_ms": 6690
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 1681,
+        "end_ms": 2581,
+        "duration_ms": 900,
+        "after_part": 0
+      },
+      {
+        "start_ms": 8818,
+        "end_ms": 9118,
+        "duration_ms": 300,
+        "after_part": 1
+      },
+      {
+        "start_ms": 13584,
+        "end_ms": 16084,
+        "duration_ms": 2500,
+        "after_part": 2
+      }
+    ],
+    "speech_ms": 18074,
+    "pause_ms": 3700,
+    "audio_ms": 34274,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "16_16_multiple_2500ms_pauses.wav",
+    "scenario": "16_multiple_2500ms_pauses",
+    "start_mode": "joined",
+    "expected_text": "Перед началом встречи подготовь краткий обзор выполненной работы и перечисли важные изменения которые появились после прошлой проверки отдельно запиши вопросы которые пока остаются открытыми и укажи какие данные нужны чтобы принять решение после обсуждения распределим задачи между участниками договоримся о сроках и сохраним общий план в доступном месте",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши перед началом встречи подготовь краткий обзор выполненной работы и перечисли важные изменения которые появились после прошлой проверки",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 1000,
+        "end_ms": 12874,
+        "duration_ms": 11874
+      },
+      {
+        "index": 1,
+        "text": "отдельно запиши вопросы которые пока остаются открытыми и укажи какие данные нужны чтобы принять решение",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 15374,
+        "end_ms": 24297,
+        "duration_ms": 8924
+      },
+      {
+        "index": 2,
+        "text": "после обсуждения распределим задачи между участниками договоримся о сроках и сохраним общий план в доступном месте",
+        "voice": "Dmitriy (Russian)",
+        "start_ms": 26797,
+        "end_ms": 36658,
+        "duration_ms": 9861
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 12874,
+        "end_ms": 15374,
+        "duration_ms": 2500,
+        "after_part": 0
+      },
+      {
+        "start_ms": 24297,
+        "end_ms": 26797,
+        "duration_ms": 2500,
+        "after_part": 1
+      }
+    ],
+    "speech_ms": 30658,
+    "pause_ms": 5000,
+    "audio_ms": 48158,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "17_17_three_second_pause_after_wake.wav",
+    "scenario": "17_three_second_pause_after_wake",
+    "start_mode": "wake_pause",
+    "expected_text": "Я сначала сверю все пункты инструкции и подготовлю понятное описание действий которые нужно выполнить перед запуском потом проверю варианты на чистой установке сравню сообщения об ошибках и отмечу шаги которые требуют дополнительного пояснения в завершение отправлю команде итоговый документ и назначу время для повторной проверки",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 3000,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер",
+        "voice": "Vika (Russian)",
+        "start_ms": 1000,
+        "end_ms": 1699,
+        "duration_ms": 699
+      },
+      {
+        "index": 1,
+        "text": "напиши я сначала сверю все пункты инструкции и подготовлю понятное описание действий которые нужно выполнить перед запуском",
+        "voice": "Vika (Russian)",
+        "start_ms": 2649,
+        "end_ms": 12952,
+        "duration_ms": 10304
+      },
+      {
+        "index": 2,
+        "text": "потом проверю варианты на чистой установке сравню сообщения об ошибках и отмечу шаги которые требуют дополнительного пояснения",
+        "voice": "Vika (Russian)",
+        "start_ms": 15952,
+        "end_ms": 26617,
+        "duration_ms": 10665
+      },
+      {
+        "index": 3,
+        "text": "в завершение отправлю команде итоговый документ и назначу время для повторной проверки",
+        "voice": "Vika (Russian)",
+        "start_ms": 27117,
+        "end_ms": 34347,
+        "duration_ms": 7230
+      }
+    ],
+    "pauses": [
+      {
+        "start_ms": 1699,
+        "end_ms": 2649,
+        "duration_ms": 950,
+        "after_part": 0
+      },
+      {
+        "start_ms": 12952,
+        "end_ms": 15952,
+        "duration_ms": 3000,
+        "after_part": 1
+      },
+      {
+        "start_ms": 26617,
+        "end_ms": 27117,
+        "duration_ms": 500,
+        "after_part": 2
+      }
+    ],
+    "speech_ms": 28897,
+    "pause_ms": 4450,
+    "audio_ms": 45847,
+    "final_silence_ms": 11500
+  },
+  {
+    "file": "18_18_empty_dictation_timeout.wav",
+    "scenario": "18_empty_dictation_timeout",
+    "start_mode": "joined_trigger_only",
+    "expected_text": "",
+    "expected_end": "Silence",
+    "expected_command": "",
+    "pause_check_ms": 0,
+    "soft_pause_after_part": -1,
+    "parts": [
+      {
+        "index": 0,
+        "text": "ривер напиши",
+        "voice": "Roman (Russian)",
+        "start_ms": 1000,
+        "end_ms": 1989,
+        "duration_ms": 989
+      }
+    ],
+    "pauses": [],
+    "speech_ms": 989,
+    "pause_ms": 0,
+    "audio_ms": 13489,
+    "final_silence_ms": 11500
+  }
+]

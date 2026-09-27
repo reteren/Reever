@@ -12,16 +12,17 @@ use tauri::{AppHandle, Emitter};
 
 use crate::actions::SharedState;
 use crate::asr::{Asr, AsrConfig};
+use crate::audio::{start_capture, Player};
 use crate::bilingual::LangMode;
+use crate::config::ReeverConfig;
+use crate::dictation::{pieces_to_string, Formatter};
+use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
+use crate::engine::{DictationEndReason, Engine, EngineConfig, EngineEvent};
+use crate::events::{set_state, ui_log};
 use crate::langid::SpeechLid;
 use crate::speech::LanguageId;
-use crate::audio::{start_capture, Player};
-use crate::config::ReeverConfig;
-use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
-use crate::engine::{Engine, EngineConfig, EngineEvent};
-use crate::events::{set_state, ui_log};
 use crate::vad::SileroVad;
-use crate::{everything, textnorm};
+use crate::{everything, textnorm, typing};
 
 /// Очередь от realtime-колбэка микрофона. Распознавание идёт синхронно в этом
 /// потоке, поэтому запас ~5 с: длинная фраза в простое не должна терять аудио,
@@ -64,7 +65,10 @@ fn set_asr_status(app: &AppHandle, status: &Mutex<Status>, asr: &'static str) {
 /// грузить модель и слушать микрофон, незачем.
 fn spawn_everything_probe(app: &AppHandle, cfg: &ReeverConfig, status: &Arc<Mutex<Status>>) {
     let (app, status) = (app.clone(), status.clone());
-    let (host, port) = (cfg.settings.everything_host.clone(), cfg.settings.everything_port);
+    let (host, port) = (
+        cfg.settings.everything_host.clone(),
+        cfg.settings.everything_port,
+    );
     ui_log(&app, format!("everything: http://{host}:{port}"));
     std::thread::spawn(move || {
         let ok = (0..5).any(|i| {
@@ -77,11 +81,14 @@ fn spawn_everything_probe(app: &AppHandle, cfg: &ReeverConfig, status: &Arc<Mute
             st.everything = Some(ok);
         }
         emit_status(&app, &status);
-        ui_log(&app, if ok {
-            "✓ Everything HTTP доступен"
-        } else {
-            "⚠ Everything HTTP НЕ доступен — для «открой папку» поставь Everything 1.5a + HTTP-сервер"
-        });
+        ui_log(
+            &app,
+            if ok {
+                "✓ Everything HTTP доступен"
+            } else {
+                "⚠ Everything HTTP НЕ доступен — для «открой папку» поставь Everything 1.5a + HTTP-сервер"
+            },
+        );
     });
 }
 
@@ -98,12 +105,21 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     ui_log(app, format!("режим активации: {}", s.activation_mode));
 
     if s.offline_mode {
-        ui_log(app, "🔒 офлайн-режим: веб-поиск и Everything HTTP отключены (нулевой сетевой трафик)");
+        ui_log(
+            app,
+            "🔒 офлайн-режим: веб-поиск и Everything HTTP отключены (нулевой сетевой трафик)",
+        );
     } else {
         spawn_everything_probe(app, cfg, &status);
     }
 
-    ui_log(app, format!("загрузка модели распознавания: {}", cfg.asr_model_dir.display()));
+    ui_log(
+        app,
+        format!(
+            "загрузка модели распознавания: {}",
+            cfg.asr_model_dir.display()
+        ),
+    );
     let asr = Asr::new(&AsrConfig {
         model_dir: cfg.asr_model_dir.clone(),
         num_threads: s.asr_threads.max(1) as i32,
@@ -120,6 +136,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             command_wait_ms: s.command_wait_ms,
             signal_mute_ms: 0,
             partial_interval_ms: if s.partial_results { 400 } else { 0 },
+            dictation_pause_ms: s.dictation_pause_ms.clamp(300, 5_000),
+            dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
         },
         asr,
         vad,
@@ -140,6 +158,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         calibrating: None,
         cancel_words: cfg.settings.cancel_words.clone(),
         grammar_version: None,
+        dictation: None,
     };
     set_state(app, "idle");
     ui_log(app, "✓ готов. «ривер» — и команду сразу или после сигнала. Хоткей — то же без «ривер». «отмена» — стоп.");
@@ -151,6 +170,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 engine.reset();
                 worker.confirm_op = None;
                 worker.calibrating = None;
+                worker.dictation = None;
                 // Накопившееся в очереди — тоже голос; выбрасываем, не распознавая.
                 while rx.try_recv().is_ok() {}
                 set_state(app, "paused");
@@ -217,7 +237,10 @@ where
         Some(dir) => match SpeechLid::new(dir, 1) {
             Ok(lid) => Some(Box::new(lid)),
             Err(e) => {
-                ui_log(app, format!("⚠ определитель языка недоступен ({e:#}) — только эвристика"));
+                ui_log(
+                    app,
+                    format!("⚠ определитель языка недоступен ({e:#}) — только эвристика"),
+                );
                 None
             }
         },
@@ -233,7 +256,11 @@ where
         format!(
             "✓ второй язык: {} · определитель: {} · язык цели: {}",
             s.second_asr_model,
-            if lid.is_some() { s.lid_model.as_str() } else { "эвристика" },
+            if lid.is_some() {
+                s.lid_model.as_str()
+            } else {
+                "эвристика"
+            },
             s.payload_language
         ),
     );
@@ -255,6 +282,17 @@ struct Worker<'a> {
     cancel_words: Vec<String>,
     /// Версия грамматики, уже переданная в Engine; `None` — ещё ни разу.
     grammar_version: Option<u64>,
+    /// Идёт диктовка («ривер напиши»).
+    dictation: Option<Dictation>,
+}
+
+/// Состояние одной диктовки: оформление текста и то, что ушло в буфер обмена.
+#[derive(Default)]
+struct Dictation {
+    formatter: Formatter,
+    /// Текст, для которого не нашлось поля ввода; лежит в буфере обмена целиком.
+    clipboard: String,
+    typed_chars: usize,
 }
 
 impl Worker<'_> {
@@ -299,7 +337,10 @@ impl Worker<'_> {
         let pending = self.shared.calibrate.lock().ok().and_then(|g| g.clone());
         match (&self.calibrating, pending) {
             (None, Some(id)) => {
-                ui_log(self.app, "● калибровка — говори фразу для действия (можно несколько подряд)…");
+                ui_log(
+                    self.app,
+                    "● калибровка — говори фразу для действия (можно несколько подряд)…",
+                );
                 self.sound("start.wav");
                 engine.start_calibration();
                 self.calibrating = Some(id);
@@ -320,6 +361,7 @@ impl Worker<'_> {
         {
             ui_log(self.app, "● хоткей — слушаю команду…");
             self.sound("start.wav");
+            self.dictation = None;
             engine.listen_command();
         }
     }
@@ -353,7 +395,93 @@ impl Worker<'_> {
                 let _ = self.app.emit("reever://partial", String::new());
                 set_state(self.app, "idle");
             }
+            EngineEvent::DictationStart => self.dictation_start(),
+            EngineEvent::Dictation(text) => self.dictation_text(&text),
+            EngineEvent::DictationEnd(reason) => self.dictation_end(reason),
             EngineEvent::Log(m) => ui_log(self.app, m),
+        }
+    }
+
+    fn dictation_start(&mut self) {
+        let _ = self.app.emit("reever://partial", String::new());
+        let idle_s = self.cfg.settings.dictation_idle_ms.clamp(2_000, 600_000) / 1000;
+        ui_log(
+            self.app,
+            format!("✎ диктовка: говори — текст печатается в поле с курсором; конец — «стоп ввод», «ривер остановись» или {idle_s} с тишины"),
+        );
+        self.sound("start.wav");
+        self.dictation = Some(Dictation::default());
+    }
+
+    /// Кусок диктовки: в поле с курсором активного окна, иначе (если включено) в буфер.
+    fn dictation_text(&mut self, raw: &str) {
+        let _ = self.app.emit("reever://partial", String::new());
+        let private = self.private();
+        let clipboard_enabled = self.cfg.settings.dictation_clipboard;
+        let session = self.dictation.get_or_insert_with(Dictation::default);
+        let pieces = session.formatter.format(raw);
+        if pieces.is_empty() {
+            return;
+        }
+        let progress = match typing::text_target() {
+            Some(target) => typing::type_pieces(target, &pieces),
+            None => typing::TypeProgress {
+                typed: Vec::new(),
+                remaining: pieces.clone(),
+            },
+        };
+        let text = pieces_to_string(&pieces);
+        session.typed_chars += pieces_to_string(&progress.typed).chars().count();
+        let rest = &progress.remaining;
+        let mut note = "";
+        if !rest.is_empty() {
+            if clipboard_enabled {
+                let rest = pieces_to_string(rest);
+                let rest = if session.typed_chars == 0 && session.clipboard.is_empty() {
+                    rest.trim_start()
+                } else {
+                    rest.as_str()
+                };
+                session.clipboard.push_str(rest);
+                note = match typing::set_clipboard(&session.clipboard) {
+                    Ok(()) => " → 📋 буфер",
+                    Err(_) => " → ⚠ буфер занят, текст потерян",
+                };
+            } else {
+                note = " → ⚠ нет поля ввода, пропущено";
+            }
+        }
+        if private {
+            ui_log(self.app, format!("✎ продиктовано{note}"));
+        } else {
+            ui_log(self.app, format!("✎ «{}»{note}", text.trim()));
+        }
+    }
+
+    fn dictation_end(&mut self, reason: DictationEndReason) {
+        let _ = self.app.emit("reever://partial", String::new());
+        let session = self.dictation.take().unwrap_or_default();
+        let why = match reason {
+            DictationEndReason::Silence => "тишина",
+            DictationEndReason::Stopped => "стоп",
+            DictationEndReason::Command => "новая команда",
+            DictationEndReason::Error => "ошибка распознавания",
+        };
+        let mut summary = format!(
+            "✓ диктовка завершена ({why}): напечатано символов — {}",
+            session.typed_chars
+        );
+        if !session.clipboard.is_empty() {
+            summary.push_str(&format!(
+                "; в буфере обмена — {} (вставь Ctrl+V)",
+                session.clipboard.chars().count()
+            ));
+        }
+        ui_log(self.app, summary);
+        match reason {
+            DictationEndReason::Command => {}
+            DictationEndReason::Error => self.sound("error.wav"),
+            _ => self.sound("success.wav"),
         }
     }
 
@@ -385,7 +513,10 @@ impl Worker<'_> {
             DispatchResult::Confirm(pending) => {
                 ui_log(
                     self.app,
-                    format!("❓ {} — подтверди голосом: «да» / «нет» (yes / no)", pending.describe()),
+                    format!(
+                        "❓ {} — подтверди голосом: «да» / «нет» (yes / no)",
+                        pending.describe()
+                    ),
                 );
                 self.confirm_sound();
                 self.confirm_op = Some(pending);
@@ -406,7 +537,9 @@ impl Worker<'_> {
     }
 
     fn confirm(&mut self, yes: bool) {
-        let Some(pending) = self.confirm_op.take() else { return };
+        let Some(pending) = self.confirm_op.take() else {
+            return;
+        };
         if yes {
             ui_log(self.app, format!("⚙ выполняю: {}", pending.describe()));
             let ok = execute_pending(self.app, &pending);
@@ -419,7 +552,9 @@ impl Worker<'_> {
     }
 
     fn calibration(&mut self, text: &str, alt: Option<&str>) {
-        let Some(id) = self.calibrating.clone() else { return };
+        let Some(id) = self.calibrating.clone() else {
+            return;
+        };
         let phrase = text.trim();
         let mut candidates = vec![phrase.to_string()];
         if let Some(alt) = alt.map(str::trim).filter(|alt| !alt.is_empty()) {
@@ -458,7 +593,13 @@ impl Worker<'_> {
         if self.private() {
             ui_log(self.app, format!("✓ калибровка «{id}»: фраза записана"));
         } else {
-            ui_log(self.app, format!("✓ калибровка «{id}»: «{phrase}»{}", if added { "" } else { " (уже есть)" }));
+            ui_log(
+                self.app,
+                format!(
+                    "✓ калибровка «{id}»: «{phrase}»{}",
+                    if added { "" } else { " (уже есть)" }
+                ),
+            );
         }
         self.sound("success.wav");
         let _ = self.app.emit("reever://calibrated", id);

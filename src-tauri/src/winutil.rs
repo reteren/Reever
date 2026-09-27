@@ -87,6 +87,11 @@ pub fn snapshot() -> Vec<isize> {
     v
 }
 
+/// Заголовок окна по сырому HWND.
+pub fn title_of(raw: isize) -> String {
+    window_title(hwnd_from(raw))
+}
+
 fn window_title(hwnd: HWND) -> String {
     unsafe {
         let len = GetWindowTextLengthW(hwnd);

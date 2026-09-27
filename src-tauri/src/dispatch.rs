@@ -106,6 +106,9 @@ pub enum Route {
     Kill(Vec<String>),
     /// Посчитать в калькуляторе: кандидаты выражения (русский и английский варианты).
     Calc(Vec<String>),
+    /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
+    /// (он сам печатает текст); сюда она доходит только из eval и тестов.
+    Dictate(String),
     /// Ничего не подошло.
     Unknown,
 }
@@ -136,6 +139,9 @@ pub fn route(
                 }
             }
         }
+        if trigger.intent.kind == IntentKind::Dictate {
+            return Route::Dictate(payloads[0].clone());
+        }
         if payloads[0].is_empty() {
             return Route::Unknown;
         }
@@ -145,6 +151,7 @@ pub fn route(
             IntentKind::Close => Route::Close(payloads),
             IntentKind::Kill => Route::Kill(payloads),
             IntentKind::Calc => Route::Calc(payloads),
+            IntentKind::Dictate => Route::Dictate(payloads[0].clone()),
             IntentKind::Search => Route::Search {
                 label: trigger.intent.label.clone(),
                 url: trigger.intent.url.replace("{q}", &urlencode(&payloads[0])),
@@ -359,6 +366,11 @@ pub fn dispatch(
             DispatchResult::Done(handle_launch(app, cfg, outcome, &query))
         }
         Route::Folder(targets) => DispatchResult::Done(open_via_everything(app, cfg, &targets)),
+        Route::Dictate(_) => {
+            // Диктовку ведёт Engine; сюда попадает только команда, пришедшая в обход него.
+            ui_log(app, "⚠ диктовка запускается голосом: «ривер напиши …»");
+            DispatchResult::Done(false)
+        }
         Route::Calc(candidates) => {
             let expression = candidates
                 .iter()

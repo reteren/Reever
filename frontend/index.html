@@ -151,11 +151,13 @@
         vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
         partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
         raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
-        sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:''
+        sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
+        dictation_clipboard:true,dictation_idle_ms:10000,dictation_pause_ms:800
       };
       const defaultGrammarPreview=()=>({
         wake_words:['ривер','ревер','ривьер','ливер'],
         cancel_words:['отмена','стоп','отбой','забудь'],
+        dictation_stop:['стоп ввод','ривер остановись'],
         intents:[
           {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true,lang:'auto'},
           {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку'],url:'',enabled:true,lang:'auto'},
@@ -163,7 +165,8 @@
           {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'},
           {id:'close',kind:'close',label:'закрыть открытую программу',triggers:['закрой'],url:'',enabled:true,lang:'auto'},
           {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши'],url:'',enabled:true,lang:'auto'},
-          {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай'],url:'',enabled:true,lang:'auto'}
+          {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай'],url:'',enabled:true,lang:'auto'},
+          {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','диктовка'],url:'',enabled:true,lang:'auto'}
         ]
       });
       let previewGrammar=defaultGrammarPreview();
@@ -181,7 +184,7 @@
               else if(ids.has(intent.id)) errors.push(`Повторяется id «${intent.id}».`);
               ids.add(intent.id);
               if(intent.kind==='search'&&!String(intent.url||'').includes('{q}')) errors.push(`В URL «${intent.label||intent.id}» должен быть шаблон {q}.`);
-              if(intent.kind==='calc'&&!(intent.triggers||[]).some(phrase=>String(phrase).trim())) errors.push(`Добавь хотя бы одну фразу для «${intent.label||'калькулятора'}».`);
+              if((intent.kind==='calc'||intent.kind==='dictate')&&!(intent.triggers||[]).some(phrase=>String(phrase).trim())) errors.push(`Добавь хотя бы одну фразу для «${intent.label||intent.id}».`);
               for(const phrase of intent.triggers||[]){
                 const key=String(phrase).trim().toLocaleLowerCase();
                 if(!key&&intent.kind!=='launch') errors.push(`Пустая фраза доступна только для запуска программ («${intent.label||intent.id}»).`);
@@ -404,6 +407,11 @@
             host.append(grammarExampleRow(`${wake} ${trigger} X`,'калькулятор: «33 умножить на 78»'));
             continue;
           }
+          if(intent.kind==='dictate'&&trigger){
+            const stop=(grammar.dictation_stop||[]).find(word=>String(word).trim())||'стоп ввод';
+            host.append(grammarExampleRow(`${wake} ${trigger} …`,`диктовка в поле с курсором (или в буфер); конец — «${stop}» или тишина`));
+            continue;
+          }
           if(trigger) host.append(grammarExampleRow(`${wake} ${trigger} X`,intent.label||'Команда'));
         }
         host.append(grammarExampleRow(`${wake} выключи комп`,'система, с подтверждением'));
@@ -455,8 +463,8 @@
         grammarEditor.append(wakeGroup);
         for(const intent of grammarDraft.intents||[]){
           const group=el('fieldset',{className:'grp grammar-intent'});
-          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор'};
-          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑'};
+          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор',dictate:'Диктовка'};
+          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑',dictate:'✎'};
           const legend=el('legend');
           const icon=el('span',{className:'grammar-kind-icon',textContent:kindIcons[intent.kind]||'•'});
           icon.setAttribute('aria-hidden','true');
@@ -479,7 +487,7 @@
           const setTriggers=values=>intent.triggers=values;
           const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim());
           const triggerHost=el('div'); group.append(triggerHost);
-          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc')?1:0;
+          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate')?1:0;
           if(minimumTriggers) triggerHost.append(el('div',{className:'hint grammar-small-note'}));
           addChipEditor(triggerHost,visibleTriggers,values=>{
             const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
@@ -525,6 +533,10 @@
         cancelGroup.append(el('div',{className:'hint grammar-small-note',textContent:'Первое слово показывается как команда отмены в примерах.'}));
         addChipEditor(cancelGroup,()=>grammarDraft.cancel_words||[],values=>grammarDraft.cancel_words=values,'слово отмены');
         grammarEditor.append(cancelGroup);
+        const stopGroup=el('fieldset',{className:'grp'}); stopGroup.append(el('legend',{textContent:'Остановить диктовку'}));
+        stopGroup.append(el('div',{className:'hint grammar-small-note',textContent:'Фраза целиком или в конце куска: «стоп ввод», «ривер остановись». Посреди текста она остаётся текстом.'}));
+        addChipEditor(stopGroup,()=>grammarDraft.dictation_stop||[],values=>grammarDraft.dictation_stop=values,'фразу остановки',1);
+        grammarEditor.append(stopGroup);
         const actions=el('div',{className:'grammar-actions'});
         const save=el('button',{type:'button',className:'default',textContent:'Сохранить'});
         const cancel=el('button',{type:'button',className:'sm',textContent:'Отмена'});
@@ -579,6 +591,10 @@
           ['lid_model','Определитель языка — рестарт','model_optional'],
           ['payload_language','Язык цели команды по умолчанию — рестарт','language'],
           ['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после wake, мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number']]],
+        ['Диктовка',[
+          ['dictation_clipboard','Если нет поля ввода — текст в буфер обмена — рестарт','bool',null,'«Ривер напиши …»: текст печатается туда, где стоит курсор. Если курсора в поле нет, он копится в буфере — вставь Ctrl+V.'],
+          ['dictation_idle_ms','Закончить диктовку после тишины, мс (10000 = 10 с) — рестарт','number'],
+          ['dictation_pause_ms','Пауза, после которой кусок печатается, мс — рестарт','number']]],
         ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],
         ['Система',[
           ['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],

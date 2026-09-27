@@ -12,7 +12,14 @@ pub struct SegmenterConfig {
     pub end_silence_ms: u32,
     /// Жёсткий предел длины сегмента — принудительное завершение.
     pub max_segment_ms: u32,
+    /// Мягкий предел (0 — выкл.): после него фраза заканчивается уже на короткой
+    /// паузе (`SOFT_END_SILENCE_MS`), чтобы длинная диктовка резалась между словами,
+    /// а не по жёсткому пределу посреди слова.
+    pub soft_max_segment_ms: u32,
 }
+
+/// Пауза, завершающая фразу после мягкого предела длины.
+const SOFT_END_SILENCE_MS: u32 = 250;
 
 impl Default for SegmenterConfig {
     fn default() -> Self {
@@ -21,6 +28,7 @@ impl Default for SegmenterConfig {
             min_speech_ms: 120,
             end_silence_ms: 600,
             max_segment_ms: 15_000,
+            soft_max_segment_ms: 0,
         }
     }
 }
@@ -79,6 +87,13 @@ impl Segmenter {
         }
     }
 
+    /// Пределы длины фразы и pre-roll: у диктовки они длиннее, чем у коротких команд.
+    pub fn set_limits(&mut self, pre_roll_ms: u32, soft_max_segment_ms: u32, max_segment_ms: u32) {
+        self.cfg.pre_roll_ms = pre_roll_ms;
+        self.cfg.soft_max_segment_ms = soft_max_segment_ms;
+        self.cfg.max_segment_ms = max_segment_ms;
+    }
+
     /// Кормит произвольный по длине кусок; кадры для `vad` режет сам.
     pub fn push(&mut self, pcm: &[i16], vad: &mut dyn VoiceDetector) -> Vec<SegmentEvent> {
         let mut events = Vec::new();
@@ -125,7 +140,12 @@ impl Segmenter {
             }
 
             let max_len = samples(self.cfg.max_segment_ms).max(1);
-            let silence_limit = samples(self.cfg.end_silence_ms);
+            let soft_max = self.cfg.soft_max_segment_ms;
+            let silence_limit = if soft_max > 0 && self.phrase_samples >= samples(soft_max) {
+                samples(self.cfg.end_silence_ms.min(SOFT_END_SILENCE_MS))
+            } else {
+                samples(self.cfg.end_silence_ms)
+            };
             if self.phrase_samples >= max_len
                 || (self.trailing_silence_samples > 0
                     && self.trailing_silence_samples >= silence_limit)
@@ -300,6 +320,7 @@ mod tests {
             min_speech_ms,
             end_silence_ms,
             max_segment_ms: 5_000,
+            soft_max_segment_ms: 0,
         }
     }
 

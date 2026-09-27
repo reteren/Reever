@@ -115,6 +115,22 @@ pub struct Settings {
     /// быстрее реакция, но слишком мало рискует обрезать фразу между словами.
     #[serde(default = "default_endpoint_ms")]
     pub endpoint_ms: u64,
+    /// Диктовка: пауза (мс), после которой сказанный кусок печатается; диктовка идёт дальше.
+    #[serde(default = "default_dictation_pause_ms")]
+    pub dictation_pause_ms: u32,
+    /// Диктовка заканчивается, если столько миллисекунд не было речи.
+    #[serde(default = "default_dictation_idle_ms")]
+    pub dictation_idle_ms: u32,
+    /// Нет поля с курсором — продиктованный текст идёт в буфер обмена.
+    #[serde(default = "default_true")]
+    pub dictation_clipboard: bool,
+}
+
+fn default_dictation_pause_ms() -> u32 {
+    800
+}
+fn default_dictation_idle_ms() -> u32 {
+    10_000
 }
 
 fn default_endpoint_ms() -> u64 {
@@ -247,6 +263,9 @@ fn parse_settings(text: &str) -> Settings {
     restore!("offline_mode", offline_mode, bool);
     restore!("mute_hotkey", mute_hotkey, String);
     restore!("endpoint_ms", endpoint_ms, u64);
+    restore!("dictation_pause_ms", dictation_pause_ms, u32);
+    restore!("dictation_idle_ms", dictation_idle_ms, u32);
+    restore!("dictation_clipboard", dictation_clipboard, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -288,6 +307,9 @@ impl Default for Settings {
             offline_mode: false,
             mute_hotkey: String::new(),
             endpoint_ms: default_endpoint_ms(),
+            dictation_pause_ms: default_dictation_pause_ms(),
+            dictation_idle_ms: default_dictation_idle_ms(),
+            dictation_clipboard: true,
         }
     }
 }

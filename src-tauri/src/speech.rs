@@ -40,6 +40,12 @@ pub trait Transcriber {
     fn transcribe_timed(&mut self, pcm: &[i16]) -> anyhow::Result<Timed> {
         Ok(Timed { text: self.transcribe(pcm)?, words: Vec::new() })
     }
+
+    /// Текст «как сказано» для диктовки: без нормализации (числа словами, `ё`, регистр
+    /// и пунктуация модели, если она их выдаёт). По умолчанию — нормализованный текст.
+    fn transcribe_verbatim(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        self.transcribe(pcm)
+    }
 }
 
 /// Язык фрагмента речи.

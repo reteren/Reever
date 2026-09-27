@@ -1,12 +1,15 @@
 //! Автомат прослушивания без Tauri: wake → команда / подтверждение / калибровка.
 //! Владелец: воркер `engine`.
 
-use crate::bilingual::{self, LangMode, Resolved};
+use crate::bilingual::{self, LangMode, Resolved, MIN_LID_DURATION_MS};
 use crate::commands::is_bare_verb;
-use crate::grammar::Grammar;
+use crate::dictation::{
+    choose_language, language_switch, leading_language_switch, trailing_stop_words, trim_words,
+};
+use crate::grammar::{Grammar, IntentKind};
 use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
-use crate::speech::{samples, LanguageId, Timed, Transcriber, VoiceDetector};
-use crate::textnorm::{is_yes, starts_with_wake, strip_wake};
+use crate::speech::{samples, Lang, LanguageId, Timed, Transcriber, VoiceDetector, SAMPLE_RATE};
+use crate::textnorm::{is_yes, normalize, starts_with_wake, strip_wake};
 
 #[derive(Clone, Debug)]
 pub struct EngineConfig {
@@ -23,6 +26,10 @@ pub struct EngineConfig {
     pub signal_mute_ms: u32,
     /// Промежуточные тексты во время команды; 0 — выключено.
     pub partial_interval_ms: u32,
+    /// Диктовка: пауза, после которой сказанный кусок печатается (диктовка идёт дальше).
+    pub dictation_pause_ms: u32,
+    /// Диктовка заканчивается, если столько времени не было речи.
+    pub dictation_idle_ms: u32,
 }
 
 impl Default for EngineConfig {
@@ -37,6 +44,8 @@ impl Default for EngineConfig {
             // команды («ривер открой… папку»). Эхо сигнала гасит пропуск пустых фраз.
             signal_mute_ms: 0,
             partial_interval_ms: 400,
+            dictation_pause_ms: 800,
+            dictation_idle_ms: 10_000,
         }
     }
 }
@@ -57,9 +66,34 @@ pub enum EngineEvent {
     Confirm(bool),
     /// После wake/хоткея команды не дождались.
     Timeout,
+    /// Началась диктовка («ривер напиши»): дальше речь — текст, а не команды.
+    DictationStart,
+    /// Очередной продиктованный кусок «как сказано» (без нормализации).
+    Dictation(String),
+    /// Диктовка закончилась.
+    DictationEnd(DictationEndReason),
     /// Диагностика для лога (без распознанного текста — приватность решает glue).
     Log(String),
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DictationEndReason {
+    /// Долго не было речи (`dictation_idle_ms`).
+    Silence,
+    /// Сказали фразу остановки («стоп ввод», «ривер остановись»).
+    Stopped,
+    /// Сказали новую команду с wake-словом — она выполняется следом.
+    Command,
+    /// Ошибка распознавания.
+    Error,
+}
+
+/// Pre-roll и пределы длины фразы: короткие команды и длинная диктовка.
+const COMMAND_LIMITS: (u32, u32, u32) = (300, 0, 15_000);
+const DICTATION_LIMITS: (u32, u32, u32) = (500, 12_000, 24_000);
+/// Длиннее этого промежуточный текст диктовки не пересчитывается: дорого, а кусок
+/// всё равно скоро закончится на мягком пределе.
+const DICTATION_PARTIAL_MAX_MS: u32 = 10_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ListenKind {
@@ -83,9 +117,18 @@ struct ListenState {
 const MAX_EMPTY_SEGMENTS: u8 = 2;
 
 #[derive(Clone, Debug)]
+struct DictationState {
+    /// Сколько ещё ждать речи до конца диктовки (сэмплы).
+    idle_remaining: usize,
+    speech_started: bool,
+    partial_elapsed: usize,
+}
+
+#[derive(Clone, Debug)]
 enum Mode {
     Idle,
     Listening(ListenState),
+    Dictating(DictationState),
     Calibrating,
 }
 
@@ -129,6 +172,8 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     second: Option<Box<dyn Transcriber + Send>>,
     lid: Option<Box<dyn LanguageId + Send>>,
     lang_mode: LangMode,
+    /// Язык диктовки, выбранный голосом («по-английски»); `None` — автоматически.
+    dictation_lang: Option<Lang>,
 }
 
 impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
@@ -155,6 +200,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             second: None,
             lid: None,
             lang_mode: LangMode::Auto,
+            dictation_lang: None,
         }
     }
 
@@ -318,18 +364,34 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     fn prepare_segmenter(&mut self, end_silence_ms: u32) {
         self.segmenter.reset();
         self.vad.reset();
+        let (pre_roll, soft_max, max) = COMMAND_LIMITS;
+        self.segmenter.set_limits(pre_roll, soft_max, max);
         self.segmenter.set_end_silence_ms(end_silence_ms);
     }
 
     fn wait_remaining(&self) -> Option<usize> {
         match &self.mode {
             Mode::Listening(state) if !state.speech_started => Some(state.wait_remaining),
+            Mode::Dictating(state) if !state.speech_started => Some(state.idle_remaining),
             _ => None,
         }
     }
 
     fn is_speech_started(&self) -> bool {
-        matches!(&self.mode, Mode::Listening(state) if state.speech_started)
+        match &self.mode {
+            Mode::Listening(state) => state.speech_started,
+            Mode::Dictating(state) => state.speech_started,
+            _ => false,
+        }
+    }
+
+    /// (началась ли речь, сколько сэмплов с последнего промежуточного текста)
+    fn partial_progress(&mut self) -> Option<(&mut bool, &mut usize)> {
+        match &mut self.mode {
+            Mode::Listening(state) => Some((&mut state.speech_started, &mut state.partial_elapsed)),
+            Mode::Dictating(state) => Some((&mut state.speech_started, &mut state.partial_elapsed)),
+            _ => None,
+        }
     }
 
     fn partial_samples_until_next(&self) -> Option<usize> {
@@ -338,30 +400,35 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             Mode::Listening(state) if state.speech_started && interval > 0 => {
                 Some(interval.saturating_sub(state.partial_elapsed))
             }
+            Mode::Dictating(state) if state.speech_started && interval > 0 => {
+                Some(interval.saturating_sub(state.partial_elapsed))
+            }
             _ => None,
         }
     }
 
     fn advance_wait(&mut self, count: usize, out: &mut Vec<EngineEvent>) {
-        if let Mode::Listening(state) = &mut self.mode {
-            if !state.speech_started {
-                state.wait_remaining = state.wait_remaining.saturating_sub(count);
-                if state.wait_remaining == 0 {
-                    self.expire_listening(out);
-                }
-            }
+        let remaining = match &mut self.mode {
+            Mode::Listening(state) if !state.speech_started => &mut state.wait_remaining,
+            Mode::Dictating(state) if !state.speech_started => &mut state.idle_remaining,
+            _ => return,
+        };
+        *remaining = remaining.saturating_sub(count);
+        if *remaining == 0 {
+            self.expire_listening(out);
         }
     }
 
     fn expire_listening(&mut self, out: &mut Vec<EngineEvent>) {
-        let kind = match &self.mode {
-            Mode::Listening(state) if !state.speech_started => state.kind,
+        match &self.mode {
+            Mode::Listening(state) if !state.speech_started => match state.kind {
+                ListenKind::Command => out.push(EngineEvent::Timeout),
+                ListenKind::Confirm => out.push(EngineEvent::Confirm(false)),
+            },
+            Mode::Dictating(state) if !state.speech_started => {
+                out.push(EngineEvent::DictationEnd(DictationEndReason::Silence))
+            }
             _ => return,
-        };
-
-        match kind {
-            ListenKind::Command => out.push(EngineEvent::Timeout),
-            ListenKind::Confirm => out.push(EngineEvent::Confirm(false)),
         }
         self.return_to_idle(true, out);
     }
@@ -372,23 +439,25 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         }
 
-        let should_transcribe = if let Mode::Listening(state) = &mut self.mode {
-            if state.speech_started {
-                state.partial_elapsed = state.partial_elapsed.saturating_add(count);
-                if state.partial_elapsed >= interval {
-                    state.partial_elapsed %= interval;
+        let should_transcribe = match self.partial_progress() {
+            Some((speech_started, partial_elapsed)) if *speech_started => {
+                *partial_elapsed = partial_elapsed.saturating_add(count);
+                if *partial_elapsed >= interval {
+                    *partial_elapsed %= interval;
                     true
                 } else {
                     false
                 }
-            } else {
-                false
             }
-        } else {
-            false
+            _ => false,
         };
 
         if !should_transcribe || self.segmenter.current_audio().is_empty() {
+            return;
+        }
+        if matches!(self.mode, Mode::Dictating(_))
+            && self.segmenter.current_audio().len() > samples(DICTATION_PARTIAL_MAX_MS)
+        {
             return;
         }
 
@@ -410,6 +479,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             }
             Err(error) => {
                 out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                if matches!(self.mode, Mode::Dictating(_)) {
+                    out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
+                }
                 self.return_to_idle(true, out);
             }
         }
@@ -418,9 +490,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     fn handle_segment_event(&mut self, event: SegmentEvent, out: &mut Vec<EngineEvent>) {
         match event {
             SegmentEvent::SpeechStart => {
-                if let Mode::Listening(state) = &mut self.mode {
-                    state.speech_started = true;
-                    state.partial_elapsed = 0;
+                if let Some((speech_started, partial_elapsed)) = self.partial_progress() {
+                    *speech_started = true;
+                    *partial_elapsed = 0;
                 }
             }
             SegmentEvent::SpeechEnd(mut audio) => {
@@ -438,15 +510,19 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     Mode::Listening(state) => {
                         out.push(EngineEvent::State("busy"));
                         let result = match state.kind {
-                            ListenKind::Command => self.asr.transcribe_timed(&audio).map(|timed| {
-                                self.second_language_only(&audio, timed)
-                            }),
+                            ListenKind::Command => self
+                                .asr
+                                .transcribe_timed(&audio)
+                                .map(|timed| self.second_language_only(&audio, timed)),
                             // Английское «yes/no» русская модель не слышит вовсе (пустой
                             // текст) — тогда ответ слушает вторая модель, как и английскую цель.
                             ListenKind::Confirm => self
                                 .asr
                                 .transcribe(&audio)
-                                .map(|text| Timed { text, words: Vec::new() })
+                                .map(|text| Timed {
+                                    text,
+                                    words: Vec::new(),
+                                })
                                 .map(|timed| self.second_language_only(&audio, timed)),
                         };
                         match result {
@@ -472,6 +548,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                     let text = self.strip_repeated_wake(&timed.text);
                                     if text.trim().is_empty() {
                                         out.push(EngineEvent::Timeout);
+                                    } else if state.prefix.trim().is_empty()
+                                        && self.try_start_dictation(&audio, &timed, out)
+                                    {
+                                        audio.fill(0);
+                                        return;
                                     } else {
                                         let resolved =
                                             self.resolve_command(&audio, &timed, &state.prefix);
@@ -500,6 +581,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 self.return_to_idle(true, out);
                             }
                         }
+                        audio.fill(0);
+                    }
+                    Mode::Dictating(_) => {
+                        self.dictation_segment(&audio, out);
                         audio.fill(0);
                     }
                     Mode::Calibrating => {
@@ -546,6 +631,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         };
         let rest = rest.trim();
+        if self.try_start_dictation(audio, &timed, out) {
+            return;
+        }
         if rest.is_empty() || self.is_incomplete(rest) {
             out.push(EngineEvent::WakeHeard);
             self.begin_listening(ListenKind::Command, rest.to_string());
@@ -561,6 +649,207 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
     }
 
+    /// «напиши …» (намерение `Dictate`) — начать диктовку. `heard` — нормализованный текст
+    /// этого аудио целиком (возможно, с wake-словом): по нему считается, сколько слов
+    /// «как сказано» отрезать, чтобы осталась только цель — первый кусок текста.
+    fn try_start_dictation(
+        &mut self,
+        audio: &[i16],
+        timed: &Timed,
+        out: &mut Vec<EngineEvent>,
+    ) -> bool {
+        let heard = timed.text.as_str();
+        let body = self.strip_repeated_wake(heard);
+        let payload = match self
+            .grammar
+            .as_ref()
+            .and_then(|grammar| grammar.match_trigger(&body))
+        {
+            Some(matched) if matched.intent.kind == IntentKind::Dictate => matched.payload,
+            _ => return false,
+        };
+
+        out.push(EngineEvent::DictationStart);
+        out.push(EngineEvent::State("listening"));
+        self.dictation_lang = None;
+        let heard_words = heard.split_whitespace().count();
+        let mut skip = heard_words.saturating_sub(payload.split_whitespace().count());
+        if let Some((lang, words)) = leading_language_switch(&payload) {
+            self.dictation_lang = Some(lang);
+            skip += words;
+        }
+        // Даже при пустой цели звук после «напиши» может быть: английскую фразу русская
+        // модель часто не слышит вовсе («ривер напиши hello…» → «ривер напиши»).
+        if skip < heard_words || !timed.words.is_empty() {
+            let first = self.first_dictation_chunk(audio, timed, skip);
+            if !first.trim().is_empty() {
+                out.push(EngineEvent::Dictation(first));
+            }
+        }
+        self.begin_dictation();
+        true
+    }
+
+    /// Текст после «напиши» в той же фразе. По таймингу слов вырезается звук цели, и он
+    /// распознаётся заново обеими моделями — так «ривер напиши hello» даёт английский текст.
+    /// Без тайминга — русский вариант всей фразы без первых `skip` слов.
+    fn first_dictation_chunk(&mut self, audio: &[i16], timed: &Timed, skip: usize) -> String {
+        let heard_words = timed.text.split_whitespace().count();
+        if timed.words.len() == heard_words && skip > 0 && skip <= timed.words.len() {
+            let start_s = match timed.words.get(skip) {
+                Some(word) => (word.start - 0.15).max(timed.words[skip - 1].end),
+                // Цели русская модель не услышала: берём всё после триггера. Конец последнего
+                // слова в тайминге растянут до конца записи, поэтому он оценивается по длине
+                // слова (~0,1 с на букву).
+                None => {
+                    let last = &timed.words[skip - 1];
+                    let spoken = 0.15 + 0.1 * last.text.chars().count() as f32;
+                    last.end.min(last.start + spoken)
+                }
+            };
+            let start = ((start_s.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
+            let cropped = &audio[start..];
+            let min_len = if skip < timed.words.len() { samples(200) } else { samples(600) };
+            if cropped.len() >= min_len {
+                let ru = self.asr.transcribe_verbatim(cropped).unwrap_or_default();
+                return self.dictation_text(cropped, ru);
+            }
+            if skip >= timed.words.len() {
+                return String::new();
+            }
+        }
+        if skip >= heard_words {
+            return String::new();
+        }
+        match self.asr.transcribe_verbatim(audio) {
+            Ok(raw) => trim_words(&raw, skip, 0),
+            Err(_) => String::new(),
+        }
+    }
+
+    fn begin_dictation(&mut self) {
+        let (pre_roll, soft_max, max) = DICTATION_LIMITS;
+        self.prepare_segmenter(self.cfg.dictation_pause_ms);
+        self.segmenter.set_limits(pre_roll, soft_max, max);
+        self.mode = Mode::Dictating(DictationState {
+            idle_remaining: samples(self.cfg.dictation_idle_ms.max(1_000)),
+            speech_started: false,
+            partial_elapsed: 0,
+        });
+        self.mute_remaining = 0;
+        self.mode_epoch = self.mode_epoch.wrapping_add(1);
+    }
+
+    /// Законченный кусок диктовки: фраза остановки, новая команда с wake-словом или текст.
+    fn dictation_segment(&mut self, audio: &[i16], out: &mut Vec<EngineEvent>) {
+        let raw = match self.asr.transcribe_verbatim(audio) {
+            Ok(raw) => raw,
+            Err(error) => {
+                out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
+                self.return_to_idle(true, out);
+                return;
+            }
+        };
+        let norm = normalize(&raw);
+        let stop_phrases = self
+            .grammar
+            .as_ref()
+            .map(|grammar| grammar.dictation_stop.clone())
+            .unwrap_or_else(|| Grammar::defaults().dictation_stop);
+
+        if let Some(stop_words) = trailing_stop_words(&norm, &stop_phrases, &self.cfg.wake_words) {
+            let text = trim_words(&raw, 0, stop_words);
+            if !text.is_empty() {
+                out.push(EngineEvent::Dictation(text));
+            }
+            out.push(EngineEvent::DictationEnd(DictationEndReason::Stopped));
+            self.return_to_idle(true, out);
+            return;
+        }
+
+        if let Some(lang) = language_switch(&norm) {
+            self.dictation_lang = Some(lang);
+            out.push(EngineEvent::Log(match lang {
+                Lang::En => "✎ диктовка: английский".into(),
+                Lang::Ru => "✎ диктовка: русский".into(),
+            }));
+            self.begin_dictation();
+            out.push(EngineEvent::State("listening"));
+            return;
+        }
+
+        if strip_initial_wake(&norm, &self.cfg.wake_words).is_some() {
+            // «ривер …» посреди диктовки — это снова команда: диктовка заканчивается,
+            // а фраза разбирается так же, как в простое.
+            out.push(EngineEvent::DictationEnd(DictationEndReason::Command));
+            self.enter_idle();
+            let timed = self.asr.transcribe_timed(audio);
+            self.handle_idle_transcript(timed, audio, out);
+            if matches!(self.mode, Mode::Idle) {
+                out.push(EngineEvent::State("idle"));
+            }
+            return;
+        }
+
+        let text = self.dictation_text(audio, raw);
+        if !text.trim().is_empty() {
+            out.push(EngineEvent::Dictation(text));
+        }
+        self.begin_dictation();
+        out.push(EngineEvent::State("listening"));
+    }
+
+    /// Язык куска диктовки. Русская модель — основная; вторая включается, если язык
+    /// намерения «английский» или определитель уверенно слышит английский, а русский
+    /// вариант не состоит из явно русских слов (то же вето, что у цели команды).
+    fn dictation_text(&mut self, audio: &[i16], ru_raw: String) -> String {
+        let mode = match self.dictation_lang {
+            Some(Lang::Ru) => LangMode::Ru,
+            Some(Lang::En) => LangMode::En,
+            None => {
+                let intent_lang = self
+                    .grammar
+                    .as_ref()
+                    .and_then(|grammar| {
+                        grammar
+                            .intents
+                            .iter()
+                            .find(|i| i.kind == IntentKind::Dictate)
+                    })
+                    .map(|intent| intent.lang)
+                    .unwrap_or(LangMode::Auto);
+                if intent_lang == LangMode::Auto {
+                    self.lang_mode
+                } else {
+                    intent_lang
+                }
+            }
+        };
+        if mode == LangMode::Ru {
+            return ru_raw;
+        }
+        let Some(second) = self.second.as_deref_mut() else {
+            return ru_raw;
+        };
+        // Английскую модель слушаем всегда: определитель языка на английском с русским
+        // акцентом уверенно говорит «ru», а русская модель слышит транслит или пустоту.
+        let en_raw = second.transcribe_verbatim(audio).unwrap_or_default();
+        if mode == LangMode::En {
+            return if en_raw.trim().is_empty() { ru_raw } else { en_raw };
+        }
+        let long_enough =
+            audio.len() as f32 * 1000.0 / SAMPLE_RATE as f32 >= MIN_LID_DURATION_MS;
+        let lid = match self.lid.as_deref_mut() {
+            Some(lid) if long_enough => lid.detect(audio).ok(),
+            _ => None,
+        };
+        match choose_language(&ru_raw, &en_raw, lid) {
+            Lang::En => en_raw,
+            Lang::Ru => ru_raw,
+        }
+    }
+
     /// Русская модель на чисто английском сегменте («ривер поиск ютуб» + пауза +
     /// «never gonna give you up») часто возвращает пустоту — и пустая фраза была бы принята
     /// за эхо сигнала. Прежде чем так решить, сегмент слушает вторая модель; её текст
@@ -573,7 +862,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return timed;
         };
         match second.transcribe(audio) {
-            Ok(text) if !text.trim().is_empty() => Timed { text, words: Vec::new() },
+            Ok(text) if !text.trim().is_empty() => Timed {
+                text,
+                words: Vec::new(),
+            },
             _ => timed,
         }
     }
@@ -586,7 +878,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let Some(second) = self.second.as_deref_mut() else {
             return false;
         };
-        second.transcribe(audio).map(|text| is_yes(&text)).unwrap_or(false)
+        second
+            .transcribe(audio)
+            .map(|text| is_yes(&text))
+            .unwrap_or(false)
     }
 
     fn resolve_command(&mut self, audio: &[i16], timed: &Timed, prefix: &str) -> Resolved {
@@ -1291,5 +1586,125 @@ mod tests {
         let events = engine.push_audio(&phrase(123, 120));
         assert!(contains(&events, &EngineEvent::Confirm(true)));
         assert_eq!(calls.load(Ordering::Relaxed), 0);
+    }
+
+    fn dictation_engine(texts: &[&str]) -> Engine<MockTranscriber, MockVoiceDetector> {
+        let mut cfg = test_config();
+        cfg.dictation_pause_ms = 120;
+        cfg.dictation_idle_ms = 1_000;
+        let (mut engine, _, _, _) = engine(cfg, texts);
+        engine.set_grammar(crate::grammar::Grammar::defaults());
+        engine
+    }
+
+    fn dictated(events: &[EngineEvent]) -> Vec<String> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                EngineEvent::Dictation(text) => Some(text.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn dictation_in_one_breath_types_the_payload_and_keeps_listening() {
+        // Mock: транскрипция фразы простоя, затем её же «как сказано».
+        let mut engine = dictation_engine(&[
+            "ривер напиши привет мир",
+            "ривер напиши привет мир",
+            "как дела",
+            "стоп ввод",
+        ]);
+        let mut events = engine.push_audio(&phrase(123, 700));
+        assert!(contains(&events, &EngineEvent::DictationStart));
+        assert!(!contains(&events, &EngineEvent::WakeHeard));
+        assert_eq!(dictated(&events), ["привет мир"]);
+
+        // короткая пауза (с хвостом первой фразы — меньше тайм-аута 1 с): диктовка идёт
+        events = engine.push_audio(&vec![0; samples(200)]);
+        events.extend(engine.push_audio(&phrase(123, 200)));
+        assert_eq!(dictated(&events), ["как дела"]);
+
+        events = engine.push_audio(&phrase(123, 200));
+        assert!(dictated(&events).is_empty());
+        assert!(contains(
+            &events,
+            &EngineEvent::DictationEnd(DictationEndReason::Stopped)
+        ));
+        assert!(contains(&events, &EngineEvent::State("idle")));
+    }
+
+    #[test]
+    fn dictation_after_a_pause_starts_without_the_wake_signal() {
+        let mut engine = dictation_engine(&["ривер напиши", "длинный текст письма"]);
+        let mut events = engine.push_audio(&phrase(123, 700));
+        assert!(contains(&events, &EngineEvent::DictationStart));
+        assert!(!contains(&events, &EngineEvent::WakeHeard));
+        events.extend(engine.push_audio(&phrase(123, 200)));
+        assert_eq!(dictated(&events), ["длинный текст письма"]);
+    }
+
+    #[test]
+    fn dictation_ends_after_idle_silence() {
+        let mut engine = dictation_engine(&["ривер напиши"]);
+        let events = engine.push_audio(&phrase(123, 700));
+        assert!(contains(&events, &EngineEvent::DictationStart));
+        let events = engine.push_audio(&vec![0; samples(1_100)]);
+        assert!(contains(
+            &events,
+            &EngineEvent::DictationEnd(DictationEndReason::Silence)
+        ));
+        assert!(contains(&events, &EngineEvent::State("idle")));
+    }
+
+    #[test]
+    fn stop_phrase_at_the_end_keeps_the_text_before_it() {
+        let mut engine = dictation_engine(&["ривер напиши", "вот и всё стоп ввод"]);
+        engine.push_audio(&phrase(123, 700));
+        let events = engine.push_audio(&phrase(123, 200));
+        assert_eq!(dictated(&events), ["вот и всё"]);
+        assert!(contains(
+            &events,
+            &EngineEvent::DictationEnd(DictationEndReason::Stopped)
+        ));
+    }
+
+    #[test]
+    fn river_stop_phrase_ends_dictation() {
+        let mut engine = dictation_engine(&["ривер напиши", "ривер остановись"]);
+        engine.push_audio(&phrase(123, 700));
+        let events = engine.push_audio(&phrase(123, 200));
+        assert!(dictated(&events).is_empty());
+        assert!(contains(
+            &events,
+            &EngineEvent::DictationEnd(DictationEndReason::Stopped)
+        ));
+        assert!(!events
+            .iter()
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
+    }
+
+    #[test]
+    fn wake_command_during_dictation_ends_it_and_runs_the_command() {
+        let mut engine = dictation_engine(&[
+            "ривер напиши",
+            "ривер открой загрузки",
+            "ривер открой загрузки",
+        ]);
+        engine.push_audio(&phrase(123, 700));
+        let events = engine.push_audio(&phrase(123, 200));
+        assert!(contains(
+            &events,
+            &EngineEvent::DictationEnd(DictationEndReason::Command)
+        ));
+        assert!(contains(
+            &events,
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
+        ));
+        assert!(dictated(&events).is_empty());
     }
 }
