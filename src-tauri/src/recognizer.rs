@@ -102,7 +102,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     }));
     set_state(app, "loading");
     emit_status(app, &status);
-    ui_log(app, format!("режим активации: {}", s.activation_mode));
+    ui_log(app, format!("Reever {} · режим активации: {}", env!("CARGO_PKG_VERSION"), s.activation_mode));
 
     if s.offline_mode {
         ui_log(

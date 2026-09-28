@@ -7,7 +7,7 @@ use anyhow::{bail, Context};
 use windows::Win32::{
     Foundation::{GlobalFree, HANDLE, HINSTANCE, HWND},
     System::{
-        Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED},
+        Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
         DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
         LibraryLoader::GetModuleHandleW,
         Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
@@ -78,7 +78,7 @@ const SHELL_CLASSES: &[&str] = &[
 
 /// Активное окно, если в нём фокус на поле ввода (виден текстовый курсор или UI Automation
 /// говорит, что в фокусе редактируемое поле). Своё окно Reever — не цель.
-pub fn text_target() -> Option<isize> {
+fn text_target_local() -> Option<isize> {
     let foreground = unsafe { GetForegroundWindow() };
     if foreground.0.is_null() {
         return None;
@@ -133,7 +133,7 @@ fn hwnd_from(raw: isize) -> HWND {
 
 thread_local! {
     static AUTOMATION: Option<IUIAutomation> = unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        // COM инициализирован потоком ввода (STA, см. input_thread.rs).
         CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER).ok()
     };
 }
@@ -174,7 +174,7 @@ pub struct TypeProgress {
 
 /// Напечатать куски только пока активно исходное поле. Снимок `hwndFocus` защищает
 /// от смены поля даже внутри того же верхнего окна приложения.
-pub fn type_pieces(target: isize, pieces: &[Piece]) -> TypeProgress {
+fn type_pieces_local(target: isize, pieces: &[Piece]) -> TypeProgress {
     let Ok(focus) = current_focus(target) else {
         return TypeProgress {
             typed: Vec::new(),
@@ -364,7 +364,7 @@ fn send_inputs(inputs: &[INPUT]) -> u32 {
 }
 
 /// Положить текст в буфер обмена (заменяя прежнее содержимое).
-pub fn set_clipboard(text: &str) -> anyhow::Result<()> {
+fn set_clipboard_local(text: &str) -> anyhow::Result<()> {
     let wide: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
     let owner = CLIPBOARD_OWNER.with(|owner| *owner);
     if owner.0.is_null() {
@@ -403,4 +403,30 @@ pub fn set_clipboard(text: &str) -> anyhow::Result<()> {
         let _ = CloseClipboard();
         result
     }
+}
+
+// Публичный вход — только через поток ввода (input_thread.rs): UIA, SendInput и окно-
+// владелец буфера не должны жить в аудио-воркере, который запускает программы.
+
+/// Активное окно, если в нём фокус на поле ввода; см. `text_target_local`.
+pub fn text_target() -> Option<isize> {
+    crate::input_thread::call(text_target_local).flatten()
+}
+
+/// Напечатать куски в поле `target`; см. `type_pieces_local`.
+pub fn type_pieces(target: isize, pieces: &[Piece]) -> TypeProgress {
+    let owned = pieces.to_vec();
+    crate::input_thread::call(move || type_pieces_local(target, &owned)).unwrap_or_else(|| {
+        TypeProgress {
+            typed: Vec::new(),
+            remaining: pieces.to_vec(),
+        }
+    })
+}
+
+/// Положить текст в буфер обмена; см. `set_clipboard_local`.
+pub fn set_clipboard(text: &str) -> anyhow::Result<()> {
+    let owned = text.to_string();
+    crate::input_thread::call(move || set_clipboard_local(&owned))
+        .unwrap_or_else(|| Err(anyhow::anyhow!("поток ввода недоступен")))
 }

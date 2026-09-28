@@ -121,6 +121,17 @@ pub fn is_yes(text: &str) -> bool {
     })
 }
 
+/// Явный отказ на подтверждение («нет», «отмена», «no»).
+pub fn is_no(text: &str) -> bool {
+    normalize(text).split_whitespace().any(|word| {
+        matches!(
+            word,
+            "нет" | "не" | "неа" | "отмена" | "отмени" | "отменить" | "стоп" | "не надо" | "no"
+                | "nope" | "cancel" | "stop" | "ноу" | "ноуп"
+        ) || word.starts_with("отмен")
+    })
+}
+
 /// Удаляет вводные слова только в начале фразы. Используется для сравнения и разбора
 /// вежливых команд, чтобы слова внутри названия действия не пропадали.
 pub(crate) fn strip_leading_fillers(text: &str) -> String {

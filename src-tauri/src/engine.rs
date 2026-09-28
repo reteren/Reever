@@ -9,7 +9,7 @@ use crate::dictation::{
 use crate::grammar::{Grammar, IntentKind};
 use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
 use crate::speech::{samples, Lang, LanguageId, Timed, Transcriber, VoiceDetector, SAMPLE_RATE};
-use crate::textnorm::{is_yes, normalize, starts_with_wake, strip_wake};
+use crate::textnorm::{is_no, is_yes, normalize, starts_with_wake, strip_wake};
 
 #[derive(Clone, Debug)]
 pub struct EngineConfig {
@@ -570,8 +570,26 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 ListenKind::Confirm => {
                                     let text = self.strip_repeated_wake(&timed.text);
                                     let yes = is_yes(&text) || self.second_says_yes(&audio);
-                                    out.push(EngineEvent::Confirm(yes));
-                                    self.return_to_idle(true, out);
+                                    // Ни «да», ни «нет»: это эхо сигнала подтверждения или шум
+                                    // (английская модель выдумывает на нём «mm hmm»). Отказом это
+                                    // не считаем — ждём настоящий ответ, но не бесконечно.
+                                    if !yes
+                                        && !is_no(&text)
+                                        && state.empty_segments < MAX_EMPTY_SEGMENTS
+                                    {
+                                        self.prepare_segmenter(self.cfg.command_pause_ms);
+                                        self.mode = Mode::Listening(ListenState {
+                                            wait_remaining: samples(self.cfg.command_wait_ms),
+                                            speech_started: false,
+                                            partial_elapsed: 0,
+                                            empty_segments: state.empty_segments + 1,
+                                            ..state
+                                        });
+                                        out.push(EngineEvent::State("listening"));
+                                    } else {
+                                        out.push(EngineEvent::Confirm(yes));
+                                        self.return_to_idle(true, out);
+                                    }
                                 }
                             },
                             Err(error) => {
@@ -1706,5 +1724,16 @@ mod tests {
             }
         ));
         assert!(dictated(&events).is_empty());
+    }
+
+    #[test]
+    fn confirm_ignores_echo_that_is_neither_yes_nor_no() {
+        // эхо сигнала, распознанное как «мм», не отменяет команду — ждём ответа
+        let (mut engine, _, _, _) = engine(test_config(), &["мм", "да"]);
+        engine.listen_confirm();
+        let mut events = engine.push_audio(&phrase(123, 120));
+        assert!(!events.iter().any(|event| matches!(event, EngineEvent::Confirm(_))));
+        events.extend(engine.push_audio(&phrase(123, 120)));
+        assert!(contains(&events, &EngineEvent::Confirm(true)));
     }
 }

@@ -85,8 +85,10 @@ impl Formatter {
         let mut pieces = Vec::new();
         let mut text = String::new();
         let mut i = 0;
+        let mut spoken_last = false;
         while i < tokens.len() {
             if let Some((len, spoken)) = match_spoken(&keys[i..]) {
+                spoken_last = true;
                 match spoken {
                     Spoken::Mark(mark) => {
                         // «запятая» первым словом куска — знак к концу прошлого куска.
@@ -116,7 +118,14 @@ impl Formatter {
                 continue;
             }
             self.push_word(&mut text, tokens[i], true);
+            spoken_last = false;
             i += 1;
+        }
+        // Точку в конце куска ставит модель с пунктуацией (английская), а не человек:
+        // кусок кончается паузой, а не обязательно предложением. Сказанную «точку» оставляем.
+        if !spoken_last && text.ends_with('.') && !text.ends_with("..") {
+            text.pop();
+            self.sentence_start = false;
         }
         if !text.is_empty() {
             pieces.push(Piece::Text(text));
@@ -392,6 +401,14 @@ mod tests {
         assert_eq!(text(&f.format("если ктото задержится скажи что нибудь")), "Если кто-то задержится скажи что-нибудь");
         let mut f = Formatter::new();
         assert_eq!(text(&f.format("как то так а то нет")), "Как-то так а то нет");
+    }
+
+    #[test]
+    fn model_period_at_chunk_end_is_dropped_but_spoken_one_kept() {
+        let mut f = Formatter::new();
+        assert_eq!(text(&f.format("I think we should move it.")), "I think we should move it");
+        assert_eq!(text(&f.format("готово точка")), " готово.");
+        assert_eq!(text(&f.format("One. Two.")), " One. Two");
     }
 
     #[test]

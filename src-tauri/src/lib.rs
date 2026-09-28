@@ -18,6 +18,7 @@ pub mod engine;
 pub mod events;
 pub mod everything;
 pub mod grammar;
+pub mod input_thread;
 pub mod langid;
 pub mod launcher;
 pub mod procs;
@@ -97,6 +98,9 @@ pub fn run() {
         )
         .setup(|app| {
             let cfg = Arc::new(ReeverConfig::resolve(app.handle())?);
+            if let Some(dir) = cfg.settings_path.parent() {
+                events::init_log_file(dir.join("reever.log"));
+            }
 
             // Все конфиги полностью редактируемы пользователем (release -> %APPDATA%).
             let actions_path = config::user_config_path(app.handle(), "actions.json");

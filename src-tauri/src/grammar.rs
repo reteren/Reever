@@ -12,10 +12,17 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 4;
+const GRAMMAR_VERSION: u32 = 5;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
-const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[(2, &["close", "kill"]), (3, &["calc"]), (4, &["dictate"])];
+const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
+    (2, &["close", "kill"]),
+    (3, &["calc"]),
+    (4, &["dictate"]),
+];
+/// Новые фразы у существующих намерений: (версия, id намерения, фраза). Дописываются
+/// один раз при миграции, если фраза не занята другим намерением.
+const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[(5, "dictate", "запиши")];
 
 fn legacy_version() -> u32 {
     1
@@ -192,7 +199,7 @@ impl Grammar {
                     "dictate",
                     IntentKind::Dictate,
                     "диктовка: ввести текст в поле с курсором",
-                    &["напиши", "диктовка"],
+                    &["напиши", "запиши", "диктовка"],
                     "",
                 ),
                 intent(
@@ -470,6 +477,22 @@ impl Grammar {
 }
 
 fn append_versioned_defaults(grammar: &mut Grammar) {
+    for (introduced_version, id, phrase) in ADDED_DEFAULT_TRIGGERS {
+        if grammar.version >= *introduced_version {
+            continue;
+        }
+        let wanted = normalize(phrase);
+        let taken = grammar
+            .intents
+            .iter()
+            .any(|intent| intent.triggers.iter().any(|trigger| normalize(trigger) == wanted));
+        if taken {
+            continue;
+        }
+        if let Some(intent) = grammar.intents.iter_mut().find(|intent| intent.id == *id) {
+            intent.triggers.push((*phrase).to_string());
+        }
+    }
     let defaults = Grammar::defaults();
     for (introduced_version, ids) in ADDED_DEFAULT_INTENTS {
         if grammar.version >= *introduced_version {
@@ -986,7 +1009,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 4);
+        assert_eq!(Grammar::defaults().version, 5);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()
@@ -1090,6 +1113,23 @@ mod tests {
             "битый файл не должен запускать миграцию действий"
         );
         assert_eq!(std::fs::read_to_string(&path).unwrap(), corrupt);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn version_four_migration_adds_zapishi_to_dictation_once() {
+        let path = temporary_path("v4-zapishi");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 4;
+        intent_mut(&mut legacy, "dictate").triggers = vec!["напиши".into(), "диктовка".into()];
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        assert_eq!(
+            migrated.intents.iter().find(|i| i.id == "dictate").unwrap().triggers,
+            ["напиши", "диктовка", "запиши"]
+        );
+        let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        assert_eq!(reloaded, migrated);
         let _ = std::fs::remove_file(path);
     }
 }

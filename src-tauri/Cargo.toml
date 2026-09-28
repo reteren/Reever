@@ -1,6 +1,6 @@
 [package]
 name = "reever"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "Reever — offline voice launcher for Windows"
 
@@ -57,6 +57,8 @@ features = [
   "Win32_System_Memory",
   # spellcheck.rs: словарная проверка языка куска диктовки
   "Win32_Globalization",
+  # events.rs: местное время в журнале
+  "Win32_System_SystemInformation",
 ]
 
 [profile.release]

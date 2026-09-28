@@ -9,7 +9,7 @@ use windows::{
     core::HSTRING,
     Win32::{
         Globalization::{ISpellChecker, ISpellCheckerFactory, ISpellingError, SpellCheckerFactory},
-        System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED},
+        System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
     },
 };
 
@@ -19,7 +19,6 @@ thread_local! {
 
 fn create(language: &str) -> Option<ISpellChecker> {
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
         let factory: ISpellCheckerFactory =
             CoCreateInstance(&SpellCheckerFactory, None, CLSCTX_INPROC_SERVER).ok()?;
         let tag = HSTRING::from(language);
@@ -32,7 +31,8 @@ fn create(language: &str) -> Option<ISpellChecker> {
 
 /// Доступна ли проверка для языка (`ru-RU`, `en-US`).
 pub fn is_available(language: &str) -> bool {
-    with_checker(language, |_| ()).is_some()
+    let language = language.to_string();
+    crate::input_thread::call(move || with_checker(&language, |_| ()).is_some()).unwrap_or(false)
 }
 
 fn with_checker<R>(language: &str, f: impl FnOnce(&ISpellChecker) -> R) -> Option<R> {
@@ -48,6 +48,12 @@ fn with_checker<R>(language: &str, f: impl FnOnce(&ISpellChecker) -> R) -> Optio
 /// Доля слов текста с ошибками (0 — все слова словарные) и число слов.
 /// `None` — проверки для языка нет или в тексте нет слов.
 pub fn misspelled_ratio(language: &str, text: &str) -> Option<(f32, usize)> {
+    // Проверка орфографии — COM: только в потоке ввода (input_thread.rs), не в аудио-воркере.
+    let (language, text) = (language.to_string(), text.to_string());
+    crate::input_thread::call(move || misspelled_ratio_local(&language, &text)).flatten()
+}
+
+fn misspelled_ratio_local(language: &str, text: &str) -> Option<(f32, usize)> {
     let words = text
         .split(|c: char| !c.is_alphabetic() && c != '\'' && c != '-')
         .filter(|word| word.chars().any(char::is_alphabetic))

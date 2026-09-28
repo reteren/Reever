@@ -41,10 +41,16 @@ fn main() -> anyhow::Result<()> {
         let mut engine = Engine::new(EngineConfig::default(), ru, vad);
         engine.set_grammar(Grammar::defaults());
         engine.set_bilingual(Some(Box::new(en)), Some(Box::new(lid)), LangMode::Auto);
+        // LANG_PROBE_CONFIRM: после команды — как recognizer при confirm_close — ждать «да».
+        let confirm = std::env::var_os("LANG_PROBE_CONFIRM").is_some();
         for chunk in pcm.chunks(samples(20)) {
             for event in engine.push_audio(chunk) {
                 match event {
                     EngineEvent::Partial(_) | EngineEvent::State(_) => {}
+                    EngineEvent::Command { .. } if confirm => {
+                        println!("{event:?} → listen_confirm");
+                        engine.listen_confirm();
+                    }
                     other => println!("{other:?}"),
                 }
             }
