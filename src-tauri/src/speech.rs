@@ -62,6 +62,15 @@ pub trait LanguageId {
     fn detect(&mut self, pcm: &[i16]) -> anyhow::Result<(Lang, f32)>;
 }
 
+/// Фоновый детектор wake-слова на потоковой модели: слушает эфир в простое непрерывно.
+pub trait WakeSpotter {
+    /// Очередной кусок 16 кГц mono; `true` — в этом куске впервые прозвучало wake-слово.
+    fn feed(&mut self, pcm: &[i16]) -> bool;
+    /// Забыть текущую фразу (выход из простоя, пауза микрофона).
+    fn reset(&mut self);
+    fn set_wake_words(&mut self, wake_words: &[String]);
+}
+
 /// Покадровый детектор речи.
 pub trait VoiceDetector {
     /// Длина кадра в сэмплах; `is_speech` всегда получает ровно столько.

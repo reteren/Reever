@@ -136,6 +136,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             command_wait_ms: s.command_wait_ms,
             signal_mute_ms: 0,
             partial_interval_ms: if s.partial_results { 400 } else { 0 },
+            confirm_wait_ms: 8_000,
             dictation_pause_ms: s.dictation_pause_ms.clamp(300, 5_000),
             dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
         },
@@ -143,6 +144,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         vad,
     );
     enable_second_language(app, cfg, &mut engine);
+    enable_wake_spotter(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
 
     let (tx, rx) = sync_channel::<Vec<i16>>(AUDIO_QUEUE);
@@ -159,6 +161,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         cancel_words: cfg.settings.cancel_words.clone(),
         grammar_version: None,
         dictation: None,
+        last_wake_sound: None,
     };
     set_state(app, "idle");
     ui_log(app, "✓ готов. «ривер» — и команду сразу или после сигнала. Хоткей — то же без «ривер». «отмена» — стоп.");
@@ -208,6 +211,27 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         }
     }
     Ok(())
+}
+
+/// Фоновый детектор wake-слова на маленькой потоковой модели (docs/voice-pipeline.md).
+/// Модели нет или выключен — не фатально: «ривер» ловит только большая модель.
+fn enable_wake_spotter<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
+where
+    T: crate::speech::Transcriber,
+    V: crate::speech::VoiceDetector,
+{
+    let s = &cfg.settings;
+    if !s.wake_spotter || s.activation_mode == "hotkey" {
+        return;
+    }
+    let dir = crate::config::resource(app, &format!("model/{}", s.wake_spotter_model));
+    match crate::wake::StreamingWakeSpotter::new(&dir, &s.wake_words) {
+        Ok(spotter) => {
+            ui_log(app, format!("✓ фоновый детектор «ривер»: {}", s.wake_spotter_model));
+            engine.set_wake_spotter(Some(Box::new(spotter)));
+        }
+        Err(e) => ui_log(app, format!("⚠ фоновый детектор «ривер» недоступен: {e:#}")),
+    }
 }
 
 /// Второй язык цели команды («ривер поиск ютуб never gonna give you up»): вторая модель
@@ -284,6 +308,9 @@ struct Worker<'a> {
     grammar_version: Option<u64>,
     /// Идёт диктовка («ривер напиши»).
     dictation: Option<Dictation>,
+    /// Когда последний раз играл сигнал wake-слова: детектор и GigaAM слышат одно «ривер»,
+    /// сигнал должен прозвучать один раз.
+    last_wake_sound: Option<std::time::Instant>,
 }
 
 /// Состояние одной диктовки: оформление текста и то, что ушло в буфер обмена.
@@ -298,6 +325,21 @@ struct Dictation {
 impl Worker<'_> {
     fn sound(&self, name: &str) {
         self.player.play(&self.cfg.sound(name));
+    }
+
+    /// Сигнал «услышал ривер»: сразу от детектора, а если его нет — когда фраза разобрана.
+    /// Повтор того же «ривер» (детектор, потом GigaAM) в пределах 3 с не звучит.
+    fn wake_sound(&mut self) {
+        if !self.cfg.settings.wake_sound {
+            return;
+        }
+        let recent = self
+            .last_wake_sound
+            .is_some_and(|at| at.elapsed() < Duration::from_secs(3));
+        if !recent {
+            self.sound("start.wav");
+            self.last_wake_sound = Some(std::time::Instant::now());
+        }
     }
 
     fn private(&self) -> bool {
@@ -375,8 +417,9 @@ impl Worker<'_> {
             EngineEvent::State(s) => set_state(self.app, s),
             EngineEvent::WakeHeard => {
                 ui_log(self.app, "● слушаю команду…");
-                self.sound("start.wav");
+                self.wake_sound();
             }
+            EngineEvent::WakeSpotted => self.wake_sound(),
             EngineEvent::Partial(t) => {
                 if !self.private() {
                     let _ = self.app.emit("reever://partial", t);
@@ -409,7 +452,9 @@ impl Worker<'_> {
             self.app,
             format!("✎ диктовка: говори — текст печатается в поле с курсором; конец — «стоп ввод», «ривер остановись» или {idle_s} с тишины"),
         );
-        self.sound("start.wav");
+        // Цепочка сигналов: «ривер» уже прозвучал (детектор/пауза) — теперь «принял команду».
+        self.wake_sound();
+        self.sound("received.wav");
         self.dictation = Some(Dictation::default());
     }
 

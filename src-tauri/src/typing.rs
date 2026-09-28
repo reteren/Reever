@@ -424,6 +424,18 @@ pub fn type_pieces(target: isize, pieces: &[Piece]) -> TypeProgress {
     })
 }
 
+/// Нажать Enter в окне `target` (отправить сообщение в чате), если оно всё ещё активно.
+pub fn press_enter(target: isize) -> bool {
+    crate::input_thread::call(move || {
+        ensure_foreground_window(target).is_ok()
+            && send_inputs(&[
+                key(VK_RETURN, 0, KEYBD_EVENT_FLAGS(0)),
+                key(VK_RETURN, 0, KEYEVENTF_KEYUP),
+            ]) == 2
+    })
+    .unwrap_or(false)
+}
+
 /// Положить текст в буфер обмена; см. `set_clipboard_local`.
 pub fn set_clipboard(text: &str) -> anyhow::Result<()> {
     let owned = text.to_string();

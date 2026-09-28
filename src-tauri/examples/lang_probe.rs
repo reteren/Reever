@@ -29,6 +29,86 @@ fn main() -> anyhow::Result<()> {
     let mut lid = SpeechLid::new(&model.join("sherpa-onnx-whisper-base"), 2)?;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let spotter_dir = model.join("sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16");
+    if args.first().map(String::as_str) == Some("--spot") {
+        // Где фоновый детектор слышит wake-слово (секунды от начала файла), по 20 мс.
+        let wake = vec!["ривер".to_string(), "ревер".into(), "ривьер".into(), "ливер".into()];
+        for path in &args[1..] {
+            let mut spotter = reever_lib::wake::StreamingWakeSpotter::new(&spotter_dir, &wake)?;
+            let mut pcm = read_wav(Path::new(path))?;
+            pcm.extend(std::iter::repeat(0i16).take(samples(1_500)));
+            let mut hits = Vec::new();
+            for (index, chunk) in pcm.chunks(samples(20)).enumerate() {
+                use reever_lib::speech::WakeSpotter;
+                if spotter.feed(chunk) {
+                    hits.push(format!("{:.2}", index as f32 * 0.02));
+                }
+            }
+            println!(
+                "{:<40} {}",
+                Path::new(path).file_name().unwrap_or_default().to_string_lossy(),
+                if hits.is_empty() { "—".into() } else { hits.join(", ") }
+            );
+        }
+        return Ok(());
+    }
+    if args.first().map(String::as_str) == Some("--spot-engine") {
+        // Корпус через Engine (VAD + детектор + GigaAM): по файлу — сигналы детектора и
+        // команды. Файлы разделены 2 с тишины, движок один на весь прогон.
+        let vad = SileroVad::new(&model.join("silero_vad.onnx"), 0.5)?;
+        let mut engine = Engine::new(EngineConfig::default(), ru, vad);
+        engine.set_grammar(Grammar::defaults());
+        let with_spotter = std::env::var_os("LANG_PROBE_NO_SPOTTER").is_none();
+        if with_spotter {
+            let spotter = reever_lib::wake::StreamingWakeSpotter::new(
+                &spotter_dir,
+                &["ривер".to_string(), "ревер".into(), "ривьер".into(), "ливер".into()],
+            )?;
+            engine.set_wake_spotter(Some(Box::new(spotter)));
+        }
+        for path in &args[1..] {
+            let mut pcm = read_wav(Path::new(path))?;
+            pcm.extend(std::iter::repeat(0i16).take(samples(7_000)));
+            let (mut spotted, mut woke) = (0, Vec::new());
+            // LANG_PROBE_BEEP=<wav 16 кГц>: сигнал «услышал» подмешивается в микрофон с момента
+            // срабатывания детектора (40 % громкости) — как динамики в реальной комнате.
+            let beep = std::env::var_os("LANG_PROBE_BEEP")
+                .map(|path| read_wav(Path::new(&path)))
+                .transpose()?;
+            let mut beep_at: Option<usize> = None;
+            let chunk_len = samples(20);
+            for index in 0..pcm.len().div_ceil(chunk_len) {
+                let start = index * chunk_len;
+                let end = (start + chunk_len).min(pcm.len());
+                if let (Some(beep), Some(at)) = (&beep, beep_at) {
+                    for (i, sample) in pcm[start..end].iter_mut().enumerate() {
+                        if let Some(b) = beep.get(start + i - at) {
+                            *sample = (*sample as i32 + (*b as i32 * 2 / 5)).clamp(-32768, 32767) as i16;
+                        }
+                    }
+                }
+                for event in engine.push_audio(&pcm[start..end]) {
+                    match event {
+                        EngineEvent::WakeSpotted => {
+                            spotted += 1;
+                            beep_at.get_or_insert(end);
+                        }
+                        EngineEvent::Command { text, .. } => woke.push(text),
+                        EngineEvent::WakeHeard => woke.push("<wake>".into()),
+                        EngineEvent::Log(message) if message.starts_with("wake:") => woke.push("<починка>".into()),
+                        _ => {}
+                    }
+                }
+            }
+            engine.reset();
+            println!(
+                "{}	{spotted}	{}",
+                Path::new(path).file_name().unwrap_or_default().to_string_lossy(),
+                woke.join(" | ")
+            );
+        }
+        return Ok(());
+    }
     if args.first().map(String::as_str) == Some("--engine") {
         // Склеить файлы с паузой 1,2 с и прогнать через настоящий Engine (VAD + диктовка).
         let mut pcm = Vec::new();
@@ -41,6 +121,13 @@ fn main() -> anyhow::Result<()> {
         let mut engine = Engine::new(EngineConfig::default(), ru, vad);
         engine.set_grammar(Grammar::defaults());
         engine.set_bilingual(Some(Box::new(en)), Some(Box::new(lid)), LangMode::Auto);
+        if std::env::var_os("LANG_PROBE_SPOTTER").is_some() {
+            let spotter = reever_lib::wake::StreamingWakeSpotter::new(
+                &spotter_dir,
+                &["ривер".to_string(), "ревер".into(), "ривьер".into(), "ливер".into()],
+            )?;
+            engine.set_wake_spotter(Some(Box::new(spotter)));
+        }
         // LANG_PROBE_CONFIRM: после команды — как recognizer при confirm_close — ждать «да».
         let confirm = std::env::var_os("LANG_PROBE_CONFIRM").is_some();
         for chunk in pcm.chunks(samples(20)) {

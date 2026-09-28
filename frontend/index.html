@@ -152,11 +152,11 @@
         partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
         raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
         sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-        dictation_clipboard:true,dictation_idle_ms:10000,dictation_pause_ms:800
+        dictation_clipboard:true,dictation_idle_ms:10000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true
       };
       const defaultGrammarPreview=()=>({
         wake_words:['ривер','ревер','ривьер','ливер'],
-        cancel_words:['отмена','стоп','отбой','забудь'],
+        cancel_words:['отмена','стоп','отбой','забудь','хватит','остановись','stop'],
         dictation_stop:['стоп ввод','ривер остановись'],
         intents:[
           {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true,lang:'auto'},
@@ -166,7 +166,10 @@
           {id:'close',kind:'close',label:'закрыть открытую программу',triggers:['закрой'],url:'',enabled:true,lang:'auto'},
           {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши'],url:'',enabled:true,lang:'auto'},
           {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай'],url:'',enabled:true,lang:'auto'},
-          {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','диктовка'],url:'',enabled:true,lang:'auto'}
+          {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','запиши','диктовка'],url:'',enabled:true,lang:'auto'},
+          {id:'chat_gpt',kind:'web_chat',label:'спросить ChatGPT (чат в браузере)',triggers:['чат гпт','чатгпт','чат джипити','чат джи пити','чат жпт','chatgpt','chat gpt'],url:'https://chatgpt.com/',enabled:true,lang:'auto'},
+          {id:'chat_claude',kind:'web_chat',label:'спросить Claude (чат в браузере)',triggers:['клауд','клод','клауде','клоуд','claude'],url:'https://claude.ai/new',enabled:true,lang:'auto'},
+          {id:'chat_gemini',kind:'web_chat',label:'спросить Gemini (чат в браузере)',triggers:['гемини','гимини','гимине','джемини','джимини','gemini'],url:'https://gemini.google.com/app',enabled:true,lang:'auto'}
         ]
       });
       let previewGrammar=defaultGrammarPreview();
@@ -184,6 +187,7 @@
               else if(ids.has(intent.id)) errors.push(`Повторяется id «${intent.id}».`);
               ids.add(intent.id);
               if(intent.kind==='search'&&!String(intent.url||'').includes('{q}')) errors.push(`В URL «${intent.label||intent.id}» должен быть шаблон {q}.`);
+              if(intent.kind==='web_chat'&&!/^https?:\/\//.test(String(intent.url||'').trim())) errors.push(`Адрес чата «${intent.label||intent.id}» должен начинаться с https://.`);
               if((intent.kind==='calc'||intent.kind==='dictate')&&!(intent.triggers||[]).some(phrase=>String(phrase).trim())) errors.push(`Добавь хотя бы одну фразу для «${intent.label||intent.id}».`);
               for(const phrase of intent.triggers||[]){
                 const key=String(phrase).trim().toLocaleLowerCase();
@@ -407,6 +411,10 @@
             host.append(grammarExampleRow(`${wake} ${trigger} X`,'калькулятор: «33 умножить на 78»'));
             continue;
           }
+          if(intent.kind==='web_chat'&&trigger){
+            host.append(grammarExampleRow(`${wake} ${trigger} X`,`${intent.label||'чат с ИИ'}: откроет чат и введёт вопрос`));
+            continue;
+          }
           if(intent.kind==='dictate'&&trigger){
             const stop=(grammar.dictation_stop||[]).find(word=>String(word).trim())||'стоп ввод';
             host.append(grammarExampleRow(`${wake} ${trigger} …`,`диктовка в поле с курсором (или в буфер); конец — «${stop}» или тишина`));
@@ -463,8 +471,8 @@
         grammarEditor.append(wakeGroup);
         for(const intent of grammarDraft.intents||[]){
           const group=el('fieldset',{className:'grp grammar-intent'});
-          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор',dictate:'Диктовка'};
-          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑',dictate:'✎'};
+          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор',dictate:'Диктовка',web_chat:'Чат с ИИ'};
+          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑',dictate:'✎',web_chat:'✦'};
           const legend=el('legend');
           const icon=el('span',{className:'grammar-kind-icon',textContent:kindIcons[intent.kind]||'•'});
           icon.setAttribute('aria-hidden','true');
@@ -477,8 +485,8 @@
           const labelWrap=el('label',{className:'grammar-label-field'}); labelWrap.append(el('span',{className:'fld',textContent:'Подпись'}));
           const labelInput=el('input',{value:intent.label||''}); labelInput.oninput=()=>intent.label=labelInput.value; labelWrap.append(labelInput);
           head.append(enabledWrap,labelWrap);
-          if(intent.kind==='search'&&String(intent.id).startsWith('search_')){
-            const remove=el('button',{type:'button',className:'sm danger grammar-delete-intent',textContent:'Удалить поиск'});
+          if((intent.kind==='search'&&String(intent.id).startsWith('search_'))||(intent.kind==='web_chat'&&String(intent.id).startsWith('chat_custom_'))){
+            const remove=el('button',{type:'button',className:'sm danger grammar-delete-intent',textContent:intent.kind==='web_chat'?'Удалить чат':'Удалить поиск'});
             remove.onclick=()=>{grammarDraft.intents=grammarDraft.intents.filter(item=>item!==intent);renderGrammarEditor();}; head.append(remove);
           }
           group.append(head);
@@ -487,7 +495,7 @@
           const setTriggers=values=>intent.triggers=values;
           const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim());
           const triggerHost=el('div'); group.append(triggerHost);
-          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate')?1:0;
+          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='web_chat')?1:0;
           if(minimumTriggers) triggerHost.append(el('div',{className:'hint grammar-small-note'}));
           addChipEditor(triggerHost,visibleTriggers,values=>{
             const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
@@ -514,6 +522,10 @@
             bareRow.append(bare,el('span',{textContent:`Открывать без ключевого слова (просто «${grammarWake()} фотошоп»)`}));
             group.append(bareRow);
           }
+          if(intent.kind==='web_chat'){
+            const urlWrap=el('label',{className:'grammar-url-field'}); urlWrap.append(el('span',{className:'fld',textContent:'Адрес чата'}));
+            const urlInput=el('input',{value:intent.url||'',placeholder:'https://gemini.google.com/app'}); urlInput.oninput=()=>intent.url=urlInput.value; urlWrap.append(urlInput); group.append(urlWrap);
+          }
           if(intent.kind==='search'){
             const urlWrap=el('label',{className:'grammar-url-field'}); urlWrap.append(el('span',{className:'fld',textContent:'URL с {q}'}));
             const urlInput=el('input',{value:intent.url||'',placeholder:'https://example.com/?q={q}'}); urlInput.oninput=()=>intent.url=urlInput.value; urlWrap.append(urlInput); group.append(urlWrap);
@@ -529,6 +541,14 @@
           renderGrammarEditor();
         };
         grammarEditor.append(addSearch);
+        const addChat=el('button',{type:'button',className:'sm grammar-add-search',textContent:'+ Свой чат с ИИ'});
+        addChat.onclick=()=>{
+          let timestamp=Date.now();
+          while(grammarDraft.intents.some(intent=>intent.id===`chat_custom_${timestamp}`)) timestamp++;
+          grammarDraft.intents.push({id:`chat_custom_${timestamp}`,kind:'web_chat',label:'Новый чат',triggers:['чат'],url:'https://chatgpt.com/',enabled:true,lang:'auto'});
+          renderGrammarEditor();
+        };
+        grammarEditor.append(addChat);
         const cancelGroup=el('fieldset',{className:'grp'}); cancelGroup.append(el('legend',{textContent:'Слова отмены'}));
         cancelGroup.append(el('div',{className:'hint grammar-small-note',textContent:'Первое слово показывается как команда отмены в примерах.'}));
         addChipEditor(cancelGroup,()=>grammarDraft.cancel_words||[],values=>grammarDraft.cancel_words=values,'слово отмены');
@@ -582,7 +602,7 @@
 
       let settingsObj={};
       const GROUPS=[
-        ['Активация',[['activation_mode','Режим — рестарт','select',['both','wake','hotkey']],['hotkey','Хоткей push-to-talk — сразу','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» — сразу','hotkey']]],
+        ['Активация',[['activation_mode','Режим — рестарт','select',['both','wake','hotkey']],['wake_spotter','Фоновый детектор «ривер» (маленькая модель) — рестарт','bool',null,'Слушает эфир непрерывно и ловит wake-слово сразу, по ходу речи; подстраховывает большую модель, когда та его не расслышала.'],['wake_sound','Сигнал сразу, как услышано «ривер» — рестарт','bool'],['hotkey','Хоткей push-to-talk — сразу','hotkey'],['mute_hotkey','Хоткей «заглушить микрофон» — сразу','hotkey']]],
         ['Приватность',[['private_log','Приватный лог — рестарт','bool'],['offline_mode','Офлайн-режим — рестарт','bool']]],
         ['Распознавание',[
           ['asr_model','Русская модель распознавания — рестарт','model'],
@@ -594,7 +614,8 @@
         ['Диктовка',[
           ['dictation_clipboard','Если нет поля ввода — текст в буфер обмена — рестарт','bool',null,'«Ривер напиши …»: текст печатается туда, где стоит курсор. Если курсора в поле нет, он копится в буфере — вставь Ctrl+V.'],
           ['dictation_idle_ms','Закончить диктовку после тишины, мс (10000 = 10 с) — рестарт','number'],
-          ['dictation_pause_ms','Пауза, после которой кусок печатается, мс — рестарт','number']]],
+          ['dictation_pause_ms','Пауза, после которой кусок печатается, мс — рестарт','number'],
+          ['webchat_send','«Ривер гемини …»: сразу отправлять вопрос — рестарт','bool',null,'Выключи, чтобы вопрос только вводился в чат, а Enter ты нажимал сам.']]],
         ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],
         ['Система',[
           ['confirm_dangerous','Подтверждать выключение и перезагрузку — рестарт','bool'],

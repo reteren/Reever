@@ -30,6 +30,8 @@ pub mod system;
 pub mod textnorm;
 pub mod typing;
 pub mod vad;
+pub mod wake;
+pub mod webchat;
 pub mod winutil;
 
 use std::str::FromStr;

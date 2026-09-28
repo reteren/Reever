@@ -213,6 +213,80 @@ fn wake_fuzzy_matches(word: &str, wake: &str) -> bool {
     false
 }
 
+/// Числа словами → цифры в тексте «как сказано» (диктовка): «восемьдесят восемь» → «88».
+/// Остальные слова, регистр, «ё» и пунктуация не трогаются. Только кириллица — английский
+/// текст модель пишет сама, а «one of them» цифрой стать не должно. Одиночные формы
+/// единицы («один раз», «одна») остаются словами.
+pub fn digits_in_text(raw: &str) -> String {
+    let tokens: Vec<&str> = raw.split_whitespace().collect();
+    let keys: Vec<String> = tokens
+        .iter()
+        .map(|token| {
+            token
+                .trim_matches(|c: char| !c.is_alphanumeric())
+                .to_lowercase()
+                .replace('ё', "е")
+        })
+        .collect();
+    let key_refs: Vec<&str> = keys.iter().map(String::as_str).collect();
+    let cyrillic = |key: &str| key.chars().next().is_some_and(|c| ('а'..='я').contains(&c));
+
+    let mut out = Vec::with_capacity(tokens.len());
+    let mut i = 0;
+    while i < tokens.len() {
+        let Some((value, kind)) = number_word(key_refs[i]).filter(|_| cyrillic(key_refs[i])) else {
+            out.push(tokens[i].to_string());
+            i += 1;
+            continue;
+        };
+        let has_following_scale = key_refs
+            .get(i + 1)
+            .and_then(|word| number_word(word))
+            .is_some_and(|(_, next_kind)| next_kind == NumberKind::Scale);
+        let (number, next) = if kind == NumberKind::Scale || has_following_scale || value >= 20 {
+            read_compound_number(&key_refs, i)
+        } else {
+            (value, i + 1)
+        };
+        // «двадцать шестом» — порядковое: целиком словами, иначе вышло бы «20 шестом».
+        let ordinal_follows = key_refs.get(next).is_some_and(|word| is_ordinal_word(word));
+        if (number == 1 && next == i + 1) || ordinal_follows {
+            out.extend(tokens[i..next].iter().map(|token| token.to_string()));
+            i = next;
+            continue;
+        }
+        // Пунктуация после последнего слова числа («двадцать,») остаётся на месте.
+        let last = tokens[next - 1];
+        let tail: String = last
+            .chars()
+            .rev()
+            .take_while(|c| !c.is_alphanumeric())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect();
+        out.push(format!("{number}{tail}"));
+        i = next;
+    }
+    out.join(" ")
+}
+
+/// Порядковое числительное: «первый», «шестом», «двадцатого», «сотый».
+fn is_ordinal_word(word: &str) -> bool {
+    const ROOTS: &[&str] = &[
+        "перв", "втор", "трет", "четверт", "пят", "шест", "седьм", "восьм", "девят", "десят",
+        "двадцат", "тридцат", "сороков", "сот", "тысячн",
+    ];
+    const ENDINGS: &[&str] = &[
+        "ый", "ой", "ий", "ая", "ое", "ье", "ые", "ого", "его", "ому", "ему", "ом", "ем", "ую",
+        "ых", "их", "ым", "им", "ыми", "ими", "ья", "ьи", "ьего", "ьему", "ьим", "ьем", "ью",
+    ];
+    ROOTS.iter().any(|root| {
+        word.strip_prefix(root)
+            .is_some_and(|rest| ENDINGS.contains(&rest))
+    })
+}
+
 fn normalize_number_words(words: &[&str]) -> String {
     let mut out = Vec::with_capacity(words.len());
     let mut i = 0;
@@ -696,5 +770,21 @@ mod tests {
         assert!(is_yes("согласна"));
         assert!(is_yes("угу"));
         assert!(!is_yes("далеко"));
+    }
+
+    #[test]
+    fn dictation_numbers_become_digits_but_text_stays_as_spoken() {
+        assert_eq!(
+            super::digits_in_text("Едят сосиски восемьдесят восемь штук"),
+            "Едят сосиски 88 штук"
+        );
+        assert_eq!(
+            super::digits_in_text("в две тысячи двадцать шестом году,"),
+            "в две тысячи двадцать шестом году,"
+        );
+        assert_eq!(super::digits_in_text("в две тысячи двадцать шестой"), "в две тысячи двадцать шестой");
+        assert_eq!(super::digits_in_text("один раз и ещё двадцать,"), "один раз и ещё 20,");
+        assert_eq!(super::digits_in_text("one of them"), "one of them");
+        assert_eq!(super::digits_in_text("пять минут"), "5 минут");
     }
 }

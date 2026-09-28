@@ -36,7 +36,9 @@ param(
     [switch]$SkipModels,
     [string]$AsrModel = 'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',
     [string]$SecondModel = 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
-    [string]$LidModel = 'sherpa-onnx-whisper-base'
+    [string]$LidModel = 'sherpa-onnx-whisper-base',
+    # Фоновый детектор wake-слова (docs/voice-pipeline.md); пустое имя — без него.
+    [string]$WakeModel = 'sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -160,6 +162,9 @@ if (-not $SkipModels) {
     # Определитель языка цели команды (docs/bilingual.md); пустое имя — без него.
     if (-not [string]::IsNullOrWhiteSpace($LidModel)) {
         Install-WhisperModel -Name $LidModel
+    }
+    if (-not [string]::IsNullOrWhiteSpace($WakeModel)) {
+        Install-SherpaModel -Name $WakeModel
     }
 } else {
     Write-Step 'Модели — пропущено (-SkipModels)'

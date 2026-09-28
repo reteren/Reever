@@ -86,6 +86,15 @@ pub fn execute_pending(app: &AppHandle, pending: &PendingAction) -> bool {
     }
 }
 
+/// Первая буква заглавной: нормализованный текст приходит в нижнем регистре.
+fn capitalize_first(text: &str) -> String {
+    let mut chars = text.trim().chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().chain(chars).collect(),
+        None => String::new(),
+    }
+}
+
 /// Куда ведёт команда — чистое решение без побочных эффектов (тестируется без Tauri,
 /// используется `examples/eval.rs`). Контракт: docs/grammar.md.
 #[derive(Clone, Debug, PartialEq)]
@@ -109,6 +118,8 @@ pub enum Route {
     /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
     /// (он сам печатает текст); сюда она доходит только из eval и тестов.
     Dictate(String),
+    /// Веб-чат с ИИ: адрес, подпись намерения и вопрос.
+    WebChat { label: String, url: String, text: String },
     /// Ничего не подошло.
     Unknown,
 }
@@ -152,6 +163,11 @@ pub fn route(
             IntentKind::Kill => Route::Kill(payloads),
             IntentKind::Calc => Route::Calc(payloads),
             IntentKind::Dictate => Route::Dictate(payloads[0].clone()),
+            IntentKind::WebChat => Route::WebChat {
+                label: trigger.intent.label.clone(),
+                url: trigger.intent.url.trim().to_string(),
+                text: capitalize_first(&payloads[0]),
+            },
             IntentKind::Search => Route::Search {
                 label: trigger.intent.label.clone(),
                 url: trigger.intent.url.replace("{q}", &urlencode(&payloads[0])),
@@ -431,6 +447,31 @@ pub fn dispatch(
             DispatchResult::Done(open_url(cfg, &label, &url, || {
                 launcher::shell_open(&url)
             }))
+        }
+        Route::WebChat { label, url, text } => {
+            if cfg.settings.offline_mode {
+                ui_log(app, "🔒 офлайн-режим: чат в браузере отключён");
+                return DispatchResult::Done(false);
+            }
+            if cfg.settings.private_log {
+                ui_log(app, format!("💬 {label}"));
+            } else {
+                ui_log(app, format!("💬 {label}: «{text}»"));
+            }
+            match crate::webchat::open_and_send(&url, &text, cfg.settings.webchat_send) {
+                Ok(crate::webchat::ChatOutcome::Typed) => DispatchResult::Done(true),
+                Ok(crate::webchat::ChatOutcome::Clipboard) => {
+                    ui_log(
+                        app,
+                        "📋 поле ввода чата не нашлось — вопрос в буфере обмена, вставь Ctrl+V",
+                    );
+                    DispatchResult::Done(false)
+                }
+                Err(error) => {
+                    ui_log(app, format!("⚠ чат: {error:#}"));
+                    DispatchResult::Done(false)
+                }
+            }
         }
         Route::Unknown => {
             ui_log(app, "⚠ не распознал команду");
@@ -1098,5 +1139,48 @@ mod tests {
             Route::Unknown
         );
         assert!(grammar.is_incomplete("посчитай"));
+    }
+
+    #[test]
+    fn gemini_variants_route_to_web_chat() {
+        let grammar = Grammar::defaults();
+        let actions = Vec::new();
+        for (heard, question) in [
+            ("гемини какая погода будет завтра в москве", "Какая погода будет завтра в москве"),
+            ("гимини какая погода будет завтра в москве", "Какая погода будет завтра в москве"),
+            ("джимини обясни что такое квантовый компьютер", "Обясни что такое квантовый компьютер"),
+            ("gemini what is rust", "What is rust"),
+        ] {
+            match route(heard, &grammar, &actions, THRESHOLD) {
+                Route::WebChat { url, text, .. } => {
+                    assert_eq!(url, "https://gemini.google.com/app", "{heard}");
+                    assert_eq!(text, question, "{heard}");
+                }
+                other => panic!("{heard}: {other:?}"),
+            }
+        }
+        for heard in ["гемини", "гимине", "джимини"] {
+            assert!(grammar.is_incomplete(heard), "{heard} — ждать вопрос после паузы");
+        }
+    }
+
+    #[test]
+    fn chatgpt_and_claude_route_to_their_chats() {
+        let grammar = Grammar::defaults();
+        let actions = Vec::new();
+        for (heard, url) in [
+            ("чат гпт как сварить борщ", "https://chatgpt.com/"),
+            ("чатгпт как сварить борщ", "https://chatgpt.com/"),
+            ("клауд как сварить борщ", "https://claude.ai/new"),
+            ("клод как сварить борщ", "https://claude.ai/new"),
+        ] {
+            match route(heard, &grammar, &actions, THRESHOLD) {
+                Route::WebChat { url: got, text, .. } => {
+                    assert_eq!(got, url, "{heard}");
+                    assert_eq!(text, "Как сварить борщ", "{heard}");
+                }
+                other => panic!("{heard}: {other:?}"),
+            }
+        }
     }
 }

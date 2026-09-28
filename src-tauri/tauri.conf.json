@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Reever",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "identifier": "com.troid.reever",
   "build": {
     "frontendDist": "../frontend"
@@ -63,7 +63,11 @@
       "resources/wallpaper.png": "resources/wallpaper.png",
       "resources/model/sherpa-onnx-whisper-base/base-encoder.int8.onnx": "resources/model/sherpa-onnx-whisper-base/base-encoder.int8.onnx",
       "resources/model/sherpa-onnx-whisper-base/base-decoder.int8.onnx": "resources/model/sherpa-onnx-whisper-base/base-decoder.int8.onnx",
-      "resources/model/sherpa-onnx-whisper-base/base-tokens.txt": "resources/model/sherpa-onnx-whisper-base/base-tokens.txt"
+      "resources/model/sherpa-onnx-whisper-base/base-tokens.txt": "resources/model/sherpa-onnx-whisper-base/base-tokens.txt",
+      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/encoder.int8.onnx": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/encoder.int8.onnx",
+      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/decoder.onnx": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/decoder.onnx",
+      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/joiner.int8.onnx": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/joiner.int8.onnx",
+      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/tokens.txt": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/tokens.txt"
     }
   }
 }

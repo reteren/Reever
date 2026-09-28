@@ -79,7 +79,8 @@ impl Formatter {
 
     /// Оформить очередной распознанный кусок.
     pub fn format(&mut self, raw: &str) -> Vec<Piece> {
-        let hyphenated = hyphenate_particles(raw);
+        let raw = crate::textnorm::digits_in_text(raw);
+        let hyphenated = hyphenate_particles(&raw);
         let tokens: Vec<&str> = hyphenated.iter().map(String::as_str).collect();
         let keys: Vec<String> = tokens.iter().map(|token| spoken_key(token)).collect();
         let mut pieces = Vec::new();
@@ -386,7 +387,7 @@ mod tests {
             ]
         );
         let mut f = Formatter::new();
-        assert_eq!(text(&f.format("раз точка с запятой два")), "Раз; два");
+        assert_eq!(text(&f.format("раз точка с запятой два")), "Раз; 2");
     }
 
     #[test]

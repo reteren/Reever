@@ -12,14 +12,19 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 5;
+const GRAMMAR_VERSION: u32 = 7;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (2, &["close", "kill"]),
     (3, &["calc"]),
     (4, &["dictate"]),
+    (6, &["chat_gemini"]),
+    (7, &["chat_gpt", "chat_claude"]),
 ];
+/// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
+const ADDED_CANCEL_WORDS: &[(u32, &str)] =
+    &[(7, "хватит"), (7, "остановись"), (7, "stop")];
 /// Новые фразы у существующих намерений: (версия, id намерения, фраза). Дописываются
 /// один раз при миграции, если фраза не занята другим намерением.
 const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[(5, "dictate", "запиши")];
@@ -45,6 +50,8 @@ pub enum IntentKind {
     Calc,
     /// Диктовка: «напиши …» — дальше речь печатается в поле с курсором (или в буфер).
     Dictate,
+    /// Веб-чат с ИИ по адресу `url`: открыть и ввести туда сказанное («ривер гемини …»).
+    WebChat,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -150,6 +157,9 @@ impl Grammar {
                 "стоп".into(),
                 "отбой".into(),
                 "забудь".into(),
+                "хватит".into(),
+                "остановись".into(),
+                "stop".into(),
             ],
             dictation_stop: vec!["стоп ввод".into(), "ривер остановись".into()],
             intents: vec![
@@ -201,6 +211,27 @@ impl Grammar {
                     "диктовка: ввести текст в поле с курсором",
                     &["напиши", "запиши", "диктовка"],
                     "",
+                ),
+                intent(
+                    "chat_gemini",
+                    IntentKind::WebChat,
+                    "спросить Gemini (чат в браузере)",
+                    &["гемини", "гимини", "гимине", "джемини", "джимини", "gemini"],
+                    "https://gemini.google.com/app",
+                ),
+                intent(
+                    "chat_gpt",
+                    IntentKind::WebChat,
+                    "спросить ChatGPT (чат в браузере)",
+                    &["чат гпт", "чатгпт", "чат джипити", "чат джи пити", "чат жпт", "chatgpt", "chat gpt"],
+                    "https://chatgpt.com/",
+                ),
+                intent(
+                    "chat_claude",
+                    IntentKind::WebChat,
+                    "спросить Claude (чат в браузере)",
+                    &["клауд", "клод", "клауде", "клоуд", "claude"],
+                    "https://claude.ai/new",
                 ),
                 intent(
                     "kill",
@@ -363,6 +394,15 @@ impl Grammar {
                     intent.id
                 ));
             }
+            if intent.kind == IntentKind::WebChat
+                && !(intent.url.trim().starts_with("http://")
+                    || intent.url.trim().starts_with("https://"))
+            {
+                errors.push(format!(
+                    "Адрес чата «{}» должен начинаться с https://.",
+                    display_intent(intent)
+                ));
+            }
             if intent.kind == IntentKind::Search && !intent.url.contains("{q}") {
                 errors.push(format!(
                     "В шаблоне поиска «{}» должен быть маркер {{q}}.",
@@ -477,6 +517,16 @@ impl Grammar {
 }
 
 fn append_versioned_defaults(grammar: &mut Grammar) {
+    for (introduced_version, word) in ADDED_CANCEL_WORDS {
+        if grammar.version < *introduced_version
+            && !grammar
+                .cancel_words
+                .iter()
+                .any(|existing| normalize(existing) == normalize(word))
+        {
+            grammar.cancel_words.push((*word).to_string());
+        }
+    }
     for (introduced_version, id, phrase) in ADDED_DEFAULT_TRIGGERS {
         if grammar.version >= *introduced_version {
             continue;
@@ -1009,7 +1059,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 5);
+        assert_eq!(Grammar::defaults().version, 7);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

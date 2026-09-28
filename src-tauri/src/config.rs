@@ -124,6 +124,22 @@ pub struct Settings {
     /// Нет поля с курсором — продиктованный текст идёт в буфер обмена.
     #[serde(default = "default_true")]
     pub dictation_clipboard: bool,
+    /// «ривер гемини …»: сразу отправлять вопрос (Enter), а не только вводить.
+    #[serde(default = "default_true")]
+    pub webchat_send: bool,
+    /// Фоновый детектор wake-слова на маленькой потоковой модели.
+    #[serde(default = "default_true")]
+    pub wake_spotter: bool,
+    /// Папка модели детектора в resources/model.
+    #[serde(default = "default_wake_spotter_model")]
+    pub wake_spotter_model: String,
+    /// Сигнал сразу, как только услышано wake-слово.
+    #[serde(default = "default_true")]
+    pub wake_sound: bool,
+}
+
+fn default_wake_spotter_model() -> String {
+    "sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16".into()
 }
 
 fn default_dictation_pause_ms() -> u32 {
@@ -266,6 +282,10 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("dictation_clipboard", dictation_clipboard, bool);
+    restore!("webchat_send", webchat_send, bool);
+    restore!("wake_spotter", wake_spotter, bool);
+    restore!("wake_spotter_model", wake_spotter_model, String);
+    restore!("wake_sound", wake_sound, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -310,6 +330,10 @@ impl Default for Settings {
             dictation_pause_ms: default_dictation_pause_ms(),
             dictation_idle_ms: default_dictation_idle_ms(),
             dictation_clipboard: true,
+            webchat_send: true,
+            wake_spotter: true,
+            wake_spotter_model: default_wake_spotter_model(),
+            wake_sound: true,
         }
     }
 }
