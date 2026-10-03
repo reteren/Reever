@@ -16,11 +16,13 @@ pub mod dictation;
 pub mod dispatch;
 pub mod engine;
 pub mod events;
+pub mod find;
 pub mod everything;
 pub mod grammar;
 pub mod input_thread;
 pub mod langid;
 pub mod launcher;
+pub mod picker;
 pub mod procs;
 pub mod recognizer;
 pub mod segmenter;
@@ -163,6 +165,19 @@ pub fn run() {
                 }
             }
 
+            // --- окно выбора «найди»: Alt+F4 — как Esc (спрятать и перестать ждать номер) ---
+            if let Some(w) = app.get_webview_window("picker") {
+                let handle = app.handle().clone();
+                let shared_for_picker = shared.clone();
+                w.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        picker::mark_closed(&shared_for_picker);
+                        picker::hide(&handle, &shared_for_picker);
+                    }
+                });
+            }
+
             // --- глобальные хоткеи: push-to-talk + mute ---
             // источник правды для пере-регистрации на лету (set_hotkey / set_mute_hotkey)
             if let Ok(mut g) = shared.ptt_hotkey.lock() { *g = cfg.settings.hotkey.clone(); }
@@ -212,6 +227,8 @@ pub fn run() {
             commands_api::set_mute_hotkey,
             commands_api::get_wallpaper,
             commands_api::check_everything,
+            picker::picker_choose,
+            picker::picker_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -18,6 +18,8 @@ pub enum DispatchResult {
     Done(bool),
     /// Выполнить только после голосового «да» (docs/app-control.md).
     Confirm(PendingAction),
+    /// Показано окно выбора с N вариантами — ждать номер голосом (docs/find.md).
+    Choose(usize),
 }
 
 /// Действие, которое ждёт подтверждения голосом.
@@ -118,6 +120,11 @@ pub enum Route {
     /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
     /// (он сам печатает текст); сюда она доходит только из eval и тестов.
     Dictate(String),
+    /// Найти через Everything и дать выбрать: кандидаты запроса (русский, английский).
+    Find {
+        scope: crate::find::FindScope,
+        candidates: Vec<String>,
+    },
     /// Веб-чат с ИИ: адрес, подпись намерения и вопрос.
     WebChat { label: String, url: String, text: String },
     /// Ничего не подошло.
@@ -163,6 +170,14 @@ pub fn route(
             IntentKind::Kill => Route::Kill(payloads),
             IntentKind::Calc => Route::Calc(payloads),
             IntentKind::Dictate => Route::Dictate(payloads[0].clone()),
+            IntentKind::Find | IntentKind::FindFolder | IntentKind::FindFile => Route::Find {
+                scope: match trigger.intent.kind {
+                    IntentKind::FindFolder => crate::find::FindScope::Folder,
+                    IntentKind::FindFile => crate::find::FindScope::File,
+                    _ => crate::find::FindScope::Any,
+                },
+                candidates: payloads.clone(),
+            },
             IntentKind::WebChat => Route::WebChat {
                 label: trigger.intent.label.clone(),
                 url: trigger.intent.url.trim().to_string(),
@@ -447,6 +462,54 @@ pub fn dispatch(
             DispatchResult::Done(open_url(cfg, &label, &url, || {
                 launcher::shell_open(&url)
             }))
+        }
+        Route::Find { scope, candidates } => {
+            if cfg.settings.offline_mode {
+                ui_log(app, "🔒 офлайн-режим: поиск через Everything отключён");
+                return DispatchResult::Done(false);
+            }
+            let what = match scope {
+                crate::find::FindScope::Folder => "папку",
+                crate::find::FindScope::File => "файл",
+                crate::find::FindScope::Any => "файл или папку",
+            };
+            if cfg.settings.private_log {
+                ui_log(app, format!("🔎 ищу {what}"));
+            } else {
+                ui_log(app, format!("🔎 ищу {what}: «{}»", candidates.join(" / ")));
+            }
+            let usage = crate::find::Usage::load(&shared.usage_path);
+            let recent = crate::find::windows_recent();
+            let items = match crate::find::search(
+                &cfg.settings.everything_host,
+                cfg.settings.everything_port,
+                &candidates,
+                scope,
+                &usage,
+                &recent,
+            ) {
+                Ok(items) => items,
+                Err(error) => {
+                    // Текст ошибки может содержать кусок ответа с путями — не в приватном режиме.
+                    if cfg.settings.private_log {
+                        ui_log(app, "⚠ Everything недоступен");
+                    } else {
+                        ui_log(app, format!("⚠ Everything недоступен: {error}"));
+                    }
+                    return DispatchResult::Done(false);
+                }
+            };
+            match items.len() {
+                0 => {
+                    ui_log(app, "∅ ничего не нашёл");
+                    DispatchResult::Done(false)
+                }
+                1 => DispatchResult::Done(crate::picker::open(app, shared, cfg, &items[0])),
+                n => {
+                    let _ = crate::picker::show(app, shared, &candidates[0], &items);
+                    DispatchResult::Choose(n)
+                }
+            }
         }
         Route::WebChat { label, url, text } => {
             if cfg.settings.offline_mode {
@@ -1178,6 +1241,27 @@ mod tests {
                 Route::WebChat { url: got, text, .. } => {
                     assert_eq!(got, url, "{heard}");
                     assert_eq!(text, "Как сварить борщ", "{heard}");
+                }
+                other => panic!("{heard}: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn find_phrases_pick_the_scope_by_the_longest_trigger() {
+        let grammar = Grammar::defaults();
+        let actions = Vec::new();
+        use crate::find::FindScope;
+        for (heard, scope, query) in [
+            ("найди папку проджект джи эс ти", FindScope::Folder, "проджект джи эс ти"),
+            ("найди project gst", FindScope::Any, "project gst"),
+            ("найди файл отчет", FindScope::File, "отчет"),
+            ("поищи папку загрузки", FindScope::Folder, "загрузки"),
+        ] {
+            match route(heard, &grammar, &actions, THRESHOLD) {
+                Route::Find { scope: got, candidates } => {
+                    assert_eq!(got, scope, "{heard}");
+                    assert_eq!(candidates[0], query, "{heard}");
                 }
                 other => panic!("{heard}: {other:?}"),
             }

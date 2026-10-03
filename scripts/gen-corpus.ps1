@@ -18,16 +18,33 @@
 .PARAMETER Dictation
     Вместо корпуса команд синтезировать длинные сценарии диктовки в
     testdata/corpus/dictation/ и записать testdata/dictation-manifest.json.
+
+.PARAMETER Find
+    Синтезировать компактный find-бенчмарк из реальных целей Everything: по одному
+    слитному и одному разделённому паузой после «найди» варианту на цель.
 #>
 [CmdletBinding()]
-param([int]$Voices = 2, [switch]$Dictation)
+param([int]$Voices = 2, [switch]$Dictation, [switch]$Find)
 
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot  = Split-Path -Parent $PSScriptRoot
 $CorpusDir = Join-Path $RepoRoot 'testdata/corpus'
-$OutDir    = if ($Dictation) { Join-Path $CorpusDir 'dictation' } else { $CorpusDir }
-$Manifest  = if ($Dictation) { Join-Path $RepoRoot 'testdata/dictation-manifest.json' } else { Join-Path $RepoRoot 'testdata/manifest.json' }
+if ($Dictation -and $Find) { throw 'выберите только один режим: -Dictation или -Find' }
+$OutDir = if ($Dictation) {
+    Join-Path $CorpusDir 'dictation'
+} elseif ($Find) {
+    Join-Path $CorpusDir 'find-benchmark'
+} else {
+    $CorpusDir
+}
+$Manifest = if ($Dictation) {
+    Join-Path $RepoRoot 'testdata/dictation-manifest.json'
+} elseif ($Find) {
+    Join-Path $RepoRoot 'testdata/find-manifest.json'
+} else {
+    Join-Path $RepoRoot 'testdata/manifest.json'
+}
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 Get-ChildItem -LiteralPath $OutDir -Filter '*.wav' | Remove-Item -Force
 
@@ -376,6 +393,80 @@ if ($Dictation) {
     $utf8 = New-Object System.Text.UTF8Encoding -ArgumentList $false
     [IO.File]::WriteAllText($Manifest, $json, $utf8)
     Write-Host "готово: $($rows.Count) сценариев -> $OutDir; manifest -> $Manifest"
+    return
+}
+
+if ($Find) {
+    $targetsPath = Join-Path $RepoRoot 'testdata/find-targets.json'
+    $targets = Get-Content -LiteralPath $targetsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (@($targets).Count -lt 20 -or @($targets).Count -gt 25) {
+        throw "find-targets.json должен содержать 20–25 целей, сейчас: $(@($targets).Count)"
+    }
+    $voiceNames = @('Microsoft Irina Desktop', 'Alexandr (Russian)')
+    foreach ($voiceName in $voiceNames) {
+        if (-not $tokens.ContainsKey($voiceName)) { throw "не найден требуемый голос $voiceName" }
+    }
+    foreach ($target in $targets) {
+        $queryPrefix = if ($target.kind -eq 'folder') { 'folder: ' } else { 'file: ' }
+        $query = [uri]::EscapeDataString($queryPrefix + [string]$target.name)
+        $webResponse = Invoke-WebRequest -Uri "http://127.0.0.1:8011/?search=$query&json=1&path_column=1&count=120" -TimeoutSec 5 -UseBasicParsing
+        $response = [Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray()) | ConvertFrom-Json
+        $verified = $false
+        foreach ($item in $response.results) {
+            $fullPath = ([string]$item.path).TrimEnd('\') + '\' + [string]$item.name
+            $nameMatches = [StringComparer]::OrdinalIgnoreCase.Equals([string]$item.name, [string]$target.name)
+            $pathMatches = [StringComparer]::OrdinalIgnoreCase.Equals($fullPath.TrimEnd('\'), ([string]$target.path).TrimEnd('\'))
+            if ($nameMatches -and $pathMatches) {
+                $verified = $true
+                break
+            }
+        }
+        if (-not $verified) { throw "Everything не подтвердил цель: $($target.path)" }
+    }
+
+    $rows = New-Object System.Collections.Generic.List[object]
+    $index = 0
+    foreach ($target in $targets) {
+        $voiceName = $voiceNames[$index % $voiceNames.Count]
+        $prefix = switch ([string]$target.phrase) {
+            'folder' { 'ривер найди папку' }
+            'file'   { 'ривер найди файл' }
+            default  { 'ривер найди' }
+        }
+        $head = 'ривер найди'
+        $tail = if ($target.phrase -eq 'folder') { 'папку ' + [string]$target.name } elseif ($target.phrase -eq 'file') { 'файл ' + [string]$target.name } else { [string]$target.name }
+        $utterance = $prefix + ' ' + [string]$target.name
+        foreach ($style in @('joined', 'pause_after_find')) {
+            $pcm = New-Object System.Collections.Generic.List[byte]
+            if ($style -eq 'joined') {
+                $pcm.AddRange([byte[]](Get-Pcm $utterance $voiceName ($index % 3)))
+            } else {
+                $pcm.AddRange([byte[]](Get-Pcm $head $voiceName ($index % 3)))
+                $pcm.AddRange([byte[]]::new(32 * 650))
+                $pcm.AddRange([byte[]](Get-Pcm $tail $voiceName ($index % 3)))
+            }
+            $audio = New-Object System.Collections.Generic.List[byte]
+            $audio.AddRange([byte[]]::new(32 * 1000))
+            $audio.AddRange($pcm.ToArray())
+            $audio.AddRange([byte[]]::new(32 * 3500))
+            $file = '{0:D2}_{1}_{2}.wav' -f ($index + 1), [string]$target.id, $style
+            Write-Wav (Join-Path $OutDir $file) $audio.ToArray()
+            $rows.Add([pscustomobject]@{
+                file = $file; target_id = [string]$target.id; target_name = [string]$target.name
+                target_path = [string]$target.path; target_kind = [string]$target.kind
+                language = [string]$target.language; phrase = [string]$target.phrase
+                style = $style; voice = $voiceName; utterance = $utterance
+                expected = [string]$target.path; pause_after_find_ms = if ($style -eq 'pause_after_find') { 650 } else { 0 }
+            })
+        }
+        Write-Host ("{0}: {1} / {2} ({3})" -f $target.id, $target.language, $target.phrase, $voiceName)
+        $index++
+    }
+    Remove-Item -LiteralPath $TmpWav -Force -ErrorAction SilentlyContinue
+    $json = ConvertTo-Json -InputObject $rows.ToArray() -Depth 6
+    $utf8 = New-Object System.Text.UTF8Encoding -ArgumentList $false
+    [IO.File]::WriteAllText($Manifest, $json, $utf8)
+    Write-Host "готово: $($rows.Count) find-фраз -> $OutDir; manifest -> $Manifest"
     return
 }
 

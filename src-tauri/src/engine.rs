@@ -30,6 +30,8 @@ pub struct EngineConfig {
     pub partial_interval_ms: u32,
     /// Сколько ждать ответа «да»/«нет» на подтверждение.
     pub confirm_wait_ms: u32,
+    /// Сколько ждать номер варианта в окне выбора.
+    pub choice_wait_ms: u32,
     /// Диктовка: пауза, после которой сказанный кусок печатается (диктовка идёт дальше).
     pub dictation_pause_ms: u32,
     /// Диктовка заканчивается, если столько времени не было речи.
@@ -49,6 +51,7 @@ impl Default for EngineConfig {
             signal_mute_ms: 0,
             partial_interval_ms: 400,
             confirm_wait_ms: 8_000,
+            choice_wait_ms: 15_000,
             dictation_pause_ms: 800,
             dictation_idle_ms: 10_000,
         }
@@ -71,6 +74,8 @@ pub enum EngineEvent {
     Calibration { text: String, alt: Option<String> },
     /// Ответ на подтверждение: true — «да».
     Confirm(bool),
+    /// Сказанное в окне выбора (номер варианта); пусто — не дождались.
+    Choice(String),
     /// После wake/хоткея команды не дождались.
     Timeout,
     /// Началась диктовка («ривер напиши»): дальше речь — текст, а не команды.
@@ -106,6 +111,8 @@ const DICTATION_PARTIAL_MAX_MS: u32 = 10_000;
 enum ListenKind {
     Command,
     Confirm,
+    /// Номер варианта в окне выбора («ривер найди …»).
+    Choice,
 }
 
 #[derive(Clone, Debug)]
@@ -368,6 +375,20 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.pending_events.push(EngineEvent::State("listening"));
     }
 
+    /// Ждать номер варианта в окне выбора («третий», «номер 2»).
+    pub fn listen_choice(&mut self) {
+        self.begin_listening(ListenKind::Choice, String::new());
+        self.pending_events.push(EngineEvent::State("listening"));
+    }
+
+    /// Окно выбора закрыто мышью/клавиатурой — номер больше не ждём.
+    pub fn stop_choice(&mut self) {
+        if matches!(&self.mode, Mode::Listening(state) if state.kind == ListenKind::Choice) {
+            self.enter_idle();
+            self.pending_events.push(EngineEvent::State("idle"));
+        }
+    }
+
     /// Ждать «да»/«отмена» на подтверждение опасной команды.
     pub fn listen_confirm(&mut self) {
         self.begin_listening(ListenKind::Confirm, String::new());
@@ -425,6 +446,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         match kind {
             ListenKind::Command => self.cfg.command_wait_ms,
             ListenKind::Confirm => self.cfg.confirm_wait_ms,
+            ListenKind::Choice => self.cfg.choice_wait_ms,
         }
     }
 
@@ -490,6 +512,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         match &self.mode {
             Mode::Listening(state) if !state.speech_started => match state.kind {
                 ListenKind::Command => out.push(EngineEvent::Timeout),
+                ListenKind::Choice => out.push(EngineEvent::Choice(String::new())),
                 ListenKind::Confirm => {
                     out.push(EngineEvent::Log(format!(
                         "подтверждение: ответа не было {} с — отмена",
@@ -588,7 +611,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     Mode::Listening(state) => {
                         out.push(EngineEvent::State("busy"));
                         let result = match state.kind {
-                            ListenKind::Command => self
+                            ListenKind::Command | ListenKind::Choice => self
                                 .asr
                                 .transcribe_timed(&audio)
                                 .map(|timed| self.second_language_only(&audio, timed)),
@@ -622,6 +645,23 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 out.push(EngineEvent::State("listening"));
                             }
                             Ok(timed) => match state.kind {
+                                ListenKind::Choice => {
+                                    // «ривер …» вместо номера — новая команда, окно выбора
+                                    // остаётся для мыши.
+                                    if strip_initial_wake(&timed.text, &self.cfg.wake_words)
+                                        .is_some()
+                                    {
+                                        out.push(EngineEvent::Choice(String::new()));
+                                        self.enter_idle();
+                                        self.handle_idle_transcript(Ok(timed), &audio, out);
+                                        if matches!(self.mode, Mode::Idle) {
+                                            out.push(EngineEvent::State("idle"));
+                                        }
+                                    } else {
+                                        out.push(EngineEvent::Choice(timed.text));
+                                        self.return_to_idle(true, out);
+                                    }
+                                }
                                 ListenKind::Command => {
                                     let text = self.strip_repeated_wake(&timed.text);
                                     if text.trim().is_empty() {
@@ -2014,5 +2054,34 @@ mod tests {
             );
             assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
         }
+    }
+
+    #[test]
+    fn choice_mode_returns_the_spoken_number_or_times_out() {
+        let (mut spoken, _, _, _) = engine(test_config(), &["третий"]);
+        spoken.listen_choice();
+        let events = spoken.push_audio(&phrase(123, 120));
+        assert!(contains(&events, &EngineEvent::Choice("третий".into())));
+
+        let mut cfg = test_config();
+        cfg.choice_wait_ms = 300;
+        let (mut silent, _, _, _) = engine(cfg, &[]);
+        silent.listen_choice();
+        let events = silent.push_audio(&vec![0; samples(300)]);
+        assert!(contains(&events, &EngineEvent::Choice(String::new())));
+    }
+
+    #[test]
+    fn wake_command_during_choice_is_a_new_command() {
+        let (mut engine, _, _, _) = engine(test_config(), &["ривер открой загрузки"]);
+        engine.listen_choice();
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(contains(
+            &events,
+            &EngineEvent::Command {
+                text: "открой загрузки".into(),
+                alt: None
+            }
+        ));
     }
 }

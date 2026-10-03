@@ -137,6 +137,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             signal_mute_ms: 0,
             partial_interval_ms: if s.partial_results { 400 } else { 0 },
             confirm_wait_ms: 8_000,
+            choice_wait_ms: 15_000,
             dictation_pause_ms: s.dictation_pause_ms.clamp(300, 5_000),
             dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
         },
@@ -162,6 +163,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         grammar_version: None,
         dictation: None,
         last_wake_sound: None,
+        choice_session: None,
     };
     set_state(app, "idle");
     ui_log(app, "✓ готов. «ривер» — и команду сразу или после сигнала. Хоткей — то же без «ривер». «отмена» — стоп.");
@@ -308,6 +310,8 @@ struct Worker<'a> {
     grammar_version: Option<u64>,
     /// Идёт диктовка («ривер напиши»).
     dictation: Option<Dictation>,
+    /// Номер окна выбора, для которого ждём номер голосом.
+    choice_session: Option<u64>,
     /// Когда последний раз играл сигнал wake-слова: детектор и GigaAM слышат одно «ривер»,
     /// сигнал должен прозвучать один раз.
     last_wake_sound: Option<std::time::Instant>,
@@ -396,6 +400,13 @@ impl Worker<'_> {
             }
             _ => {}
         }
+        // Окно выбора закрыто кликом/клавишей — номер голосом больше не ждём.
+        if let Some(session) = self.choice_session {
+            if self.shared.picker_closed_session.load(Ordering::SeqCst) >= session {
+                self.choice_session = None;
+                engine.stop_choice();
+            }
+        }
         // Хоткей в калибровке/подтверждении не перебивает текущий режим.
         if self.shared.force_listen.swap(false, Ordering::Relaxed)
             && self.calibrating.is_none()
@@ -427,6 +438,7 @@ impl Worker<'_> {
             }
             EngineEvent::Command { text, alt } => self.command(engine, &text, alt.as_deref()),
             EngineEvent::Confirm(yes) => self.confirm(yes),
+            EngineEvent::Choice(text) => self.choice(&text),
             EngineEvent::Calibration { text, alt } => self.calibration(&text, alt.as_deref()),
             EngineEvent::Timeout => {
                 if self.confirm_op.take().is_some() {
@@ -555,6 +567,14 @@ impl Worker<'_> {
                 self.sound(if ok { "success.wav" } else { "error.wav" });
                 set_state(self.app, "idle");
             }
+            DispatchResult::Choose(count) => {
+                ui_log(
+                    self.app,
+                    format!("🔎 найдено {count} — скажи номер («третий») или выбери в окне"),
+                );
+                self.choice_session = Some(self.shared.picker_session.load(Ordering::SeqCst));
+                engine.listen_choice();
+            }
             DispatchResult::Confirm(pending) => {
                 ui_log(
                     self.app,
@@ -579,6 +599,46 @@ impl Worker<'_> {
         } else {
             self.sound("start.wav");
         }
+    }
+
+    /// Номер варианта, сказанный в окне выбора. Не разобрали — окно остаётся для мыши.
+    fn choice(&mut self, text: &str) {
+        self.choice_session = None;
+        let open = self
+            .shared
+            .picker
+            .lock()
+            .map(|picker| !picker.is_empty())
+            .unwrap_or(false);
+        if !open {
+            return;
+        }
+        if text.trim().is_empty() {
+            ui_log(self.app, "… номер не услышал — выбери в окне мышью или клавишами");
+            set_state(self.app, "idle");
+            return;
+        }
+        if textnorm::is_cancel(text, &self.cancel_words) {
+            crate::picker::hide(self.app, self.shared);
+            ui_log(self.app, "↩ выбор отменён");
+            self.sound("error.wav");
+            set_state(self.app, "idle");
+            return;
+        }
+        match crate::find::parse_choice(text) {
+            Some(number) => {
+                let ok = crate::picker::choose(self.app, self.shared, self.cfg, number - 1);
+                self.sound(if ok { "success.wav" } else { "error.wav" });
+            }
+            None => {
+                if self.private() {
+                    ui_log(self.app, "… не понял номер — выбери в окне");
+                } else {
+                    ui_log(self.app, format!("… не понял номер «{text}» — выбери в окне"));
+                }
+            }
+        }
+        set_state(self.app, "idle");
     }
 
     fn confirm(&mut self, yes: bool) {

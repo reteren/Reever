@@ -167,6 +167,9 @@
           {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши'],url:'',enabled:true,lang:'auto'},
           {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай'],url:'',enabled:true,lang:'auto'},
           {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','запиши','диктовка'],url:'',enabled:true,lang:'auto'},
+          {id:'find',kind:'find',label:'найти файл или папку (окно выбора)',triggers:['найди','найти','поищи','find'],url:'',enabled:true,lang:'auto'},
+          {id:'find_folder',kind:'find_folder',label:'найти папку (окно выбора)',triggers:['найди папку','найти папку','поищи папку','find folder'],url:'',enabled:true,lang:'auto'},
+          {id:'find_file',kind:'find_file',label:'найти файл (окно выбора)',triggers:['найди файл','найти файл','поищи файл','find file'],url:'',enabled:true,lang:'auto'},
           {id:'chat_gpt',kind:'web_chat',label:'спросить ChatGPT (чат в браузере)',triggers:['чат гпт','чатгпт','чат джипити','чат джи пити','чат жпт','chatgpt','chat gpt'],url:'https://chatgpt.com/',enabled:true,lang:'auto'},
           {id:'chat_claude',kind:'web_chat',label:'спросить Claude (чат в браузере)',triggers:['клауд','клод','клауде','клоуд','claude'],url:'https://claude.ai/new',enabled:true,lang:'auto'},
           {id:'chat_gemini',kind:'web_chat',label:'спросить Gemini (чат в браузере)',triggers:['гемини','гимини','гимине','джемини','джимини','gemini'],url:'https://gemini.google.com/app',enabled:true,lang:'auto'}
@@ -411,6 +414,11 @@
             host.append(grammarExampleRow(`${wake} ${trigger} X`,'калькулятор: «33 умножить на 78»'));
             continue;
           }
+          if((intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')&&trigger){
+            const what=intent.kind==='find_folder'?'папки':intent.kind==='find_file'?'файлы':'файлы и папки';
+            host.append(grammarExampleRow(`${wake} ${trigger} X`,`${what} через Everything; несколько — окно выбора, скажи номер`));
+            continue;
+          }
           if(intent.kind==='web_chat'&&trigger){
             host.append(grammarExampleRow(`${wake} ${trigger} X`,`${intent.label||'чат с ИИ'}: откроет чат и введёт вопрос`));
             continue;
@@ -471,8 +479,8 @@
         grammarEditor.append(wakeGroup);
         for(const intent of grammarDraft.intents||[]){
           const group=el('fieldset',{className:'grp grammar-intent'});
-          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор',dictate:'Диктовка',web_chat:'Чат с ИИ'};
-          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑',dictate:'✎',web_chat:'✦'};
+          const kindLabels={launch:'Запуск',folder:'Папки',search:'Поиск',close:'Закрыть программу',kill:'Завершить программу',calc:'Калькулятор',dictate:'Диктовка',web_chat:'Чат с ИИ',find:'Найти',find_folder:'Найти папку',find_file:'Найти файл'};
+          const kindIcons={launch:'▶',folder:'▤',search:'⌕',close:'×',kill:'■',calc:'∑',dictate:'✎',web_chat:'✦',find:'⌕',find_folder:'▤',find_file:'▭'};
           const legend=el('legend');
           const icon=el('span',{className:'grammar-kind-icon',textContent:kindIcons[intent.kind]||'•'});
           icon.setAttribute('aria-hidden','true');
@@ -495,7 +503,7 @@
           const setTriggers=values=>intent.triggers=values;
           const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim());
           const triggerHost=el('div'); group.append(triggerHost);
-          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='web_chat')?1:0;
+          const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='web_chat'||intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')?1:0;
           if(minimumTriggers) triggerHost.append(el('div',{className:'hint grammar-small-note'}));
           addChipEditor(triggerHost,visibleTriggers,values=>{
             const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());

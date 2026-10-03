@@ -125,6 +125,11 @@ pub fn raise_new(before: &[isize], hint: &str) {
     bring_to_front(hwnd_from(pick));
 }
 
+/// Вывести окно на передний план по сырому HWND (обход запрета смены foreground).
+pub fn bring_to_front_raw(raw: isize) {
+    bring_to_front(hwnd_from(raw));
+}
+
 fn bring_to_front(hwnd: HWND) {
     unsafe {
         let fg = GetForegroundWindow();

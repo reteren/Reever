@@ -1,0 +1,28 @@
+[
+  {"id":"en_folder_project_gst","name":"-PROJECT.GST-","path":"C:\\-PROJECT.GST-","kind":"folder","language":"en","phrase":"folder"},
+  {"id":"en_folder_memory_vault","name":"Memory_Vault","path":"C:\\Memory_Vault","kind":"folder","language":"en","phrase":"any"},
+  {"id":"en_folder_camelcase","name":"camelcase","path":"C:\\Users\\reteren\\AppData\\Local\\Programs\\orca\\resources\\node_modules\\camelcase","kind":"folder","language":"en","phrase":"folder"},
+  {"id":"en_folder_src_tauri","name":"src-tauri","path":"C:\\Reever\\src-tauri","kind":"folder","language":"en","phrase":"any"},
+  {"id":"en_file_voice_pipeline","name":"voice-pipeline.md","path":"C:\\Reever\\docs\\voice-pipeline.md","kind":"file","language":"en","phrase":"file"},
+  {"id":"en_file_bilingual","name":"bilingual.md","path":"C:\\Reever\\docs\\bilingual.md","kind":"file","language":"en","phrase":"file"},
+  {"id":"en_file_gen_corpus","name":"gen-corpus.ps1","path":"C:\\Reever\\scripts\\gen-corpus.ps1","kind":"file","language":"en","phrase":"file"},
+  {"id":"en_file_actions","name":"actions.json","path":"C:\\Reever\\src-tauri\\resources\\actions.json","kind":"file","language":"en","phrase":"any"},
+
+  {"id":"ru_folder_documents","name":"Документы","path":"C:\\ProgramData\\Документы","kind":"folder","language":"ru","phrase":"folder"},
+  {"id":"ru_folder_desktop","name":"Рабочий стол","path":"C:\\ProgramData\\Рабочий стол","kind":"folder","language":"ru","phrase":"folder"},
+  {"id":"ru_folder_music","name":"Моя музыка","path":"C:\\Users\\reteren\\Documents\\Моя музыка","kind":"folder","language":"ru","phrase":"any"},
+  {"id":"ru_folder_project","name":"сам сатана мне шепчит этот проект","path":"C:\\Users\\reteren\\Documents\\Image-Line\\FL Studio\\Projects\\сам сатана мне шепчит этот проект","kind":"folder","language":"ru","phrase":"any"},
+  {"id":"ru_file_nostalgic","name":"Самый ностальгический проект года.md","path":"C:\\-PROJECT.GST-\\obsidian\\итоги года\\итоги 2025\\Самый ностальгический проект года.md","kind":"file","language":"ru","phrase":"file"},
+  {"id":"ru_file_overrated","name":"Самый переоценённый проект года.md","path":"C:\\-PROJECT.GST-\\obsidian\\итоги года\\итоги 2025\\Самый переоценённый проект года.md","kind":"file","language":"ru","phrase":"file"},
+  {"id":"ru_file_project_wav","name":"это твой проект)))).wav","path":"C:\\Users\\reteren\\Downloads\\это твой проект)))).wav","kind":"file","language":"ru","phrase":"any"},
+  {"id":"ru_file_downloads_link","name":"Загрузки.lnk","path":"C:\\Users\\reteren\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\Загрузки.lnk","kind":"file","language":"ru","phrase":"file"},
+
+  {"id":"mixed_folder_adobe","name":"Деловые партнеры Photoshop Cloud","path":"C:\\Users\\reteren\\Documents\\Adobe\\Деловые партнеры Photoshop Cloud","kind":"folder","language":"mixed","phrase":"folder"},
+  {"id":"mixed_folder_firefox","name":"Старые данные Firefox","path":"C:\\Users\\reteren\\Desktop\\Старые данные Firefox","kind":"folder","language":"mixed","phrase":"folder"},
+  {"id":"mixed_folder_office","name":"Средства Microsoft Office","path":"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Средства Microsoft Office","kind":"folder","language":"mixed","phrase":"any"},
+  {"id":"mixed_folder_jump","name":"jumpычь","path":"C:\\Users\\reteren\\Documents\\Image-Line\\FL Studio\\Projects\\jumpычь","kind":"folder","language":"mixed","phrase":"any"},
+  {"id":"mixed_file_gigaam","name":"у-gigaam-transducer-в-sherpa-onnx-нет-длительностей-токенов.md","path":"C:\\Memory_Vault\\PROJECTS\\Reever-memory\\MEMORY\\KNOWLEDGE\\у-gigaam-transducer-в-sherpa-onnx-нет-длительностей-токенов.md","kind":"file","language":"mixed","phrase":"file"},
+  {"id":"mixed_file_whisper","name":"whisper-lid-в-sherpa-onnx-считает-английский-с-русским-акцентом-русским.md","path":"C:\\Memory_Vault\\PROJECTS\\Reever-memory\\MEMORY\\KNOWLEDGE\\whisper-lid-в-sherpa-onnx-считает-английский-с-русским-акцентом-русским.md","kind":"file","language":"mixed","phrase":"file"},
+  {"id":"mixed_file_parakeet","name":"parakeet-tdt-v2-выдумывает-английские-фразы-на-русской-речи-и-на-шуме.md","path":"C:\\Memory_Vault\\PROJECTS\\Reever-memory\\MEMORY\\KNOWLEDGE\\parakeet-tdt-v2-выдумывает-английские-фразы-на-русской-речи-и-на-шуме.md","kind":"file","language":"mixed","phrase":"any"},
+  {"id":"mixed_file_clipboard","name":"openclipboard-с-null-владельцем-делает-setclipboarddata-ненадёжным.md","path":"C:\\Memory_Vault\\PROJECTS\\Reever-memory\\MEMORY\\KNOWLEDGE\\openclipboard-с-null-владельцем-делает-setclipboarddata-ненадёжным.md","kind":"file","language":"mixed","phrase":"any"}
+]

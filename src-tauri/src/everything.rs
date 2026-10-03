@@ -29,6 +29,9 @@ struct EvtItem {
     name: String,
     #[serde(default)]
     path: String, // родительский каталог
+    /// "file" | "folder"
+    #[serde(default, rename = "type")]
+    kind: String,
 }
 
 /// Корректная склейка родитель+имя. ВАЖНО: `PathBuf::join("E:", x)` на Windows даёт
@@ -96,6 +99,30 @@ fn search_raw(host: &str, port: u16, query: &str, count: usize) -> Result<Vec<Pa
 
     println!("[everything] results={}", paths.len());
     Ok(paths)
+}
+
+/// Поиск для «найди …»: полные пути и признак папки. Пунктуация и пробелы в именах не
+/// учитываются (`ignore_punctuation`, `ignore_whitespace` плагина HTTP Server 1.5):
+/// «project gst» находит «-PROJECT.GST-».
+pub fn search_items(
+    host: &str,
+    port: u16,
+    query: &str,
+    count: usize,
+) -> Result<Vec<(PathBuf, bool)>, String> {
+    let path = format!(
+        "/?search={}&json=1&path_column=1&count={}&ignore_punctuation=1&ignore_whitespace=1",
+        url_encode(query),
+        count
+    );
+    let body = http_get(host, port, &path)?;
+    let resp: EvtResponse = serde_json::from_str(&body)
+        .map_err(|e| format!("не разобрал ответ ({e}); тело: {:.160}", body))?;
+    Ok(resp
+        .results
+        .into_iter()
+        .map(|item| (join_path(&item.path, &item.name), item.kind == "folder"))
+        .collect())
 }
 
 /// Ослабляем каждое слово до префикса (отбрасываем вероятное окончание) —

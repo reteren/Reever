@@ -321,6 +321,15 @@ pub struct SharedState {
     pub grammar_path: PathBuf,
     /// Растёт при каждом сохранении грамматики — аудио-поток сверяет и перечитывает.
     pub grammar_version: std::sync::atomic::AtomicU64,
+    /// Варианты в окне выбора «ривер найди …» (пусто — окно закрыто).
+    pub picker: Mutex<Vec<crate::find::FindItem>>,
+    /// Номер текущего окна выбора: растёт при каждом показе.
+    pub picker_session: std::sync::atomic::AtomicU64,
+    /// Номер окна, закрытого из интерфейса (клик, Esc, Alt+F4) — аудио-поток сверяет его со
+    /// своим и перестаёт ждать номер голосом. Так закрытие старого окна не обрывает новое.
+    pub picker_closed_session: std::sync::atomic::AtomicU64,
+    /// История открытий для ранжирования поиска (`usage.json` рядом с actions.json).
+    pub usage_path: PathBuf,
 }
 
 impl SharedState {
@@ -337,7 +346,12 @@ impl SharedState {
         let added = merge_defaults(&mut actions);
         let (grammar, migrated_actions) =
             crate::grammar::Grammar::load_or_migrate(&grammar_path, settings, &mut actions);
+        let usage_path = actions_path.with_file_name("usage.json");
         let state = Self {
+            usage_path,
+            picker: Mutex::new(Vec::new()),
+            picker_session: std::sync::atomic::AtomicU64::new(0),
+            picker_closed_session: std::sync::atomic::AtomicU64::new(0),
             actions: Mutex::new(actions),
             calibrate: Mutex::new(None),
             actions_path,

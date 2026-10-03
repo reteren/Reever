@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 7;
+const GRAMMAR_VERSION: u32 = 8;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -21,6 +21,7 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (4, &["dictate"]),
     (6, &["chat_gemini"]),
     (7, &["chat_gpt", "chat_claude"]),
+    (8, &["find", "find_folder", "find_file"]),
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
 const ADDED_CANCEL_WORDS: &[(u32, &str)] =
@@ -52,6 +53,12 @@ pub enum IntentKind {
     Dictate,
     /// Веб-чат с ИИ по адресу `url`: открыть и ввести туда сказанное («ривер гемини …»).
     WebChat,
+    /// «Найди …» — файл или папка через Everything, выбор в окне Reever.
+    Find,
+    /// «Найди папку …» — только папки.
+    FindFolder,
+    /// «Найди файл …» — только файлы.
+    FindFile,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -232,6 +239,27 @@ impl Grammar {
                     "спросить Claude (чат в браузере)",
                     &["клауд", "клод", "клауде", "клоуд", "claude"],
                     "https://claude.ai/new",
+                ),
+                intent(
+                    "find",
+                    IntentKind::Find,
+                    "найти файл или папку (окно выбора)",
+                    &["найди", "найти", "поищи", "find"],
+                    "",
+                ),
+                intent(
+                    "find_folder",
+                    IntentKind::FindFolder,
+                    "найти папку (окно выбора)",
+                    &["найди папку", "найти папку", "поищи папку", "find folder"],
+                    "",
+                ),
+                intent(
+                    "find_file",
+                    IntentKind::FindFile,
+                    "найти файл (окно выбора)",
+                    &["найди файл", "найти файл", "поищи файл", "find file"],
+                    "",
                 ),
                 intent(
                     "kill",
@@ -1059,7 +1087,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 7);
+        assert_eq!(Grammar::defaults().version, 8);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()
