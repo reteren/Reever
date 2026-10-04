@@ -539,8 +539,14 @@ impl Grammar {
     /// Фраза — только ключевое слово без цели («папка», «загугли», «поиск ютуб»,
     /// «открой»): Engine должен дослушать продолжение, а не выполнять обрубок.
     pub fn is_incomplete(&self, text: &str) -> bool {
-        self.match_trigger(text)
-            .is_some_and(|matched| matched.payload.is_empty())
+        self.match_trigger(text).is_some_and(|matched| {
+            matched.payload.is_empty()
+                // «найди отчёт формат» + пауза — формат скажут следом.
+                || (matches!(
+                    matched.intent.kind,
+                    IntentKind::Find | IntentKind::FindFile | IntentKind::FindFolder
+                ) && crate::find::ends_with_format_word(&matched.payload))
+        })
     }
 }
 
@@ -1209,5 +1215,13 @@ mod tests {
         let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
         assert_eq!(reloaded, migrated);
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn find_waits_for_the_format_after_the_word_format() {
+        let grammar = Grammar::defaults();
+        assert!(grammar.is_incomplete("найди reever формат"));
+        assert!(!grammar.is_incomplete("найди reever формат екзе"));
+        assert!(!grammar.is_incomplete("загугли формат а4"));
     }
 }

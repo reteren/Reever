@@ -152,7 +152,7 @@
         partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
         raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
         sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-        dictation_clipboard:true,dictation_idle_ms:10000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true
+        dictation_clipboard:true,dictation_live:true,dictation_idle_ms:5000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true
       };
       const defaultGrammarPreview=()=>({
         wake_words:['ривер','ревер','ривьер','ливер'],
@@ -621,7 +621,8 @@
           ['asr_threads','Потоки распознавания — рестарт','number'],['vad_threshold','Порог VAD 0..1 — рестарт','number'],['wake_pause_ms','Пауза после wake, мс — рестарт','number'],['command_pause_ms','Пауза конца команды, мс — рестарт','number'],['command_wait_ms','Сколько ждать команду после wake, мс — рестарт','number'],['partial_results','Показывать живой текст команды — рестарт','bool'],['match_threshold','Порог совпадения действия 0..1 — рестарт','number'],['open_min_similarity','Порог «открой папку» 0..1 — рестарт','number']]],
         ['Диктовка',[
           ['dictation_clipboard','Если нет поля ввода — текст в буфер обмена — рестарт','bool',null,'«Ривер напиши …»: текст печатается туда, где стоит курсор. Если курсора в поле нет, он копится в буфере — вставь Ctrl+V.'],
-          ['dictation_idle_ms','Закончить диктовку после тишины, мс (10000 = 10 с) — рестарт','number'],
+          ['dictation_live','Печатать по ходу речи (по словам) — рестарт','bool',null,'Слова появляются, пока говоришь; распознанное позже уточняется и исправляется. Выключи — текст будет появляться кусками после пауз.'],
+          ['dictation_idle_ms','Закончить диктовку после тишины, мс (5000 = 5 с) — рестарт','number'],
           ['dictation_pause_ms','Пауза, после которой кусок печатается, мс — рестарт','number'],
           ['webchat_send','«Ривер гемини …»: сразу отправлять вопрос — рестарт','bool',null,'Выключи, чтобы вопрос только вводился в чат, а Enter ты нажимал сам.']]],
         ['Everything',[['everything_host','Host — рестарт','text'],['everything_port','Port — рестарт','number'],['launch_everything_fallback','«Запусти»: страховка через Everything — рестарт','bool']]],

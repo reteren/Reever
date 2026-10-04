@@ -479,6 +479,7 @@ fn end_reason_name(reason: DictationEndReason) -> &'static str {
         DictationEndReason::Stopped => "Stopped",
         DictationEndReason::Command => "Command",
         DictationEndReason::Error => "Error",
+        DictationEndReason::Cancelled => "Cancelled",
     }
 }
 

@@ -3,7 +3,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use strsim::jaro_winkler;
 use tauri::AppHandle;
 
 use crate::actions::{Action, SharedState};
@@ -126,7 +125,11 @@ pub enum Route {
         candidates: Vec<String>,
     },
     /// Веб-чат с ИИ: адрес, подпись намерения и вопрос.
-    WebChat { label: String, url: String, text: String },
+    WebChat {
+        label: String,
+        url: String,
+        text: String,
+    },
     /// Ничего не подошло.
     Unknown,
 }
@@ -147,15 +150,40 @@ pub fn route(
 
     if let Some(trigger) = grammar.match_trigger(&text) {
         let mut payloads = vec![trigger.payload.trim().to_string()];
-        if trigger.intent.kind != IntentKind::Search {
-            if let Some(alt) = alt.map(|alt| strip_leading_fillers(&normalize(alt))) {
-                if let Some(alt_trigger) = grammar
+        let alt_payload = alt
+            .map(|alt| strip_leading_fillers(&normalize(alt)))
+            .and_then(|alt| {
+                grammar
                     .match_trigger(&alt)
                     .filter(|matched| matched.intent.id == trigger.intent.id)
+                    .map(|matched| matched.payload.trim().to_string())
+            })
+            .filter(|payload| !payload.is_empty());
+        if matches!(trigger.intent.kind, IntentKind::Search | IntentKind::WebChat) {
+            // Поиск и чат уходят одним текстом — язык решает словарь (docs/bilingual.md).
+            // Выбор `bilingual` меняется только при явном перевесе словарных слов.
+            if let Some(alt_payload) = alt_payload {
+                let lang = |t: &str| {
+                    if t.chars().any(|c| matches!(c, 'а'..='я' | 'ё')) {
+                        "ru-RU"
+                    } else {
+                        "en-US"
+                    }
+                };
+                let (chosen_lang, other_lang) = (lang(&payloads[0]), lang(&alt_payload));
+                if chosen_lang != other_lang
+                    && crate::dictation::payload_switch_language(
+                        &payloads[0],
+                        chosen_lang,
+                        &alt_payload,
+                        other_lang,
+                    )
                 {
-                    push_unique(&mut payloads, alt_trigger.payload.trim());
+                    payloads[0] = alt_payload;
                 }
             }
+        } else if let Some(alt_payload) = alt_payload {
+            push_unique(&mut payloads, &alt_payload);
         }
         if trigger.intent.kind == IntentKind::Dictate {
             return Route::Dictate(payloads[0].clone());
@@ -396,7 +424,23 @@ pub fn dispatch(
             );
             DispatchResult::Done(handle_launch(app, cfg, outcome, &query))
         }
-        Route::Folder(targets) => DispatchResult::Done(open_via_everything(app, cfg, &targets)),
+        // «папка X» / «открой папку X» — тот же поиск с окном выбора, что и «найди папку X»;
+        // алиасы из aliases.json («загрузки» → Downloads) — дополнительные варианты запроса.
+        Route::Folder(targets) => {
+            let mut candidates = targets.clone();
+            for target in &targets {
+                if let Some(alias) = cfg.aliases.folder(target) {
+                    push_unique(&mut candidates, &alias);
+                }
+            }
+            dispatch_find(
+                app,
+                cfg,
+                shared,
+                crate::find::FindScope::Folder,
+                &candidates,
+            )
+        }
         Route::Dictate(_) => {
             // Диктовку ведёт Engine; сюда попадает только команда, пришедшая в обход него.
             ui_log(app, "⚠ диктовка запускается голосом: «ривер напиши …»");
@@ -459,58 +503,9 @@ pub fn dispatch(
             } else {
                 ui_log(app, format!("🔎 {label}: {url}"));
             }
-            DispatchResult::Done(open_url(cfg, &label, &url, || {
-                launcher::shell_open(&url)
-            }))
+            DispatchResult::Done(open_url(cfg, &label, &url, || launcher::shell_open(&url)))
         }
-        Route::Find { scope, candidates } => {
-            if cfg.settings.offline_mode {
-                ui_log(app, "🔒 офлайн-режим: поиск через Everything отключён");
-                return DispatchResult::Done(false);
-            }
-            let what = match scope {
-                crate::find::FindScope::Folder => "папку",
-                crate::find::FindScope::File => "файл",
-                crate::find::FindScope::Any => "файл или папку",
-            };
-            if cfg.settings.private_log {
-                ui_log(app, format!("🔎 ищу {what}"));
-            } else {
-                ui_log(app, format!("🔎 ищу {what}: «{}»", candidates.join(" / ")));
-            }
-            let usage = crate::find::Usage::load(&shared.usage_path);
-            let recent = crate::find::windows_recent();
-            let items = match crate::find::search(
-                &cfg.settings.everything_host,
-                cfg.settings.everything_port,
-                &candidates,
-                scope,
-                &usage,
-                &recent,
-            ) {
-                Ok(items) => items,
-                Err(error) => {
-                    // Текст ошибки может содержать кусок ответа с путями — не в приватном режиме.
-                    if cfg.settings.private_log {
-                        ui_log(app, "⚠ Everything недоступен");
-                    } else {
-                        ui_log(app, format!("⚠ Everything недоступен: {error}"));
-                    }
-                    return DispatchResult::Done(false);
-                }
-            };
-            match items.len() {
-                0 => {
-                    ui_log(app, "∅ ничего не нашёл");
-                    DispatchResult::Done(false)
-                }
-                1 => DispatchResult::Done(crate::picker::open(app, shared, cfg, &items[0])),
-                n => {
-                    let _ = crate::picker::show(app, shared, &candidates[0], &items);
-                    DispatchResult::Choose(n)
-                }
-            }
-        }
+        Route::Find { scope, candidates } => dispatch_find(app, cfg, shared, scope, &candidates),
         Route::WebChat { label, url, text } => {
             if cfg.settings.offline_mode {
                 ui_log(app, "🔒 офлайн-режим: чат в браузере отключён");
@@ -539,6 +534,100 @@ pub fn dispatch(
         Route::Unknown => {
             ui_log(app, "⚠ не распознал команду");
             DispatchResult::Done(false)
+        }
+    }
+}
+
+/// «Найди …» и «папка …»: поиск через Everything; одно совпадение — открыть, несколько —
+/// окно выбора (docs/find.md).
+fn dispatch_find(
+    app: &AppHandle,
+    cfg: &ReeverConfig,
+    shared: &Arc<SharedState>,
+    scope: crate::find::FindScope,
+    candidates: &[String],
+) -> DispatchResult {
+    if cfg.settings.offline_mode {
+        ui_log(app, "🔒 офлайн-режим: поиск через Everything отключён");
+        return DispatchResult::Done(false);
+    }
+    let what = match scope {
+        crate::find::FindScope::Folder => "папку",
+        crate::find::FindScope::File => "файл",
+        crate::find::FindScope::Any => "файл или папку",
+    };
+    if cfg.settings.private_log {
+        ui_log(app, format!("🔎 ищу {what}"));
+    } else {
+        ui_log(app, format!("🔎 ищу {what}: «{}»", candidates.join(" / ")));
+    }
+    // «… формат X»: имя — до слова «формат», формат — из закрытого словаря (find::FORMATS).
+    let mut names: Vec<String> = Vec::new();
+    let mut spoken_formats: Vec<String> = Vec::new();
+    for candidate in candidates {
+        let (name, format) = crate::find::split_format(candidate);
+        if !name.trim().is_empty() && !names.contains(&name) {
+            names.push(name);
+        }
+        if let Some(format) = format.filter(|f| !f.trim().is_empty()) {
+            spoken_formats.push(format);
+        }
+    }
+    let extension = crate::find::resolve_extension(&spoken_formats);
+    if !spoken_formats.is_empty() {
+        match &extension {
+            Some(ext) => ui_log(app, format!("🔎 формат: .{ext}")),
+            None => {
+                if cfg.settings.private_log {
+                    ui_log(app, "⚠ формат не распознан");
+                } else {
+                    ui_log(app, format!("⚠ формат не распознан: «{}»", spoken_formats.join(" / ")));
+                }
+                return DispatchResult::Done(false);
+            }
+        }
+    }
+    if names.is_empty() && extension.is_none() {
+        ui_log(app, "∅ пустой запрос");
+        return DispatchResult::Done(false);
+    }
+    let usage = crate::find::Usage::load(&shared.usage_path);
+    let recent = crate::find::windows_recent();
+    let items = match crate::find::search_with_extension(
+        &cfg.settings.everything_host,
+        cfg.settings.everything_port,
+        &names,
+        scope,
+        extension.as_deref(),
+        &usage,
+        &recent,
+    ) {
+        Ok(items) => items,
+        Err(error) => {
+            // Текст ошибки может содержать кусок ответа с путями — не в приватном режиме.
+            if cfg.settings.private_log {
+                ui_log(app, "⚠ Everything недоступен");
+            } else {
+                ui_log(app, format!("⚠ Everything недоступен: {error}"));
+            }
+            return DispatchResult::Done(false);
+        }
+    };
+    match items.len() {
+        0 => {
+            ui_log(app, "∅ ничего не нашёл");
+            DispatchResult::Done(false)
+        }
+        1 => DispatchResult::Done(crate::picker::open(app, shared, cfg, &items[0])),
+        n => {
+            let title = match (&extension, names.first()) {
+                (Some(ext), Some(name)) => format!("{name} · .{ext}"),
+                (Some(ext), None) => format!(".{ext}"),
+                (None, Some(name)) => name.clone(),
+                (None, None) => String::new(),
+            };
+            let _ = crate::picker::show(app, shared, &title, &items);
+            DispatchResult::Choose(n)
         }
     }
 }
@@ -698,117 +787,6 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
             launch_with_raise(cfg, &hint, || launcher::shell_open(&target))
         }
     }
-}
-
-fn open_via_everything(app: &AppHandle, cfg: &ReeverConfig, targets: &[String]) -> bool {
-    if cfg.settings.offline_mode {
-        ui_log(app, "🔒 офлайн-режим: поиск папок (Everything) отключён");
-        return false;
-    }
-    let host = &cfg.settings.everything_host;
-    let port = cfg.settings.everything_port;
-
-    let mut queries = Vec::new();
-    for target in targets {
-        let query = cfg
-            .aliases
-            .folder(target)
-            .unwrap_or_else(|| target.to_string());
-        push_unique(&mut queries, &query);
-    }
-    if queries.is_empty() {
-        ui_log(app, "∅ пустой запрос папки");
-        return false;
-    }
-    if cfg.settings.private_log {
-        ui_log(
-            app,
-            format!("🔎 поиск папок по {} вариантам…", queries.len()),
-        );
-    } else {
-        ui_log(
-            app,
-            format!(
-                "🔎 поиск папок: {}",
-                queries
-                    .iter()
-                    .map(|q| format!("«{q}»"))
-                    .collect::<Vec<_>>()
-                    .join(" / ")
-            ),
-        );
-    }
-
-    let mut errors = Vec::new();
-    let mut best: Option<(std::path::PathBuf, String, usize, f64)> = None;
-    for (index, query) in queries.iter().enumerate() {
-        let outcome = everything::find_folders(host, port, query);
-        if let Some(error) = outcome.error {
-            errors.push(error);
-        }
-        for path in outcome.paths {
-            let base = path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("");
-            let similarity = jaro_winkler(&normalize(query), &normalize(base));
-            if best
-                .as_ref()
-                .is_none_or(|(_, _, _, score)| similarity > *score)
-            {
-                best = Some((path, query.clone(), index, similarity));
-            }
-        }
-    }
-    let Some((best, query, variant_index, similarity)) = best else {
-        if let Some(error) = errors.first() {
-            ui_log(app, format!("⚠ {error}"));
-        } else {
-            ui_log(app, "∅ папки не найдены");
-        }
-        return false;
-    };
-    let base = best
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("")
-        .to_string();
-
-    if similarity < cfg.settings.open_min_similarity {
-        ui_log(
-            app,
-            format!(
-                "∅ вариант {} не уверен ({similarity:.2} < {:.2}) — пропускаю «{}»",
-                variant_index + 1,
-                cfg.settings.open_min_similarity,
-                best.display()
-            ),
-        );
-        return false;
-    }
-
-    if cfg.settings.private_log {
-        ui_log(
-            app,
-            format!(
-                "📁 победил вариант {} (похожесть {similarity:.2})",
-                variant_index + 1
-            ),
-        );
-    } else {
-        ui_log(
-            app,
-            format!(
-                "📁 победил вариант {} «{query}» (похожесть {similarity:.2}): {}",
-                variant_index + 1,
-                best.display()
-            ),
-        );
-    }
-    let hint = base;
-    launch_with_raise(cfg, &hint, || {
-        everything::open_folders(std::slice::from_ref(&best)) > 0
-    })
 }
 
 fn handle_launch(app: &AppHandle, cfg: &ReeverConfig, outcome: SearchOutcome, hint: &str) -> bool {
@@ -1209,9 +1187,18 @@ mod tests {
         let grammar = Grammar::defaults();
         let actions = Vec::new();
         for (heard, question) in [
-            ("гемини какая погода будет завтра в москве", "Какая погода будет завтра в москве"),
-            ("гимини какая погода будет завтра в москве", "Какая погода будет завтра в москве"),
-            ("джимини обясни что такое квантовый компьютер", "Обясни что такое квантовый компьютер"),
+            (
+                "гемини какая погода будет завтра в москве",
+                "Какая погода будет завтра в москве",
+            ),
+            (
+                "гимини какая погода будет завтра в москве",
+                "Какая погода будет завтра в москве",
+            ),
+            (
+                "джимини обясни что такое квантовый компьютер",
+                "Обясни что такое квантовый компьютер",
+            ),
             ("gemini what is rust", "What is rust"),
         ] {
             match route(heard, &grammar, &actions, THRESHOLD) {
@@ -1223,7 +1210,10 @@ mod tests {
             }
         }
         for heard in ["гемини", "гимине", "джимини"] {
-            assert!(grammar.is_incomplete(heard), "{heard} — ждать вопрос после паузы");
+            assert!(
+                grammar.is_incomplete(heard),
+                "{heard} — ждать вопрос после паузы"
+            );
         }
     }
 
@@ -1253,18 +1243,40 @@ mod tests {
         let actions = Vec::new();
         use crate::find::FindScope;
         for (heard, scope, query) in [
-            ("найди папку проджект джи эс ти", FindScope::Folder, "проджект джи эс ти"),
+            (
+                "найди папку проджект джи эс ти",
+                FindScope::Folder,
+                "проджект джи эс ти",
+            ),
             ("найди project gst", FindScope::Any, "project gst"),
             ("найди файл отчет", FindScope::File, "отчет"),
             ("поищи папку загрузки", FindScope::Folder, "загрузки"),
         ] {
             match route(heard, &grammar, &actions, THRESHOLD) {
-                Route::Find { scope: got, candidates } => {
+                Route::Find {
+                    scope: got,
+                    candidates,
+                } => {
                     assert_eq!(got, scope, "{heard}");
                     assert_eq!(candidates[0], query, "{heard}");
                 }
                 other => panic!("{heard}: {other:?}"),
             }
         }
+    }
+
+    #[test]
+    fn search_payload_language_is_chosen_by_dictionary() {
+        let grammar = Grammar::defaults();
+        let actions = Vec::new();
+        let url = |text: &str, alt: &str| match super::route(text, Some(alt), &grammar, &actions, THRESHOLD) {
+            Route::Search { url, .. } => url,
+            other => panic!("{other:?}"),
+        };
+        // английский с акцентом: русская модель дала транслит
+        assert!(url("загугли плиз ревью зе файнал скеджул", "загугли please review the final schedule")
+            .contains("please+review"));
+        // русская фраза: английская модель выдумала связную фразу — остаётся русский
+        assert!(!url("загугли погода в москве", "загугли i think it s a good idea").contains("think"));
     }
 }

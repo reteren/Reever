@@ -1,14 +1,22 @@
 //! Ввод продиктованного текста: есть ли у активного окна поле с курсором, печать в него
 //! (`SendInput`, Unicode) и запасной путь — буфер обмена.
 
-use std::{ffi::c_void, mem::size_of, thread::sleep, time::Duration};
+use std::{
+    ffi::c_void,
+    mem::size_of,
+    thread::sleep,
+    time::Duration,
+};
 
 use anyhow::{bail, Context};
 use windows::Win32::{
     Foundation::{GlobalFree, HANDLE, HINSTANCE, HWND},
     System::{
         Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
-        DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
+        DataExchange::{
+            CloseClipboard, EmptyClipboard, GetClipboardData, IsClipboardFormatAvailable,
+            OpenClipboard, SetClipboardData,
+        },
         LibraryLoader::GetModuleHandleW,
         Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
         Threading::GetCurrentProcessId,
@@ -20,7 +28,7 @@ use windows::Win32::{
         },
         Input::KeyboardAndMouse::{
             SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS,
-            KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VIRTUAL_KEY, VK_RETURN, VK_SHIFT,
+            KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VIRTUAL_KEY, VK_BACK, VK_RETURN, VK_SHIFT,
         },
         WindowsAndMessaging::{
             CreateWindowExW, GetAncestor, GetClassNameW, GetForegroundWindow, GetGUIThreadInfo,
@@ -108,6 +116,43 @@ fn text_target_local() -> Option<isize> {
     }
 }
 
+/// Что сейчас в фокусе — для журнала, когда поле ввода не нашлось: класс активного окна,
+/// его процесс и что видит UI Automation (тип элемента, процесс, только ли для чтения).
+fn describe_focus_local() -> String {
+    let foreground = unsafe { GetForegroundWindow() };
+    if foreground.0.is_null() {
+        return "нет активного окна".into();
+    }
+    let mut pid = 0u32;
+    let thread = unsafe { GetWindowThreadProcessId(foreground, Some(&mut pid)) };
+    let mut info = GUITHREADINFO {
+        cbSize: size_of::<GUITHREADINFO>() as u32,
+        ..Default::default()
+    };
+    let caret = unsafe { GetGUIThreadInfo(thread, &mut info) }.is_ok() && !info.hwndCaret.0.is_null();
+    let uia = AUTOMATION.with(|automation| {
+        let automation = automation.as_ref()?;
+        unsafe {
+            let element = automation.GetFocusedElement().ok()?;
+            let control = element.CurrentControlType().ok().map(|c| c.0).unwrap_or_default();
+            let element_pid = element.CurrentProcessId().unwrap_or_default();
+            let readonly = element
+                .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
+                .ok()
+                .and_then(|value| value.CurrentIsReadOnly().ok())
+                .map(|ro| if ro.as_bool() { "только чтение" } else { "редактируемое" })
+                .unwrap_or("без ValuePattern");
+            Some(format!("UIA тип {control}, pid {element_pid}, {readonly}"))
+        }
+    });
+    format!(
+        "окно класса «{}», pid {pid}, системный курсор: {}, {}",
+        class_name(foreground),
+        if caret { "есть" } else { "нет" },
+        uia.unwrap_or_else(|| "UIA: нет элемента".into())
+    )
+}
+
 /// UI Automation может быть недоступна в потоке приложения, поэтому дополнительно
 /// проверяем штатный ES_READONLY у нативных EDIT/RichEdit, если там стоит курсор.
 fn native_edit_is_read_only(hwnd: HWND) -> bool {
@@ -150,9 +195,14 @@ fn focused_element_editable(foreground_pid: u32) -> Option<bool> {
             let Ok(element) = automation.GetFocusedElement() else {
                 return None;
             };
-            if element.CurrentProcessId().map(|pid| pid as u32).ok()? != foreground_pid {
-                return None;
-            }
+            let element_pid = match element.CurrentProcessId() {
+                Ok(pid) => pid as u32,
+                Err(_) => return Some(false),
+            };
+            // Процесс элемента не сверяем строго: у WebView2/Chromium поле живёт в процессе
+            // рендерера, который может быть и не потомком окна (журнал пользователя: окно
+            // pid 48532, поле pid 49924). Фокус и так в активном окне, а печать идёт туда же.
+            let _ = (element_pid, foreground_pid);
             let control_type = element.CurrentControlType().ok()?;
             if control_type != UIA_EditControlTypeId && control_type != UIA_DocumentControlTypeId {
                 return Some(false);
@@ -164,6 +214,7 @@ fn focused_element_editable(foreground_pid: u32) -> Option<bool> {
         }
     })
 }
+
 
 /// Префикс, который удалось напечатать, и точный остаток для буфера обмена.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -436,9 +487,141 @@ pub fn press_enter(target: isize) -> bool {
     .unwrap_or(false)
 }
 
+/// Активно ли ещё окно `target` (или его дочернее): выбранное в начале диктовки окно
+/// остаётся целью, пока пользователь не переключился.
+pub fn is_foreground(target: isize) -> bool {
+    ensure_foreground_window(target).is_ok()
+}
+
+/// Стереть `count` символов Backspace в окне `target` (пока оно активно). Возвращает,
+/// сколько нажатий отправлено.
+pub fn press_backspace(target: isize, count: usize) -> usize {
+    crate::input_thread::call(move || {
+        let mut sent = 0;
+        while sent < count {
+            if ensure_foreground_window(target).is_err() {
+                break;
+            }
+            let batch = (count - sent).min(24);
+            let mut inputs = Vec::with_capacity(batch * 2);
+            for _ in 0..batch {
+                inputs.push(key(VK_BACK, 0, KEYBD_EVENT_FLAGS(0)));
+                inputs.push(key(VK_BACK, 0, KEYEVENTF_KEYUP));
+            }
+            if send_inputs(&inputs) as usize != inputs.len() {
+                break;
+            }
+            sent += batch;
+            std::thread::sleep(std::time::Duration::from_millis(4));
+        }
+        sent
+    })
+    .unwrap_or(0)
+}
+
+/// Текст из буфера обмена (`None` — там не текст или буфер занят).
+pub fn get_clipboard_text() -> Option<String> {
+    crate::input_thread::call(get_clipboard_text_local).flatten()
+}
+
+fn get_clipboard_text_local() -> Option<String> {
+    unsafe {
+        if IsClipboardFormatAvailable(CF_UNICODETEXT).is_err() {
+            return None;
+        }
+        let owner = CLIPBOARD_OWNER.with(|owner| *owner);
+        OpenClipboard(owner).ok()?;
+        let text = (|| {
+            let handle = GetClipboardData(CF_UNICODETEXT).ok()?;
+            let memory = windows::Win32::Foundation::HGLOBAL(handle.0);
+            let ptr = GlobalLock(memory) as *const u16;
+            if ptr.is_null() {
+                return None;
+            }
+            let mut len = 0;
+            while *ptr.add(len) != 0 {
+                len += 1;
+            }
+            let text = String::from_utf16_lossy(std::slice::from_raw_parts(ptr, len));
+            let _ = GlobalUnlock(memory);
+            Some(text)
+        })();
+        let _ = CloseClipboard();
+        text
+    }
+}
+
+/// Описание фокуса для журнала; см. `describe_focus_local`.
+pub fn describe_focus() -> String {
+    crate::input_thread::call(describe_focus_local).unwrap_or_default()
+}
+
 /// Положить текст в буфер обмена; см. `set_clipboard_local`.
 pub fn set_clipboard(text: &str) -> anyhow::Result<()> {
     let owned = text.to_string();
     crate::input_thread::call(move || set_clipboard_local(&owned))
         .unwrap_or_else(|| Err(anyhow::anyhow!("поток ввода недоступен")))
+}
+
+/// Текст, напечатанный в поле по ходу речи, и его выравнивание с новым вариантом: стереть
+/// расходящийся хвост (Backspace) и допечатать остальное. Перевод строки — `\n`
+/// (Shift+Enter, одно нажатие Backspace стирает его).
+#[derive(Clone, Debug, Default)]
+pub struct LiveField {
+    /// Что сейчас напечатано (то, что Reever сам ввёл в этот кусок).
+    pub typed: String,
+}
+
+impl LiveField {
+    /// Привести напечатанное к `wanted` в окне `target`. `false` — окно сменилось или ввод не
+    /// прошёл; `typed` тогда отражает то, что реально успело напечататься.
+    pub fn reconcile(&mut self, target: isize, wanted: &str) -> bool {
+        let typed: Vec<char> = self.typed.chars().collect();
+        let wanted_chars: Vec<char> = wanted.chars().collect();
+        let prefix = typed
+            .iter()
+            .zip(wanted_chars.iter())
+            .take_while(|(a, b)| a == b)
+            .count();
+        let erase = typed.len() - prefix;
+        if erase > 0 {
+            let sent = press_backspace(target, erase);
+            self.typed = typed[..typed.len() - sent].iter().collect();
+            if sent < erase {
+                return false;
+            }
+        }
+        let rest: String = wanted_chars[prefix..].iter().collect();
+        if rest.is_empty() {
+            return true;
+        }
+        let progress = type_pieces(target, &text_to_pieces(&rest));
+        self.typed.push_str(&pieces_to_text(&progress.typed));
+        progress.remaining.is_empty()
+    }
+}
+
+/// Куски оформленного текста → строка с `\n` на месте перевода строки.
+pub fn pieces_to_text(pieces: &[Piece]) -> String {
+    pieces
+        .iter()
+        .map(|piece| match piece {
+            Piece::Text(text) => text.as_str(),
+            Piece::NewLine => "\n",
+        })
+        .collect()
+}
+
+/// Обратно: строка с `\n` → куски для печати.
+pub fn text_to_pieces(text: &str) -> Vec<Piece> {
+    let mut pieces = Vec::new();
+    for (index, part) in text.split('\n').enumerate() {
+        if index > 0 {
+            pieces.push(Piece::NewLine);
+        }
+        if !part.is_empty() {
+            pieces.push(Piece::Text(part.to_string()));
+        }
+    }
+    pieces
 }

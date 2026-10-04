@@ -4,7 +4,17 @@
 //! cargo run --example dictation_probe
 
 use std::{
-    mem::size_of, os::windows::process::CommandExt, process::Command, slice, thread::sleep,
+    io::{Read, Write},
+    mem::size_of,
+    net::TcpListener,
+    os::windows::process::CommandExt,
+    process::Command,
+    slice,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread::{self, sleep, JoinHandle},
     time::Duration,
 };
 
@@ -14,15 +24,30 @@ use reever_lib::{
     winutil,
 };
 use windows::Win32::{
-    Foundation::{HGLOBAL, HWND},
+    Foundation::{HGLOBAL, HWND, LPARAM, WPARAM},
     System::{
-        DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard},
+        Com::{
+            CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
+            COINIT_APARTMENTTHREADED,
+        },
+        DataExchange::{CloseClipboard, EnumClipboardFormats, GetClipboardData, OpenClipboard},
         Memory::{GlobalLock, GlobalSize, GlobalUnlock},
+    },
+    UI::{
+        Accessibility::{
+            CUIAutomation, IUIAutomation, IUIAutomationValuePattern, UIA_ValuePatternId,
+        },
+        WindowsAndMessaging::{
+            GetForegroundWindow, GetWindowThreadProcessId, PostMessageW, WM_CLOSE,
+        },
     },
 };
 
 const CLIPBOARD_UNICODE_TEXT: u32 = 13;
 const PROBE_TEXT: &str = "ReeverProbe";
+const WEBVIEW_PROBE_TITLE: &str = "ReeverDictationProbe-WebView";
+const WEBVIEW_PROBE_TEXT: &str =
+    "Проверка кириллицы и английского — Reever\nEnglish dictation line";
 
 #[derive(Clone, Copy)]
 enum WindowKind {
@@ -42,6 +67,12 @@ struct ProbeCase {
 fn main() {
     if std::env::args().any(|arg| arg == "--focus-only") {
         if probe_focus_change() {
+            return;
+        }
+        std::process::exit(1);
+    }
+    if std::env::args().any(|arg| arg == "--webview-only") {
+        if probe_webview() {
             return;
         }
         std::process::exit(1);
@@ -80,6 +111,9 @@ fn main() {
             failures += 1;
         }
     }
+    if !probe_webview() {
+        failures += 1;
+    }
     if !probe_focus_change() {
         failures += 1;
     }
@@ -92,6 +126,255 @@ fn main() {
         eprintln!("✗ проверок с ошибками: {failures}");
         std::process::exit(1);
     }
+}
+
+fn probe_webview() -> bool {
+    let root = std::env::temp_dir().join(format!(
+        "reever-webview-probe-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos())
+    ));
+    let profile = root.join("profile");
+    if std::fs::create_dir_all(&profile).is_err() {
+        eprintln!("{WEBVIEW_PROBE_TITLE}: не удалось создать профиль Edge");
+        let _ = std::fs::remove_dir_all(&root);
+        return false;
+    }
+    let Some(edge) = edge_executable() else {
+        eprintln!("{WEBVIEW_PROBE_TITLE}: msedge.exe не найден");
+        let _ = std::fs::remove_dir_all(&root);
+        return false;
+    };
+    let Some((port, server_stop, server_thread)) = start_webview_server() else {
+        eprintln!("{WEBVIEW_PROBE_TITLE}: не удалось открыть локальный HTTP сервер");
+        let _ = std::fs::remove_dir_all(&root);
+        return false;
+    };
+    let before = winutil::snapshot();
+    let url = format!("http://localhost:{port}/");
+    let mut child = match Command::new(edge)
+        .arg(format!("--user-data-dir={}", profile.display()))
+        .args([
+            "--no-first-run",
+            "--disable-background-mode",
+            "--site-per-process",
+            "--force-renderer-accessibility",
+            "--window-size=900,560",
+        ])
+        .arg(format!("--app={url}"))
+        .creation_flags(0x0800_0000)
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(error) => {
+            eprintln!("{WEBVIEW_PROBE_TITLE}: не удалось запустить Edge: {error}");
+            stop_webview_server(server_stop, server_thread);
+            let _ = std::fs::remove_dir_all(&root);
+            return false;
+        }
+    };
+
+    let mut window = None;
+    for _ in 0..100 {
+        window = winutil::snapshot()
+            .into_iter()
+            .find(|hwnd| winutil::title_of(*hwnd) == WEBVIEW_PROBE_TITLE);
+        if window.is_some() {
+            break;
+        }
+        // Подсказка выбирает только появившееся после запуска окно с нужным заголовком.
+        winutil::raise_new(&before, WEBVIEW_PROBE_TITLE);
+        sleep(Duration::from_millis(100));
+    }
+
+    let Some(window) = window else {
+        eprintln!("{WEBVIEW_PROBE_TITLE}: окно с точным заголовком не появилось");
+        finish_webview(&mut child, WEBVIEW_PROBE_TITLE, &root);
+        stop_webview_server(server_stop, server_thread);
+        return false;
+    };
+    winutil::bring_to_front_raw(window);
+
+    let target = (0..20).find_map(|_| {
+        let target = typing::text_target()
+            .filter(|hwnd| *hwnd == window && winutil::title_of(*hwnd) == WEBVIEW_PROBE_TITLE);
+        if target.is_none() {
+            sleep(Duration::from_millis(100));
+            winutil::bring_to_front_raw(window);
+        }
+        target
+    });
+    let baseline_visible = target.is_some();
+    let mut foreground_pid = 0;
+    unsafe { GetWindowThreadProcessId(HWND(window as *mut _), Some(&mut foreground_pid)) };
+    let focused_details = focused_element_details();
+    let mut progress = TypeProgress::default();
+    let mut actual = None;
+    if let Some(target) = target {
+        // The exact window title is checked immediately before this is the only SendInput call.
+        if winutil::title_of(target) == WEBVIEW_PROBE_TITLE {
+            progress = typing::type_pieces(
+                target,
+                &[
+                    Piece::Text("Проверка кириллицы и английского — Reever".into()),
+                    Piece::NewLine,
+                    Piece::Text("English dictation line".into()),
+                ],
+            );
+            for _ in 0..20 {
+                actual = focused_value().or_else(|| actual.clone());
+                if actual.as_deref() == Some(WEBVIEW_PROBE_TEXT) {
+                    break;
+                }
+                sleep(Duration::from_millis(100));
+            }
+        }
+    }
+    let expected = [
+        Piece::Text("Проверка кириллицы и английского — Reever".into()),
+        Piece::NewLine,
+        Piece::Text("English dictation line".into()),
+    ];
+    let foreground_is_probe =
+        winutil::title_of(unsafe { GetForegroundWindow() }.0 as isize) == WEBVIEW_PROBE_TITLE;
+    let focused_after = focused_element_details();
+    let passed = baseline_visible
+        && progress.remaining.is_empty()
+        && progress.typed == expected
+        && actual.as_deref() == Some(WEBVIEW_PROBE_TEXT);
+    println!(
+        "{WEBVIEW_PROBE_TITLE}: text_target={}, window_pid={foreground_pid}, focused={focused_details:?}, typed={} chars, remaining={} chars, foreground_is_probe={foreground_is_probe}, focused_after={focused_after:?}, readback={:?} {}",
+        baseline_visible,
+        pieces_to_string(&progress.typed).chars().count(),
+        pieces_to_string(&progress.remaining).chars().count(),
+        actual,
+        if passed { "✓" } else { "✗" }
+    );
+    finish_webview(&mut child, WEBVIEW_PROBE_TITLE, &root);
+    stop_webview_server(server_stop, server_thread);
+    passed
+}
+
+fn start_webview_server() -> Option<(u16, Arc<AtomicBool>, JoinHandle<()>)> {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).ok()?;
+    listener.set_nonblocking(true).ok()?;
+    let port = listener.local_addr().ok()?.port();
+    let running = Arc::new(AtomicBool::new(true));
+    let thread_running = Arc::clone(&running);
+    let server = thread::spawn(move || {
+        let page = format!(
+            r#"<!doctype html><html lang="ru"><meta charset="utf-8"><title>{WEBVIEW_PROBE_TITLE}</title>
+<style>html,body{{height:100%;margin:0;font:18px "Segoe UI",sans-serif}}body{{padding:24px;box-sizing:border-box}}textarea{{width:100%;height:82%;box-sizing:border-box;font:20px "Segoe UI",sans-serif}}</style>
+<label>Тестовое поле диктовки Chromium</label><textarea id="probe" aria-label="Тестовое поле диктовки" autofocus spellcheck="false"></textarea>
+<script>window.addEventListener('load',()=>document.getElementById('probe').focus());</script></html>"#
+        );
+        while thread_running.load(Ordering::Relaxed) {
+            match listener.accept() {
+                Ok((mut stream, _)) => {
+                    let mut request = [0u8; 2048];
+                    let _ = stream.read(&mut request);
+                    let body = &page;
+                    let _ = write!(
+                        stream,
+                        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+                        body.len(),
+                        body
+                    );
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    sleep(Duration::from_millis(10));
+                }
+                Err(_) => break,
+            }
+        }
+    });
+    Some((port, running, server))
+}
+
+fn stop_webview_server(running: Arc<AtomicBool>, server: JoinHandle<()>) {
+    running.store(false, Ordering::Relaxed);
+    let _ = server.join();
+}
+
+fn edge_executable() -> Option<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+    for variable in ["PROGRAMFILES(X86)", "PROGRAMFILES", "LOCALAPPDATA"] {
+        if let Some(root) = std::env::var_os(variable) {
+            let root = std::path::PathBuf::from(root);
+            candidates.push(root.join("Microsoft/Edge/Application/msedge.exe"));
+            candidates.push(root.join("Microsoft/Edge/msedge.exe"));
+            let webview_root = root.join("Microsoft/EdgeWebView/Application");
+            if let Ok(entries) = std::fs::read_dir(webview_root) {
+                candidates.extend(entries.flatten().filter_map(|entry| {
+                    entry
+                        .file_type()
+                        .ok()
+                        .filter(|kind| kind.is_dir())
+                        .map(|_| entry.path().join("msedgewebview2.exe"))
+                }));
+            }
+        }
+    }
+    candidates.into_iter().find(|candidate| candidate.is_file())
+}
+
+fn finish_webview(child: &mut std::process::Child, title: &str, root: &std::path::Path) {
+    for _ in 0..20 {
+        if let Some(hwnd) = winutil::snapshot()
+            .into_iter()
+            .find(|hwnd| winutil::title_of(*hwnd) == title)
+        {
+            unsafe {
+                let _ = PostMessageW(HWND(hwnd as *mut _), WM_CLOSE, WPARAM(0), LPARAM(0));
+            }
+            sleep(Duration::from_millis(50));
+        } else {
+            break;
+        }
+    }
+    if child.try_wait().ok().flatten().is_none() {
+        // The browser was started with a unique profile above; kill only this probe process.
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    let _ = std::fs::remove_dir_all(root);
+}
+
+fn focused_value() -> Option<String> {
+    let initialized = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }.is_ok();
+    let value = (|| unsafe {
+        let automation: IUIAutomation =
+            CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER).ok()?;
+        let element = automation.GetFocusedElement().ok()?;
+        let pattern = element
+            .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
+            .ok()?;
+        pattern.CurrentValue().ok().map(|value| value.to_string())
+    })();
+    if initialized {
+        unsafe { CoUninitialize() };
+    }
+    value
+}
+
+fn focused_element_details() -> Option<(u32, String, String)> {
+    let initialized = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }.is_ok();
+    let pid = (|| unsafe {
+        let automation: IUIAutomation =
+            CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER).ok()?;
+        let element = automation.GetFocusedElement().ok()?;
+        Some((
+            element.CurrentProcessId().ok()? as u32,
+            format!("{:?}", element.CurrentControlType().ok()?),
+            element.CurrentName().ok()?.to_string(),
+        ))
+    })();
+    if initialized {
+        unsafe { CoUninitialize() };
+    }
+    pid
 }
 
 fn probe_focus_change() -> bool {
@@ -408,6 +691,11 @@ fn probe_clipboard() -> bool {
         }
     };
 
+    if !clipboard_contains_only_unicode_text() {
+        println!("clipboard: есть другие форматы — проверку пропущено без изменений");
+        return true;
+    }
+
     let sample = "Кириллица, ёжик и emoji 😀";
     let write_result = typing::set_clipboard(sample);
     let actual = read_clipboard_text();
@@ -427,6 +715,31 @@ fn probe_clipboard() -> bool {
         }
     );
     round_trip_ok && restore_ok
+}
+
+/// Writing text replaces every clipboard format. Only run the round-trip probe
+/// when the clipboard contains plain Unicode text and nothing else to preserve.
+fn clipboard_contains_only_unicode_text() -> bool {
+    let mut opened = false;
+    for _ in 0..10 {
+        if unsafe { OpenClipboard(HWND::default()) }.is_ok() {
+            opened = true;
+            break;
+        }
+        sleep(Duration::from_millis(20));
+    }
+    if !opened {
+        return false;
+    }
+
+    let mut formats = Vec::new();
+    let mut format = unsafe { EnumClipboardFormats(0) };
+    while format != 0 {
+        formats.push(format);
+        format = unsafe { EnumClipboardFormats(format) };
+    }
+    let _ = unsafe { CloseClipboard() };
+    formats.as_slice() == [CLIPBOARD_UNICODE_TEXT]
 }
 
 fn read_clipboard_text() -> Result<Option<String>, String> {
@@ -466,4 +779,3 @@ fn read_clipboard_text() -> Result<Option<String>, String> {
     };
     result
 }
-

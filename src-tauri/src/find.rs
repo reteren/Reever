@@ -45,6 +45,10 @@ const FUZZY_PER_QUERY: usize = 500;
 const FUZZY_MIN: f64 = 0.6 * 0.82;
 /// Ранг совпадения, найденного пословным запросом (все слова есть в имени).
 const ALL_WORDS_MATCHED: f64 = 0.85;
+/// Ниже этого ранга совпадения прячутся, если есть хорошие.
+const WEAK_SCORE: f64 = 0.45;
+/// Ранг совпадения по всем словам, кроме одного.
+const ALL_BUT_ONE_MATCHED: f64 = 0.75;
 /// Сколько всего можно потратить на запросы к Everything (локально — миллисекунды).
 const SEARCH_BUDGET_MS: u64 = 2_500;
 /// Недавние Windows перечитываются не чаще раза в минуту.
@@ -117,6 +121,26 @@ pub fn mixed_query(candidate: &str) -> Option<String> {
         terms.push(letters);
     }
     Some(terms.join(" "))
+}
+
+/// Запросы без одного из слов: для 2–5 слов, оставшиеся слова — не короче 3 букв вместе.
+pub fn queries_without_one_word(variant: &str) -> Vec<String> {
+    let words: Vec<&str> = variant.split_whitespace().collect();
+    if !(2..=5).contains(&words.len()) {
+        return Vec::new();
+    }
+    (0..words.len())
+        .map(|skip| {
+            words
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| *i != skip)
+                .map(|(_, w)| *w)
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .filter(|rest| rest.chars().filter(|c| c.is_alphanumeric()).count() >= 3)
+        .collect()
 }
 
 /// Основа русского слова для поиска подстрокой: длинное слово без двух последних букв
@@ -274,6 +298,137 @@ fn translit(word: &str) -> String {
         }
     }
     out
+}
+
+// ---------------------------------------------------------------- формат файла
+
+/// Слова, после которых идёт формат: «найди отчёт формат пдф».
+const FORMAT_WORDS: &[&str] = &["формат", "формате", "format", "расширение", "расширением", "extension"];
+
+/// Разделить цель на имя и сказанный формат: «отчет формат пдф» → («отчет», Some(«пдф»)).
+/// Формат без слов после — `Some("")` (ещё не договорили).
+pub fn split_format(candidate: &str) -> (String, Option<String>) {
+    let words: Vec<&str> = candidate.split_whitespace().collect();
+    match words
+        .iter()
+        .position(|word| FORMAT_WORDS.contains(&word.to_lowercase().as_str()))
+    {
+        Some(index) => (words[..index].join(" "), Some(words[index + 1..].join(" "))),
+        None => (candidate.trim().to_string(), None),
+    }
+}
+
+/// Цель заканчивается словом «формат» — договорят после паузы.
+pub fn ends_with_format_word(text: &str) -> bool {
+    text.split_whitespace()
+        .last()
+        .is_some_and(|word| FORMAT_WORDS.contains(&word.to_lowercase().as_str()))
+}
+
+/// Закрытый словарь форматов: расширение и как его говорят. После «формат» сказанное
+/// сравнивается только с ним — «пу» не станет случайным словом, а будет ближайшим форматом.
+const FORMATS: &[(&str, &[&str])] = &[
+    (
+        "exe",
+        &[
+            "экзе", "екзе", "ехе", "эхе", "икзе", "икзи", "игзи", "игзе", "егзе", "эгзе", "ексе",
+            "эксе", "иксе", "экзешник", "екзешник", "экзэ", "исполняемый",
+        ],
+    ),
+    ("py", &["пу", "пай", "пи", "питон", "пайтон", "пиуай", "пивай", "пэйтон", "python", "pie", "pi", "pu"]),
+    ("json", &["джсон", "джейсон", "жсон", "джисон", "джэйсон", "жейсон", "джесон", "jason", "jayson"]),
+    ("txt", &["тхт", "текст", "текстовый", "тиэкстэ", "тикст", "тэхатэ", "text"]),
+    ("md", &["мд", "эмди", "маркдаун", "марк", "эмдэ"]),
+    ("pdf", &["пдф", "пидиэф", "пэдээф", "пидиеф"]),
+    ("png", &["пнг", "пиэнджи", "пэнгэ", "пинг", "пэнг"]),
+    ("jpg", &["джипег", "жпег", "джпг", "жипег", "джипиджи", "jpeg"]),
+    ("gif", &["гиф", "джиф", "гифка"]),
+    ("webp", &["вебп", "вэбп", "вебпи"]),
+    ("webm", &["вебм", "вэбм", "вебэм"]),
+    ("svg", &["свг", "эсвэгэ", "эсвиджи"]),
+    ("ico", &["ико", "айко", "иконка"]),
+    ("psd", &["псд", "пиэсди", "фотошоп"]),
+    ("mp3", &["мп3", "эмпэ3", "эмпи3", "мптри"]),
+    ("mp4", &["мп4", "эмпэ4", "эмпи4"]),
+    ("wav", &["вав", "уэйв", "вейв", "вэйв", "уав"]),
+    ("flac", &["флак"]),
+    ("ogg", &["огг", "ог"]),
+    ("mkv", &["мкв", "эмкаве"]),
+    ("mov", &["мов", "мув"]),
+    ("avi", &["ави", "авишка"]),
+    ("docx", &["докс", "докикс", "ворд", "док", "word"]),
+    ("xlsx", &["эксель", "иксель", "кселс", "иксэлэсикс", "excel"]),
+    ("pptx", &["пауэрпоинт", "презентация", "пптикс"]),
+    ("csv", &["цсв", "сиэсви", "ксв"]),
+    ("zip", &["зип", "зипка", "архив"]),
+    ("rar", &["рар"]),
+    ("7z", &["7з", "7зип", "севензип"]),
+    ("rs", &["раст", "рс", "эрэс"]),
+    ("js", &["джиэс", "джаваскрипт", "жс", "яваскрипт"]),
+    ("ts", &["тиэс", "тайпскрипт", "тс"]),
+    ("html", &["хтмл", "эйчтиэмэль", "штмл"]),
+    ("css", &["цсс", "сиэсэс", "ксс"]),
+    ("cpp", &["сипипи", "цпп", "сиплюсплюс"]),
+    ("cs", &["сишарп", "цс", "сиэс"]),
+    ("lnk", &["линк", "лнк", "ярлык", "лнг"]),
+    ("ini", &["ини", "инишка"]),
+    ("log", &["лог"]),
+    ("bat", &["бат", "батник"]),
+    ("ps1", &["пиэс1", "пс1", "пауэршелл"]),
+    ("dll", &["длл", "дидиэл"]),
+    ("toml", &["томл", "томэл"]),
+    ("yaml", &["ямл", "ямэл", "yml"]),
+    ("xml", &["хмл", "иксэмэль", "иксмл"]),
+    ("sln", &["слн", "солюшн"]),
+    ("blend", &["бленд", "блендер"]),
+    ("iso", &["исо", "айсо"]),
+    ("msi", &["мси", "эмэсай"]),
+    ("apk", &["апк", "апэка"]),
+    ("torrent", &["торрент"]),
+    ("srt", &["срт", "субтитры"]),
+];
+
+/// Расширение по сказанному после «формат»: латиница как есть («exe», «json»), русское
+/// произношение из словаря, названия букв («пи эн джи» → png), иначе ближайший формат
+/// словаря по сходству. `None` — непохоже ни на один формат.
+pub fn resolve_extension(spoken: &[String]) -> Option<String> {
+    let mut best: Option<(&str, f64)> = None;
+    for raw in spoken {
+        let words = drop_spoken_punctuation(&raw.to_lowercase());
+        let squashed = squash(&words);
+        if squashed.is_empty() {
+            continue;
+        }
+        let latin = spelled_letters(&squashed)
+            .or_else(|| {
+                let letters = latin_letters_and(&words, english_translit);
+                (!letters.chars().any(is_cyrillic)).then(|| squash(&letters))
+            })
+            .unwrap_or_default();
+        // Точное совпадение с расширением или произношением — сразу.
+        for (ext, sayings) in FORMATS {
+            if squashed == *ext || latin == *ext || sayings.iter().any(|s| squash(s) == squashed) {
+                return Some((*ext).to_string());
+            }
+        }
+        // Латиница, которой нет в словаре («heic», «webm»), — это и есть расширение, сказанное
+        // буквально: нечёткое сравнение превратило бы «webm» в «webp».
+        if squashed.chars().all(|c| c.is_ascii_alphanumeric()) && (2..=6).contains(&squashed.len()) {
+            return Some(squashed);
+        }
+        for (ext, sayings) in FORMATS {
+            let mut score = jaro_winkler(&squashed, ext).max(jaro_winkler(&latin, ext));
+            for saying in sayings.iter() {
+                score = score.max(jaro_winkler(&squashed, &squash(saying)));
+            }
+            if best.map_or(true, |(_, s)| score > s) {
+                best = Some((ext, score));
+            }
+        }
+    }
+    // Словарь закрытый — порог мягче, чем для имён: ближайший формат лучше, чем ничего.
+    best.filter(|(_, score)| *score >= 0.75)
+        .map(|(ext, _)| ext.to_string())
 }
 
 // ---------------------------------------------------------------- ранжирование
@@ -481,12 +636,28 @@ pub fn search(
     usage: &Usage,
     recent: &HashMap<String, u64>,
 ) -> Result<Vec<FindItem>, String> {
+    search_with_extension(host, port, candidates, scope, None, usage, recent)
+}
+
+/// То же с фильтром по расширению («… формат exe»): только файлы `ext:<ext>`. Без имени —
+/// недавние файлы этого формата.
+pub fn search_with_extension(
+    host: &str,
+    port: u16,
+    candidates: &[String],
+    scope: FindScope,
+    extension: Option<&str>,
+    usage: &Usage,
+    recent: &HashMap<String, u64>,
+) -> Result<Vec<FindItem>, String> {
     let variants = query_variants(candidates);
-    let prefix = match scope {
-        FindScope::Any => "",
-        FindScope::Folder => "folder: ",
-        FindScope::File => "file: ",
+    let prefix = match (scope, extension) {
+        (_, Some(ext)) => format!("file: ext:{ext} "),
+        (FindScope::Any, None) => String::new(),
+        (FindScope::Folder, None) => "folder: ".into(),
+        (FindScope::File, None) => "file: ".into(),
     };
+    let prefix = prefix.as_str();
     let mut found: HashMap<String, FindItem> = HashMap::new();
     let mut last_error = None;
     let mut any_ok = false;
@@ -498,7 +669,8 @@ pub fn search(
                last_error: &mut Option<String>,
                query: &str,
                count: usize,
-               min_similarity: f64| {
+               min_similarity: f64,
+               floor: f64| {
         if std::time::Instant::now() >= deadline && *any_ok {
             return;
         }
@@ -515,10 +687,9 @@ pub fn search(
                         .iter()
                         .map(|v| name_score(&name, v))
                         .fold(0.0, f64::max);
-                    // Отрицательный порог — пословный запрос: все слова уже совпали.
-                    if min_similarity < 0.0 {
-                        similarity = similarity.max(ALL_WORDS_MATCHED);
-                    } else if similarity < min_similarity {
+                    // `floor` — запрос уже гарантирует совпадение слов (пословный, без одного слова).
+                    similarity = similarity.max(floor);
+                    if similarity < min_similarity {
                         continue;
                     }
                     let boost = usage_boost(&full, usage, recent);
@@ -543,21 +714,45 @@ pub fn search(
         }
     };
 
+    // Только формат, без имени: недавние файлы этого формата (Everything по умолчанию
+    // сортирует по дате изменения).
+    if variants.is_empty() && extension.is_some() {
+        run(&mut found, &mut any_ok, &mut last_error, prefix.trim_end(), PER_QUERY, 0.0, ALL_WORDS_MATCHED);
+    }
+
     // Everything отдаёт первые N совпадений без учёта похожести, поэтому на каждый вариант
     // три запроса: имя целиком (`wfn:`), начало имени (`startwith:`) и вхождение слов.
     for variant in variants.iter().take(4) {
         let squashed = squash(variant);
-        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}wfn:{squashed}"), PER_QUERY, 0.0);
-        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}startwith:{squashed}"), PER_QUERY, 0.0);
+        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}wfn:{squashed}"), PER_QUERY, 0.0, 0.0);
+        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}startwith:{squashed}"), PER_QUERY, 0.0, 0.0);
         // Слова — раздельные условия (AND), пунктуация и пробелы в имени не мешают.
-        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}{variant}"), PER_QUERY, 0.0);
+        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}{variant}"), PER_QUERY, 0.0, 0.0);
     }
 
     // Смешанные имена: пословный запрос «слово | латиница». Всё, что он нашёл, совпало по
     // всем словам — поэтому ранг не ниже 0,85.
     for candidate in candidates {
         if let Some(query) = mixed_query(candidate) {
-            run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}{query}"), PER_QUERY, -1.0);
+            run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}{query}"), PER_QUERY, 0.0, ALL_WORDS_MATCHED);
+        }
+    }
+
+    // Одно слово ASR услышал неверно («alt debug message» вместо «old debug message») — запрос
+    // без каждого из слов по очереди. Совпали все слова, кроме одного: ранг 0,75.
+    if found.values().filter(|item| item.score >= 0.7).count() < 3 {
+        for variant in variants.iter().take(4) {
+            for query in queries_without_one_word(variant) {
+                run(
+                    &mut found,
+                    &mut any_ok,
+                    &mut last_error,
+                    &format!("{prefix}{query}"),
+                    PER_QUERY,
+                    0.0,
+                    ALL_BUT_ONE_MATCHED,
+                );
+            }
         }
     }
 
@@ -580,6 +775,7 @@ pub fn search(
                 &format!("{prefix}startwith:{head}"),
                 FUZZY_PER_QUERY,
                 FUZZY_MIN,
+                0.0,
             );
         }
     }
@@ -588,6 +784,11 @@ pub fn search(
         return Err(last_error.unwrap_or_else(|| "нет запроса".into()));
     }
     let mut items: Vec<FindItem> = found.into_values().collect();
+    // Есть хорошие совпадения — случайные слабые («old_dirty_mattress» на «old debug») не нужны.
+    let best = items.iter().map(|item| item.score).fold(f64::MIN, f64::max);
+    if best >= 0.7 {
+        items.retain(|item| item.score >= WEAK_SCORE);
+    }
     // Частые — первым разделом, внутри каждого — по рангу; при равенстве короче путь.
     items.sort_by(|a, b| {
         b.frequent
@@ -683,6 +884,38 @@ mod tests {
         );
         assert_eq!(mixed_query("project gst"), None);
         assert_eq!(mixed_query("загрузки"), None);
+    }
+
+    #[test]
+    fn one_misheard_word_is_dropped_in_turn() {
+        assert_eq!(
+            queries_without_one_word("alt debug message"),
+            ["debug message", "alt message", "alt debug"]
+        );
+        assert!(queries_without_one_word("downloads").is_empty());
+    }
+
+    #[test]
+    fn format_after_the_word_format_is_split_and_resolved() {
+        assert_eq!(
+            split_format("отчет формат пдф"),
+            ("отчет".to_string(), Some("пдф".to_string()))
+        );
+        assert_eq!(split_format("project gst"), ("project gst".to_string(), None));
+        assert!(ends_with_format_word("reever формат"));
+        let ext = |spoken: &str| resolve_extension(&[spoken.to_string()]);
+        assert_eq!(ext("екзе").as_deref(), Some("exe"));
+        assert_eq!(ext("игзи").as_deref(), Some("exe"));
+        assert_eq!(ext("exe").as_deref(), Some("exe"));
+        assert_eq!(ext("пу").as_deref(), Some("py"));
+        assert_eq!(ext("джсон").as_deref(), Some("json"));
+        assert_eq!(ext("джейсон").as_deref(), Some("json"));
+        assert_eq!(ext("пи эн джи").as_deref(), Some("png"));
+        assert_eq!(ext("точка мд").as_deref(), Some("md"));
+        assert_eq!(ext("эмпэ 3").as_deref(), Some("mp3"));
+        assert_eq!(ext("webm").as_deref(), Some("webm"));
+        // английская модель иногда пишет формат словом
+        assert_eq!(ext("jason").as_deref(), Some("json"));
     }
 
     #[test]

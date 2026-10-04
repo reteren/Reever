@@ -15,7 +15,7 @@ use crate::asr::{Asr, AsrConfig};
 use crate::audio::{start_capture, Player};
 use crate::bilingual::LangMode;
 use crate::config::ReeverConfig;
-use crate::dictation::{pieces_to_string, Formatter};
+use crate::dictation::Formatter;
 use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
 use crate::engine::{DictationEndReason, Engine, EngineConfig, EngineEvent};
 use crate::events::{set_state, ui_log};
@@ -140,6 +140,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             choice_wait_ms: 15_000,
             dictation_pause_ms: s.dictation_pause_ms.clamp(300, 5_000),
             dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
+            dictation_live: s.dictation_live,
         },
         asr,
         vad,
@@ -323,7 +324,18 @@ struct Dictation {
     formatter: Formatter,
     /// Текст, для которого не нашлось поля ввода; лежит в буфере обмена целиком.
     clipboard: String,
+    /// Что было в буфере до диктовки (`Some` — диктовка в него писала): вернуть при отмене.
+    clipboard_before: Option<Option<String>>,
+    /// Сколько символов готовых кусков напечатано в поле (для стирания при отмене).
     typed_chars: usize,
+    /// Причина «нет поля ввода» уже записана в журнал в этой диктовке.
+    focus_logged: bool,
+    /// Окно, выбранное для ввода в начале диктовки.
+    target: Option<isize>,
+    /// Напечатанное по ходу речи для текущего куска.
+    live: typing::LiveField,
+    /// Печать по ходу речи не удалась (окно сменилось) — до конца диктовки только готовые куски.
+    live_broken: bool,
 }
 
 impl Worker<'_> {
@@ -452,6 +464,7 @@ impl Worker<'_> {
             }
             EngineEvent::DictationStart => self.dictation_start(),
             EngineEvent::Dictation(text) => self.dictation_text(&text),
+            EngineEvent::DictationPartial(text) => self.dictation_partial(&text),
             EngineEvent::DictationEnd(reason) => self.dictation_end(reason),
             EngineEvent::Log(m) => ui_log(self.app, m),
         }
@@ -462,7 +475,7 @@ impl Worker<'_> {
         let idle_s = self.cfg.settings.dictation_idle_ms.clamp(2_000, 600_000) / 1000;
         ui_log(
             self.app,
-            format!("✎ диктовка: говори — текст печатается в поле с курсором; конец — «стоп ввод», «ривер остановись» или {idle_s} с тишины"),
+            format!("✎ диктовка: говори — текст печатается в поле с курсором; конец — {idle_s} с тишины, «стоп ввод» или «ривер остановись»; «ривер отмена» — стереть"),
         );
         // Цепочка сигналов: «ривер» уже прозвучал (детектор/пауза) — теперь «принял команду».
         self.wake_sound();
@@ -470,36 +483,100 @@ impl Worker<'_> {
         self.dictation = Some(Dictation::default());
     }
 
-    /// Кусок диктовки: в поле с курсором активного окна, иначе (если включено) в буфер.
+    /// Окно, куда печатать: выбранное в начале диктовки, пока оно активно (поле в нём не
+    /// перепроверяется на каждом куске — фокус в WebView на миг уходит на соседний элемент,
+    /// и кусок улетал в буфер); иначе — поле ввода в новом активном окне.
+    fn dictation_target(&mut self) -> Option<isize> {
+        let session = self.dictation.get_or_insert_with(Dictation::default);
+        if let Some(target) = session.target {
+            if typing::is_foreground(target) {
+                return Some(target);
+            }
+        }
+        let target = typing::text_target();
+        if target.is_some() {
+            session.target = target;
+        } else if !session.focus_logged {
+            // Один раз за диктовку — что было в фокусе: по журналу видно, почему поле не нашлось.
+            session.focus_logged = true;
+            ui_log(self.app, format!("⚠ поле ввода не найдено: {}", typing::describe_focus()));
+        }
+        target
+    }
+
+    /// Привести напечатанный по ходу речи текст куска к `wanted` (typing::LiveField).
+    fn reconcile_live(&mut self, wanted: &str) -> bool {
+        let Some(target) = self.dictation_target() else {
+            return false;
+        };
+        let session = self.dictation.get_or_insert_with(Dictation::default);
+        session.live.reconcile(target, wanted)
+    }
+
+    /// Промежуточный текст куска — печать по ходу речи. Последнее слово ещё меняется, поэтому
+    /// печатается всё до него; окончательный текст выровняет `dictation_text`.
+    fn dictation_partial(&mut self, raw: &str) {
+        if !self.private() {
+            let _ = self.app.emit("reever://partial", raw.to_string());
+        }
+        let session = self.dictation.get_or_insert_with(Dictation::default);
+        if session.live_broken {
+            return;
+        }
+        let preview = typing::pieces_to_text(&session.formatter.clone().format(raw));
+        let stable = match preview.rfind(' ') {
+            Some(cut) => preview[..cut].to_string(),
+            None => return,
+        };
+        // Сократилось только из-за выкинутого последнего слова — не стираем зря.
+        if session.live.typed.starts_with(&stable) {
+            return;
+        }
+        if !self.reconcile_live(&stable) {
+            if let Some(session) = self.dictation.as_mut() {
+                session.live_broken = true;
+            }
+        }
+    }
+
+    /// Готовый кусок диктовки: в поле с курсором (выравнивая напечатанное по ходу речи),
+    /// иначе (если включено) — в буфер обмена.
     fn dictation_text(&mut self, raw: &str) {
         let _ = self.app.emit("reever://partial", String::new());
         let private = self.private();
         let clipboard_enabled = self.cfg.settings.dictation_clipboard;
         let session = self.dictation.get_or_insert_with(Dictation::default);
         let pieces = session.formatter.format(raw);
-        if pieces.is_empty() {
+        let wanted = typing::pieces_to_text(&pieces);
+        if wanted.is_empty() {
             return;
         }
-        let progress = match typing::text_target() {
-            Some(target) => typing::type_pieces(target, &pieces),
-            None => typing::TypeProgress {
-                typed: Vec::new(),
-                remaining: pieces.clone(),
-            },
-        };
-        let text = pieces_to_string(&pieces);
-        session.typed_chars += pieces_to_string(&progress.typed).chars().count();
-        let rest = &progress.remaining;
+        let typed_ok = self.reconcile_live(&wanted);
+        let session = self.dictation.get_or_insert_with(Dictation::default);
+        // Что из куска реально в поле — общий префикс с напечатанным; остальное — в буфер.
+        let in_field = session
+            .live
+            .typed
+            .chars()
+            .zip(wanted.chars())
+            .take_while(|(a, b)| a == b)
+            .count();
+        session.typed_chars += in_field;
+        session.live.typed.clear();
+        let rest: String = if typed_ok { String::new() } else { wanted.chars().skip(in_field).collect() };
         let mut note = "";
         if !rest.is_empty() {
             if clipboard_enabled {
-                let rest = pieces_to_string(rest);
+                if session.clipboard_before.is_none() {
+                    session.clipboard_before = Some(typing::get_clipboard_text());
+                }
+                let rest = rest.replace('\n', "\r\n");
                 let rest = if session.typed_chars == 0 && session.clipboard.is_empty() {
-                    rest.trim_start()
+                    rest.trim_start().to_string()
                 } else {
-                    rest.as_str()
+                    rest
                 };
-                session.clipboard.push_str(rest);
+                session.clipboard.push_str(&rest);
                 note = match typing::set_clipboard(&session.clipboard) {
                     Ok(()) => " → 📋 буфер",
                     Err(_) => " → ⚠ буфер занят, текст потерян",
@@ -511,18 +588,27 @@ impl Worker<'_> {
         if private {
             ui_log(self.app, format!("✎ продиктовано{note}"));
         } else {
-            ui_log(self.app, format!("✎ «{}»{note}", text.trim()));
+            ui_log(self.app, format!("✎ «{}»{note}", wanted.trim()));
         }
     }
 
     fn dictation_end(&mut self, reason: DictationEndReason) {
         let _ = self.app.emit("reever://partial", String::new());
+        // Напечатанное по ходу речи для незаконченного куска («ривер открой …») — стереть.
+        if reason == DictationEndReason::Command {
+            let _ = self.reconcile_live("");
+        }
+        if reason == DictationEndReason::Cancelled {
+            self.cancel_dictation();
+            return;
+        }
         let session = self.dictation.take().unwrap_or_default();
         let why = match reason {
             DictationEndReason::Silence => "тишина",
             DictationEndReason::Stopped => "стоп",
             DictationEndReason::Command => "новая команда",
             DictationEndReason::Error => "ошибка распознавания",
+            DictationEndReason::Cancelled => "отмена",
         };
         let mut summary = format!(
             "✓ диктовка завершена ({why}): напечатано символов — {}",
@@ -542,6 +628,31 @@ impl Worker<'_> {
         }
     }
 
+    /// «Ривер отмена» в диктовке: стереть напечатанное (пока окно то же) и вернуть буфер
+    /// обмена, каким он был до диктовки.
+    fn cancel_dictation(&mut self) {
+        let session = self.dictation.take().unwrap_or_default();
+        let total = session.typed_chars + session.live.typed.chars().count();
+        let mut erased = 0;
+        if total > 0 {
+            if let Some(target) = session.target.filter(|t| typing::is_foreground(*t)) {
+                erased = typing::press_backspace(target, total);
+            }
+        }
+        if let Some(before) = &session.clipboard_before {
+            let _ = typing::set_clipboard(before.as_deref().unwrap_or(""));
+        }
+        let mut summary = format!("↩ диктовка отменена: стёрто символов — {erased}");
+        if erased < total {
+            summary.push_str(&format!(" из {total} (окно сменилось — остаток не тронут)"));
+        }
+        if session.clipboard_before.is_some() {
+            summary.push_str("; буфер обмена восстановлен");
+        }
+        ui_log(self.app, summary);
+        self.sound("error.wav");
+    }
+
     fn command<T, V>(&mut self, engine: &mut Engine<T, V>, text: &str, alt: Option<&str>)
     where
         T: crate::speech::Transcriber,
@@ -551,7 +662,11 @@ impl Worker<'_> {
         if self.private() {
             ui_log(self.app, "📝 распознано (приватный режим)");
         } else {
-            ui_log(self.app, format!("📝 «{text}»"));
+            // Второй вариант (другой язык) — по журналу видно, что услышала вторая модель.
+            match alt.filter(|alt| alt.trim() != text.trim()) {
+                Some(alt) => ui_log(self.app, format!("📝 «{text}» · другой язык: «{alt}»")),
+                None => ui_log(self.app, format!("📝 «{text}»")),
+            }
             let _ = self.app.emit("reever://heard", text.to_string());
         }
         if textnorm::is_cancel(text, &self.cancel_words) {

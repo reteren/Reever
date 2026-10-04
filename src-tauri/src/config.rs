@@ -124,6 +124,9 @@ pub struct Settings {
     /// Нет поля с курсором — продиктованный текст идёт в буфер обмена.
     #[serde(default = "default_true")]
     pub dictation_clipboard: bool,
+    /// Печатать диктовку по ходу речи (по словам), а не после паузы.
+    #[serde(default = "default_true")]
+    pub dictation_live: bool,
     /// «ривер гемини …»: сразу отправлять вопрос (Enter), а не только вводить.
     #[serde(default = "default_true")]
     pub webchat_send: bool,
@@ -146,7 +149,7 @@ fn default_dictation_pause_ms() -> u32 {
     800
 }
 fn default_dictation_idle_ms() -> u32 {
-    10_000
+    5_000
 }
 
 fn default_endpoint_ms() -> u64 {
@@ -282,6 +285,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("dictation_clipboard", dictation_clipboard, bool);
+    restore!("dictation_live", dictation_live, bool);
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_spotter", wake_spotter, bool);
     restore!("wake_spotter_model", wake_spotter_model, String);
@@ -330,6 +334,7 @@ impl Default for Settings {
             dictation_pause_ms: default_dictation_pause_ms(),
             dictation_idle_ms: default_dictation_idle_ms(),
             dictation_clipboard: true,
+            dictation_live: true,
             webchat_send: true,
             wake_spotter: true,
             wake_spotter_model: default_wake_spotter_model(),

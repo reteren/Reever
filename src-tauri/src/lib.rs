@@ -194,6 +194,29 @@ pub fn run() {
                 }
             }
 
+            // --- проверка окна выбора без микрофона: REEVER_FIND_DEMO="запрос" ---
+            // Reever не слушает эфир, а через 2 с показывает окно выбора для запроса. Нужно
+            // для живой проверки окна рядом с основной установкой Reever.
+            if let Ok(query) = std::env::var("REEVER_FIND_DEMO") {
+                let handle = app.handle().clone();
+                let cfg = cfg.clone();
+                let shared = shared.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    let items = find::search(
+                        &cfg.settings.everything_host,
+                        cfg.settings.everything_port,
+                        &[query.clone()],
+                        find::FindScope::Any,
+                        &find::Usage::load(&shared.usage_path),
+                        &find::windows_recent(),
+                    )
+                    .unwrap_or_default();
+                    let _ = picker::show(&handle, &shared, &query, &items);
+                });
+                return Ok(());
+            }
+
             // --- аудио-воркер ---
             let handle = app.handle().clone();
             std::thread::Builder::new()

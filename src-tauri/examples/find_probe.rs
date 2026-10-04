@@ -11,11 +11,31 @@ fn main() {
         Some("file") => FindScope::File,
         _ => FindScope::Any,
     };
-    let candidates = args[1..].to_vec();
-    println!("варианты: {:?}", find::query_variants(&candidates));
+    // «… формат X» — как в dispatch: имя до слова «формат», формат из словаря.
+    let mut candidates = Vec::new();
+    let mut formats = Vec::new();
+    for arg in &args[1..] {
+        let (name, format) = find::split_format(arg);
+        if !name.is_empty() {
+            candidates.push(name);
+        }
+        if let Some(format) = format {
+            formats.push(format);
+        }
+    }
+    let extension = find::resolve_extension(&formats);
+    println!("варианты: {:?} · формат: {:?}", find::query_variants(&candidates), extension);
     let recent = find::windows_recent();
     println!("недавних Windows: {}", recent.len());
-    match find::search("127.0.0.1", 8011, &candidates, scope, &Usage::default(), &recent) {
+    match find::search_with_extension(
+        "127.0.0.1",
+        8011,
+        &candidates,
+        scope,
+        extension.as_deref(),
+        &Usage::default(),
+        &recent,
+    ) {
         Ok(items) => {
             for (i, item) in items.iter().take(12).enumerate() {
                 println!(

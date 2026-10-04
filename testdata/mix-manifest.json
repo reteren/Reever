@@ -1,0 +1,226 @@
+[
+  {
+    "id": "mixed_hardness",
+    "kind": "mixed",
+    "expected_word": "hardness",
+    "phrase": "Настрой hardness поверхности на высокий уровень",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-01-mixed_hardness.wav"
+  },
+  {
+    "id": "mixed_roughness",
+    "kind": "mixed",
+    "expected_word": "roughness",
+    "phrase": "Добавь roughness к материалу",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-02-mixed_roughness.wav"
+  },
+  {
+    "id": "mixed_opacity",
+    "kind": "mixed",
+    "expected_word": "opacity",
+    "phrase": "Уменьши opacity этого слоя",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-03-mixed_opacity.wav"
+  },
+  {
+    "id": "mixed_layer",
+    "kind": "mixed",
+    "expected_word": "layer",
+    "phrase": "Выбери layer с маской",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-04-mixed_layer.wav"
+  },
+  {
+    "id": "mixed_brush",
+    "kind": "mixed",
+    "expected_word": "brush",
+    "phrase": "Возьми brush помягче",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-05-mixed_brush.wav"
+  },
+  {
+    "id": "mixed_render",
+    "kind": "mixed",
+    "expected_word": "render",
+    "phrase": "Запусти render этой сцены",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-06-mixed_render.wav"
+  },
+  {
+    "id": "mixed_commit",
+    "kind": "mixed",
+    "expected_word": "commit",
+    "phrase": "Сделай commit после проверки",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-07-mixed_commit.wav"
+  },
+  {
+    "id": "mixed_merge",
+    "kind": "mixed",
+    "expected_word": "merge",
+    "phrase": "Перед merge проверь изменения",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-08-mixed_merge.wav"
+  },
+  {
+    "id": "mixed_deploy",
+    "kind": "mixed",
+    "expected_word": "deploy",
+    "phrase": "Можно deploy на тестовый сервер",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-09-mixed_deploy.wav"
+  },
+  {
+    "id": "mixed_branch",
+    "kind": "mixed",
+    "expected_word": "branch",
+    "phrase": "Создай новую branch для задачи",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-10-mixed_branch.wav"
+  },
+  {
+    "id": "mixed_shader",
+    "kind": "mixed",
+    "expected_word": "shader",
+    "phrase": "Проверь shader для этой модели",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-11-mixed_shader.wav"
+  },
+  {
+    "id": "mixed_texture",
+    "kind": "mixed",
+    "expected_word": "texture",
+    "phrase": "Замени texture на более чёткую",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-12-mixed_texture.wav"
+  },
+  {
+    "id": "mixed_material",
+    "kind": "mixed",
+    "expected_word": "material",
+    "phrase": "Выбери material для волос",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-13-mixed_material.wav"
+  },
+  {
+    "id": "mixed_mask",
+    "kind": "mixed",
+    "expected_word": "mask",
+    "phrase": "Добавь mask на фотографию",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-14-mixed_mask.wav"
+  },
+  {
+    "id": "mixed_canvas",
+    "kind": "mixed",
+    "expected_word": "canvas",
+    "phrase": "Увеличь размер canvas",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-15-mixed_canvas.wav"
+  },
+  {
+    "id": "mixed_preview",
+    "kind": "mixed",
+    "expected_word": "preview",
+    "phrase": "Покажи preview перед отправкой",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-16-mixed_preview.wav"
+  },
+  {
+    "id": "mixed_package",
+    "kind": "mixed",
+    "expected_word": "package",
+    "phrase": "Собери package для установки",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-17-mixed_package.wav"
+  },
+  {
+    "id": "mixed_pipeline",
+    "kind": "mixed",
+    "expected_word": "pipeline",
+    "phrase": "Проверь pipeline и сохрани проект",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-18-mixed_pipeline.wav"
+  },
+  {
+    "id": "ru_pizdecz",
+    "kind": "russian_slang",
+    "expected_word": "пиздец",
+    "phrase": "Это просто пиздец какой-то",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-19-ru_pizdecz.wav"
+  },
+  {
+    "id": "ru_kapets",
+    "kind": "russian_slang",
+    "expected_word": "капец",
+    "phrase": "Ну это полный капец",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-20-ru_kapets.wav"
+  },
+  {
+    "id": "ru_cringe",
+    "kind": "russian_slang",
+    "expected_word": "кринж",
+    "phrase": "Вчера был лютый кринж",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-21-ru_cringe.wav"
+  },
+  {
+    "id": "ru_zashkvar",
+    "kind": "russian_slang",
+    "expected_word": "зашквар",
+    "phrase": "Такой зашквар нельзя выкладывать",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-22-ru_zashkvar.wav"
+  },
+  {
+    "id": "ru_imba",
+    "kind": "russian_slang",
+    "expected_word": "имба",
+    "phrase": "Да ладно, это настоящая имба",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-23-ru_imba.wav"
+  },
+  {
+    "id": "ru_chill",
+    "kind": "russian_slang",
+    "expected_word": "чилить",
+    "phrase": "После работы хочется чилить",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-24-ru_chill.wav"
+  },
+  {
+    "id": "ru_ugar",
+    "kind": "russian_slang",
+    "expected_word": "угар",
+    "phrase": "Вчера весь вечер был угар",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-25-ru_ugar.wav"
+  },
+  {
+    "id": "ru_blin",
+    "kind": "russian_slang",
+    "expected_word": "блин",
+    "phrase": "Блин, опять всё сломалось",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-26-ru_blin.wav"
+  },
+  {
+    "id": "ru_zhest",
+    "kind": "russian_slang",
+    "expected_word": "жесть",
+    "phrase": "Вот это жесть конечно",
+    "voice": "Microsoft Irina Desktop",
+    "file": "mix-27-ru_zhest.wav"
+  },
+  {
+    "id": "ru_vibe",
+    "kind": "russian_slang",
+    "expected_word": "вайб",
+    "phrase": "У этого места особенный вайб",
+    "voice": "Alexandr (Russian)",
+    "file": "mix-28-ru_vibe.wav"
+  }
+]

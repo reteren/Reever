@@ -36,6 +36,8 @@ pub struct EngineConfig {
     pub dictation_pause_ms: u32,
     /// Диктовка заканчивается, если столько времени не было речи.
     pub dictation_idle_ms: u32,
+    /// Печатать диктовку по ходу речи (промежуточный текст), а не после паузы.
+    pub dictation_live: bool,
 }
 
 impl Default for EngineConfig {
@@ -53,7 +55,8 @@ impl Default for EngineConfig {
             confirm_wait_ms: 8_000,
             choice_wait_ms: 15_000,
             dictation_pause_ms: 800,
-            dictation_idle_ms: 10_000,
+            dictation_idle_ms: 5_000,
+            dictation_live: false,
         }
     }
 }
@@ -82,6 +85,8 @@ pub enum EngineEvent {
     DictationStart,
     /// Очередной продиктованный кусок «как сказано» (без нормализации).
     Dictation(String),
+    /// Промежуточный текст текущего куска «как сказано» — для печати по ходу речи.
+    DictationPartial(String),
     /// Диктовка закончилась.
     DictationEnd(DictationEndReason),
     /// Диагностика для лога (без распознанного текста — приватность решает glue).
@@ -94,6 +99,8 @@ pub enum DictationEndReason {
     Silence,
     /// Сказали фразу остановки («стоп ввод», «ривер остановись»).
     Stopped,
+    /// «Ривер отмена» / «ривер стоп» — диктовка отменена, продиктованное стирается.
+    Cancelled,
     /// Сказали новую команду с wake-словом — она выполняется следом.
     Command,
     /// Ошибка распознавания.
@@ -103,6 +110,8 @@ pub enum DictationEndReason {
 /// Pre-roll и пределы длины фразы: короткие команды и длинная диктовка.
 const COMMAND_LIMITS: (u32, u32, u32) = (300, 0, 15_000);
 const DICTATION_LIMITS: (u32, u32, u32) = (500, 12_000, 24_000);
+/// Как часто пересчитывать текст при живой диктовке.
+const LIVE_PARTIAL_MS: u32 = 400;
 /// Длиннее этого промежуточный текст диктовки не пересчитывается: дорого, а кусок
 /// всё равно скоро закончится на мягком пределе.
 const DICTATION_PARTIAL_MAX_MS: u32 = 10_000;
@@ -483,8 +492,17 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
     }
 
+    /// Интервал промежуточного текста: у живой диктовки он есть всегда.
+    fn partial_interval(&self) -> usize {
+        if matches!(self.mode, Mode::Dictating(_)) && self.cfg.dictation_live {
+            samples(LIVE_PARTIAL_MS)
+        } else {
+            samples(self.cfg.partial_interval_ms)
+        }
+    }
+
     fn partial_samples_until_next(&self) -> Option<usize> {
-        let interval = samples(self.cfg.partial_interval_ms);
+        let interval = self.partial_interval();
         match &self.mode {
             Mode::Listening(state) if state.speech_started && interval > 0 => {
                 Some(interval.saturating_sub(state.partial_elapsed))
@@ -530,7 +548,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     }
 
     fn advance_partial(&mut self, count: usize, out: &mut Vec<EngineEvent>) {
-        let interval = samples(self.cfg.partial_interval_ms);
+        let interval = self.partial_interval();
         if interval == 0 {
             return;
         }
@@ -554,6 +572,24 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         if matches!(self.mode, Mode::Dictating(_))
             && self.segmenter.current_audio().len() > samples(DICTATION_PARTIAL_MAX_MS)
         {
+            return;
+        }
+
+        // Живая диктовка: промежуточный текст «как сказано» — его печатают по ходу речи.
+        if matches!(self.mode, Mode::Dictating(_)) && self.cfg.dictation_live {
+            let result = {
+                let audio = self.segmenter.current_audio();
+                self.asr.transcribe_verbatim(audio)
+            };
+            match result {
+                Ok(raw) if !raw.trim().is_empty() => out.push(EngineEvent::DictationPartial(raw)),
+                Ok(_) => {}
+                Err(error) => {
+                    out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                    out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
+                    self.return_to_idle(true, out);
+                }
+            }
             return;
         }
 
@@ -948,18 +984,24 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         }
 
-        let cancel = strip_initial_wake(&norm, &self.cfg.wake_words).is_some_and(|rest| {
-            let cancel_words = self
-                .grammar
-                .as_ref()
-                .map(|grammar| grammar.cancel_words.clone())
-                .unwrap_or_else(|| Grammar::defaults().cancel_words);
+        let cancel_words = self
+            .grammar
+            .as_ref()
+            .map(|grammar| grammar.cancel_words.clone())
+            .unwrap_or_else(|| Grammar::defaults().cancel_words);
+        // «ривер отмена» / «ривер стоп» — в начале куска или в конце («…и всё ривер отмена»):
+        // диктовка отменяется, продиктованное стирается. Не команда «стоп»: нечёткий поиск
+        // однажды запустил на неё Spotify.
+        let cancel_at_start = strip_initial_wake(&norm, &self.cfg.wake_words).is_some_and(|rest| {
             !rest.trim().is_empty() && crate::textnorm::is_cancel(&rest, &cancel_words)
         });
-        if cancel {
-            // «ривер стоп» / «ривер хватит» посреди диктовки — просто конец диктовки, а не
-            // команда «стоп» (нечёткий поиск однажды запустил на неё Spotify).
-            out.push(EngineEvent::DictationEnd(DictationEndReason::Stopped));
+        let words: Vec<&str> = norm.split_whitespace().collect();
+        let cancel_at_end = words.len() >= 2
+            && crate::textnorm::is_cancel(words[words.len() - 1], &cancel_words)
+            && strip_initial_wake(words[words.len() - 2], &self.cfg.wake_words)
+                .is_some_and(|rest| rest.trim().is_empty());
+        if cancel_at_start || cancel_at_end {
+            out.push(EngineEvent::DictationEnd(DictationEndReason::Cancelled));
             self.return_to_idle(true, out);
             return;
         }
@@ -1031,8 +1073,27 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         };
         match choose_language(&ru_raw, &en_raw, lid) {
             Lang::En => en_raw,
-            Lang::Ru => ru_raw,
+            Lang::Ru => self.mix_english_words(audio, ru_raw),
         }
+    }
+
+    /// Русский кусок с английскими словами внутри («настрой харднес» → «настрой hardness»):
+    /// пословная подмена по таймингу слов обеих моделей (`dictation::mix_english_words` —
+    /// только несловарное русское слово на словарное английское и похожее по звучанию).
+    fn mix_english_words(&mut self, audio: &[i16], ru_raw: String) -> String {
+        let Ok(ru_timed) = self.asr.transcribe_timed(audio) else {
+            return ru_raw;
+        };
+        let Some(second) = self.second.as_deref_mut() else {
+            return ru_raw;
+        };
+        let Ok(en_timed) = second.transcribe_timed(audio) else {
+            return ru_raw;
+        };
+        let is_word = |lang: &str, word: &str| {
+            crate::spellcheck::misspelled_ratio(lang, word).map(|(ratio, _)| ratio < 0.5)
+        };
+        crate::dictation::mix_english_words(&ru_raw, &ru_timed.words, &en_timed.words, &is_word)
     }
 
     /// Русская модель на чисто английском сегменте («ривер поиск ютуб» + пауза +
@@ -2049,7 +2110,7 @@ mod tests {
             engine.push_audio(&phrase(123, 700));
             let events = engine.push_audio(&phrase(123, 200));
             assert!(
-                contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Stopped)),
+                contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Cancelled)),
                 "{word}: {events:?}"
             );
             assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
@@ -2083,5 +2144,32 @@ mod tests {
                 alt: None
             }
         ));
+    }
+
+    #[test]
+    fn river_cancel_at_the_end_of_a_chunk_cancels_the_dictation() {
+        let mut engine = dictation_engine(&["ривер напиши", "и вот это всё ривер отмена"]);
+        engine.push_audio(&phrase(123, 700));
+        let events = engine.push_audio(&phrase(123, 200));
+        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Cancelled)), "{events:?}");
+        assert!(dictated(&events).is_empty());
+    }
+
+    #[test]
+    fn live_dictation_emits_verbatim_partials() {
+        let mut cfg = test_config();
+        cfg.dictation_pause_ms = 120;
+        cfg.dictation_live = true;
+        let (mut engine, _, _, _) = engine(cfg, &["ривер напиши", "привет", "привет мир", "привет мир"]);
+        engine.set_grammar(crate::grammar::Grammar::defaults());
+        engine.push_audio(&phrase(123, 700));
+        // длинная фраза: 900 мс речи — успевают промежуточные распознавания
+        let mut pcm = vec![123; samples(900)];
+        pcm.resize(samples(900 + 300), 0);
+        let events = engine.push_audio(&pcm);
+        assert!(
+            events.iter().any(|e| matches!(e, EngineEvent::DictationPartial(t) if t.starts_with("привет"))),
+            "{events:?}"
+        );
     }
 }

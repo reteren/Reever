@@ -1,6 +1,6 @@
 {
   "name": "reever",
-  "version": "0.2.7",
+  "version": "0.2.9",
   "private": true,
   "scripts": {
     "tauri": "tauri",
