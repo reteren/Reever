@@ -11,6 +11,7 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 
 use crate::actions::SharedState;
+use crate::anglicism::Anglicisms;
 use crate::asr::{Asr, AsrConfig};
 use crate::audio::{start_capture, Player};
 use crate::bilingual::LangMode;
@@ -147,6 +148,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     );
     enable_second_language(app, cfg, &mut engine);
     enable_wake_spotter(app, cfg, &mut engine);
+    enable_anglicisms(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
 
     let (tx, rx) = sync_channel::<Vec<i16>>(AUDIO_QUEUE);
@@ -214,6 +216,23 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         }
     }
     Ok(())
+}
+
+/// Словарь англицизмов для диктовки (anglicism.rs). Нет файла — не фатально: диктовка
+/// пишет английские слова так, как их услышала русская модель.
+fn enable_anglicisms<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
+where
+    T: crate::speech::Transcriber,
+    V: crate::speech::VoiceDetector,
+{
+    let s = &cfg.settings;
+    if !s.dictation_english {
+        return;
+    }
+    match Anglicisms::load(&cfg.anglicisms_path, &s.dictation_terms) {
+        Ok(anglicisms) => engine.set_anglicisms(Some(anglicisms)),
+        Err(error) => ui_log(app, format!("⚠ словарь англицизмов не загружен: {error:#}")),
+    }
 }
 
 /// Фоновый детектор wake-слова на маленькой потоковой модели (docs/voice-pipeline.md).

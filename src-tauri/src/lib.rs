@@ -3,6 +3,7 @@
 // тестам и инструментам в examples/ без запуска Tauri.
 
 pub mod actions;
+pub mod anglicism;
 pub mod apps;
 pub mod asr;
 pub mod audio;

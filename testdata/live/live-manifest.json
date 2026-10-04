@@ -1,0 +1,13 @@
+[
+  {
+    "id": "m2-hardness-1-live-1791134743723",
+    "kind": "mixed",
+    "phrase": "Для камня выставь hardness на сорок процентов",
+    "expected": "Для камня выставь hardness на сорок процентов",
+    "expected_terms": [
+      "hardness"
+    ],
+    "voice": "live microphone",
+    "file": "m2-hardness-1-live-1791134743723.wav"
+  }
+]

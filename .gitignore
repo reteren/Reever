@@ -10,3 +10,4 @@
 
 # Синтетический корпус (scripts/gen-corpus.ps1); manifest.json хранится в git.
 /testdata/corpus/
+/testdata/live/*.wav

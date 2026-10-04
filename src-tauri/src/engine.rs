@@ -1,6 +1,7 @@
 //! Автомат прослушивания без Tauri: wake → команда / подтверждение / калибровка.
 //! Владелец: воркер `engine`.
 
+use crate::anglicism::Anglicisms;
 use crate::bilingual::{self, LangMode, Resolved, MIN_LID_DURATION_MS};
 use crate::commands::is_bare_verb;
 use crate::dictation::{
@@ -200,6 +201,8 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     spotter: Option<Box<dyn WakeSpotter + Send>>,
     /// Сколько сэмплов прошло с последнего срабатывания детектора wake-слова.
     spot_age: Option<usize>,
+    /// Словарь англицизмов: «харднес» в русской диктовке → hardness.
+    anglicisms: Option<Anglicisms>,
     /// Сэмплов с начала речи текущей фразы простоя (`None` — речи сейчас нет).
     idle_speech_age: Option<usize>,
 }
@@ -240,6 +243,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             spotter: None,
             spot_age: None,
             idle_speech_age: None,
+            anglicisms: None,
         }
     }
 
@@ -253,6 +257,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.second = second;
         self.lid = lid;
         self.lang_mode = mode;
+    }
+
+    /// Словарь англицизмов для русской диктовки; `None` — текст как услышала модель.
+    pub fn set_anglicisms(&mut self, anglicisms: Option<Anglicisms>) {
+        self.anglicisms = anglicisms;
     }
 
     /// Фоновый детектор wake-слова (маленькая потоковая модель); `None` — только GigaAM.
@@ -582,7 +591,14 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 self.asr.transcribe_verbatim(audio)
             };
             match result {
-                Ok(raw) if !raw.trim().is_empty() => out.push(EngineEvent::DictationPartial(raw)),
+                Ok(raw) if !raw.trim().is_empty() => {
+                    let text = if self.dictation_lang == Some(Lang::En) {
+                        raw
+                    } else {
+                        self.english_words(raw)
+                    };
+                    out.push(EngineEvent::DictationPartial(text));
+                }
                 Ok(_) => {}
                 Err(error) => {
                     out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
@@ -1054,10 +1070,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             }
         };
         if mode == LangMode::Ru {
-            return ru_raw;
+            return self.english_words(ru_raw);
         }
         let Some(second) = self.second.as_deref_mut() else {
-            return ru_raw;
+            return self.english_words(ru_raw);
         };
         // Английскую модель слушаем всегда: определитель языка на английском с русским
         // акцентом уверенно говорит «ru», а русская модель слышит транслит или пустоту.
@@ -1073,8 +1089,24 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         };
         match choose_language(&ru_raw, &en_raw, lid) {
             Lang::En => en_raw,
-            Lang::Ru => self.mix_english_words(audio, ru_raw),
+            Lang::Ru => {
+                let mixed = self.mix_english_words(audio, ru_raw);
+                self.english_words(mixed)
+            }
         }
+    }
+
+    /// Транслит английских слов в русском куске — латиницей по словарю англицизмов
+    /// (второй модели не нужно: на русской фразе она термин почти не слышит).
+    fn english_words(&self, text: String) -> String {
+        let Some(anglicisms) = &self.anglicisms else {
+            return text;
+        };
+        let is_russian = |word: &str| {
+            crate::spellcheck::misspelled_ratio("ru-RU", word)
+                .map(|(ratio, count)| count == 1 && ratio == 0.0)
+        };
+        anglicisms.restore(&text, &is_russian)
     }
 
     /// Русский кусок с английскими словами внутри («настрой харднес» → «настрой hardness»):

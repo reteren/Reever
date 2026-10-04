@@ -1,0 +1,58 @@
+{
+  "png": {
+    "display": "PNG",
+    "variants": ["пнг", "пиэнджи", "пиэндже", "пэнджи", "пиэнги"]
+  },
+  "jpeg": {
+    "display": "JPEG",
+    "variants": ["джейпег", "джипег", "жпег", "джейпэг"]
+  },
+  "jpg": {
+    "display": "JPG",
+    "variants": ["джейпиджи", "джипиг", "жпег"]
+  },
+  "gpu": {
+    "display": "GPU",
+    "variants": ["джипию", "джи пи ю", "гпу"]
+  },
+  "usb": {
+    "display": "USB",
+    "variants": ["юэсби", "юсби", "усб"]
+  },
+  "cpu": {
+    "display": "CPU",
+    "variants": ["сиипиу", "сипиу", "цпу"]
+  },
+  "api": {
+    "display": "API",
+    "variants": ["эйпиай", "апи"]
+  },
+  "ui": {
+    "display": "UI",
+    "variants": ["юай", "юи"]
+  },
+  "ux": {
+    "display": "UX",
+    "variants": ["юэкс", "юикс"]
+  },
+  "ide": {
+    "display": "IDE",
+    "variants": ["айди", "айди-и", "айдиэ"]
+  },
+  "cli": {
+    "display": "CLI",
+    "variants": ["сиэлэй", "сиэлай"]
+  },
+  "url": {
+    "display": "URL",
+    "variants": ["юарэл", "юэрэл"]
+  },
+  "ssd": {
+    "display": "SSD",
+    "variants": ["эсэсди", "эсэсд"]
+  },
+  "ram": {
+    "display": "RAM",
+    "variants": ["рэм", "рам"]
+  }
+}

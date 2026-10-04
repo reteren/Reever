@@ -127,6 +127,14 @@ pub struct Settings {
     /// Печатать диктовку по ходу речи (по словам), а не после паузы.
     #[serde(default = "default_true")]
     pub dictation_live: bool,
+    /// Английские слова в русской диктовке латиницей по словарю англицизмов
+    /// («харднес» → hardness, см. anglicism.rs).
+    #[serde(default = "default_true")]
+    pub dictation_english: bool,
+    /// Свои английские слова для диктовки: `opacity` — предпочитать это слово,
+    /// `апасити=opacity` — всегда менять именно так.
+    #[serde(default)]
+    pub dictation_terms: Vec<String>,
     /// «ривер гемини …»: сразу отправлять вопрос (Enter), а не только вводить.
     #[serde(default = "default_true")]
     pub webchat_send: bool,
@@ -286,6 +294,8 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
+    restore!("dictation_english", dictation_english, bool);
+    restore!("dictation_terms", dictation_terms, Vec<String>);
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_spotter", wake_spotter, bool);
     restore!("wake_spotter_model", wake_spotter_model, String);
@@ -335,6 +345,8 @@ impl Default for Settings {
             dictation_idle_ms: default_dictation_idle_ms(),
             dictation_clipboard: true,
             dictation_live: true,
+            dictation_english: true,
+            dictation_terms: Vec::new(),
             webchat_send: true,
             wake_spotter: true,
             wake_spotter_model: default_wake_spotter_model(),
@@ -351,6 +363,8 @@ pub struct ReeverConfig {
     /// `None` означает режим LID только по текстовым эвристикам.
     pub lid_model_dir: Option<PathBuf>,
     pub vad_model_path: PathBuf,
+    /// Словарь англицизмов для диктовки (resources/anglicisms.tsv).
+    pub anglicisms_path: PathBuf,
     pub sounds_dir: PathBuf,
     pub settings_path: PathBuf,
     pub aliases: Aliases,
@@ -381,6 +395,7 @@ impl ReeverConfig {
             second_model_dir: resource(app, &format!("model/{}", settings.second_asr_model)),
             lid_model_dir,
             vad_model_path: resource(app, "model/silero_vad.onnx"),
+            anglicisms_path: resource(app, "anglicisms.tsv"),
             sounds_dir: user_config_dir(app, "sounds"),
             settings_path,
             aliases,

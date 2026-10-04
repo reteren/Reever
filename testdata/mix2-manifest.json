@@ -1,0 +1,1242 @@
+[
+  {
+    "id": "m2-hardness-1",
+    "kind": "mixed",
+    "phrase": "Для камня выставь hardness на сорок процентов",
+    "expected": "Для камня выставь hardness на сорок процентов",
+    "expected_terms": [
+      "hardness"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-001-m2-hardness-1.wav"
+  },
+  {
+    "id": "m2-hardness-2",
+    "kind": "mixed",
+    "phrase": "hardness у этой кисти слишком высокая",
+    "expected": "hardness у этой кисти слишком высокая",
+    "expected_terms": [
+      "hardness"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-002-m2-hardness-2.wav"
+  },
+  {
+    "id": "m2-opacity-1",
+    "kind": "mixed",
+    "phrase": "Opacity слоя поставь на семьдесят процентов",
+    "expected": "Opacity слоя поставь на семьдесят процентов",
+    "expected_terms": [
+      "opacity"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-003-m2-opacity-1.wav"
+  },
+  {
+    "id": "m2-opacity-2",
+    "kind": "mixed",
+    "phrase": "Снизь opacity фона до двадцати",
+    "expected": "Снизь opacity фона до двадцати",
+    "expected_terms": [
+      "opacity"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-004-m2-opacity-2.wav"
+  },
+  {
+    "id": "m2-roughness-1",
+    "kind": "mixed",
+    "phrase": "Добавь roughness поверхности металла",
+    "expected": "Добавь roughness поверхности металла",
+    "expected_terms": [
+      "roughness"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-005-m2-roughness-1.wav"
+  },
+  {
+    "id": "m2-roughness-2",
+    "kind": "mixed",
+    "phrase": "Для пластика roughness убавь до нуля",
+    "expected": "Для пластика roughness убавь до нуля",
+    "expected_terms": [
+      "roughness"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-006-m2-roughness-2.wav"
+  },
+  {
+    "id": "m2-escape-1",
+    "kind": "mixed",
+    "phrase": "Нажми escape, чтобы закрыть окно",
+    "expected": "Нажми escape, чтобы закрыть окно",
+    "expected_terms": [
+      "escape"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-007-m2-escape-1.wav"
+  },
+  {
+    "id": "m2-escape-2",
+    "kind": "mixed",
+    "phrase": "escape нажми после отмены",
+    "expected": "escape нажми после отмены",
+    "expected_terms": [
+      "escape"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-008-m2-escape-2.wav"
+  },
+  {
+    "id": "m2-eraser-1",
+    "kind": "mixed",
+    "phrase": "Выбери eraser для удаления лишнего",
+    "expected": "Выбери eraser для удаления лишнего",
+    "expected_terms": [
+      "eraser"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-009-m2-eraser-1.wav"
+  },
+  {
+    "id": "m2-eraser-2",
+    "kind": "mixed",
+    "phrase": "eraser на панели находится слева",
+    "expected": "eraser на панели находится слева",
+    "expected_terms": [
+      "eraser"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-010-m2-eraser-2.wav"
+  },
+  {
+    "id": "m2-tool-1",
+    "kind": "mixed",
+    "phrase": "tool для обрезки находится справа",
+    "expected": "tool для обрезки находится справа",
+    "expected_terms": [
+      "tool"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-011-m2-tool-1.wav"
+  },
+  {
+    "id": "m2-tool-2",
+    "kind": "mixed",
+    "phrase": "Сначала выбери нужный tool",
+    "expected": "Сначала выбери нужный tool",
+    "expected_terms": [
+      "tool"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-012-m2-tool-2.wav"
+  },
+  {
+    "id": "m2-png-1",
+    "kind": "mixed",
+    "phrase": "Сохрани иллюстрацию как PNG",
+    "expected": "Сохрани иллюстрацию как PNG",
+    "expected_terms": [
+      "PNG"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-013-m2-png-1.wav"
+  },
+  {
+    "id": "m2-png-2",
+    "kind": "mixed",
+    "phrase": "PNG для этой картинки будет достаточно",
+    "expected": "PNG для этой картинки будет достаточно",
+    "expected_terms": [
+      "PNG"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-014-m2-png-2.wav"
+  },
+  {
+    "id": "m2-jpeg-1",
+    "kind": "mixed",
+    "phrase": "Экспортируй снимок в JPEG",
+    "expected": "Экспортируй снимок в JPEG",
+    "expected_terms": [
+      "JPEG"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-015-m2-jpeg-1.wav"
+  },
+  {
+    "id": "m2-jpeg-2",
+    "kind": "mixed",
+    "phrase": "JPEG подойдёт для отправки по почте",
+    "expected": "JPEG подойдёт для отправки по почте",
+    "expected_terms": [
+      "JPEG"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-016-m2-jpeg-2.wav"
+  },
+  {
+    "id": "m2-layer-1",
+    "kind": "mixed",
+    "phrase": "Поставь layer над фоном",
+    "expected": "Поставь layer над фоном",
+    "expected_terms": [
+      "layer"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-017-m2-layer-1.wav"
+  },
+  {
+    "id": "m2-layer-2",
+    "kind": "mixed",
+    "phrase": "layer с текстом заблокируй",
+    "expected": "layer с текстом заблокируй",
+    "expected_terms": [
+      "layer"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-018-m2-layer-2.wav"
+  },
+  {
+    "id": "m2-brush-1",
+    "kind": "mixed",
+    "phrase": "Выбери brush помягче",
+    "expected": "Выбери brush помягче",
+    "expected_terms": [
+      "brush"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-019-m2-brush-1.wav"
+  },
+  {
+    "id": "m2-brush-2",
+    "kind": "mixed",
+    "phrase": "brush для волос сделай меньше",
+    "expected": "brush для волос сделай меньше",
+    "expected_terms": [
+      "brush"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-020-m2-brush-2.wav"
+  },
+  {
+    "id": "m2-canvas-1",
+    "kind": "mixed",
+    "phrase": "Увеличь canvas по ширине",
+    "expected": "Увеличь canvas по ширине",
+    "expected_terms": [
+      "canvas"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-021-m2-canvas-1.wav"
+  },
+  {
+    "id": "m2-canvas-2",
+    "kind": "mixed",
+    "phrase": "canvas оставь белым",
+    "expected": "canvas оставь белым",
+    "expected_terms": [
+      "canvas"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-022-m2-canvas-2.wav"
+  },
+  {
+    "id": "m2-scale-1",
+    "kind": "mixed",
+    "phrase": "Поставь scale на пятьдесят процентов",
+    "expected": "Поставь scale на пятьдесят процентов",
+    "expected_terms": [
+      "scale"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-023-m2-scale-1.wav"
+  },
+  {
+    "id": "m2-scale-2",
+    "kind": "mixed",
+    "phrase": "scale изображения измени перед экспортом",
+    "expected": "scale изображения измени перед экспортом",
+    "expected_terms": [
+      "scale"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-024-m2-scale-2.wav"
+  },
+  {
+    "id": "m2-size-1",
+    "kind": "mixed",
+    "phrase": "Уменьши size кисти до двенадцати",
+    "expected": "Уменьши size кисти до двенадцати",
+    "expected_terms": [
+      "size"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-025-m2-size-1.wav"
+  },
+  {
+    "id": "m2-size-2",
+    "kind": "mixed",
+    "phrase": "size окна можно увеличить",
+    "expected": "size окна можно увеличить",
+    "expected_terms": [
+      "size"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-026-m2-size-2.wav"
+  },
+  {
+    "id": "m2-preview-1",
+    "kind": "mixed",
+    "phrase": "Покажи preview перед отправкой",
+    "expected": "Покажи preview перед отправкой",
+    "expected_terms": [
+      "preview"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-027-m2-preview-1.wav"
+  },
+  {
+    "id": "m2-preview-2",
+    "kind": "mixed",
+    "phrase": "preview результата открой справа",
+    "expected": "preview результата открой справа",
+    "expected_terms": [
+      "preview"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-028-m2-preview-2.wav"
+  },
+  {
+    "id": "m2-render-1",
+    "kind": "mixed",
+    "phrase": "Запусти render этой сцены",
+    "expected": "Запусти render этой сцены",
+    "expected_terms": [
+      "render"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-029-m2-render-1.wav"
+  },
+  {
+    "id": "m2-render-2",
+    "kind": "mixed",
+    "phrase": "render лучше сделать ночью",
+    "expected": "render лучше сделать ночью",
+    "expected_terms": [
+      "render"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-030-m2-render-2.wav"
+  },
+  {
+    "id": "m2-shader-1",
+    "kind": "mixed",
+    "phrase": "Проверь shader на новой модели",
+    "expected": "Проверь shader на новой модели",
+    "expected_terms": [
+      "shader"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-031-m2-shader-1.wav"
+  },
+  {
+    "id": "m2-shader-2",
+    "kind": "mixed",
+    "phrase": "shader для воды выглядит слишком ярким",
+    "expected": "shader для воды выглядит слишком ярким",
+    "expected_terms": [
+      "shader"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-032-m2-shader-2.wav"
+  },
+  {
+    "id": "m2-commit-1",
+    "kind": "mixed",
+    "phrase": "Сделай commit после проверки",
+    "expected": "Сделай commit после проверки",
+    "expected_terms": [
+      "commit"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-033-m2-commit-1.wav"
+  },
+  {
+    "id": "m2-commit-2",
+    "kind": "mixed",
+    "phrase": "commit с этим исправлением уже готов",
+    "expected": "commit с этим исправлением уже готов",
+    "expected_terms": [
+      "commit"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-034-m2-commit-2.wav"
+  },
+  {
+    "id": "m2-merge-1",
+    "kind": "mixed",
+    "phrase": "Перед merge проверь изменения",
+    "expected": "Перед merge проверь изменения",
+    "expected_terms": [
+      "merge"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-035-m2-merge-1.wav"
+  },
+  {
+    "id": "m2-merge-2",
+    "kind": "mixed",
+    "phrase": "merge этой ветки запланирован на вечер",
+    "expected": "merge этой ветки запланирован на вечер",
+    "expected_terms": [
+      "merge"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-036-m2-merge-2.wav"
+  },
+  {
+    "id": "m2-branch-1",
+    "kind": "mixed",
+    "phrase": "Создай новую branch для задачи",
+    "expected": "Создай новую branch для задачи",
+    "expected_terms": [
+      "branch"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-037-m2-branch-1.wav"
+  },
+  {
+    "id": "m2-branch-2",
+    "kind": "mixed",
+    "phrase": "branch с исправлением уже опубликована",
+    "expected": "branch с исправлением уже опубликована",
+    "expected_terms": [
+      "branch"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-038-m2-branch-2.wav"
+  },
+  {
+    "id": "m2-deploy-1",
+    "kind": "mixed",
+    "phrase": "Можно deploy на тестовый сервер",
+    "expected": "Можно deploy на тестовый сервер",
+    "expected_terms": [
+      "deploy"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-039-m2-deploy-1.wav"
+  },
+  {
+    "id": "m2-deploy-2",
+    "kind": "mixed",
+    "phrase": "deploy приложения начнётся после обеда",
+    "expected": "deploy приложения начнётся после обеда",
+    "expected_terms": [
+      "deploy"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-040-m2-deploy-2.wav"
+  },
+  {
+    "id": "m2-pull-request-1",
+    "kind": "mixed",
+    "phrase": "Открой pull request для ревью",
+    "expected": "Открой pull request для ревью",
+    "expected_terms": [
+      "pull request"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-041-m2-pull-request-1.wav"
+  },
+  {
+    "id": "m2-pull-request-2",
+    "kind": "mixed",
+    "phrase": "pull request я отправил утром",
+    "expected": "pull request я отправил утром",
+    "expected_terms": [
+      "pull request"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-042-m2-pull-request-2.wav"
+  },
+  {
+    "id": "m2-ctrl-1",
+    "kind": "mixed",
+    "phrase": "Зажми Ctrl и нажми букву эс",
+    "expected": "Зажми Ctrl и нажми букву эс",
+    "expected_terms": [
+      "Ctrl"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-043-m2-ctrl-1.wav"
+  },
+  {
+    "id": "m2-ctrl-2",
+    "kind": "mixed",
+    "phrase": "Ctrl используй для быстрого выделения",
+    "expected": "Ctrl используй для быстрого выделения",
+    "expected_terms": [
+      "Ctrl"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-044-m2-ctrl-2.wav"
+  },
+  {
+    "id": "m2-alt-1",
+    "kind": "mixed",
+    "phrase": "Нажми Alt перед выбором пункта",
+    "expected": "Нажми Alt перед выбором пункта",
+    "expected_terms": [
+      "Alt"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-045-m2-alt-1.wav"
+  },
+  {
+    "id": "m2-alt-2",
+    "kind": "mixed",
+    "phrase": "Alt зажми на секунду",
+    "expected": "Alt зажми на секунду",
+    "expected_terms": [
+      "Alt"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-046-m2-alt-2.wav"
+  },
+  {
+    "id": "m2-shift-1",
+    "kind": "mixed",
+    "phrase": "Удерживай Shift при масштабировании",
+    "expected": "Удерживай Shift при масштабировании",
+    "expected_terms": [
+      "Shift"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-047-m2-shift-1.wav"
+  },
+  {
+    "id": "m2-shift-2",
+    "kind": "mixed",
+    "phrase": "Shift добавь к этому сочетанию",
+    "expected": "Shift добавь к этому сочетанию",
+    "expected_terms": [
+      "Shift"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-048-m2-shift-2.wav"
+  },
+  {
+    "id": "m2-enter-1",
+    "kind": "mixed",
+    "phrase": "Нажми Enter, чтобы подтвердить",
+    "expected": "Нажми Enter, чтобы подтвердить",
+    "expected_terms": [
+      "Enter"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-049-m2-enter-1.wav"
+  },
+  {
+    "id": "m2-enter-2",
+    "kind": "mixed",
+    "phrase": "Enter отправит сообщение в чат",
+    "expected": "Enter отправит сообщение в чат",
+    "expected_terms": [
+      "Enter"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-050-m2-enter-2.wav"
+  },
+  {
+    "id": "m2-tab-1",
+    "kind": "mixed",
+    "phrase": "Перейди к следующему полю клавишей Tab",
+    "expected": "Перейди к следующему полю клавишей Tab",
+    "expected_terms": [
+      "Tab"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-051-m2-tab-1.wav"
+  },
+  {
+    "id": "m2-tab-2",
+    "kind": "mixed",
+    "phrase": "Tab нажми два раза",
+    "expected": "Tab нажми два раза",
+    "expected_terms": [
+      "Tab"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-052-m2-tab-2.wav"
+  },
+  {
+    "id": "m2-photoshop-1",
+    "kind": "mixed",
+    "phrase": "Открой Photoshop и загрузи проект",
+    "expected": "Открой Photoshop и загрузи проект",
+    "expected_terms": [
+      "Photoshop"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-053-m2-photoshop-1.wav"
+  },
+  {
+    "id": "m2-photoshop-2",
+    "kind": "mixed",
+    "phrase": "Photoshop сегодня запускается медленно",
+    "expected": "Photoshop сегодня запускается медленно",
+    "expected_terms": [
+      "Photoshop"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-054-m2-photoshop-2.wav"
+  },
+  {
+    "id": "m2-figma-1",
+    "kind": "mixed",
+    "phrase": "Найди макет в Figma",
+    "expected": "Найди макет в Figma",
+    "expected_terms": [
+      "Figma"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-055-m2-figma-1.wav"
+  },
+  {
+    "id": "m2-figma-2",
+    "kind": "mixed",
+    "phrase": "Figma сохранила изменения автоматически",
+    "expected": "Figma сохранила изменения автоматически",
+    "expected_terms": [
+      "Figma"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-056-m2-figma-2.wav"
+  },
+  {
+    "id": "m2-blender-1",
+    "kind": "mixed",
+    "phrase": "Добавь камеру в Blender",
+    "expected": "Добавь камеру в Blender",
+    "expected_terms": [
+      "Blender"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-057-m2-blender-1.wav"
+  },
+  {
+    "id": "m2-blender-2",
+    "kind": "mixed",
+    "phrase": "Blender открой на втором экране",
+    "expected": "Blender открой на втором экране",
+    "expected_terms": [
+      "Blender"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-058-m2-blender-2.wav"
+  },
+  {
+    "id": "m2-unity-1",
+    "kind": "mixed",
+    "phrase": "Собери сцену в Unity",
+    "expected": "Собери сцену в Unity",
+    "expected_terms": [
+      "Unity"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-059-m2-unity-1.wav"
+  },
+  {
+    "id": "m2-unity-2",
+    "kind": "mixed",
+    "phrase": "Unity скачала обновление движка",
+    "expected": "Unity скачала обновление движка",
+    "expected_terms": [
+      "Unity"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-060-m2-unity-2.wav"
+  },
+  {
+    "id": "m2-github-1",
+    "kind": "mixed",
+    "phrase": "Загрузи ветку на GitHub",
+    "expected": "Загрузи ветку на GitHub",
+    "expected_terms": [
+      "GitHub"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-061-m2-github-1.wav"
+  },
+  {
+    "id": "m2-github-2",
+    "kind": "mixed",
+    "phrase": "GitHub прислал уведомление о проверке",
+    "expected": "GitHub прислал уведомление о проверке",
+    "expected_terms": [
+      "GitHub"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-062-m2-github-2.wav"
+  },
+  {
+    "id": "m2-discord-1",
+    "kind": "mixed",
+    "phrase": "Отправь ссылку в Discord",
+    "expected": "Отправь ссылку в Discord",
+    "expected_terms": [
+      "Discord"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-063-m2-discord-1.wav"
+  },
+  {
+    "id": "m2-discord-2",
+    "kind": "mixed",
+    "phrase": "Discord открой после встречи",
+    "expected": "Discord открой после встречи",
+    "expected_terms": [
+      "Discord"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-064-m2-discord-2.wav"
+  },
+  {
+    "id": "m2-undo-1",
+    "kind": "mixed",
+    "phrase": "Сделай undo последнего действия",
+    "expected": "Сделай undo последнего действия",
+    "expected_terms": [
+      "undo"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-065-m2-undo-1.wav"
+  },
+  {
+    "id": "m2-undo-2",
+    "kind": "mixed",
+    "phrase": "undo вернёт предыдущий вариант",
+    "expected": "undo вернёт предыдущий вариант",
+    "expected_terms": [
+      "undo"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-066-m2-undo-2.wav"
+  },
+  {
+    "id": "m2-redo-1",
+    "kind": "mixed",
+    "phrase": "Выполни redo после отмены",
+    "expected": "Выполни redo после отмены",
+    "expected_terms": [
+      "redo"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-067-m2-redo-1.wav"
+  },
+  {
+    "id": "m2-redo-2",
+    "kind": "mixed",
+    "phrase": "redo вернул правильный цвет",
+    "expected": "redo вернул правильный цвет",
+    "expected_terms": [
+      "redo"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-068-m2-redo-2.wav"
+  },
+  {
+    "id": "m2-save-1",
+    "kind": "mixed",
+    "phrase": "Не забудь save перед закрытием",
+    "expected": "Не забудь save перед закрытием",
+    "expected_terms": [
+      "save"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-069-m2-save-1.wav"
+  },
+  {
+    "id": "m2-save-2",
+    "kind": "mixed",
+    "phrase": "save проекта уже завершился",
+    "expected": "save проекта уже завершился",
+    "expected_terms": [
+      "save"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-070-m2-save-2.wav"
+  },
+  {
+    "id": "m2-export-1",
+    "kind": "mixed",
+    "phrase": "Сделай export в отдельную папку",
+    "expected": "Сделай export в отдельную папку",
+    "expected_terms": [
+      "export"
+    ],
+    "voice": "Roman (Russian)",
+    "file": "mix2-071-m2-export-1.wav"
+  },
+  {
+    "id": "m2-export-2",
+    "kind": "mixed",
+    "phrase": "export модели займёт пару минут",
+    "expected": "export модели займёт пару минут",
+    "expected_terms": [
+      "export"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-072-m2-export-2.wav"
+  },
+  {
+    "id": "m2-import-1",
+    "kind": "mixed",
+    "phrase": "Запусти import текстур",
+    "expected": "Запусти import текстур",
+    "expected_terms": [
+      "import"
+    ],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-073-m2-import-1.wav"
+  },
+  {
+    "id": "m2-import-2",
+    "kind": "mixed",
+    "phrase": "import файла прошёл без ошибок",
+    "expected": "import файла прошёл без ошибок",
+    "expected_terms": [
+      "import"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-074-m2-import-2.wav"
+  },
+  {
+    "id": "m2-crop-1",
+    "kind": "mixed",
+    "phrase": "Выбери crop для обрезки фотографии",
+    "expected": "Выбери crop для обрезки фотографии",
+    "expected_terms": [
+      "crop"
+    ],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-075-m2-crop-1.wav"
+  },
+  {
+    "id": "m2-crop-2",
+    "kind": "mixed",
+    "phrase": "crop кадра оставь по центру",
+    "expected": "crop кадра оставь по центру",
+    "expected_terms": [
+      "crop"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-076-m2-crop-2.wav"
+  },
+  {
+    "id": "m2-zoom-1",
+    "kind": "mixed",
+    "phrase": "Увеличь zoom для проверки деталей",
+    "expected": "Увеличь zoom для проверки деталей",
+    "expected_terms": [
+      "zoom"
+    ],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-077-m2-zoom-1.wav"
+  },
+  {
+    "id": "m2-zoom-2",
+    "kind": "mixed",
+    "phrase": "zoom поставь на сто процентов",
+    "expected": "zoom поставь на сто процентов",
+    "expected_terms": [
+      "zoom"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-078-m2-zoom-2.wav"
+  },
+  {
+    "id": "m2-screenshot-1",
+    "kind": "mixed",
+    "phrase": "Сделай screenshot открытого окна",
+    "expected": "Сделай screenshot открытого окна",
+    "expected_terms": [
+      "screenshot"
+    ],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-079-m2-screenshot-1.wav"
+  },
+  {
+    "id": "m2-screenshot-2",
+    "kind": "mixed",
+    "phrase": "screenshot экрана сохрани на рабочий стол",
+    "expected": "screenshot экрана сохрани на рабочий стол",
+    "expected_terms": [
+      "screenshot"
+    ],
+    "voice": "Vika (Russian)",
+    "file": "mix2-080-m2-screenshot-2.wav"
+  },
+  {
+    "id": "ru-m2-01",
+    "kind": "russian",
+    "phrase": "Мама достала из шкатулки серебряную брошь и приколола её к воротнику",
+    "expected": "Мама достала из шкатулки серебряную брошь и приколола её к воротнику",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-081-ru-01.wav"
+  },
+  {
+    "id": "ru-m2-02",
+    "kind": "russian",
+    "phrase": "Ориентиром для поворота будет высокая водонапорная башня",
+    "expected": "Ориентиром для поворота будет высокая водонапорная башня",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-082-ru-02.wav"
+  },
+  {
+    "id": "ru-m2-03",
+    "kind": "russian",
+    "phrase": "На праздник дети надели бумажные маски и стали танцевать",
+    "expected": "На праздник дети надели бумажные маски и стали танцевать",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-083-ru-03.wav"
+  },
+  {
+    "id": "ru-m2-04",
+    "kind": "russian",
+    "phrase": "На нижний слой краски нанесли прозрачный лак",
+    "expected": "На нижний слой краски нанесли прозрачный лак",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-084-ru-04.wav"
+  },
+  {
+    "id": "ru-m2-05",
+    "kind": "russian",
+    "phrase": "Поезд из Москвы прибыл в Тулу без опоздания",
+    "expected": "Поезд из Москвы прибыл в Тулу без опоздания",
+    "expected_terms": [],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-085-ru-05.wav"
+  },
+  {
+    "id": "ru-m2-06",
+    "kind": "russian",
+    "phrase": "Раз от раза погода становилась всё теплее",
+    "expected": "Раз от раза погода становилась всё теплее",
+    "expected_terms": [],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-086-ru-06.wav"
+  },
+  {
+    "id": "ru-m2-07",
+    "kind": "russian",
+    "phrase": "Сайт библиотеки работает даже во время выходных",
+    "expected": "Сайт библиотеки работает даже во время выходных",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-087-ru-07.wav"
+  },
+  {
+    "id": "ru-m2-08",
+    "kind": "russian",
+    "phrase": "Файл с фотографиями лежит в папке на рабочем столе",
+    "expected": "Файл с фотографиями лежит в папке на рабочем столе",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-088-ru-08.wav"
+  },
+  {
+    "id": "ru-m2-09",
+    "kind": "russian",
+    "phrase": "Папка с документами осталась у секретаря",
+    "expected": "Папка с документами осталась у секретаря",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-089-ru-09.wav"
+  },
+  {
+    "id": "ru-m2-10",
+    "kind": "russian",
+    "phrase": "Сервер перезагрузили после обновления программы",
+    "expected": "Сервер перезагрузили после обновления программы",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-090-ru-10.wav"
+  },
+  {
+    "id": "ru-m2-11",
+    "kind": "russian",
+    "phrase": "Вчерашний разговор неожиданно затянулся до полуночи",
+    "expected": "Вчерашний разговор неожиданно затянулся до полуночи",
+    "expected_terms": [],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-091-ru-11.wav"
+  },
+  {
+    "id": "ru-m2-12",
+    "kind": "russian",
+    "phrase": "Купи свежий хлеб и молоко по дороге домой",
+    "expected": "Купи свежий хлеб и молоко по дороге домой",
+    "expected_terms": [],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-092-ru-12.wav"
+  },
+  {
+    "id": "ru-m2-13",
+    "kind": "russian",
+    "phrase": "Старый мост закрыли на ремонт до конца месяца",
+    "expected": "Старый мост закрыли на ремонт до конца месяца",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-093-ru-13.wav"
+  },
+  {
+    "id": "ru-m2-14",
+    "kind": "russian",
+    "phrase": "Сосед посадил возле дома три молодых яблони",
+    "expected": "Сосед посадил возле дома три молодых яблони",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-094-ru-14.wav"
+  },
+  {
+    "id": "ru-m2-15",
+    "kind": "russian",
+    "phrase": "Пожалуйста, поставь чайник и достань большие чашки",
+    "expected": "Пожалуйста, поставь чайник и достань большие чашки",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-095-ru-15.wav"
+  },
+  {
+    "id": "ru-m2-16",
+    "kind": "russian",
+    "phrase": "За окном весь день шёл мелкий осенний дождь",
+    "expected": "За окном весь день шёл мелкий осенний дождь",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-096-ru-16.wav"
+  },
+  {
+    "id": "ru-m2-17",
+    "kind": "russian",
+    "phrase": "На полке стоят книги о путешествиях по северу",
+    "expected": "На полке стоят книги о путешествиях по северу",
+    "expected_terms": [],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-097-ru-17.wav"
+  },
+  {
+    "id": "ru-m2-18",
+    "kind": "russian",
+    "phrase": "Новый автобус остановился возле главного входа",
+    "expected": "Новый автобус остановился возле главного входа",
+    "expected_terms": [],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-098-ru-18.wav"
+  },
+  {
+    "id": "ru-m2-19",
+    "kind": "russian",
+    "phrase": "Утром бабушка испекла пирог с яблоками и корицей",
+    "expected": "Утром бабушка испекла пирог с яблоками и корицей",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-099-ru-19.wav"
+  },
+  {
+    "id": "ru-m2-20",
+    "kind": "russian",
+    "phrase": "На станции объявили задержку вечернего поезда",
+    "expected": "На станции объявили задержку вечернего поезда",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-100-ru-20.wav"
+  },
+  {
+    "id": "ru-m2-21",
+    "kind": "russian",
+    "phrase": "Ветер быстро разогнал тёмные облака над рекой",
+    "expected": "Ветер быстро разогнал тёмные облака над рекой",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-101-ru-21.wav"
+  },
+  {
+    "id": "ru-m2-22",
+    "kind": "russian",
+    "phrase": "Положи ключи на деревянную тумбочку у двери",
+    "expected": "Положи ключи на деревянную тумбочку у двери",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-102-ru-22.wav"
+  },
+  {
+    "id": "ru-m2-23",
+    "kind": "russian",
+    "phrase": "Кошка свернулась клубком на тёплом подоконнике",
+    "expected": "Кошка свернулась клубком на тёплом подоконнике",
+    "expected_terms": [],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-103-ru-23.wav"
+  },
+  {
+    "id": "ru-m2-24",
+    "kind": "russian",
+    "phrase": "Рабочий стол нужно протереть перед началом встречи",
+    "expected": "Рабочий стол нужно протереть перед началом встречи",
+    "expected_terms": [],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-104-ru-24.wav"
+  },
+  {
+    "id": "ru-m2-25",
+    "kind": "russian",
+    "phrase": "Завтра мы поедем в гости к старым друзьям",
+    "expected": "Завтра мы поедем в гости к старым друзьям",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-105-ru-25.wav"
+  },
+  {
+    "id": "ru-m2-26",
+    "kind": "russian",
+    "phrase": "В корзине осталось несколько спелых груш",
+    "expected": "В корзине осталось несколько спелых груш",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-106-ru-26.wav"
+  },
+  {
+    "id": "ru-m2-27",
+    "kind": "russian",
+    "phrase": "Участники собрались возле входа ровно к восьми",
+    "expected": "Участники собрались возле входа ровно к восьми",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-107-ru-27.wav"
+  },
+  {
+    "id": "ru-m2-28",
+    "kind": "russian",
+    "phrase": "После прогулки дети выпили горячего какао",
+    "expected": "После прогулки дети выпили горячего какао",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-108-ru-28.wav"
+  },
+  {
+    "id": "ru-m2-29",
+    "kind": "russian",
+    "phrase": "В библиотеке открыли небольшую выставку старых карт",
+    "expected": "В библиотеке открыли небольшую выставку старых карт",
+    "expected_terms": [],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-109-ru-29.wav"
+  },
+  {
+    "id": "ru-m2-30",
+    "kind": "russian",
+    "phrase": "Поставь цветы поближе к солнечному окну",
+    "expected": "Поставь цветы поближе к солнечному окну",
+    "expected_terms": [],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-110-ru-30.wav"
+  },
+  {
+    "id": "ru-m2-31",
+    "kind": "russian",
+    "phrase": "На соседней улице построили новую детскую площадку",
+    "expected": "На соседней улице построили новую детскую площадку",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-111-ru-31.wav"
+  },
+  {
+    "id": "ru-m2-32",
+    "kind": "russian",
+    "phrase": "Повар добавил в суп немного свежего укропа",
+    "expected": "Повар добавил в суп немного свежего укропа",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-112-ru-32.wav"
+  },
+  {
+    "id": "ru-m2-33",
+    "kind": "russian",
+    "phrase": "Летом река здесь становится мелкой и прозрачной",
+    "expected": "Летом река здесь становится мелкой и прозрачной",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-113-ru-33.wav"
+  },
+  {
+    "id": "ru-m2-34",
+    "kind": "russian",
+    "phrase": "Мастер починил расшатавшуюся ножку кухонного стула",
+    "expected": "Мастер починил расшатавшуюся ножку кухонного стула",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-114-ru-34.wav"
+  },
+  {
+    "id": "ru-m2-35",
+    "kind": "russian",
+    "phrase": "Сегодня на рынке продают сладкую клубнику",
+    "expected": "Сегодня на рынке продают сладкую клубнику",
+    "expected_terms": [],
+    "voice": "Ekaterina (Russian)",
+    "file": "mix2-115-ru-35.wav"
+  },
+  {
+    "id": "ru-m2-36",
+    "kind": "russian",
+    "phrase": "Перед прогулкой проверь, закрыты ли окна",
+    "expected": "Перед прогулкой проверь, закрыты ли окна",
+    "expected_terms": [],
+    "voice": "Dmitriy (Russian)",
+    "file": "mix2-116-ru-36.wav"
+  },
+  {
+    "id": "ru-m2-37",
+    "kind": "russian",
+    "phrase": "Утренний туман медленно рассеялся над полем",
+    "expected": "Утренний туман медленно рассеялся над полем",
+    "expected_terms": [],
+    "voice": "Vika (Russian)",
+    "file": "mix2-117-ru-37.wav"
+  },
+  {
+    "id": "ru-m2-38",
+    "kind": "russian",
+    "phrase": "В коробке нашли старые письма и семейные фотографии",
+    "expected": "В коробке нашли старые письма и семейные фотографии",
+    "expected_terms": [],
+    "voice": "Roman (Russian)",
+    "file": "mix2-118-ru-38.wav"
+  },
+  {
+    "id": "ru-m2-39",
+    "kind": "russian",
+    "phrase": "На полке рядом с книгами лежит деревянная линейка",
+    "expected": "На полке рядом с книгами лежит деревянная линейка",
+    "expected_terms": [],
+    "voice": "Microsoft Irina Desktop - Russian",
+    "file": "mix2-119-ru-39.wav"
+  },
+  {
+    "id": "ru-m2-40",
+    "kind": "russian",
+    "phrase": "По выходным мы обычно гуляем в городском парке",
+    "expected": "По выходным мы обычно гуляем в городском парке",
+    "expected_terms": [],
+    "voice": "Alexandr (Russian)",
+    "file": "mix2-120-ru-40.wav"
+  }
+]

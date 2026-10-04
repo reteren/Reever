@@ -1,0 +1,1916 @@
+[
+  {
+    "id": "mixed_hardness",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "настрой харниз поверхности на высокий уровень",
+    "expected_groups": [
+      [
+        "hardness"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_roughness",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "добавь рокфнис к материалу",
+    "expected_groups": [
+      [
+        "roughness"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_opacity",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "уменьши опросите этого слоя",
+    "expected_groups": [
+      [
+        "opacity"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": [
+      "опросите"
+    ]
+  },
+  {
+    "id": "mixed_layer",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "выбери лайр с маской",
+    "expected_groups": [
+      [
+        "layer"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_brush",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "возьми брошь помягче",
+    "expected_groups": [
+      [
+        "brush"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": [
+      "брошь"
+    ]
+  },
+  {
+    "id": "mixed_render",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "запусти ориентир этой сцены",
+    "expected_groups": [
+      [
+        "render"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": [
+      "ориентир"
+    ]
+  },
+  {
+    "id": "mixed_commit",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "сделай каэрмит после проверки",
+    "expected_groups": [
+      [
+        "commit"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_merge",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "перед мерги проверь изменения",
+    "expected_groups": [
+      [
+        "merge"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_deploy",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "можно диплой на тестовый сервер",
+    "expected_groups": [
+      [
+        "deploy"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_branch",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "создай новую бренч для задачи",
+    "expected_groups": [
+      [
+        "branch"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_shader",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "проверь шейдер для этой модели",
+    "expected_groups": [
+      [
+        "shader"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_texture",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "заменитестори на более четкую",
+    "expected_groups": [
+      [
+        "texture"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_material",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "выбери материал для волос",
+    "expected_groups": [
+      [
+        "material"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": [
+      "материал"
+    ]
+  },
+  {
+    "id": "mixed_mask",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "добавь маск на фотографию",
+    "expected_groups": [
+      [
+        "mask"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_canvas",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "увеличь размер",
+    "expected_groups": [
+      [
+        "canvas"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_preview",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "покажи привив перед отправкой",
+    "expected_groups": [
+      [
+        "preview"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_package",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "собери пыкидж для установки",
+    "expected_groups": [
+      [
+        "package"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "mixed_pipeline",
+    "set": "mix-report",
+    "kind": "mixed",
+    "text": "проверь пепелиние и сохрани проект",
+    "expected_groups": [
+      [
+        "pipeline"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_pizdecz",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "это просто пиздец какойто",
+    "expected_groups": [],
+    "keep_expected": [
+      "пиздец"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_kapets",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "ну это полный капец",
+    "expected_groups": [],
+    "keep_expected": [
+      "капец"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_cringe",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "вчера был лютый кринж",
+    "expected_groups": [],
+    "keep_expected": [
+      "кринж"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_zashkvar",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "такой зашквар нельзя выкладывать",
+    "expected_groups": [],
+    "keep_expected": [
+      "зашквар"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_imba",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "да ладно это настоящая имба",
+    "expected_groups": [],
+    "keep_expected": [
+      "имба"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_chill",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "после работы хочется чилить",
+    "expected_groups": [],
+    "keep_expected": [
+      "чилить"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_ugar",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "вчера весь вечер был угар",
+    "expected_groups": [],
+    "keep_expected": [
+      "угар"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_blin",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "блин опять все сломалось",
+    "expected_groups": [],
+    "keep_expected": [
+      "блин"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_zhest",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "вот это жесть конечно",
+    "expected_groups": [],
+    "keep_expected": [
+      "жесть"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru_vibe",
+    "set": "mix-report",
+    "kind": "russian_slang",
+    "text": "у этого места особенный вай",
+    "expected_groups": [],
+    "keep_expected": [
+      "вайб"
+    ],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-hardness-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "для камня выставь харнист на 40 процентов",
+    "expected_groups": [
+      [
+        "hardness"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-hardness-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "харнес у этой кисти слишком высокая",
+    "expected_groups": [
+      [
+        "hardness"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-opacity-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "апоциты слоя поставь на 70 процентов",
+    "expected_groups": [
+      [
+        "opacity"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-opacity-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "снизь апатиты фона до 20",
+    "expected_groups": [
+      [
+        "opacity"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-roughness-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "добавь рокнис с поверхности металла",
+    "expected_groups": [
+      [
+        "roughness"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-roughness-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "для пластика аукнис убавь до нуля",
+    "expected_groups": [
+      [
+        "roughness"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-escape-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "нажми есцепи чтобы закрыть окно",
+    "expected_groups": [
+      [
+        "escape"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-escape-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "есцепи нажми после отмены",
+    "expected_groups": [
+      [
+        "escape"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-eraser-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "выбери яросер для удаления лишнего",
+    "expected_groups": [
+      [
+        "eraser"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-eraser-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "еросер на панеле находится слева",
+    "expected_groups": [
+      [
+        "eraser"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-tool-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "тол для обрезки находится справа",
+    "expected_groups": [
+      [
+        "tool"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-tool-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сначала выбери нужный тол",
+    "expected_groups": [
+      [
+        "tool"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-png-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сохрани иллюстрацию как пиэнджи",
+    "expected_groups": [
+      [
+        "png"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-png-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "для этой картинки будет достаточно",
+    "expected_groups": [
+      [
+        "png"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-jpeg-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "экспортируй снимок ипек",
+    "expected_groups": [
+      [
+        "jpeg"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-jpeg-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "ипик подойдет для отправки по почте",
+    "expected_groups": [
+      [
+        "jpeg"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-layer-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "поставь лээр нат фоном",
+    "expected_groups": [
+      [
+        "layer"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-layer-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "вр с текстом заблокируй",
+    "expected_groups": [
+      [
+        "layer"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-brush-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "выбери бруш помягче",
+    "expected_groups": [
+      [
+        "brush"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-brush-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "груш для волос сделай меньше",
+    "expected_groups": [
+      [
+        "brush"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-canvas-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "увеличь самвас по ширине",
+    "expected_groups": [
+      [
+        "canvas"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-canvas-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "самваз оставь белым",
+    "expected_groups": [
+      [
+        "canvas"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-scale-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "поставь в сцеле на 50 процентов",
+    "expected_groups": [
+      [
+        "scale"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-scale-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "скейл изображения изменить перед экспортом",
+    "expected_groups": [
+      [
+        "scale"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-size-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "уменьши сайс кисти до 12",
+    "expected_groups": [
+      [
+        "size"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-size-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сизиок нам можно увеличить",
+    "expected_groups": [
+      [
+        "size"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-preview-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "покажи привив перед отправкой",
+    "expected_groups": [
+      [
+        "preview"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-preview-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "привив результаты открой справа",
+    "expected_groups": [
+      [
+        "preview"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-render-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "запусти риндер этой сцены",
+    "expected_groups": [
+      [
+        "render"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-render-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "риндер лучше сделать ночью",
+    "expected_groups": [
+      [
+        "render"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-shader-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "проверь шадер на новой модиле",
+    "expected_groups": [
+      [
+        "shader"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-shader-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "шадер для воды выглядит слишком ярким",
+    "expected_groups": [
+      [
+        "shader"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-commit-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сделать самид после проверки",
+    "expected_groups": [
+      [
+        "commit"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-commit-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "саммит с этим исправлением уже готов",
+    "expected_groups": [
+      [
+        "commit"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-merge-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "перед мергипроверь изменения",
+    "expected_groups": [
+      [
+        "merge"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-merge-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "мерджетой ветки запланирован на вечер",
+    "expected_groups": [
+      [
+        "merge"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-branch-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "создай новую брендж для задачи",
+    "expected_groups": [
+      [
+        "branch"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-branch-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "бранч с исправлением уже опубликовано",
+    "expected_groups": [
+      [
+        "branch"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-deploy-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "можно диплой на тестовый сервер",
+    "expected_groups": [
+      [
+        "deploy"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-deploy-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "деплей приложения начнется после обеда",
+    "expected_groups": [
+      [
+        "deploy"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-pull-request-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "открой пулрекуис для ревью",
+    "expected_groups": [
+      [
+        "pull",
+        "request"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-pull-request-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "пуриквист я отправил утром",
+    "expected_groups": [
+      [
+        "pull",
+        "request"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-ctrl-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "зажми стр и нажми букву с",
+    "expected_groups": [
+      [
+        "ctrl"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-ctrl-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "стролы используют для быстрого выделения",
+    "expected_groups": [
+      [
+        "ctrl"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-alt-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "нажми алт перед выбором пункта",
+    "expected_groups": [
+      [
+        "alt"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-alt-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "аут зажми на секунду",
+    "expected_groups": [
+      [
+        "alt"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-shift-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "удерживай шифт при масштабировании",
+    "expected_groups": [
+      [
+        "shift"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-shift-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "шифт добавь к этому сочетанию",
+    "expected_groups": [
+      [
+        "shift"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-enter-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "нажми интер чтобы подтвердить",
+    "expected_groups": [
+      [
+        "enter"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-enter-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "ентер отправит сообщение в чат",
+    "expected_groups": [
+      [
+        "enter"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-tab-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "перейди к следующему полю клавиши тап",
+    "expected_groups": [
+      [
+        "tab"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-tab-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "табнажми 2 раза",
+    "expected_groups": [
+      [
+        "tab"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-photoshop-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "открой пхотошоп и загрузи проект",
+    "expected_groups": [
+      [
+        "photoshop"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-photoshop-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "пхаташоп сегодня запускается медленно",
+    "expected_groups": [
+      [
+        "photoshop"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-figma-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "найди макет фигма",
+    "expected_groups": [
+      [
+        "figma"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-figma-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "фигма сохранила изменения автоматически",
+    "expected_groups": [
+      [
+        "figma"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-blender-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "добавь камеру в блендер",
+    "expected_groups": [
+      [
+        "blender"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-blender-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "блиндер открой на втором экране",
+    "expected_groups": [
+      [
+        "blender"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-unity-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "собери сцену в униты",
+    "expected_groups": [
+      [
+        "unity"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-unity-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "скачала обновление движка",
+    "expected_groups": [
+      [
+        "unity"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-github-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "загрузи ветку нагитоп",
+    "expected_groups": [
+      [
+        "github"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-github-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "гитхоб прислал уведомление о проверке",
+    "expected_groups": [
+      [
+        "github"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-discord-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "отправь ссылку в дисерт",
+    "expected_groups": [
+      [
+        "discord"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-discord-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "дисцерд открой после встречи",
+    "expected_groups": [
+      [
+        "discord"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-undo-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сделай он до последнего действия",
+    "expected_groups": [
+      [
+        "undo"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-undo-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "он довернет предыдущий вариант",
+    "expected_groups": [
+      [
+        "undo"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-redo-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "выполни реда после отмены",
+    "expected_groups": [
+      [
+        "redo"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-redo-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "реда вернул правильный цвет",
+    "expected_groups": [
+      [
+        "redo"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-save-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "не забудь совет перед закрытием",
+    "expected_groups": [
+      [
+        "save"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-save-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "совет проекта уже завершился",
+    "expected_groups": [
+      [
+        "save"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-export-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сделай экспарт в отдельную папку",
+    "expected_groups": [
+      [
+        "export"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-export-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "их порт модели займет пару минут",
+    "expected_groups": [
+      [
+        "export"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-import-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "запусти импорт текстур",
+    "expected_groups": [
+      [
+        "import"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-import-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "импорт файла прошел без ошибок",
+    "expected_groups": [
+      [
+        "import"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-crop-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "выбери цреп для обрезки фотографии",
+    "expected_groups": [
+      [
+        "crop"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-crop-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сроп кадра оставь по центру",
+    "expected_groups": [
+      [
+        "crop"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-zoom-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "увеличь зам для проверки деталей",
+    "expected_groups": [
+      [
+        "zoom"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-zoom-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "зом поставь на 100 процентов",
+    "expected_groups": [
+      [
+        "zoom"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-screenshot-1",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "сделай стриншет открытого окна",
+    "expected_groups": [
+      [
+        "screenshot"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "m2-screenshot-2",
+    "set": "mix2-report",
+    "kind": "mixed",
+    "text": "скриншот экрана сохрани на рабочий стол",
+    "expected_groups": [
+      [
+        "screenshot"
+      ]
+    ],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-01",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "мама достала из шкатулки серебряную брошь и приколола ее к воротнику",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-02",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "ориентиром для поворота будет высокая водонапорная башня",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-03",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "на праздник дети надели бумажные маски и стали танцевать",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-04",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "на нижний слой краски нанесли прозрачный лак",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-05",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "поезд из москвы прибыл в тулу без опоздания",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-06",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "раз от раза погода становилась все теплее",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-07",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "сайт библиотеки работает даже во время выходных",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-08",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "файл с фотографиями лежит в папке на рабочем столе",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-09",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "папка с документами осталась у секретаря",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-10",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "сервер перезагрузили после обновления программы",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-11",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "вчерашний разговор неожиданно затянулся до полуночи",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-12",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "купи свежий хлеб и молоко по дороге домой",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-13",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "старый мост закрыли на ремонт до конца месяца",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-14",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "сосед посадил возле дома 3 молодых яблони",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-15",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "пожалуйста поставь чайник и достань большие чашки",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-16",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "за окном весь день шел мелкий осенний дождь",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-17",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "на полке стоят книги о путешествиях по северу",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-18",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "новый автобус остановился возле главного входа",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-19",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "утром бабушка испекла пирог с яблоками и корицей",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-20",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "на станции объявили задержку вечернего поезда",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-21",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "ветер быстро разогнал темные облака над рекой",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-22",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "положи ключи на деревянную тумбочку у двери",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-23",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "кошка свернулась клубком на теплом подоконнике",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-24",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "рабочий стол нужно протереть перед началом встречи",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-25",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "завтра мы поедем в гости к старым друзьям",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-26",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "в корзине осталось несколько спелых груш",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-27",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "участники собрались возле входа ровно к 8",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-28",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "после прогулки дети выпили горячего кокао",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-29",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "в библиотеке открыли небольшую выставку старых карт",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-30",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "поставь цветы поближе к солнечному окну",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-31",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "на соседней улице построили новую детскую площадку",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-32",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "повар добавил в суп немного свежего укропа",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-33",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "летом река здесь становится мелкой и прозрачной",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-34",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "мастер починил расшатавшуюся ножку кухонного стула",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-35",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "сегодня на рынке продают сладкую клубнику",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-36",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "перед прогулкой проверь закрыты ли окна",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-37",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "утренний туман медленно рассеялся над полем",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-38",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "в коробке нашли старые письма и семейные фотографии",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-39",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "на полке рядом с книгами лежит деревянная линейка",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "ru-m2-40",
+    "set": "mix2-report",
+    "kind": "russian_slang",
+    "text": "по выходным мы обычно гуляем в городском парке",
+    "expected_groups": [],
+    "keep_expected": [],
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_opacity",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "апасити",
+    "expected_groups": [
+      [
+        "opacity"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_hardness",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "харднес",
+    "expected_groups": [
+      [
+        "hardness"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_roughness",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "рафнес",
+    "expected_groups": [
+      [
+        "roughness"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_escape",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "эскейп",
+    "expected_groups": [
+      [
+        "escape"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_png",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "пнг",
+    "expected_groups": [
+      [
+        "png"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_scale_inflected",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "скейлится",
+    "expected_groups": [
+      [
+        "scale"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "preserve_morphology",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_high_png",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "хайф пнг",
+    "expected_groups": [
+      [
+        "high",
+        "png"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_import_inflected",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "импортнул",
+    "expected_groups": [
+      [
+        "import"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "preserve_morphology",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_export_inflected",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "экспортнул",
+    "expected_groups": [
+      [
+        "export"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "preserve_morphology",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_size",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "сайс",
+    "expected_groups": [
+      [
+        "size"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "",
+    "known_collision_tokens": []
+  },
+  {
+    "id": "user_tool_eraser",
+    "set": "user-examples",
+    "kind": "user-example",
+    "text": "тул и рас",
+    "expected_groups": [
+      [
+        "tool",
+        "eraser"
+      ],
+      [
+        "eraser",
+        "tool"
+      ]
+    ],
+    "keep_expected": [],
+    "policy": "ambiguous_order",
+    "known_collision_tokens": []
+  }
+]
