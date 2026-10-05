@@ -32,7 +32,7 @@ use windows::Win32::{
         },
         WindowsAndMessaging::{
             CreateWindowExW, GetAncestor, GetClassNameW, GetForegroundWindow, GetGUIThreadInfo,
-            GetWindowLongPtrW, GetWindowThreadProcessId, GA_ROOT, GUITHREADINFO, GWL_STYLE,
+            GetWindowLongPtrW, GetWindowThreadProcessId, GA_ROOT, GA_ROOTOWNER, GUITHREADINFO, GWL_STYLE,
             HWND_MESSAGE, WINDOW_EX_STYLE, WINDOW_STYLE,
         },
     },
@@ -371,7 +371,9 @@ fn ensure_target(target: isize, expected_focus: HWND) -> anyhow::Result<()> {
 fn ensure_foreground_window(target: isize) -> anyhow::Result<()> {
     let foreground = unsafe { GetForegroundWindow() };
     let root = unsafe { GetAncestor(foreground, GA_ROOT) };
-    if foreground.0 as isize == target || root.0 as isize == target {
+    // Всплывающее окно самого приложения (подсказка, автодополнение, меню) принадлежит цели.
+    let owner = unsafe { GetAncestor(foreground, GA_ROOTOWNER) };
+    if foreground.0 as isize == target || root.0 as isize == target || owner.0 as isize == target {
         Ok(())
     } else {
         bail!("активное окно сменилось — ввод остановлен")
@@ -599,6 +601,124 @@ impl LiveField {
         self.typed.push_str(&pieces_to_text(&progress.typed));
         progress.remaining.is_empty()
     }
+
+    /// Окончательный текст куска (`settle_goal`): напечатанное остаётся, допечатывается
+    /// продолжение. Возвращает то, что напечатать не удалось (окно сменилось) — пусто, если всё в поле.
+    pub fn settle(&mut self, target: isize, wanted: &str) -> String {
+        let goal = settle_goal(&self.typed, wanted);
+        if self.reconcile(target, &goal) {
+            return String::new();
+        }
+        let prefix = common_prefix_chars(&self.typed, &goal);
+        goal.chars().skip(prefix).collect()
+    }
+}
+
+/// Сколько символов в конце уже напечатанного можно переписать: исправление последних
+/// пары слов незаметно, а стирание целого предложения выглядит как «пишет туда-сюда».
+pub const LIVE_REWRITE_CHARS: usize = 24;
+/// По ходу речи — только последнее слово-другое: остальное поправит окончательный текст.
+pub const PARTIAL_REWRITE_CHARS: usize = 12;
+
+fn common_prefix_chars(a: &str, b: &str) -> usize {
+    a.chars().zip(b.chars()).take_while(|(x, y)| x == y).count()
+}
+
+/// Байтовые границы слов (непробельных отрезков) строки.
+fn word_spans(text: &str) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    let mut start = None;
+    for (index, character) in text.char_indices() {
+        match (character.is_whitespace(), start) {
+            (true, Some(begin)) => {
+                spans.push((begin, index));
+                start = None;
+            }
+            (false, None) => start = Some(index),
+            _ => {}
+        }
+    }
+    if let Some(begin) = start {
+        spans.push((begin, text.len()));
+    }
+    spans
+}
+
+/// Слово без регистра и знаков — для сравнения вариантов распознавания.
+fn word_key(word: &str) -> String {
+    word.chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .map(|c| if c == 'ё' { 'е' } else { c })
+        .collect()
+}
+
+/// Сколько первых слов `wanted` соответствует напечатанным словам `typed`: префикс `wanted`
+/// с наименьшим словарным расстоянием до `typed` (слова могли слиться, разделиться, смениться).
+fn aligned_words(typed: &[&str], wanted: &[&str]) -> usize {
+    let typed: Vec<String> = typed.iter().map(|w| word_key(w)).collect();
+    let wanted: Vec<String> = wanted.iter().map(|w| word_key(w)).collect();
+    // row[j] — расстояние между всеми словами typed и первыми j словами wanted.
+    let mut row: Vec<usize> = (0..=wanted.len()).collect();
+    for (i, typed_word) in typed.iter().enumerate() {
+        let mut next = vec![i + 1; wanted.len() + 1];
+        for (j, wanted_word) in wanted.iter().enumerate() {
+            let cost = usize::from(typed_word != wanted_word);
+            next[j + 1] = (row[j] + cost).min(row[j + 1] + 1).min(next[j] + 1);
+        }
+        row = next;
+    }
+    // При равенстве — больший префикс: недопечатать слово хуже, чем повторить.
+    let best = row.iter().copied().min().unwrap_or(0);
+    row.iter().rposition(|&distance| distance == best).unwrap_or(0)
+}
+
+/// Во что превратить поле, когда кусок готов. Расхождение в хвосте (до `LIVE_REWRITE_CHARS`
+/// напечатанного) исправляется; если модель передумала раньше, напечатанное остаётся,
+/// а из окончательного текста допечатывается то, что идёт после совпавших слов.
+pub fn settle_goal(typed: &str, wanted: &str) -> String {
+    let erase = typed.chars().count() - common_prefix_chars(typed, wanted);
+    if erase <= LIVE_REWRITE_CHARS {
+        return wanted.to_string();
+    }
+    let typed_spans = word_spans(typed);
+    let wanted_spans = word_spans(wanted);
+    let typed_words: Vec<&str> = typed_spans.iter().map(|&(a, b)| &typed[a..b]).collect();
+    let wanted_words: Vec<&str> = wanted_spans.iter().map(|&(a, b)| &wanted[a..b]).collect();
+    let aligned = aligned_words(&typed_words, &wanted_words);
+    if aligned == 0 {
+        return wanted.to_string();
+    }
+    let tail_start = wanted_spans[aligned - 1].1;
+    let tail = &wanted[tail_start..];
+    let mut goal = typed.trim_end().to_string();
+    goal.push_str(tail);
+    goal
+}
+
+/// Что печатать по ходу речи. `preview` — оформленный промежуточный текст, `previous` —
+/// прошлый. Последнее слово ещё меняется, поэтому печатаются только слова, которые
+/// совпали в двух вариантах подряд; стирать по ходу речи можно лишь чуть-чуть
+/// (`PARTIAL_REWRITE_CHARS`), остальное выровняет окончательный текст. `None` — ничего не делать.
+pub fn partial_goal(typed: &str, previous: &str, preview: &str) -> Option<String> {
+    let spans = word_spans(preview);
+    let previous_spans = word_spans(previous);
+    // Без последнего (ещё звучащего) слова.
+    let stable = spans.len().saturating_sub(1);
+    let agreed = spans[..stable]
+        .iter()
+        .zip(previous_spans.iter())
+        .take_while(|(&(a, b), &(c, d))| preview[a..b] == previous[c..d])
+        .count();
+    if agreed == 0 {
+        return None;
+    }
+    let goal = &preview[..spans[agreed - 1].1];
+    if goal.chars().count() <= typed.chars().count() && typed.starts_with(goal) {
+        return None;
+    }
+    let erase = typed.chars().count() - common_prefix_chars(typed, goal);
+    (erase <= PARTIAL_REWRITE_CHARS).then(|| goal.to_string())
 }
 
 /// Куски оформленного текста → строка с `\n` на месте перевода строки.
@@ -624,4 +744,54 @@ pub fn text_to_pieces(text: &str) -> Vec<Piece> {
         }
     }
     pieces
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn settle_fixes_only_the_tail() {
+        assert_eq!(settle_goal("привет как де", "Привет, как дела?"), "Привет, как дела?");
+        assert_eq!(settle_goal("как дела", "как делишки"), "как делишки");
+    }
+
+    #[test]
+    fn settle_keeps_typed_text_when_the_model_changes_its_mind_early() {
+        let typed = "я давно уже хотел сделать механику что любую ноту";
+        let wanted = "Я давно хотел сделать механику, что любую ноду можно покрасить.";
+        assert_eq!(
+            settle_goal(typed, wanted),
+            "я давно уже хотел сделать механику что любую ноту можно покрасить."
+        );
+    }
+
+    #[test]
+    fn settle_with_nothing_typed_is_the_final_text() {
+        assert_eq!(settle_goal("", " новый кусок"), " новый кусок");
+    }
+
+    #[test]
+    fn partial_types_only_words_seen_twice() {
+        assert_eq!(partial_goal("", "", "привет как дела"), None);
+        assert_eq!(
+            partial_goal("", "привет как де", "привет как дела у"),
+            Some("привет как".into())
+        );
+        // Последнее слово сменилось — уже напечатанное не трогаем.
+        assert_eq!(partial_goal("привет как", "привет как дела", "привет как дела"), None);
+    }
+
+    #[test]
+    fn partial_never_erases_far_back() {
+        let typed = "раз два три четыре пять шесть семь";
+        assert_eq!(
+            partial_goal(typed, "раз дважды три четыре пять шесть семь восемь", "раз дважды три четыре пять шесть семь восемь девять"),
+            None
+        );
+        assert_eq!(
+            partial_goal("раз два три", "раз два тридцать пять", "раз два тридцать пять шесть"),
+            Some("раз два тридцать пять".into())
+        );
+    }
 }

@@ -44,6 +44,16 @@ const SLANG_GUARD: &[&str] = &[
     "фигово", "офигеть", "задолбал", "норм", "спс", "пж", "ок", "окей", "кста",
 ];
 
+/// Записи, которые словарь Windows считает русскими словами, но в речи о программах это
+/// почти всегда английский термин: «хедер» (религиозная школа) — header, «сейв» — save.
+/// Привычные заимствования («таймер», «слайдер», «файл») сюда не входят: их пишут по-русски.
+const OVER_RUSSIAN: &[(&str, &str)] = &[
+    ("хедер", "header"),
+    ("хэдер", "header"),
+    ("футер", "footer"),
+    ("сейв", "save"),
+];
+
 /// Окончания, после которых слово — русская форма, а не английское слово
 /// («лагать», «рандомный»): английский термин так не звучит.
 const RUSSIAN_ENDINGS: &[&str] = &[
@@ -138,6 +148,9 @@ impl Anglicisms {
                 priority,
                 variants.iter().map(String::as_str),
             );
+        }
+        for (heard, english) in OVER_RUSSIAN {
+            lexicon.exact.insert((*heard).to_string(), (*english).to_string());
         }
         lexicon.add_user_terms(user_terms);
         lexicon

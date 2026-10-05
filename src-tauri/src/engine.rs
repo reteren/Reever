@@ -100,7 +100,7 @@ pub enum DictationEndReason {
     Silence,
     /// Сказали фразу остановки («стоп ввод», «ривер остановись»).
     Stopped,
-    /// «Ривер отмена» / «ривер стоп» — диктовка отменена, продиктованное стирается.
+    /// «Ривер отмена» — диктовка отменена, продиктованное стирается («ривер стоп» — `Stopped`).
     Cancelled,
     /// Сказали новую команду с wake-словом — она выполняется следом.
     Command,
@@ -113,9 +113,23 @@ const COMMAND_LIMITS: (u32, u32, u32) = (300, 0, 15_000);
 const DICTATION_LIMITS: (u32, u32, u32) = (500, 12_000, 24_000);
 /// Как часто пересчитывать текст при живой диктовке.
 const LIVE_PARTIAL_MS: u32 = 400;
-/// Длиннее этого промежуточный текст диктовки не пересчитывается: дорого, а кусок
-/// всё равно скоро закончится на мягком пределе.
-const DICTATION_PARTIAL_MAX_MS: u32 = 10_000;
+/// Длиннее этого кусок пересчитывается реже: распознавание всего куска дорожает.
+const DICTATION_PARTIAL_SLOW_MS: u32 = 10_000;
+/// Интервал промежуточного текста у длинного куска.
+const LIVE_PARTIAL_SLOW_MS: u32 = 1_000;
+
+/// Слова, которые в диктовке после «ривер» заканчивают её, оставляя текст («ривер стоп»);
+/// остальные слова отмены («ривер отмена») стирают продиктованное.
+fn is_dictation_stop(text: &str) -> bool {
+    let words: Vec<String> = normalize(text).split_whitespace().map(String::from).collect();
+    !words.is_empty()
+        && words.len() <= 2
+        && words.iter().any(|word| {
+            matches!(word.as_str(), "стоп" | "stop" | "хватит" | "стопни" | "все" | "всё")
+                || word.starts_with("останов")
+                || word.starts_with("законч")
+        })
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ListenKind {
@@ -146,6 +160,9 @@ struct DictationState {
     idle_remaining: usize,
     speech_started: bool,
     partial_elapsed: usize,
+    /// Текущий кусок начался словами «ривер напиши …» (диктовка включилась посреди фразы):
+    /// команду в начале надо отрезать.
+    opening: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -205,6 +222,8 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     anglicisms: Option<Anglicisms>,
     /// Сэмплов с начала речи текущей фразы простоя (`None` — речи сейчас нет).
     idle_speech_age: Option<usize>,
+    /// Сэмплов с последней проверки «ривер напиши …» посреди фразы простоя.
+    idle_partial_elapsed: usize,
 }
 
 /// Срабатывание детектора позже этого от начала речи — слово в середине фразы
@@ -243,6 +262,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             spotter: None,
             spot_age: None,
             idle_speech_age: None,
+            idle_partial_elapsed: 0,
             anglicisms: None,
         }
     }
@@ -360,6 +380,21 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 && self.wait_remaining().is_some()
             {
                 self.advance_wait(count, &mut out);
+            }
+
+            // Детектор слышал «ривер» в начале фразы: проверяем, не «напиши» ли это, чтобы
+            // печатать по ходу речи с первой фразы, а не после паузы.
+            if self.mode_epoch == epoch
+                && matches!(self.mode, Mode::Idle)
+                && self.cfg.dictation_live
+                && self.idle_speech_age.is_some()
+                && self.spot_age.is_some()
+            {
+                self.idle_partial_elapsed = self.idle_partial_elapsed.saturating_add(count);
+                if self.idle_partial_elapsed >= samples(LIVE_PARTIAL_MS) {
+                    self.idle_partial_elapsed = 0;
+                    self.try_open_dictation(true, &mut out);
+                }
             }
 
             if self.mode_epoch == epoch && self.is_speech_started() {
@@ -501,10 +536,21 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
     }
 
-    /// Интервал промежуточного текста: у живой диктовки он есть всегда.
+    /// Интервал промежуточного текста: у живой диктовки он есть всегда (у длинного куска реже),
+    /// а в ожидании команды — чтобы «напиши …» начинало печатать по ходу речи.
     fn partial_interval(&self) -> usize {
+        if self.cfg.dictation_live
+            && self.cfg.partial_interval_ms == 0
+            && matches!(&self.mode, Mode::Listening(state) if state.kind == ListenKind::Command)
+        {
+            return samples(LIVE_PARTIAL_MS);
+        }
         if matches!(self.mode, Mode::Dictating(_)) && self.cfg.dictation_live {
-            samples(LIVE_PARTIAL_MS)
+            if self.segmenter.current_audio().len() > samples(DICTATION_PARTIAL_SLOW_MS) {
+                samples(LIVE_PARTIAL_SLOW_MS)
+            } else {
+                samples(LIVE_PARTIAL_MS)
+            }
         } else {
             samples(self.cfg.partial_interval_ms)
         }
@@ -578,8 +624,12 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         if !should_transcribe || self.segmenter.current_audio().is_empty() {
             return;
         }
-        if matches!(self.mode, Mode::Dictating(_))
-            && self.segmenter.current_audio().len() > samples(DICTATION_PARTIAL_MAX_MS)
+
+        // «ривер» — пауза — «напиши …»: живая диктовка с этой же фразы.
+        if self.cfg.dictation_live
+            && matches!(&self.mode, Mode::Listening(state)
+                if state.kind == ListenKind::Command && state.prefix.trim().is_empty())
+            && self.try_open_dictation(false, out)
         {
             return;
         }
@@ -590,6 +640,17 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 let audio = self.segmenter.current_audio();
                 self.asr.transcribe_verbatim(audio)
             };
+            let opening = matches!(&self.mode, Mode::Dictating(state) if state.opening);
+            let result = result.map(|raw| {
+                if opening {
+                    match self.opening_skip(&raw) {
+                        Some(skip) => self.before_wake_word(&trim_words(&raw, skip, 0)),
+                        None => String::new(),
+                    }
+                } else {
+                    self.before_wake_word(&raw)
+                }
+            });
             match result {
                 Ok(raw) if !raw.trim().is_empty() => {
                     let text = if self.dictation_lang == Some(Lang::En) {
@@ -641,6 +702,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 if matches!(self.mode, Mode::Idle) {
                     // SpeechStart приходит после min_speech_ms — речь уже идёт столько.
                     self.idle_speech_age = Some(samples(SegmenterConfig::default().min_speech_ms));
+                    self.idle_partial_elapsed = 0;
                 }
                 if let Some((speech_started, partial_elapsed)) = self.partial_progress() {
                     *speech_started = true;
@@ -782,8 +844,12 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                         }
                         audio.fill(0);
                     }
-                    Mode::Dictating(_) => {
-                        self.dictation_segment(&audio, out);
+                    Mode::Dictating(state) => {
+                        if state.opening {
+                            self.opening_segment(&audio, out);
+                        } else {
+                            self.dictation_segment(&audio, out);
+                        }
                         audio.fill(0);
                     }
                     Mode::Calibrating => {
@@ -892,10 +958,23 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
 
         out.push(EngineEvent::DictationStart);
         out.push(EngineEvent::State("listening"));
+        self.first_dictation_text(audio, timed, &payload, out);
+        true
+    }
+
+    /// Первый кусок после «напиши» (`payload` — цель по грамматике) и переход к диктовке.
+    fn first_dictation_text(
+        &mut self,
+        audio: &[i16],
+        timed: &Timed,
+        payload: &str,
+        out: &mut Vec<EngineEvent>,
+    ) {
+        let heard = timed.text.as_str();
         self.dictation_lang = None;
         let heard_words = heard.split_whitespace().count();
         let mut skip = heard_words.saturating_sub(payload.split_whitespace().count());
-        if let Some((lang, words)) = leading_language_switch(&payload) {
+        if let Some((lang, words)) = leading_language_switch(payload) {
             self.dictation_lang = Some(lang);
             skip += words;
         }
@@ -908,7 +987,94 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             }
         }
         self.begin_dictation();
+    }
+
+    /// Цель «напиши …» в тексте фразы: сколько первых слов («ривер напиши», «по-английски»)
+    /// отрезать. `None` — фраза не начинает диктовку.
+    fn opening_skip(&self, raw: &str) -> Option<usize> {
+        let norm = normalize(raw);
+        let body = self.strip_repeated_wake(&norm);
+        let matched = self.grammar.as_ref()?.match_trigger(&body)?;
+        if matched.intent.kind != IntentKind::Dictate {
+            return None;
+        }
+        let payload = matched.payload;
+        let mut skip = norm
+            .split_whitespace()
+            .count()
+            .checked_sub(payload.split_whitespace().count())?;
+        if let Some((_, words)) = leading_language_switch(&payload) {
+            skip += words;
+        }
+        Some(skip)
+    }
+
+    /// Посреди фразы слышно «ривер напиши …» и уже хотя бы слово цели — диктовка начинается
+    /// сразу, чтобы текст печатался по ходу речи, а не одним блоком после паузы. `idle` —
+    /// фраза простоя (тогда она обязана начинаться с wake-слова). Конец фразы разберёт
+    /// `opening_segment` так же, как обычный старт диктовки.
+    fn try_open_dictation(&mut self, idle: bool, out: &mut Vec<EngineEvent>) -> bool {
+        let Ok(raw) = self.asr.transcribe_verbatim(self.segmenter.current_audio()) else {
+            return false;
+        };
+        if idle && strip_initial_wake(&normalize(&raw), &self.cfg.wake_words).is_none() {
+            return false;
+        }
+        let Some(skip) = self.opening_skip(&raw) else {
+            return false;
+        };
+        if raw.split_whitespace().count() <= skip {
+            return false;
+        }
+        out.push(EngineEvent::DictationStart);
+        out.push(EngineEvent::State("listening"));
+        self.dictation_lang = None;
+        self.spot_age = None;
+        self.idle_speech_age = None;
+        let (pre_roll, soft_max, max) = DICTATION_LIMITS;
+        self.segmenter.set_limits(pre_roll, soft_max, max);
+        self.segmenter.set_end_silence_ms(self.cfg.dictation_pause_ms);
+        self.mode = Mode::Dictating(DictationState {
+            idle_remaining: samples(self.cfg.dictation_idle_ms.max(1_000)),
+            speech_started: true,
+            partial_elapsed: 0,
+            opening: true,
+        });
+        let text = self.before_wake_word(&trim_words(&raw, skip, 0));
+        if !text.trim().is_empty() {
+            let text = if self.dictation_lang == Some(Lang::En) { text } else { self.english_words(text) };
+            out.push(EngineEvent::DictationPartial(text));
+        }
         true
+    }
+
+    /// Конец фразы, с которой диктовка началась посреди речи: первый кусок, как при обычном
+    /// старте. Если окончательный текст оказался не «напиши …», фраза разбирается как кусок
+    /// диктовки (в том числе как новая команда).
+    fn opening_segment(&mut self, audio: &[i16], out: &mut Vec<EngineEvent>) {
+        let timed = match self.asr.transcribe_timed(audio) {
+            Ok(timed) => timed,
+            Err(error) => {
+                out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
+                self.return_to_idle(true, out);
+                return;
+            }
+        };
+        let body = self.strip_repeated_wake(&timed.text);
+        let payload = self
+            .grammar
+            .as_ref()
+            .and_then(|grammar| grammar.match_trigger(&body))
+            .filter(|matched| matched.intent.kind == IntentKind::Dictate)
+            .map(|matched| matched.payload);
+        match payload {
+            Some(payload) => {
+                self.first_dictation_text(audio, &timed, &payload, out);
+                out.push(EngineEvent::State("listening"));
+            }
+            None => self.dictation_segment(audio, out),
+        }
     }
 
     /// Текст после «напиши» в той же фразе. По таймингу слов вырезается звук цели, и он
@@ -956,6 +1122,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             idle_remaining: samples(self.cfg.dictation_idle_ms.max(1_000)),
             speech_started: false,
             partial_elapsed: 0,
+            opening: false,
         });
         self.mute_remaining = 0;
         self.mode_epoch = self.mode_epoch.wrapping_add(1);
@@ -1005,21 +1172,36 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             .as_ref()
             .map(|grammar| grammar.cancel_words.clone())
             .unwrap_or_else(|| Grammar::defaults().cancel_words);
-        // «ривер отмена» / «ривер стоп» — в начале куска или в конце («…и всё ривер отмена»):
-        // диктовка отменяется, продиктованное стирается. Не команда «стоп»: нечёткий поиск
-        // однажды запустил на неё Spotify.
-        let cancel_at_start = strip_initial_wake(&norm, &self.cfg.wake_words).is_some_and(|rest| {
-            !rest.trim().is_empty() && crate::textnorm::is_cancel(&rest, &cancel_words)
-        });
+        // «ривер стоп» / «ривер отмена» — в начале куска или в конце («…и всё ривер стоп»).
+        // «Стоп» (хватит, остановись) заканчивает диктовку, напечатанное остаётся; «отмена»
+        // (отбой, забудь) стирает продиктованное. Не команда «стоп»: нечёткий поиск однажды
+        // запустил на неё Spotify.
         let words: Vec<&str> = norm.split_whitespace().collect();
-        let cancel_at_end = words.len() >= 2
-            && crate::textnorm::is_cancel(words[words.len() - 1], &cancel_words)
-            && strip_initial_wake(words[words.len() - 2], &self.cfg.wake_words)
-                .is_some_and(|rest| rest.trim().is_empty());
-        if cancel_at_start || cancel_at_end {
-            out.push(EngineEvent::DictationEnd(DictationEndReason::Cancelled));
-            self.return_to_idle(true, out);
-            return;
+        let (control, keep_words) = match strip_initial_wake(&norm, &self.cfg.wake_words) {
+            Some(rest) if !rest.trim().is_empty() => (Some(rest), 0),
+            _ if words.len() >= 2
+                && strip_initial_wake(words[words.len() - 2], &self.cfg.wake_words)
+                    .is_some_and(|rest| rest.trim().is_empty()) =>
+            {
+                (Some(words[words.len() - 1].to_string()), words.len() - 2)
+            }
+            _ => (None, 0),
+        };
+        if let Some(control) = control {
+            if is_dictation_stop(&control) {
+                let text = trim_words(&raw, 0, words.len() - keep_words);
+                if !text.is_empty() {
+                    out.push(EngineEvent::Dictation(text));
+                }
+                out.push(EngineEvent::DictationEnd(DictationEndReason::Stopped));
+                self.return_to_idle(true, out);
+                return;
+            }
+            if crate::textnorm::is_cancel(&control, &cancel_words) {
+                out.push(EngineEvent::DictationEnd(DictationEndReason::Cancelled));
+                self.return_to_idle(true, out);
+                return;
+            }
         }
 
         if strip_initial_wake(&norm, &self.cfg.wake_words).is_some() {
@@ -1179,6 +1361,20 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 .map(|language_id| language_id as &mut dyn LanguageId),
             self.lang_mode,
         )
+    }
+
+    /// Промежуточный текст до «ривер …» посреди куска: команду («ривер стоп», «ривер
+    /// открой») не печатаем по ходу речи, чтобы потом не стирать.
+    fn before_wake_word(&self, raw: &str) -> String {
+        let words: Vec<&str> = raw.split_whitespace().collect();
+        let normalized: Vec<String> = words.iter().map(|word| normalize(word)).collect();
+        match normalized.iter().position(|word| {
+            !word.is_empty()
+                && strip_initial_wake(word, &self.cfg.wake_words).is_some_and(|rest| rest.trim().is_empty())
+        }) {
+            Some(index) => words[..index].join(" "),
+            None => raw.to_string(),
+        }
     }
 
     fn strip_repeated_wake(&self, text: &str) -> String {
@@ -2135,18 +2331,62 @@ mod tests {
     }
 
     #[test]
-    fn river_cancel_word_during_dictation_just_stops_it() {
-        for word in ["стоп", "stop", "хватит"] {
+    fn river_stop_ends_dictation_and_river_cancel_erases_it() {
+        for (word, reason) in [
+            ("стоп", DictationEndReason::Stopped),
+            ("stop", DictationEndReason::Stopped),
+            ("хватит", DictationEndReason::Stopped),
+            ("отмена", DictationEndReason::Cancelled),
+            ("забудь", DictationEndReason::Cancelled),
+        ] {
             let heard = format!("ривер {word}");
             let mut engine = dictation_engine(&["ривер напиши", &heard]);
             engine.push_audio(&phrase(123, 700));
             let events = engine.push_audio(&phrase(123, 200));
-            assert!(
-                contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Cancelled)),
-                "{word}: {events:?}"
-            );
+            assert!(contains(&events, &EngineEvent::DictationEnd(reason)), "{word}: {events:?}");
             assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
         }
+    }
+
+    #[test]
+    fn river_stop_at_the_end_keeps_the_text_before_it() {
+        let mut engine = dictation_engine(&["ривер напиши", "вот и всё ривер стоп"]);
+        engine.push_audio(&phrase(123, 700));
+        let events = engine.push_audio(&phrase(123, 200));
+        assert_eq!(dictated(&events), vec!["вот и всё".to_string()]);
+        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Stopped)));
+    }
+
+    #[test]
+    fn dictation_opens_mid_phrase_and_types_live_from_the_first_words() {
+        let mut cfg = test_config();
+        cfg.dictation_pause_ms = 120;
+        cfg.dictation_live = true;
+        let texts = ["напиши привет мир"; 12];
+        let (mut engine, _, _, _) = engine(cfg, &texts);
+        engine.set_grammar(crate::grammar::Grammar::defaults());
+        engine.listen_command();
+        let mut pcm = vec![123; samples(1_200)];
+        pcm.resize(samples(1_200 + 300), 0);
+        let events = engine.push_audio(&pcm);
+        assert!(contains(&events, &EngineEvent::DictationStart), "{events:?}");
+        assert!(
+            events.iter().any(|e| matches!(e, EngineEvent::DictationPartial(t) if t == "привет мир")),
+            "{events:?}"
+        );
+        assert_eq!(dictated(&events), vec!["привет мир".to_string()]);
+        assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
+    }
+
+    #[test]
+    fn live_partial_stops_before_a_wake_word() {
+        let mut engine = dictation_engine(&[]);
+        engine.cfg.wake_words = vec!["ривер".into()];
+        assert_eq!(engine.before_wake_word("и всё Ривер стоп"), "и всё");
+        assert_eq!(engine.before_wake_word("обычный текст"), "обычный текст");
+        assert!(is_dictation_stop("стоп"));
+        assert!(is_dictation_stop("остановись"));
+        assert!(!is_dictation_stop("отмена"));
     }
 
     #[test]

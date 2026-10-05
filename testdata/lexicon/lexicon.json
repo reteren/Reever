@@ -3105,7 +3105,7 @@
       "display": "light",
       "weight": 0.00559783,
       "rank": 232,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лайт",
         "лэйт"
@@ -4086,7 +4086,7 @@
       "display": "open",
       "weight": 0.00424641,
       "rank": 302,
-      "domain": false,
+      "domain": true,
       "variants": [
         "оупан",
         "опан",
@@ -5392,7 +5392,7 @@
       "display": "show",
       "weight": 0.00322377,
       "rank": 395,
-      "domain": false,
+      "domain": true,
       "variants": [
         "шоу",
         "шо"
@@ -5624,7 +5624,7 @@
       "display": "dark",
       "weight": 0.00311819,
       "rank": 412,
-      "domain": false,
+      "domain": true,
       "variants": [
         "дарк",
         "дорк"
@@ -5829,7 +5829,7 @@
       "display": "live",
       "weight": 0.00301966,
       "rank": 426,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лайв",
         "лэйв",
@@ -6092,7 +6092,7 @@
       "display": "view",
       "weight": 0.00287836,
       "rank": 445,
-      "domain": false,
+      "domain": true,
       "variants": [
         "вйу",
         "виу",
@@ -7273,7 +7273,7 @@
       "display": "opened",
       "weight": 0.0023591,
       "rank": 531,
-      "domain": false,
+      "domain": true,
       "variants": [
         "оупанд",
         "опанд",
@@ -8215,7 +8215,7 @@
       "display": "save",
       "weight": 0.00199329,
       "rank": 594,
-      "domain": false,
+      "domain": true,
       "variants": [
         "сэйв",
         "зэйв",
@@ -8653,7 +8653,7 @@
       "display": "note",
       "weight": 0.00189687,
       "rank": 623,
-      "domain": false,
+      "domain": true,
       "variants": [
         "ноут",
         "нот"
@@ -15816,7 +15816,7 @@
       "display": "stream",
       "weight": 0.00110973,
       "rank": 1112,
-      "domain": false,
+      "domain": true,
       "variants": [
         "стрим",
         "зтрим",
@@ -16845,7 +16845,7 @@
       "display": "color",
       "weight": 0.00104562,
       "rank": 1181,
-      "domain": false,
+      "domain": true,
       "variants": [
         "калер",
         "колер",
@@ -19134,7 +19134,7 @@
       "display": "task",
       "weight": 0.00092709,
       "rank": 1334,
-      "domain": false,
+      "domain": true,
       "variants": [
         "тэск",
         "таск",
@@ -21288,7 +21288,7 @@
       "display": "shadow",
       "weight": 0.00084404,
       "rank": 1480,
-      "domain": false,
+      "domain": true,
       "variants": [
         "шэдоу",
         "шадоу",
@@ -23484,7 +23484,7 @@
       "display": "drop",
       "weight": 0.00077672,
       "rank": 1632,
-      "domain": false,
+      "domain": true,
       "variants": [
         "драп",
         "дроп"
@@ -27272,7 +27272,7 @@
       "display": "recent",
       "weight": 0.00066104,
       "rank": 1882,
-      "domain": false,
+      "domain": true,
       "variants": [
         "рисант",
         "рысант",
@@ -28548,7 +28548,7 @@
       "display": "copy",
       "weight": 0.00063068,
       "rank": 1965,
-      "domain": false,
+      "domain": true,
       "variants": [
         "капи",
         "копи",
@@ -31198,7 +31198,7 @@
       "display": "hide",
       "weight": 0.00057649,
       "rank": 2138,
-      "domain": false,
+      "domain": true,
       "variants": [
         "хайд",
         "гайд",
@@ -31338,7 +31338,7 @@
       "display": "frame",
       "weight": 0.00057334,
       "rank": 2148,
-      "domain": false,
+      "domain": true,
       "variants": [
         "фрэйм",
         "фрейм",
@@ -35559,7 +35559,7 @@
       "display": "pull",
       "weight": 0.00049826,
       "rank": 2418,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пул",
         "пол"
@@ -37950,7 +37950,7 @@
       "display": "agent",
       "weight": 0.00046202,
       "rank": 2567,
-      "domain": false,
+      "domain": true,
       "variants": [
         "эйджант",
         "ейджант",
@@ -40897,7 +40897,7 @@
       "display": "feature",
       "weight": 0.00042247,
       "rank": 2757,
-      "domain": false,
+      "domain": true,
       "variants": [
         "фичер",
         "фычер",
@@ -46131,7 +46131,7 @@
       "display": "border",
       "weight": 0.00037195,
       "rank": 3095,
-      "domain": false,
+      "domain": true,
       "variants": [
         "бордер",
         "бардер",
@@ -47065,7 +47065,7 @@
       "display": "model",
       "weight": 0.00036367,
       "rank": 3156,
-      "domain": false,
+      "domain": true,
       "variants": [
         "мадал",
         "модал",
@@ -48600,7 +48600,7 @@
       "display": "fix",
       "weight": 0.00034726,
       "rank": 3258,
-      "domain": false,
+      "domain": true,
       "variants": [
         "фикс",
         "фыкс",
@@ -49669,7 +49669,7 @@
       "display": "load",
       "weight": 0.00033911,
       "rank": 3325,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лоуд",
         "лод"
@@ -54109,7 +54109,7 @@
       "display": "glow",
       "weight": 0.00030382,
       "rank": 3603,
-      "domain": false,
+      "domain": true,
       "variants": [
         "глоу",
         "гло"
@@ -55807,7 +55807,7 @@
       "display": "push",
       "weight": 0.00029344,
       "rank": 3710,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пуш",
         "пош"
@@ -56875,7 +56875,7 @@
       "display": "outline",
       "weight": 0.00028592,
       "rank": 3779,
-      "domain": false,
+      "domain": true,
       "variants": [
         "аутлайн",
         "аотлайн",
@@ -59169,7 +59169,7 @@
       "display": "log",
       "weight": 0.00027198,
       "rank": 3929,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лог",
         "лаг"
@@ -59242,7 +59242,7 @@
       "display": "version",
       "weight": 0.00027161,
       "rank": 3934,
-      "domain": false,
+      "domain": true,
       "variants": [
         "вержан",
         "вэржан",
@@ -60900,7 +60900,7 @@
       "display": "file",
       "weight": 0.0002623,
       "rank": 4042,
-      "domain": false,
+      "domain": true,
       "variants": [
         "файл",
         "фэйл"
@@ -65933,7 +65933,7 @@
       "display": "release",
       "weight": 0.00023759,
       "rank": 4364,
-      "domain": false,
+      "domain": true,
       "variants": [
         "рилис",
         "рылис",
@@ -66012,7 +66012,7 @@
       "display": "select",
       "weight": 0.000237,
       "rank": 4370,
-      "domain": false,
+      "domain": true,
       "variants": [
         "салэкт",
         "залэкт",
@@ -66058,7 +66058,7 @@
       "display": "margin",
       "weight": 0.00023676,
       "rank": 4375,
-      "domain": false,
+      "domain": true,
       "variants": [
         "марджан",
         "морджан",
@@ -67416,7 +67416,7 @@
       "display": "link",
       "weight": 0.00023142,
       "rank": 4455,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лингк",
         "лынгк",
@@ -70560,7 +70560,7 @@
       "display": "drag",
       "weight": 0.00021863,
       "rank": 4648,
-      "domain": false,
+      "domain": true,
       "variants": [
         "дрэг",
         "драг"
@@ -70753,7 +70753,7 @@
       "display": "theme",
       "weight": 0.00021798,
       "rank": 4661,
-      "domain": false,
+      "domain": true,
       "variants": [
         "сим",
         "зим",
@@ -77592,7 +77592,7 @@
       "display": "patch",
       "weight": 0.00019206,
       "rank": 5096,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пэч",
         "пач",
@@ -80753,7 +80753,7 @@
       "display": "bind",
       "weight": 0.00018242,
       "rank": 5293,
-      "domain": false,
+      "domain": true,
       "variants": [
         "байнд",
         "бэйнд"
@@ -81697,7 +81697,7 @@
       "display": "token",
       "weight": 0.00017991,
       "rank": 5354,
-      "domain": false,
+      "domain": true,
       "variants": [
         "тоукан",
         "токан",
@@ -86042,7 +86042,7 @@
       "display": "prompt",
       "weight": 0.00016843,
       "rank": 5639,
-      "domain": false,
+      "domain": true,
       "variants": [
         "прампт",
         "промпт"
@@ -93378,7 +93378,7 @@
       "display": "accent",
       "weight": 0.00015043,
       "rank": 6103,
-      "domain": false,
+      "domain": true,
       "variants": [
         "аксэнт",
         "оксэнт",
@@ -93749,7 +93749,7 @@
       "display": "paste",
       "weight": 0.00014964,
       "rank": 6127,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пэйст",
         "пейст",
@@ -109168,7 +109168,7 @@
       "display": "button",
       "weight": 0.00011886,
       "rank": 7109,
-      "domain": false,
+      "domain": true,
       "variants": [
         "батан",
         "ботан",
@@ -126420,7 +126420,7 @@
       "display": "snap",
       "weight": 9.749e-05,
       "rank": 8201,
-      "domain": false,
+      "domain": true,
       "variants": [
         "снэп",
         "знэп",
@@ -129959,7 +129959,7 @@
       "display": "panel",
       "weight": 9.347e-05,
       "rank": 8425,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пэнал",
         "панал",
@@ -135531,7 +135531,7 @@
       "display": "chat",
       "weight": 8.797e-05,
       "rank": 8777,
-      "domain": false,
+      "domain": true,
       "variants": [
         "чэт",
         "тшэт",
@@ -143863,7 +143863,7 @@
       "display": "focus",
       "weight": 8.009e-05,
       "rank": 9308,
-      "domain": false,
+      "domain": true,
       "variants": [
         "фоукас",
         "фокас",
@@ -156418,7 +156418,7 @@
       "display": "client",
       "weight": 6.966e-05,
       "rank": 10125,
-      "domain": false,
+      "domain": true,
       "variants": [
         "клайант",
         "клэйант",
@@ -160422,7 +160422,7 @@
       "display": "output",
       "weight": 6.683e-05,
       "rank": 10387,
-      "domain": false,
+      "domain": true,
       "variants": [
         "аутпут",
         "аотпут",
@@ -187052,7 +187052,7 @@
       "display": "label",
       "weight": 5.13e-05,
       "rank": 12146,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лэйбал",
         "лейбал",
@@ -188316,7 +188316,7 @@
       "display": "undo",
       "weight": 5.071e-05,
       "rank": 12228,
-      "domain": false,
+      "domain": true,
       "variants": [
         "анду",
         "онду",
@@ -199399,7 +199399,7 @@
       "display": "scroll",
       "weight": 4.579e-05,
       "rank": 12964,
-      "domain": false,
+      "domain": true,
       "variants": [
         "скроул",
         "зкроул",
@@ -206297,7 +206297,7 @@
       "display": "grab",
       "weight": 4.304e-05,
       "rank": 13428,
-      "domain": false,
+      "domain": true,
       "variants": [
         "грэб",
         "граб"
@@ -208429,7 +208429,7 @@
       "display": "edit",
       "weight": 4.225e-05,
       "rank": 13568,
-      "domain": false,
+      "domain": true,
       "variants": [
         "эдат",
         "едат",
@@ -211494,7 +211494,7 @@
       "display": "context",
       "weight": 4.11e-05,
       "rank": 13779,
-      "domain": false,
+      "domain": true,
       "variants": [
         "кантэкст",
         "контэкст",
@@ -211701,7 +211701,7 @@
       "display": "query",
       "weight": 4.104e-05,
       "rank": 13794,
-      "domain": false,
+      "domain": true,
       "variants": [
         "квири",
         "куири",
@@ -216401,7 +216401,7 @@
       "display": "beacon",
       "weight": 3.942e-05,
       "rank": 14104,
-      "domain": false,
+      "domain": true,
       "variants": [
         "бикан",
         "быкан",
@@ -237957,7 +237957,7 @@
       "display": "hover",
       "weight": 3.307e-05,
       "rank": 15560,
-      "domain": false,
+      "domain": true,
       "variants": [
         "хавер",
         "гавер",
@@ -261257,7 +261257,7 @@
       "display": "blur",
       "weight": 2.751e-05,
       "rank": 17160,
-      "domain": false,
+      "domain": true,
       "variants": [
         "блер",
         "блэр",
@@ -263508,7 +263508,7 @@
       "display": "menu",
       "weight": 2.704e-05,
       "rank": 17319,
-      "domain": false,
+      "domain": true,
       "variants": [
         "мэнйу",
         "менйу",
@@ -270198,7 +270198,7 @@
       "display": "tag",
       "weight": 2.571e-05,
       "rank": 17782,
-      "domain": false,
+      "domain": true,
       "variants": [
         "тэг",
         "таг"
@@ -279015,7 +279015,7 @@
       "display": "bug",
       "weight": 2.378e-05,
       "rank": 18423,
-      "domain": false,
+      "domain": true,
       "variants": [
         "баг",
         "бог",
@@ -303134,7 +303134,7 @@
       "display": "palette",
       "weight": 1.977e-05,
       "rank": 20186,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пэлат",
         "палат",
@@ -326229,7 +326229,7 @@
       "display": "cache",
       "weight": 1.66e-05,
       "rank": 21911,
-      "domain": false,
+      "domain": true,
       "variants": [
         "кэш",
         "каш",
@@ -329413,7 +329413,7 @@
       "display": "alpha",
       "weight": 1.616e-05,
       "rank": 22157,
-      "domain": false,
+      "domain": true,
       "variants": [
         "элфа",
         "алфа",
@@ -360465,7 +360465,7 @@
       "display": "settings",
       "weight": 1.258e-05,
       "rank": 24672,
-      "domain": false,
+      "domain": true,
       "variants": [
         "сэтингз",
         "зэтингз",
@@ -371355,7 +371355,7 @@
       "display": "gradient",
       "weight": 1.15e-05,
       "rank": 25637,
-      "domain": false,
+      "domain": true,
       "variants": [
         "грэйдиант",
         "грейдиант",
@@ -371808,7 +371808,7 @@
       "display": "padding",
       "weight": 1.145e-05,
       "rank": 25677,
-      "domain": false,
+      "domain": true,
       "variants": [
         "пэдинг",
         "падинг",
@@ -374483,7 +374483,7 @@
       "display": "grid",
       "weight": 1.121e-05,
       "rank": 25904,
-      "domain": false,
+      "domain": true,
       "variants": [
         "грид",
         "грыд",
@@ -380221,7 +380221,7 @@
       "display": "layout",
       "weight": 1.068e-05,
       "rank": 26420,
-      "domain": false,
+      "domain": true,
       "variants": [
         "лэйаут",
         "лейаут",
@@ -402535,6 +402535,21 @@
       ]
     },
     {
+      "word": "setup",
+      "display": "setup",
+      "weight": 6.93e-06,
+      "rank": 31390,
+      "domain": true,
+      "variants": [
+        "сэтап",
+        "зэтап",
+        "сетап",
+        "сэтоп",
+        "сэтэп",
+        "сэтып"
+      ]
+    },
+    {
       "word": "python",
       "display": "python",
       "weight": 6.81e-06,
@@ -402546,6 +402561,20 @@
         "пайзан",
         "пайтан",
         "пайсон"
+      ]
+    },
+    {
+      "word": "header",
+      "display": "header",
+      "weight": 6.68e-06,
+      "rank": 31834,
+      "domain": true,
+      "variants": [
+        "хэдер",
+        "гэдер",
+        "хедер",
+        "хэдэр",
+        "хэдар"
       ]
     },
     {
@@ -402579,6 +402608,48 @@
       ]
     },
     {
+      "word": "shortcut",
+      "display": "shortcut",
+      "weight": 5.03e-06,
+      "rank": 35306,
+      "domain": true,
+      "variants": [
+        "шорткат",
+        "шарткат",
+        "шорткот",
+        "шорткэт",
+        "шорткыт"
+      ]
+    },
+    {
+      "word": "timer",
+      "display": "timer",
+      "weight": 4.42e-06,
+      "rank": 36982,
+      "domain": true,
+      "variants": [
+        "таймер",
+        "тэймер",
+        "таймэр",
+        "таймар"
+      ]
+    },
+    {
+      "word": "overlay",
+      "display": "overlay",
+      "weight": 4.32e-06,
+      "rank": 37278,
+      "domain": true,
+      "variants": [
+        "оуверлэй",
+        "оверлэй",
+        "оувэрлэй",
+        "оуварлэй",
+        "оуверлей",
+        "оуверлэ"
+      ]
+    },
+    {
       "word": "pipeline",
       "display": "pipeline",
       "weight": 3.95e-06,
@@ -402588,6 +402659,106 @@
         "пайплайн",
         "пэйплайн",
         "пайплэйн"
+      ]
+    },
+    {
+      "word": "dashboard",
+      "display": "dashboard",
+      "weight": 3.56e-06,
+      "rank": 39795,
+      "domain": true,
+      "variants": [
+        "дэшборд",
+        "дашборд",
+        "дэшбард"
+      ]
+    },
+    {
+      "word": "tracker",
+      "display": "tracker",
+      "weight": 3.26e-06,
+      "rank": 41012,
+      "domain": true,
+      "variants": [
+        "трэкер",
+        "тракер",
+        "трэкэр",
+        "трэкар"
+      ]
+    },
+    {
+      "word": "server",
+      "display": "server",
+      "weight": 3.25e-06,
+      "rank": 41039,
+      "domain": true,
+      "variants": [
+        "сервер",
+        "зервер",
+        "сэрвер",
+        "сарвер",
+        "сервэр",
+        "сервар"
+      ]
+    },
+    {
+      "word": "options",
+      "display": "options",
+      "weight": 3.21e-06,
+      "rank": 41194,
+      "domain": true,
+      "variants": [
+        "апшанз",
+        "опшанз",
+        "апшонз",
+        "апшэнз",
+        "апшынз",
+        "апшанс",
+        "опшонз",
+        "опшэнз",
+        "опшынз",
+        "опшанс"
+      ]
+    },
+    {
+      "word": "picker",
+      "display": "picker",
+      "weight": 2.88e-06,
+      "rank": 42738,
+      "domain": true,
+      "variants": [
+        "пикер",
+        "пыкер",
+        "пекер",
+        "пикэр",
+        "пикар"
+      ]
+    },
+    {
+      "word": "slider",
+      "display": "slider",
+      "weight": 2.82e-06,
+      "rank": 43020,
+      "domain": true,
+      "variants": [
+        "слайдер",
+        "злайдер",
+        "слэйдер",
+        "слайдэр",
+        "слайдар"
+      ]
+    },
+    {
+      "word": "input",
+      "display": "input",
+      "weight": 2.8e-06,
+      "rank": 43108,
+      "domain": true,
+      "variants": [
+        "инпут",
+        "ынпут",
+        "енпут",
+        "инпот"
       ]
     },
     {
@@ -402601,6 +402772,57 @@
         "сип",
         "зып",
         "зеп"
+      ]
+    },
+    {
+      "word": "modal",
+      "display": "modal",
+      "weight": 2.7e-06,
+      "rank": 43653,
+      "domain": true,
+      "variants": [
+        "моудал",
+        "модал",
+        "моудол",
+        "моудэл",
+        "моудыл"
+      ]
+    },
+    {
+      "word": "gimp",
+      "display": "GIMP",
+      "weight": 2.46e-06,
+      "rank": 44939,
+      "domain": true,
+      "variants": [
+        "гимп"
+      ]
+    },
+    {
+      "word": "toggle",
+      "display": "toggle",
+      "weight": 2.15e-06,
+      "rank": 46949,
+      "domain": true,
+      "variants": [
+        "тагал",
+        "тогал",
+        "тагол",
+        "тагэл",
+        "тагыл"
+      ]
+    },
+    {
+      "word": "footer",
+      "display": "footer",
+      "weight": 1.93e-06,
+      "rank": 48618,
+      "domain": true,
+      "variants": [
+        "футер",
+        "фотер",
+        "футэр",
+        "футар"
       ]
     },
     {
@@ -402649,6 +402871,49 @@
       ]
     },
     {
+      "word": "upgrade",
+      "display": "upgrade",
+      "weight": 1.76e-06,
+      "rank": 50077,
+      "domain": true,
+      "variants": [
+        "апгрэйд",
+        "опгрэйд",
+        "эпгрэйд",
+        "ыпгрэйд",
+        "апгрейд",
+        "апгрэд"
+      ]
+    },
+    {
+      "word": "stopwatch",
+      "display": "stopwatch",
+      "weight": 1.69e-06,
+      "rank": 50664,
+      "domain": true,
+      "variants": [
+        "стапвач",
+        "зтапвач",
+        "стопвач",
+        "стапуач",
+        "стапвоч",
+        "стапватш"
+      ]
+    },
+    {
+      "word": "highlight",
+      "display": "highlight",
+      "weight": 1.35e-06,
+      "rank": 54324,
+      "domain": true,
+      "variants": [
+        "хайлайт",
+        "гайлайт",
+        "хэйлайт",
+        "хайлэйт"
+      ]
+    },
+    {
       "word": "zoom",
       "display": "zoom",
       "weight": 1.17e-06,
@@ -402658,6 +402923,18 @@
         "зум",
         "сум",
         "зюм"
+      ]
+    },
+    {
+      "word": "diff",
+      "display": "diff",
+      "weight": 1.14e-06,
+      "rank": 57273,
+      "domain": true,
+      "variants": [
+        "диф",
+        "дыф",
+        "деф"
       ]
     },
     {
@@ -402675,6 +402952,34 @@
       ]
     },
     {
+      "word": "dialog",
+      "display": "dialog",
+      "weight": 1.09e-06,
+      "rank": 57988,
+      "domain": true,
+      "variants": [
+        "дайалог",
+        "дэйалог",
+        "дайолог",
+        "дайэлог",
+        "дайылог",
+        "дайалаг"
+      ]
+    },
+    {
+      "word": "hex",
+      "display": "hex",
+      "weight": 8.6e-07,
+      "rank": 62236,
+      "domain": true,
+      "variants": [
+        "хэкс",
+        "гэкс",
+        "хекс",
+        "хэкз"
+      ]
+    },
+    {
       "word": "blender",
       "display": "blender",
       "weight": 8e-07,
@@ -402685,6 +402990,29 @@
         "блендер",
         "блэндэр",
         "блэндар"
+      ]
+    },
+    {
+      "word": "typescript",
+      "display": "TypeScript",
+      "weight": 7.3e-07,
+      "rank": 65500,
+      "domain": true,
+      "variants": [
+        "тайпскрипт"
+      ]
+    },
+    {
+      "word": "sidebar",
+      "display": "sidebar",
+      "weight": 5.9e-07,
+      "rank": 69557,
+      "domain": true,
+      "variants": [
+        "сайдбар",
+        "зайдбар",
+        "сэйдбар",
+        "сайдбор"
       ]
     },
     {
@@ -402737,6 +403065,31 @@
       ]
     },
     {
+      "word": "database",
+      "display": "database",
+      "weight": 4.4e-07,
+      "rank": 75753,
+      "domain": true,
+      "variants": [
+        "дэйтабэйс",
+        "дейтабэйс",
+        "дэтабэйс",
+        "дэйтобэйс",
+        "дэйтэбэйс",
+        "дэйтыбэйс",
+        "дэйтабейс",
+        "дэйтабэс",
+        "дэйтабэйз",
+        "датабэйс",
+        "дэтобэйс",
+        "дэтэбэйс",
+        "дэтыбэйс",
+        "дэтабейс",
+        "дэтабэс",
+        "дэтабэйз"
+      ]
+    },
+    {
       "word": "cursor",
       "display": "cursor",
       "weight": 3.3e-07,
@@ -402752,6 +403105,59 @@
       ]
     },
     {
+      "word": "update",
+      "display": "update",
+      "weight": 3.3e-07,
+      "rank": 82942,
+      "domain": true,
+      "variants": [
+        "апдэйт",
+        "опдэйт",
+        "эпдэйт",
+        "ыпдэйт",
+        "апдейт",
+        "апдэт"
+      ]
+    },
+    {
+      "word": "tauri",
+      "display": "Tauri",
+      "weight": 3e-07,
+      "rank": 85324,
+      "domain": true,
+      "variants": [
+        "таури"
+      ]
+    },
+    {
+      "word": "redo",
+      "display": "redo",
+      "weight": 1.5e-07,
+      "rank": 103763,
+      "domain": true,
+      "variants": [
+        "риду",
+        "рыду",
+        "ридю"
+      ]
+    },
+    {
+      "word": "installer",
+      "display": "installer",
+      "weight": 1e-07,
+      "rank": 116240,
+      "domain": true,
+      "variants": [
+        "инстолер",
+        "ынстолер",
+        "енстолер",
+        "инзтолер",
+        "инсталер",
+        "инстолэр",
+        "инстолар"
+      ]
+    },
+    {
       "word": "shader",
       "display": "shader",
       "weight": 7e-08,
@@ -402763,6 +403169,72 @@
         "шэдер",
         "шэйдэр",
         "шэйдар"
+      ]
+    },
+    {
+      "word": "resize",
+      "display": "resize",
+      "weight": 6e-08,
+      "rank": 133272,
+      "domain": true,
+      "variants": [
+        "ресайз",
+        "рисайз"
+      ]
+    },
+    {
+      "word": "widget",
+      "display": "widget",
+      "weight": 4e-08,
+      "rank": 145120,
+      "domain": true,
+      "variants": [
+        "виджит",
+        "уиджит",
+        "выджит",
+        "веджит",
+        "вижит",
+        "виджыт",
+        "виджет"
+      ]
+    },
+    {
+      "word": "debug",
+      "display": "debug",
+      "weight": 2e-08,
+      "rank": 163868,
+      "domain": true,
+      "variants": [
+        "дибаг",
+        "дыбаг",
+        "дибог",
+        "дибэг",
+        "дибыг",
+        "дебаг"
+      ]
+    },
+    {
+      "word": "ctrl",
+      "display": "Ctrl",
+      "weight": 1e-08,
+      "rank": 177128,
+      "domain": true,
+      "variants": [
+        "контрол",
+        "контрл",
+        "ктрл"
+      ]
+    },
+    {
+      "word": "debugger",
+      "display": "debugger",
+      "weight": 1e-08,
+      "rank": 177320,
+      "domain": true,
+      "variants": [
+        "дебаггер",
+        "дебагер",
+        "дебаггэр"
       ]
     },
     {
@@ -402783,6 +403255,18 @@
       ]
     },
     {
+      "word": "backspace",
+      "display": "Backspace",
+      "weight": 1e-08,
+      "rank": 193763,
+      "domain": true,
+      "variants": [
+        "бэкспейс",
+        "бекспейс",
+        "бэкспэйс"
+      ]
+    },
+    {
       "word": "api",
       "display": "API",
       "weight": 0.08,
@@ -402795,6 +403279,29 @@
         "эйпыай",
         "эйпиэй",
         "апи"
+      ]
+    },
+    {
+      "word": "backend",
+      "display": "backend",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "бэкэнд",
+        "бакэнд",
+        "бэкенд"
+      ]
+    },
+    {
+      "word": "checkbox",
+      "display": "checkbox",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "чекбокс",
+        "чекбох"
       ]
     },
     {
@@ -402816,6 +403323,18 @@
       ]
     },
     {
+      "word": "css",
+      "display": "CSS",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "цээсэс",
+        "сиэсэс",
+        "цсс"
+      ]
+    },
+    {
       "word": "csv",
       "display": "csv",
       "weight": 0.08,
@@ -402828,6 +403347,62 @@
         "сиесви",
         "сиэзви",
         "сиэсвы"
+      ]
+    },
+    {
+      "word": "dll",
+      "display": "DLL",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "дээлэль",
+        "длл"
+      ]
+    },
+    {
+      "word": "dropdown",
+      "display": "dropdown",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "дропдаун",
+        "дропдавн"
+      ]
+    },
+    {
+      "word": "exe",
+      "display": "exe",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "экзе",
+        "экзешник",
+        "эксе",
+        "иксе"
+      ]
+    },
+    {
+      "word": "figma",
+      "display": "Figma",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "фигма"
+      ]
+    },
+    {
+      "word": "frontend",
+      "display": "frontend",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "фронтенд",
+        "фронтэнд"
       ]
     },
     {
@@ -402855,6 +403430,27 @@
       "variants": [
         "джипию",
         "гпу"
+      ]
+    },
+    {
+      "word": "hotbar",
+      "display": "hotbar",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "хотбар"
+      ]
+    },
+    {
+      "word": "hotkey",
+      "display": "hotkey",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "хоткей",
+        "хоткэй"
       ]
     },
     {
@@ -402887,6 +403483,17 @@
         "эйчтытипи",
         "эйчтитыпи",
         "эйчтитипы"
+      ]
+    },
+    {
+      "word": "https",
+      "display": "HTTPS",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "аштитипиэс",
+        "хттпс"
       ]
     },
     {
@@ -402933,6 +403540,63 @@
       ]
     },
     {
+      "word": "json",
+      "display": "JSON",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "джейсон",
+        "джисон",
+        "жсон"
+      ]
+    },
+    {
+      "word": "keybind",
+      "display": "keybind",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "кейбинд",
+        "кибинд"
+      ]
+    },
+    {
+      "word": "mp3",
+      "display": "MP3",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "эмпэтри",
+        "эмпетри"
+      ]
+    },
+    {
+      "word": "mp4",
+      "display": "MP4",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "эмпэфор",
+        "эмпефор",
+        "эмпэчетыре"
+      ]
+    },
+    {
+      "word": "npm",
+      "display": "npm",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "энпиэм",
+        "нпм"
+      ]
+    },
+    {
       "word": "pdf",
       "display": "pdf",
       "weight": 0.08,
@@ -402973,6 +403637,43 @@
       ]
     },
     {
+      "word": "popup",
+      "display": "popup",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "папап",
+        "попап",
+        "папоп",
+        "папэп",
+        "папып"
+      ]
+    },
+    {
+      "word": "rebase",
+      "display": "rebase",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "рибейс",
+        "ребейс"
+      ]
+    },
+    {
+      "word": "repo",
+      "display": "repo",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "рипоу",
+        "рыпоу",
+        "рипо"
+      ]
+    },
+    {
       "word": "ssd",
       "display": "SSD",
       "weight": 0.08,
@@ -402981,6 +403682,61 @@
       "variants": [
         "эсэсди",
         "эсэсд"
+      ]
+    },
+    {
+      "word": "statusbar",
+      "display": "statusbar",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "статусбар"
+      ]
+    },
+    {
+      "word": "svg",
+      "display": "SVG",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "эсвэгэ",
+        "эсвиджи",
+        "свг"
+      ]
+    },
+    {
+      "word": "toml",
+      "display": "TOML",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "томл",
+        "томэл"
+      ]
+    },
+    {
+      "word": "toolbar",
+      "display": "toolbar",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "тулбар",
+        "тюлбар",
+        "тулбор"
+      ]
+    },
+    {
+      "word": "tooltip",
+      "display": "tooltip",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "тултип"
       ]
     },
     {
@@ -403020,6 +403776,29 @@
       ]
     },
     {
+      "word": "wav",
+      "display": "WAV",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "вав",
+        "вейв"
+      ]
+    },
+    {
+      "word": "webp",
+      "display": "WebP",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "вебп",
+        "вэбпи",
+        "вебпи"
+      ]
+    },
+    {
       "word": "xml",
       "display": "xml",
       "weight": 0.08,
@@ -403031,6 +403810,28 @@
         "экзэмэл",
         "эксемэл",
         "эксэмел"
+      ]
+    },
+    {
+      "word": "yaml",
+      "display": "YAML",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "ямл",
+        "ямль",
+        "ямэл"
+      ]
+    },
+    {
+      "word": "yml",
+      "display": "YML",
+      "weight": 0.08,
+      "rank": null,
+      "domain": true,
+      "variants": [
+        "ямл"
       ]
     }
   ]

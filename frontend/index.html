@@ -425,7 +425,7 @@
           }
           if(intent.kind==='dictate'&&trigger){
             const stop=(grammar.dictation_stop||[]).find(word=>String(word).trim())||'стоп ввод';
-            host.append(grammarExampleRow(`${wake} ${trigger} …`,`диктовка в поле с курсором (или в буфер); конец — «${stop}» или тишина`));
+            host.append(grammarExampleRow(`${wake} ${trigger} …`,`диктовка в поле с курсором (или в буфер); конец — «${wake} стоп», «${stop}» или тишина; «${wake} отмена» — стереть`));
             continue;
           }
           if(trigger) host.append(grammarExampleRow(`${wake} ${trigger} X`,intent.label||'Команда'));

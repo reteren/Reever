@@ -1,58 +1,337 @@
 {
   "png": {
     "display": "PNG",
-    "variants": ["пнг", "пиэнджи", "пиэндже", "пэнджи", "пиэнги"]
+    "variants": [
+      "пнг",
+      "пиэнджи",
+      "пиэндже",
+      "пэнджи",
+      "пиэнги"
+    ]
   },
   "jpeg": {
     "display": "JPEG",
-    "variants": ["джейпег", "джипег", "жпег", "джейпэг"]
+    "variants": [
+      "джейпег",
+      "джипег",
+      "жпег",
+      "джейпэг"
+    ]
   },
   "jpg": {
     "display": "JPG",
-    "variants": ["джейпиджи", "джипиг", "жпег"]
+    "variants": [
+      "джейпиджи",
+      "джипиг",
+      "жпег"
+    ]
   },
   "gpu": {
     "display": "GPU",
-    "variants": ["джипию", "джи пи ю", "гпу"]
+    "variants": [
+      "джипию",
+      "джи пи ю",
+      "гпу"
+    ]
   },
   "usb": {
     "display": "USB",
-    "variants": ["юэсби", "юсби", "усб"]
+    "variants": [
+      "юэсби",
+      "юсби",
+      "усб"
+    ]
   },
   "cpu": {
     "display": "CPU",
-    "variants": ["сиипиу", "сипиу", "цпу"]
+    "variants": [
+      "сиипиу",
+      "сипиу",
+      "цпу"
+    ]
   },
   "api": {
     "display": "API",
-    "variants": ["эйпиай", "апи"]
+    "variants": [
+      "эйпиай",
+      "апи"
+    ]
   },
   "ui": {
     "display": "UI",
-    "variants": ["юай", "юи"]
+    "variants": [
+      "юай",
+      "юи"
+    ]
   },
   "ux": {
     "display": "UX",
-    "variants": ["юэкс", "юикс"]
+    "variants": [
+      "юэкс",
+      "юикс"
+    ]
   },
   "ide": {
     "display": "IDE",
-    "variants": ["айди", "айди-и", "айдиэ"]
+    "variants": [
+      "айди",
+      "айди-и",
+      "айдиэ"
+    ]
   },
   "cli": {
     "display": "CLI",
-    "variants": ["сиэлэй", "сиэлай"]
+    "variants": [
+      "сиэлэй",
+      "сиэлай"
+    ]
   },
   "url": {
     "display": "URL",
-    "variants": ["юарэл", "юэрэл"]
+    "variants": [
+      "юарэл",
+      "юэрэл"
+    ]
   },
   "ssd": {
     "display": "SSD",
-    "variants": ["эсэсди", "эсэсд"]
+    "variants": [
+      "эсэсди",
+      "эсэсд"
+    ]
   },
   "ram": {
     "display": "RAM",
-    "variants": ["рэм", "рам"]
+    "variants": [
+      "рэм",
+      "рам"
+    ]
+  },
+  "figma": {
+    "display": "Figma",
+    "variants": [
+      "фигма"
+    ]
+  },
+  "gimp": {
+    "display": "GIMP",
+    "variants": [
+      "гимп"
+    ]
+  },
+  "ctrl": {
+    "display": "Ctrl",
+    "variants": [
+      "контрол",
+      "контрл",
+      "ктрл"
+    ]
+  },
+  "backspace": {
+    "display": "Backspace",
+    "variants": [
+      "бэкспейс",
+      "бекспейс",
+      "бэкспэйс"
+    ]
+  },
+  "svg": {
+    "display": "SVG",
+    "variants": [
+      "эсвэгэ",
+      "эсвиджи",
+      "свг"
+    ]
+  },
+  "webp": {
+    "display": "WebP",
+    "variants": [
+      "вебп",
+      "вэбпи",
+      "вебпи"
+    ]
+  },
+  "wav": {
+    "display": "WAV",
+    "variants": [
+      "вав",
+      "вейв"
+    ]
+  },
+  "mp3": {
+    "display": "MP3",
+    "variants": [
+      "эмпэтри",
+      "эмпетри"
+    ]
+  },
+  "mp4": {
+    "display": "MP4",
+    "variants": [
+      "эмпэфор",
+      "эмпефор",
+      "эмпэчетыре"
+    ]
+  },
+  "exe": {
+    "display": "exe",
+    "variants": [
+      "экзе",
+      "экзешник",
+      "эксе",
+      "иксе"
+    ]
+  },
+  "dll": {
+    "display": "DLL",
+    "variants": [
+      "дээлэль",
+      "длл"
+    ]
+  },
+  "json": {
+    "display": "JSON",
+    "variants": [
+      "джейсон",
+      "джисон",
+      "жсон"
+    ]
+  },
+  "yaml": {
+    "display": "YAML",
+    "variants": [
+      "ямл",
+      "ямль",
+      "ямэл"
+    ]
+  },
+  "yml": {
+    "display": "YML",
+    "variants": [
+      "ямл"
+    ]
+  },
+  "toml": {
+    "display": "TOML",
+    "variants": [
+      "томл",
+      "томэл"
+    ]
+  },
+  "css": {
+    "display": "CSS",
+    "variants": [
+      "цээсэс",
+      "сиэсэс",
+      "цсс"
+    ]
+  },
+  "https": {
+    "display": "HTTPS",
+    "variants": [
+      "аштитипиэс",
+      "хттпс"
+    ]
+  },
+  "tauri": {
+    "display": "Tauri",
+    "variants": [
+      "таури"
+    ]
+  },
+  "npm": {
+    "display": "npm",
+    "variants": [
+      "энпиэм",
+      "нпм"
+    ]
+  },
+  "typescript": {
+    "display": "TypeScript",
+    "variants": [
+      "тайпскрипт"
+    ]
+  },
+  "debugger": {
+    "display": "debugger",
+    "variants": [
+      "дебаггер",
+      "дебагер",
+      "дебаггэр"
+    ]
+  },
+  "hotbar": {
+    "display": "hotbar",
+    "variants": [
+      "хотбар"
+    ]
+  },
+  "statusbar": {
+    "display": "statusbar",
+    "variants": [
+      "статусбар"
+    ]
+  },
+  "tooltip": {
+    "display": "tooltip",
+    "variants": [
+      "тултип"
+    ]
+  },
+  "dropdown": {
+    "display": "dropdown",
+    "variants": [
+      "дропдаун",
+      "дропдавн"
+    ]
+  },
+  "checkbox": {
+    "display": "checkbox",
+    "variants": [
+      "чекбокс",
+      "чекбох"
+    ]
+  },
+  "resize": {
+    "display": "resize",
+    "variants": [
+      "ресайз",
+      "рисайз"
+    ]
+  },
+  "hotkey": {
+    "display": "hotkey",
+    "variants": [
+      "хоткей",
+      "хоткэй"
+    ]
+  },
+  "keybind": {
+    "display": "keybind",
+    "variants": [
+      "кейбинд",
+      "кибинд"
+    ]
+  },
+  "rebase": {
+    "display": "rebase",
+    "variants": [
+      "рибейс",
+      "ребейс"
+    ]
+  },
+  "frontend": {
+    "display": "frontend",
+    "variants": [
+      "фронтенд",
+      "фронтэнд"
+    ]
+  },
+  "debug": {
+    "display": "debug",
+    "variants": [
+      "дебаг",
+      "дибаг"
+    ]
   }
 }

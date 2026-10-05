@@ -1,7 +1,7 @@
 //! Замер `anglicism::Anglicisms` на кейсах из testdata/lexicon (build_lexicon.py):
 //! транскрипции GigaAM смешанных фраз, примеры пользователя и все слова журнала диктовки.
 //!
-//!   cargo run --release --example anglicism_eval [-- --terms opacity,eraser]
+//!   cargo run --release --example anglicism_eval [-- --terms opacity,eraser] [--probe хайд,хедер]
 //!
 //! Пишет testdata/anglicism-report.md. Все подмены на словах журнала перечисляются:
 //! там есть и настоящие английские слова пользователя, поэтому их проверяет человек.
@@ -60,6 +60,19 @@ fn main() -> Result<()> {
         cache_cell.borrow_mut().insert(word.to_string(), result);
         result
     };
+
+    // --probe хайд,хедер — только показать решения для отдельных слов.
+    if let Some(list) = args.iter().position(|a| a == "--probe").and_then(|i| args.get(i + 1)) {
+        for word in list.split(',') {
+            println!(
+                "{word} → {}   ru-RU: {:?}   {:?}",
+                words.restore(word, &is_russian),
+                is_russian(word),
+                words.explain(word)
+            );
+        }
+        return Ok(());
+    }
 
     let positives: Vec<PositiveCase> = serde_json::from_str(
         &std::fs::read_to_string(lexicon_dir.join("positive-cases.json"))

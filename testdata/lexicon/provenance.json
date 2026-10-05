@@ -1,22 +1,22 @@
 {
   "generated_utc_date": "2026-10-04",
   "frequent_word_limit": 25000,
-  "lexicon_words": 25037,
-  "phonetic_variant_count": 177694,
-  "domain_term_count": 113,
+  "lexicon_words": 25100,
+  "phonetic_variant_count": 177928,
+  "domain_term_count": 226,
   "missing_domain_terms_without_pronunciation": [],
   "slang_guard_count": 23,
   "negative_stats": {
     "log_path": "%APPDATA%\\com.troid.reever\\reever.log",
-    "log_marker_lines": 267,
-    "log_token_occurrences": 5947,
+    "log_marker_lines": 369,
+    "log_token_occurrences": 8564,
     "manifest_text_values": 72,
     "manifest_token_occurrences": 1504,
-    "total_token_occurrences": 7451,
-    "unique_tokens": 1702,
-    "cyrillic_token_occurrences": 7343,
-    "unique_cyrillic_tokens": 1648,
-    "unique_cyrillic_pairs": 3983
+    "total_token_occurrences": 10068,
+    "unique_tokens": 2031,
+    "cyrillic_token_occurrences": 9949,
+    "unique_cyrillic_tokens": 1971,
+    "unique_cyrillic_pairs": 5326
   },
   "sources": [
     {
@@ -35,6 +35,6 @@
     }
   ],
   "source_snapshot_bytes": 10823519,
-  "generated_lexicon_bytes": 9474641,
-  "generated_lexicon_gzip_bytes": 1152623
+  "generated_lexicon_bytes": 9490931,
+  "generated_lexicon_gzip_bytes": 1154913
 }
