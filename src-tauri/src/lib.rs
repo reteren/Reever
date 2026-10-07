@@ -23,6 +23,7 @@ pub mod grammar;
 pub mod input_thread;
 pub mod langid;
 pub mod launcher;
+pub mod micwatch;
 pub mod picker;
 pub mod procs;
 pub mod recognizer;

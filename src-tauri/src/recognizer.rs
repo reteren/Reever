@@ -171,7 +171,22 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     set_state(app, "idle");
     ui_log(app, "✓ готов. «ривер» — и команду сразу или после сигнала. Хоткей — то же без «ривер». «отмена» — стоп.");
 
+    // Громкость микрофона в Windows: её меняют другие программы (Discord в звонке).
+    let mut mic_level: Option<crate::micwatch::MicLevel> = None;
+    let mut mic_checked = std::time::Instant::now();
     loop {
+        if stream.is_some() && mic_checked.elapsed() >= Duration::from_secs(2) {
+            mic_checked = std::time::Instant::now();
+            let now = crate::micwatch::mic_level();
+            if let (Some(before), Some(after)) = (mic_level, now) {
+                if let Some(line) = crate::micwatch::describe_change(before, after) {
+                    ui_log(app, line);
+                }
+            }
+            if now.is_some() {
+                mic_level = now;
+            }
+        }
         if shared.paused.load(Ordering::Relaxed) {
             if stream.is_some() {
                 stream = None;
@@ -192,7 +207,12 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 Ok(st) => {
                     stream = Some(st);
                     set_state(app, "idle");
-                    ui_log(app, "🔊 микрофон включён");
+                    mic_level = crate::micwatch::mic_level();
+                    mic_checked = std::time::Instant::now();
+                    match mic_level {
+                        Some(level) => ui_log(app, format!("🔊 микрофон включён (громкость в Windows {} %)", level.percent)),
+                        None => ui_log(app, "🔊 микрофон включён"),
+                    }
                 }
                 Err(e) => {
                     ui_log(app, format!("⚠ микрофон недоступен: {e}"));

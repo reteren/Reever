@@ -978,13 +978,30 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             self.dictation_lang = Some(lang);
             skip += words;
         }
+        // «ривер напиши … ривер отмена» одним духом: длинная первая фраза тоже может
+        // заканчиваться стопом или отменой.
+        let control = self.trailing_control(&normalize(heard));
+        if let Some((DictationEndReason::Cancelled, _)) = control {
+            out.push(EngineEvent::DictationEnd(DictationEndReason::Cancelled));
+            self.return_to_idle(true, out);
+            return;
+        }
         // Даже при пустой цели звук после «напиши» может быть: английскую фразу русская
         // модель часто не слышит вовсе («ривер напиши hello…» → «ривер напиши»).
         if skip < heard_words || !timed.words.is_empty() {
             let first = self.first_dictation_chunk(audio, timed, skip);
+            let first = match control {
+                Some((_, drop)) => trim_words(&first, 0, drop),
+                None => first,
+            };
             if !first.trim().is_empty() {
                 out.push(EngineEvent::Dictation(first));
             }
+        }
+        if let Some((reason, _)) = control {
+            out.push(EngineEvent::DictationEnd(reason));
+            self.return_to_idle(true, out);
+            return;
         }
         self.begin_dictation();
     }
@@ -1071,7 +1088,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         match payload {
             Some(payload) => {
                 self.first_dictation_text(audio, &timed, &payload, out);
-                out.push(EngineEvent::State("listening"));
+                if matches!(self.mode, Mode::Dictating(_)) {
+                    out.push(EngineEvent::State("listening"));
+                }
             }
             None => self.dictation_segment(audio, out),
         }
@@ -1284,9 +1303,12 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let Some(anglicisms) = &self.anglicisms else {
             return text;
         };
+        // «ревер» — запись wake-слова, а не river: иначе «ревер стоп» перестаёт быть командой.
         let is_russian = |word: &str| {
-            crate::spellcheck::misspelled_ratio("ru-RU", word)
-                .map(|(ratio, count)| count == 1 && ratio == 0.0)
+            if strip_initial_wake(word, &self.cfg.wake_words).is_some_and(|rest| rest.trim().is_empty()) {
+                return Some(true);
+            }
+            crate::spellcheck::misspelled_ratio("ru-RU", word).map(|(ratio, count)| count == 1 && ratio == 0.0)
         };
         anglicisms.restore(&text, &is_russian)
     }
@@ -1361,6 +1383,39 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 .map(|language_id| language_id as &mut dyn LanguageId),
             self.lang_mode,
         )
+    }
+
+    /// «…ривер стоп» / «…ривер отмена» / «…стоп ввод» в конце фразы: чем закончить диктовку
+    /// и сколько последних слов (нормализованных) отрезать от текста.
+    fn trailing_control(&self, norm: &str) -> Option<(DictationEndReason, usize)> {
+        let stop_phrases = self
+            .grammar
+            .as_ref()
+            .map(|grammar| grammar.dictation_stop.clone())
+            .unwrap_or_else(|| Grammar::defaults().dictation_stop);
+        if let Some(words) = trailing_stop_words(norm, &stop_phrases, &self.cfg.wake_words) {
+            return Some((DictationEndReason::Stopped, words));
+        }
+        let words: Vec<&str> = norm.split_whitespace().collect();
+        if words.len() < 2
+            || !strip_initial_wake(words[words.len() - 2], &self.cfg.wake_words)
+                .is_some_and(|rest| rest.trim().is_empty())
+        {
+            return None;
+        }
+        let control = words[words.len() - 1];
+        let cancel_words = self
+            .grammar
+            .as_ref()
+            .map(|grammar| grammar.cancel_words.clone())
+            .unwrap_or_else(|| Grammar::defaults().cancel_words);
+        if is_dictation_stop(control) {
+            Some((DictationEndReason::Stopped, 2))
+        } else if crate::textnorm::is_cancel(control, &cancel_words) {
+            Some((DictationEndReason::Cancelled, 2))
+        } else {
+            None
+        }
     }
 
     /// Промежуточный текст до «ривер …» посреди куска: команду («ривер стоп», «ривер
@@ -2376,6 +2431,19 @@ mod tests {
         );
         assert_eq!(dictated(&events), vec!["привет мир".to_string()]);
         assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
+    }
+
+    #[test]
+    fn one_breath_dictation_honours_river_cancel_and_stop_at_the_end() {
+        let mut engine = dictation_engine(&["ривер напиши итак я хочу ривер отмена"]);
+        let events = engine.push_audio(&phrase(123, 700));
+        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Cancelled)), "{events:?}");
+        assert!(dictated(&events).is_empty(), "{events:?}");
+
+        let mut engine = dictation_engine(&["ривер напиши итак я хочу ривер стоп"; 2]);
+        let events = engine.push_audio(&phrase(123, 700));
+        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Stopped)), "{events:?}");
+        assert_eq!(dictated(&events), vec!["итак я хочу".to_string()]);
     }
 
     #[test]
