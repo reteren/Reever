@@ -118,6 +118,47 @@ const DICTATION_PARTIAL_SLOW_MS: u32 = 10_000;
 /// Интервал промежуточного текста у длинного куска.
 const LIVE_PARTIAL_SLOW_MS: u32 = 1_000;
 
+/// Пауза перед «ривер» посреди фразы, после которой это обращение, а не слово в разговоре
+/// («я ривер потестил» — без паузы, «…ну короче. Ривер, открой ютуб» — с паузой).
+const MID_WAKE_PAUSE_MS: usize = 250;
+
+/// Самая длинная тишина (мс), которая заканчивается у `at` (± слово начинается чуть раньше
+/// или позже отметки модели). Тишина — кадры 10 мс в 10 раз тише речи этой фразы.
+fn pause_before(audio: &[i16], at: usize) -> usize {
+    const FRAME: usize = 160;
+    let energies: Vec<f64> = audio
+        .chunks(FRAME)
+        .map(|frame| (frame.iter().map(|&s| (s as f64).powi(2)).sum::<f64>() / frame.len() as f64).sqrt())
+        .collect();
+    if energies.is_empty() {
+        return 0;
+    }
+    let mut sorted = energies.clone();
+    sorted.sort_by(f64::total_cmp);
+    let speech = sorted[(sorted.len() * 9 / 10).min(sorted.len() - 1)];
+    let quiet = speech * 0.1;
+    let at_frame = (at / FRAME).min(energies.len());
+    // Слово могло начаться до отметки модели на ~150 мс: ищем тишину, кончающуюся рядом.
+    let mut best = 0;
+    for end in at_frame.saturating_sub(15)..=at_frame.min(energies.len()) {
+        let run = energies[..end].iter().rev().take_while(|&&energy| energy < quiet).count();
+        best = best.max(run);
+    }
+    best * FRAME * 1000 / SAMPLE_RATE as usize
+}
+
+/// Начало «ривер» посреди фразы (сэмпл, с небольшим запасом), если перед ним пауза.
+fn mid_phrase_wake(timed: &Timed, audio: &[i16], wake_words: &[String]) -> Option<usize> {
+    timed.words.iter().enumerate().skip(1).find_map(|(_, word)| {
+        let is_wake = strip_initial_wake(&word.text, wake_words).is_some_and(|rest| rest.trim().is_empty());
+        if !is_wake {
+            return None;
+        }
+        let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
+        (pause_before(audio, at) >= MID_WAKE_PAUSE_MS).then(|| at.saturating_sub(samples(80)))
+    })
+}
+
 /// Слова, которые в диктовке после «ривер» заканчивают её, оставляя текст («ривер стоп»);
 /// остальные слова отмены («ривер отмена») стирают продиктованное.
 fn is_dictation_stop(text: &str) -> bool {
@@ -914,6 +955,18 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             timed
         };
         let Some(rest) = strip_initial_wake(&timed.text, &self.cfg.wake_words) else {
+            // В разговоре (звонок) «ривер» звучит посреди речи: фраза началась раньше, и
+            // wake не в её начале. После паузы — это обращение: разбираем хвост с «ривер».
+            if let Some(start) = mid_phrase_wake(&timed, audio, &self.cfg.wake_words) {
+                out.push(EngineEvent::Log("wake: «ривер» после паузы посреди речи".into()));
+                let tail = &audio[start..];
+                let result = self.asr.transcribe_timed(tail);
+                if result.as_ref().is_ok_and(|tail_timed| {
+                    strip_initial_wake(&tail_timed.text, &self.cfg.wake_words).is_some()
+                }) {
+                    self.handle_idle_transcript(result, tail, out);
+                }
+            }
             return;
         };
         self.spot_age = None;
@@ -2444,6 +2497,34 @@ mod tests {
         let events = engine.push_audio(&phrase(123, 700));
         assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Stopped)), "{events:?}");
         assert_eq!(dictated(&events), vec!["итак я хочу".to_string()]);
+    }
+
+    #[test]
+    fn pause_before_measures_silence_ending_at_the_word() {
+        let mut audio = vec![3000i16; samples(1_000)];
+        audio.extend(vec![0i16; samples(400)]);
+        audio.extend(vec![3000i16; samples(600)]);
+        let at = samples(1_400);
+        let pause = pause_before(&audio, at);
+        assert!((380..=420).contains(&pause), "{pause}");
+        assert_eq!(pause_before(&vec![3000i16; samples(1_000)], samples(500)), 0);
+    }
+
+    #[test]
+    fn wake_after_a_pause_mid_phrase_starts_a_command() {
+        let word = |text: &str, start: f32| crate::speech::TimedWord { text: text.into(), start, end: start + 0.3 };
+        let timed = Timed {
+            text: "ну короче ривер открой".into(),
+            words: vec![word("ну", 0.0), word("короче", 0.3), word("ривер", 1.4), word("открой", 1.8)],
+        };
+        let wake = vec!["ривер".to_string()];
+        let mut audio = vec![3000i16; samples(1_000)];
+        audio.extend(vec![0i16; samples(400)]);
+        audio.extend(vec![3000i16; samples(800)]);
+        assert_eq!(mid_phrase_wake(&timed, &audio, &wake), Some(samples(1_400) - samples(80)));
+        // Без паузы — слово в разговоре.
+        let solid = vec![3000i16; samples(2_200)];
+        assert_eq!(mid_phrase_wake(&timed, &solid, &wake), None);
     }
 
     #[test]
