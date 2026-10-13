@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reever — выбор</title>
+    <title>Reever</title>
     <link rel="stylesheet" href="tokens.css" />
     <link rel="stylesheet" href="aero.css" />
     <style>
@@ -128,37 +128,39 @@
       }
       .foot .sp { flex: 1; }
     </style>
+    <script src="i18n/i18n.js"></script>
+    <script src="i18n/locales/en.js"></script>
   </head>
   <body>
     <div id="frame">
       <div id="titlebar" data-tauri-drag-region>
         <div class="tb-icon" data-tauri-drag-region></div>
-        <span class="tb-name" data-tauri-drag-region>Reever — найдено</span>
+        <span class="tb-name" data-tauri-drag-region data-i18n="app.pickerTitle">Reever — найдено</span>
         <div class="sp" data-tauri-drag-region></div>
         <div class="caption-group">
-          <button class="winbtn close" id="close" title="Закрыть (Esc)" aria-label="Закрыть"></button>
+          <button class="winbtn close" id="close" data-i18n-title="picker.closeTitle" data-i18n-aria-label="common.close"></button>
         </div>
       </div>
       <div id="client">
         <div class="head">
-          <h1 id="title">Найдено</h1>
+          <h1 id="title" data-i18n="picker.found">Найдено</h1>
           <div class="help">
-            <div class="voice-hint"><strong>Голосом:</strong> скажи номер, например «третий».</div>
-            <div class="key-hints" aria-label="Управление с клавиатуры">
-              <span class="key-hint"><kbd>↑</kbd> <kbd>↓</kbd> переместить</span>
-              <span class="key-hint"><kbd>Enter</kbd> открыть</span>
-              <span class="key-hint"><kbd>1–9</kbd> выбрать</span>
-              <span class="key-hint"><kbd>Esc</kbd> закрыть</span>
-              <span class="key-hint">двойной щелчок — открыть</span>
+            <div class="voice-hint" data-i18n-html="picker.voice"></div>
+            <div class="key-hints" data-i18n-aria-label="picker.keyboard">
+              <span class="key-hint"><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n="picker.move">переместить</span></span>
+              <span class="key-hint"><kbd>Enter</kbd> <span data-i18n="picker.open">открыть</span></span>
+              <span class="key-hint"><kbd>1–9</kbd> <span data-i18n="picker.select">выбрать</span></span>
+              <span class="key-hint"><kbd>Esc</kbd> <span data-i18n="picker.close">закрыть</span></span>
+              <span class="key-hint" data-i18n="picker.doubleClick">двойной щелчок — открыть</span>
             </div>
           </div>
         </div>
-        <div id="list" tabindex="0" role="listbox" aria-label="Найденные файлы и папки"></div>
+        <div id="list" tabindex="0" role="listbox" data-i18n-aria-label="picker.list"></div>
         <div class="foot">
           <span id="count"></span>
           <span class="sp"></span>
-          <button class="sm" id="cancel">Отмена</button>
-          <button class="sm default" id="open">Открыть</button>
+          <button class="sm" id="cancel" data-i18n="common.cancel">Отмена</button>
+          <button class="sm default" id="open" data-i18n="picker.openButton">Открыть</button>
         </div>
       </div>
     </div>
@@ -176,8 +178,8 @@
       }
 
       function render(title) {
-        $('#title').textContent = title ? `Найдено: «${title}»` : 'Найдено';
-        $('#count').textContent = `${items.length} ${plural(items.length)}`;
+        $('#title').textContent = title ? t('picker.foundFor', { title }) : t('picker.found');
+        $('#count').textContent = t('picker.count', { count: items.length });
         const list = $('#list');
         list.replaceChildren();
         // Порядок и номера совпадают с индексами backend: голосовой выбор
@@ -185,7 +187,7 @@
         const hasFrequent = items.some(item => item.frequent);
         let section = null;
         items.forEach((item, index) => {
-          const name = item.frequent ? 'Часто открываемые' : 'Все совпадения';
+          const name = t(item.frequent ? 'picker.frequent' : 'picker.all');
           if (hasFrequent && name !== section) {
             section = name;
             list.append(el('div', { className: 'section', textContent: name }));
@@ -204,13 +206,6 @@
         selected = 0;
         mark();
         list.focus();
-      }
-
-      function plural(n) {
-        const m10 = n % 10, m100 = n % 100;
-        if (m10 === 1 && m100 !== 11) return 'вариант';
-        if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'варианта';
-        return 'вариантов';
       }
 
       function mark() {
@@ -246,9 +241,19 @@
       $('#cancel').onclick = close;
       $('#open').onclick = () => choose(selected);
 
-      tauri?.event?.listen('reever://picker', event => {
-        items = event.payload?.items || [];
-        render(event.payload?.title || '');
+      // Язык — из settings.json при каждом показе: его могли сменить в главном окне.
+      async function applyLanguage() {
+        let preference = 'auto';
+        try { preference = (await invoke('get_settings'))?.ui_language || 'auto'; } catch {}
+        await I18N.setLanguage(preference);
+      }
+      applyLanguage();
+
+      tauri?.event?.listen('reever://picker', async event => {
+        const payload = event.payload;
+        await applyLanguage();
+        items = payload?.items || [];
+        render(payload?.title || '');
       });
     </script>
   </body>

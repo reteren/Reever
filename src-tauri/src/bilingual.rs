@@ -56,6 +56,7 @@ pub fn resolve(
     prefix: &str,
     wake_words: &[String],
     grammar: &Grammar,
+    known_target: &dyn Fn(&str) -> bool,
     mut second: Option<&mut dyn Transcriber>,
     lid: Option<&mut dyn LanguageId>,
     mode: LangMode,
@@ -125,6 +126,12 @@ pub fn resolve(
         return resolved_ru(&command);
     };
     if !can_transcribe || segment_spans.is_empty() {
+        return resolved_ru(&command);
+    }
+    // Русская цель — точно фраза действия («маркноут»): английский вариант и определитель
+    // языка её уже не поменяют, а это ~0,15 с счёта до запуска.
+    let russian_words: Vec<&str> = segment_payload.iter().map(|(_, word)| *word).collect();
+    if known_target(&join_nonempty(&[&prefix_payload, &russian_words.join(" ")])) {
         return resolved_ru(&command);
     }
 
@@ -531,7 +538,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Auto,
@@ -560,7 +567,7 @@ mod tests {
             &timed,
             "поиск ютуб",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Auto,
@@ -587,7 +594,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Auto,
@@ -625,7 +632,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Ru,
@@ -663,7 +670,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::En,
@@ -699,7 +706,7 @@ mod tests {
                 &timed,
                 "",
                 &wakes(),
-                &grammar,
+                &grammar, &|_| false,
                 Some(&mut second),
                 Some(&mut lid),
                 mode,
@@ -722,7 +729,7 @@ mod tests {
         let pcm = audio(2.0);
         let mut second = MockTranscriber::new("i think it s a good idea");
         let mut lid = MockLid::new(Lang::En, 0.9);
-        let result = resolve(&pcm, &timed, "", &wakes(), &grammar, Some(&mut second), Some(&mut lid), LangMode::Auto);
+        let result = resolve(&pcm, &timed, "", &wakes(), &grammar, &|_| false, Some(&mut second), Some(&mut lid), LangMode::Auto);
         if crate::langid::text_hint("погода в москве", "i think it s a good idea") == Some(Lang::Ru) {
             assert_eq!(result.text, "загугли погода в москве");
         }
@@ -753,7 +760,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Auto,
@@ -781,7 +788,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             None,
             None,
             LangMode::En,
@@ -805,7 +812,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             None,
             LangMode::En,
@@ -830,7 +837,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Auto,
@@ -854,7 +861,7 @@ mod tests {
             &timed,
             "",
             &wakes(),
-            &grammar,
+            &grammar, &|_| false,
             Some(&mut second),
             Some(&mut lid),
             LangMode::Auto,

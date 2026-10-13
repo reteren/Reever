@@ -147,6 +147,13 @@ pub struct Settings {
     /// Сигнал сразу, как только услышано wake-слово.
     #[serde(default = "default_true")]
     pub wake_sound: bool,
+    /// Язык интерфейса: `auto` (язык Windows) или код из `uilang::SUPPORTED`.
+    #[serde(default = "default_ui_language")]
+    pub ui_language: String,
+}
+
+fn default_ui_language() -> String {
+    "auto".into()
 }
 
 fn default_wake_spotter_model() -> String {
@@ -300,6 +307,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("wake_spotter", wake_spotter, bool);
     restore!("wake_spotter_model", wake_spotter_model, String);
     restore!("wake_sound", wake_sound, bool);
+    restore!("ui_language", ui_language, String);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -351,6 +359,7 @@ impl Default for Settings {
             wake_spotter: true,
             wake_spotter_model: default_wake_spotter_model(),
             wake_sound: true,
+            ui_language: default_ui_language(),
         }
     }
 }

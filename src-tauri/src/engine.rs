@@ -12,7 +12,7 @@ use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
 use crate::speech::{
     samples, Lang, LanguageId, Timed, TimedWord, Transcriber, VoiceDetector, WakeSpotter, SAMPLE_RATE,
 };
-use crate::textnorm::{is_no, is_yes, normalize, starts_with_wake, strip_wake};
+use crate::textnorm::{is_no, is_yes, normalize, starts_with_wake, strip_leading_fillers, strip_wake};
 
 #[derive(Clone, Debug)]
 pub struct EngineConfig {
@@ -265,7 +265,22 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     idle_speech_age: Option<usize>,
     /// Сэмплов с последней проверки «ривер напиши …» посреди фразы простоя.
     idle_partial_elapsed: usize,
+    /// Цели действий (фразы и названия, нормализованные): «открой <цель>» с такой
+    /// целью — законченная команда, её не нужно дослушивать полную паузу.
+    /// Цель → действие (пустая строка — у цели несколько действий).
+    known_targets: std::collections::HashMap<String, String>,
+    /// Эта пауза фразы уже проверена на законченную команду.
+    fast_checked: bool,
+    /// Распознанный текст фразы, законченной досрочно, — чтобы не считать его второй раз.
+    fast_timed: Option<Timed>,
 }
+
+/// Пауза, после которой фраза проверяется на законченную команду («ривер открой
+/// маркноут» → запуск через 0,3 с тишины вместо полной паузы конца фразы).
+const FAST_END_MS: u32 = 300;
+
+/// Длиннее этого фраза — не короткая команда (разговор, звонок): досрочно не проверяем.
+const FAST_END_MAX_PHRASE_MS: usize = 5_000;
 
 /// Срабатывание детектора позже этого от начала речи — слово в середине фразы
 /// («включи реверс»), а не обращение: wake говорят первым.
@@ -305,6 +320,30 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             idle_speech_age: None,
             idle_partial_elapsed: 0,
             anglicisms: None,
+            known_targets: std::collections::HashMap::new(),
+            fast_checked: false,
+            fast_timed: None,
+        }
+    }
+
+    /// Цели действий (фразы калибровки и названия): по ним команда «открой X»
+    /// считается законченной сразу, и для точной русской цели не нужна вторая модель.
+    /// Пары (цель, id действия).
+    pub fn set_known_targets<I: IntoIterator<Item = (String, String)>>(&mut self, targets: I) {
+        self.known_targets.clear();
+        for (target, action) in targets {
+            let target = normalize(&target);
+            if target.is_empty() {
+                continue;
+            }
+            self.known_targets
+                .entry(target)
+                .and_modify(|owner| {
+                    if *owner != action {
+                        owner.clear();
+                    }
+                })
+                .or_insert(action);
         }
     }
 
@@ -410,6 +449,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 .any(|event| matches!(event, SegmentEvent::SpeechStart));
             for event in segment_events {
                 self.handle_segment_event(event, &mut out);
+            }
+            if self.mode_epoch == epoch {
+                self.try_fast_end(&mut out);
             }
 
             // Таймаут тратит только время до SpeechStart. При старте речи сегментатор выигрывает
@@ -756,7 +798,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 match mode {
                     Mode::Idle => {
                         self.idle_speech_age = None;
-                        let result = self.asr.transcribe_timed(&audio);
+                        let result = match self.fast_timed.take() {
+                            Some(timed) => Ok(timed),
+                            None => self.asr.transcribe_timed(&audio),
+                        };
                         self.prepare_segmenter(self.cfg.wake_pause_ms);
                         if self.cfg.wake_enabled {
                             self.handle_idle_transcript(result, &audio, out);
@@ -766,10 +811,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     Mode::Listening(state) => {
                         out.push(EngineEvent::State("busy"));
                         let result = match state.kind {
-                            ListenKind::Command | ListenKind::Choice => self
-                                .asr
-                                .transcribe_timed(&audio)
-                                .map(|timed| self.second_language_only(&audio, timed)),
+                            ListenKind::Command | ListenKind::Choice => match self.fast_timed.take() {
+                                Some(timed) => Ok(timed),
+                                None => self.asr.transcribe_timed(&audio),
+                            }
+                            .map(|timed| self.second_language_only(&audio, timed)),
                             // Английское «yes/no» русская модель не слышит вовсе (пустой
                             // текст) — тогда ответ слушает вторая модель, как и английскую цель.
                             ListenKind::Confirm => self
@@ -917,6 +963,85 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 }
             }
         }
+    }
+
+    /// Короткая пауза после законченной команды с известной целью — выполняем сразу,
+    /// не дожидаясь полной паузы конца фразы. Проверка одна на паузу: если команда
+    /// не узнана, фраза заканчивается как обычно.
+    fn try_fast_end(&mut self, out: &mut Vec<EngineEvent>) {
+        if self.known_targets.is_empty() {
+            return;
+        }
+        let silence = self.segmenter.trailing_silence();
+        if silence == 0 {
+            self.fast_checked = false;
+            return;
+        }
+        if self.fast_checked || silence < samples(FAST_END_MS) {
+            return;
+        }
+        let applies = match &self.mode {
+            Mode::Idle => self.cfg.wake_enabled,
+            Mode::Listening(state) => state.kind == ListenKind::Command,
+            _ => false,
+        };
+        let audio_len = self.segmenter.current_audio().len();
+        if !applies || audio_len == 0 || audio_len > samples(FAST_END_MAX_PHRASE_MS as u32) {
+            return;
+        }
+        self.fast_checked = true;
+        let Ok(timed) = self.asr.transcribe_timed(self.segmenter.current_audio()) else {
+            return;
+        };
+        let command = match &self.mode {
+            Mode::Idle => match strip_initial_wake(&timed.text, &self.cfg.wake_words) {
+                Some(rest) => rest,
+                None => return,
+            },
+            Mode::Listening(state) => join_command(&state.prefix, &self.strip_repeated_wake(&timed.text)),
+            _ => return,
+        };
+        if !self.is_known_command(&command) {
+            return;
+        }
+        if let Some(audio) = self.segmenter.finish_now() {
+            self.fast_timed = Some(timed);
+            self.handle_segment_event(SegmentEvent::SpeechEnd(audio), out);
+            self.fast_timed = None;
+        }
+    }
+
+    /// «открой/закрой/заверши <известная цель>» или просто «<цель>», если запуск без
+    /// ключевого слова разрешён. Поиск, чат, диктовка и прочее со свободным текстом —
+    /// никогда: там конец фразы знает только пауза.
+    fn is_known_command(&self, command: &str) -> bool {
+        let command = strip_leading_fillers(&normalize(command));
+        if command.is_empty() {
+            return false;
+        }
+        let fallback = Grammar::default();
+        let grammar = self.grammar.as_ref().unwrap_or(&fallback);
+        let target = match grammar.match_trigger(&command) {
+            Some(found)
+                if matches!(found.intent.kind, IntentKind::Launch | IntentKind::Close | IntentKind::Kill) =>
+            {
+                normalize(&found.payload)
+            }
+            Some(_) => return false,
+            None if grammar.allows_bare_launch() => command,
+            None => return false,
+        };
+        // «анти гравити» — начало «анти гравити идея» другого действия: короткая пауза
+        // посреди названия не должна открыть другую программу, такую цель дослушиваем.
+        // «маркноут» и «маркноут маркноут» у одного действия — не помеха.
+        let Some(owner) = self.known_targets.get(&target).filter(|owner| !owner.is_empty()) else {
+            return false;
+        };
+        let longer = format!("{target} ");
+        !self
+            .known_targets
+            .iter()
+            .any(|(other, other_owner)| other.starts_with(&longer) && other_owner != owner)
     }
 
     fn handle_idle_transcript(
@@ -1422,12 +1547,14 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     fn resolve_command(&mut self, audio: &[i16], timed: &Timed, prefix: &str) -> Resolved {
         let fallback_grammar = Grammar::default();
         let grammar = self.grammar.as_ref().unwrap_or(&fallback_grammar).clone();
+        let known = |target: &str| self.known_targets.contains_key(&normalize(target));
         bilingual::resolve(
             audio,
             timed,
             prefix,
             &self.cfg.wake_words,
             &grammar,
+            &known,
             self.second
                 .as_deref_mut()
                 .map(|transcriber| transcriber as &mut dyn Transcriber),
@@ -2525,6 +2652,58 @@ mod tests {
         // Без паузы — слово в разговоре.
         let solid = vec![3000i16; samples(2_200)];
         assert_eq!(mid_phrase_wake(&timed, &solid, &wake), None);
+    }
+
+    fn fast_engine(texts: &[&str]) -> Engine<MockTranscriber, MockVoiceDetector> {
+        let (mut engine, _, _, _) = engine(
+            EngineConfig {
+                wake_pause_ms: 900,
+                command_pause_ms: 900,
+                ..test_config()
+            },
+            texts,
+        );
+        engine.set_grammar(Grammar::defaults());
+        engine.set_known_targets(
+            [("маркноут", "mark"), ("маркноут маркноут", "mark"), ("анти гравити", "ag"), ("анти гравити идея", "ide")]
+                .map(|(target, action)| (target.to_string(), action.to_string())),
+        );
+        engine
+    }
+
+    /// Мс тишины после речи, когда пришла команда (`None` — не пришла).
+    fn command_after(engine: &mut Engine<MockTranscriber, MockVoiceDetector>) -> Option<(u32, String)> {
+        let mut pcm = vec![123i16; samples(240)];
+        pcm.resize(samples(240 + 1_500), 0);
+        for (index, chunk) in pcm.chunks(160).enumerate() {
+            for event in engine.push_audio(chunk) {
+                if let EngineEvent::Command { text, .. } = event {
+                    let elapsed = ((index + 1) * 10) as u32;
+                    return Some((elapsed.saturating_sub(240), text));
+                }
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn known_target_ends_the_command_after_a_short_pause() {
+        let mut engine = fast_engine(&["ривер открой маркноут"]);
+        let (silence, text) = command_after(&mut engine).expect("команда");
+        assert_eq!(text, "открой маркноут");
+        assert!(silence < 400, "команда через {silence} мс тишины");
+    }
+
+    #[test]
+    fn unknown_or_ambiguous_targets_wait_for_the_full_pause() {
+        // Свободный текст (поиск) и цель, с которой начинается другая, — полная пауза.
+        for said in ["ривер загугли маркноут", "ривер открой анти гравити", "ривер открой фотошоп"] {
+            let mut engine = fast_engine(&[said, said]);
+            let (silence, _) = command_after(&mut engine).expect("команда");
+            assert!(silence >= 900, "{said}: команда через {silence} мс тишины");
+        }
+        let mut engine = fast_engine(&["ривер открой анти гравити идея"]);
+        assert!(command_after(&mut engine).expect("команда").0 < 400);
     }
 
     #[test]

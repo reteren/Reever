@@ -234,6 +234,20 @@ impl Segmenter {
         self.candidate_speech_samples = 0;
     }
 
+    /// Тишина в конце идущей фразы, в сэмплах (0 — говорят или фразы нет).
+    pub fn trailing_silence(&self) -> usize {
+        if self.active {
+            self.trailing_silence_samples
+        } else {
+            0
+        }
+    }
+
+    /// Закончить фразу сейчас, не дожидаясь паузы: команда уже понятна целиком.
+    pub fn finish_now(&mut self) -> Option<Vec<i16>> {
+        self.finish_segment()
+    }
+
     /// Идёт ли сейчас фраза.
     pub fn in_speech(&self) -> bool {
         self.active

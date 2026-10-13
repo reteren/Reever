@@ -33,6 +33,7 @@ pub mod spellcheck;
 pub mod system;
 pub mod textnorm;
 pub mod typing;
+pub mod uilang;
 pub mod vad;
 pub mod wake;
 pub mod webchat;
@@ -117,9 +118,11 @@ pub fn run() {
             app.manage(shared.clone());
 
             // --- трей ---
-            let show = MenuItemBuilder::with_id("show", "Показать настройки").build(app)?;
-            let pause = MenuItemBuilder::with_id("pause", "Пауза / Продолжить микрофон").build(app)?;
-            let quit = MenuItemBuilder::with_id("quit", "Выход").build(app)?;
+            let locale = uilang::resolve(&cfg.settings.ui_language);
+            *uilang::CURRENT.lock().unwrap() = locale;
+            let show = MenuItemBuilder::with_id("show", uilang::text(locale, "tray.show")).build(app)?;
+            let pause = MenuItemBuilder::with_id("pause", uilang::text(locale, "tray.pause")).build(app)?;
+            let quit = MenuItemBuilder::with_id("quit", uilang::text(locale, "tray.quit")).build(app)?;
             let menu = MenuBuilder::new(app).items(&[&show, &pause, &quit]).build()?;
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -132,7 +135,9 @@ pub fn run() {
                             let now = !state.paused.load(Ordering::Relaxed);
                             state.paused.store(now, Ordering::Relaxed);
                             let _ = app.emit("reever://state", if now { "paused" } else { "idle" });
-                            let _ = app.emit("reever://log", if now { "⏸ микрофон на паузе" } else { "▶ микрофон активен" });
+                            let locale = *uilang::CURRENT.lock().unwrap();
+                            let line = uilang::text(locale, if now { "log.paused" } else { "log.resumed" });
+                            let _ = app.emit("reever://log", line);
                         }
                     }
                     "quit" => app.exit(0),
@@ -149,6 +154,7 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+            app.manage(uilang::TrayItems { show, pause, quit });
 
             // --- закрытие окна -> прячем в трей ---
             if let Some(w) = app.get_webview_window("main") {
@@ -252,6 +258,7 @@ pub fn run() {
             commands_api::set_mute_hotkey,
             commands_api::get_wallpaper,
             commands_api::check_everything,
+            commands_api::set_ui_language,
             picker::picker_choose,
             picker::picker_close,
         ])

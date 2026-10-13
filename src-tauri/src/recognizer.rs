@@ -164,6 +164,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         calibrating: None,
         cancel_words: cfg.settings.cancel_words.clone(),
         grammar_version: None,
+        targets_fingerprint: None,
+        targets_checked: None,
         dictation: None,
         last_wake_sound: None,
         choice_session: None,
@@ -230,6 +232,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         };
 
         worker.sync_grammar(&mut engine);
+        worker.sync_targets(&mut engine);
         worker.poll_triggers(&mut engine);
         for ev in engine.push_audio(&chunk) {
             worker.handle(&mut engine, ev);
@@ -348,6 +351,9 @@ struct Worker<'a> {
     cancel_words: Vec<String>,
     /// Версия грамматики, уже переданная в Engine; `None` — ещё ни разу.
     grammar_version: Option<u64>,
+    /// Отпечаток целей действий, переданных в Engine (см. `sync_targets`).
+    targets_fingerprint: Option<u64>,
+    targets_checked: Option<std::time::Instant>,
     /// Идёт диктовка («ривер напиши»).
     dictation: Option<Dictation>,
     /// Номер окна выбора, для которого ждём номер голосом.
@@ -433,6 +439,41 @@ impl Worker<'_> {
         }
         engine.set_grammar(grammar);
         self.grammar_version = Some(version);
+    }
+
+    /// Цели действий для досрочного конца команды («ривер открой маркноут» — запуск без
+    /// полной паузы). Действия меняют UI и калибровка; раз в секунду сверяем отпечаток.
+    fn sync_targets<T, V>(&mut self, engine: &mut Engine<T, V>)
+    where
+        T: crate::speech::Transcriber,
+        V: crate::speech::VoiceDetector,
+    {
+        if self.targets_checked.is_some_and(|at| at.elapsed() < Duration::from_secs(1)) {
+            return;
+        }
+        self.targets_checked = Some(std::time::Instant::now());
+        let Some(targets) = self.shared.actions.lock().ok().map(|actions| {
+            actions
+                .iter()
+                .flat_map(|action| {
+                    action
+                        .phrases
+                        .iter()
+                        .chain(std::iter::once(&action.label))
+                        .map(|target| (target.clone(), action.id.clone()))
+                })
+                .collect::<Vec<(String, String)>>()
+        }) else {
+            return;
+        };
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        targets.hash(&mut hasher);
+        let fingerprint = hasher.finish();
+        if self.targets_fingerprint != Some(fingerprint) {
+            engine.set_known_targets(targets);
+            self.targets_fingerprint = Some(fingerprint);
+        }
     }
 
     /// Внешние триггеры из UI/хоткеев: калибровка и push-to-talk.

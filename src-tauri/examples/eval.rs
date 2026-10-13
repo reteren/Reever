@@ -206,6 +206,13 @@ fn main() -> anyhow::Result<()> {
         .into_iter()
         .filter(|action| action.kind != "search")
         .collect();
+    // Как в приложении: цели действий дают досрочный конец «открой <цель>».
+    // --no-fast — прежнее поведение, только полная пауза.
+    if !args.iter().any(|value| value == "--no-fast") {
+        engine.set_known_targets(
+            actions.iter().flat_map(|action| action.phrases.iter().chain(std::iter::once(&action.label)).map(|target| (target.clone(), action.id.clone()))),
+        );
+    }
     let routing = Routing { grammar, actions };
 
     let trace = std::env::var_os("EVAL_TRACE").is_some();

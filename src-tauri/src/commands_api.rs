@@ -242,6 +242,21 @@ pub fn save_settings(
     std::fs::write(&config.settings_path, txt).map_err(|e| e.to_string())
 }
 
+/// Язык интерфейса: сохраняет выбор и сразу переводит меню трея. Возвращает
+/// итоговый код языка (`auto` раскрывается в язык Windows).
+#[tauri::command]
+pub fn set_ui_language(
+    config: State<'_, Arc<ReeverConfig>>,
+    tray: State<'_, crate::uilang::TrayItems>,
+    language: String,
+) -> Result<String, String> {
+    let locale = crate::uilang::resolve(&language);
+    crate::uilang::apply_tray(&tray, locale);
+    *crate::uilang::CURRENT.lock().map_err(|e| e.to_string())? = locale;
+    persist_hotkey(&config, "ui_language", &language)?;
+    Ok(locale.into())
+}
+
 /// Пауза/возобновление микрофона.
 #[tauri::command]
 pub fn set_paused(state: State<'_, Arc<SharedState>>, paused: bool) {
