@@ -648,6 +648,23 @@ fieldset.grp > legend {
 .grammar-language-help { margin-top: 3px; max-width: 580px; line-height: 1.35; }
 .grammar-delete-intent { margin-bottom: 4px; }
 .grammar-bare-launch { margin-bottom: 1px; }
+/* Настройки → Языки распознавания: строка на язык (название · модель · замок или ×). */
+.lang-editor { display: grid; gap: 5px; margin-top: 4px; max-width: 620px; }
+.lang-row {
+  display: grid; grid-template-columns: 110px minmax(0, 1fr) 8.5em; align-items: center; gap: 8px;
+  padding: 4px 6px; background: var(--content); border: 1px solid var(--field-edge);
+}
+.lang-row select { min-width: 0; width: 100%; }
+.lang-name { font-weight: 700; }
+.lang-lock { color: var(--ink-legend); font-size: var(--fs-sm); }
+.lang-remove { justify-self: start; min-height: 19px !important; padding: 0 6px !important; line-height: 1; }
+.lang-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; position: relative; }
+.lang-menu { display: flex; flex-wrap: wrap; gap: 4px; }
+.lang-menu[hidden] { display: none; }
+@media (max-width: 520px) {
+  .lang-row { grid-template-columns: 1fr auto; }
+  .lang-row select { grid-column: 1 / -1; grid-row: 2; }
+}
 .grammar-bare-launch span { flex: 1; }
 .grammar-url-field { margin-top: 7px; }
 .grammar-add-search { margin: 0 0 10px; }

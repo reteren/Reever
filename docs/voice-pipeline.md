@@ -116,8 +116,9 @@ Vosk уходит полностью (волна 2): wake-слово ловит�
 
 `ReeverConfig` получает `asr_model_dir: PathBuf` (resources/model/<asr_model>) и
 `vad_model_path: PathBuf` (resources/model/silero_vad.onnx), с той же логикой dev↔release и
-срезанием `\\?\`, что у `model_dir`. `endpoint_ms` и `english_enabled` остаются в структуре
-для совместимости старых файлов, но из UI убираются. `model_dir`/`en_model_dir` не удалять до
+срезанием `\\?\`, что у `model_dir`; без русского в `languages` это папка английской модели
+(docs/bilingual.md, «Языки распознавания»). `endpoint_ms` и `english_enabled` остаются в
+структуре для совместимости старых файлов, но из UI убраны. `model_dir`/`en_model_dir` не удалять до
 волны 2 (их ещё читает recognizer.rs).
 
 ## События UI — контракт для `ui` и glue

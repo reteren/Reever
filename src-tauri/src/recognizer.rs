@@ -98,7 +98,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let player = Player::new()?;
     let status = Arc::new(Mutex::new(Status {
         asr: "loading",
-        model: s.asr_model.clone(),
+        model: s.primary_asr_model().to_string(),
         everything: None,
     }));
     set_state(app, "loading");
@@ -146,9 +146,16 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         asr,
         vad,
     );
-    enable_second_language(app, cfg, &mut engine);
+    if s.russian_enabled() {
+        enable_second_language(app, cfg, &mut engine);
+        enable_anglicisms(app, cfg, &mut engine);
+    } else {
+        // Только английский: основная модель уже английская, второй язык и словарь
+        // англицизмов (русская диктовка) не нужны. Ru = «как услышала основная модель».
+        ui_log(app, "языки распознавания: только английский");
+        engine.set_bilingual(None, None, LangMode::Ru);
+    }
     enable_wake_spotter(app, cfg, &mut engine);
-    enable_anglicisms(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
 
     let (tx, rx) = sync_channel::<Vec<i16>>(AUDIO_QUEUE);
@@ -288,10 +295,6 @@ where
     V: crate::speech::VoiceDetector,
 {
     let s = &cfg.settings;
-    if !s.english_enabled {
-        ui_log(app, "второй язык выключен — только русский");
-        return;
-    }
     let second = match Asr::new(&AsrConfig {
         model_dir: cfg.second_model_dir.clone(),
         num_threads: s.asr_threads.max(1) as i32,

@@ -45,9 +45,13 @@ pub struct Settings {
     /// Порог fuzzy-совпадения фразы с действием (0..1). Выше — строже.
     #[serde(default = "default_match_threshold")]
     pub match_threshold: f64,
-    /// Включить английскую модель (декод командного буфера on-demand).
+    /// Устарело (до 0.3.6): английский теперь включён всегда, см. `languages`.
     #[serde(default = "default_true")]
     pub english_enabled: bool,
+    /// Языки распознавания (`RECOGNITION_LANGUAGES`). Английский включён всегда, даже если
+    /// его нет в списке; без русского основной моделью становится английская.
+    #[serde(default = "default_languages")]
+    pub languages: Vec<String>,
     /// Папка sherpa-onnx модели относительно resources/model/.
     #[serde(default = "default_asr_model")]
     pub asr_model: String,
@@ -150,6 +154,46 @@ pub struct Settings {
     /// Язык интерфейса: `auto` (язык Windows) или код из `uilang::SUPPORTED`.
     #[serde(default = "default_ui_language")]
     pub ui_language: String,
+}
+
+/// Языки, которые Reever умеет распознавать, по порядку показа. Английский — первый
+/// и обязательный; новый язык — новая строка здесь и модель для него.
+pub const RECOGNITION_LANGUAGES: &[&str] = &["en", "ru"];
+
+fn default_languages() -> Vec<String> {
+    vec!["ru".into(), "en".into()]
+}
+
+impl Settings {
+    /// Включённые языки распознавания в порядке `RECOGNITION_LANGUAGES`: английский
+    /// всегда, неизвестные коды отброшены.
+    pub fn recognition_languages(&self) -> Vec<&'static str> {
+        RECOGNITION_LANGUAGES
+            .iter()
+            .copied()
+            .filter(|code| {
+                *code == "en"
+                    || self
+                        .languages
+                        .iter()
+                        .any(|language| language.trim().eq_ignore_ascii_case(code))
+            })
+            .collect()
+    }
+
+    /// Русский включён: основная модель — русская, английская распознаёт цели команд.
+    pub fn russian_enabled(&self) -> bool {
+        self.recognition_languages().contains(&"ru")
+    }
+
+    /// Папка основной модели: русская, а без русского — английская.
+    pub fn primary_asr_model(&self) -> &str {
+        if self.russian_enabled() {
+            &self.asr_model
+        } else {
+            &self.second_asr_model
+        }
+    }
 }
 
 fn default_ui_language() -> String {
@@ -308,6 +352,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("wake_spotter_model", wake_spotter_model, String);
     restore!("wake_sound", wake_sound, bool);
     restore!("ui_language", ui_language, String);
+    restore!("languages", languages, Vec<String>);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -360,6 +405,7 @@ impl Default for Settings {
             wake_spotter_model: default_wake_spotter_model(),
             wake_sound: true,
             ui_language: default_ui_language(),
+            languages: default_languages(),
         }
     }
 }
@@ -400,7 +446,7 @@ impl ReeverConfig {
         };
 
         Ok(Self {
-            asr_model_dir: resource(app, &format!("model/{}", settings.asr_model)),
+            asr_model_dir: resource(app, &format!("model/{}", settings.primary_asr_model())),
             second_model_dir: resource(app, &format!("model/{}", settings.second_asr_model)),
             lid_model_dir,
             vad_model_path: resource(app, "model/silero_vad.onnx"),
@@ -533,4 +579,26 @@ pub(crate) fn resource(app: &AppHandle, rel: &str) -> PathBuf {
                 .join(rel),
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_settings;
+
+    #[test]
+    fn english_is_always_a_recognition_language() {
+        let both = parse_settings(r#"{"english_enabled": false}"#);
+        assert_eq!(both.recognition_languages(), ["en", "ru"]);
+        assert_eq!(both.primary_asr_model(), both.asr_model);
+
+        let english = parse_settings(r#"{"languages": ["en"]}"#);
+        assert_eq!(english.recognition_languages(), ["en"]);
+        assert!(!english.russian_enabled());
+        assert_eq!(english.primary_asr_model(), english.second_asr_model);
+
+        // Пустой список и неизвестные коды — всё равно английский.
+        let odd = parse_settings(r#"{"languages": ["xx", " RU "]}"#);
+        assert_eq!(odd.recognition_languages(), ["en", "ru"]);
+        assert_eq!(parse_settings(r#"{"languages": []}"#).recognition_languages(), ["en"]);
+    }
 }

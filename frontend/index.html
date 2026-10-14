@@ -59,7 +59,7 @@
             </div>
             <div class="live">
               <div class="partial" id="partial">…</div>
-              <div class="last" id="lastCmd" data-i18n="home.hint">Можно сказать «ривер» и дождаться сигнала, а можно сразу: «ривер, открой …».</div>
+              <div class="last" id="lastCmd">Можно сказать «ривер» и дождаться сигнала, а можно сразу: «ривер, открой …».</div>
             </div>
             <div class="cheat" id="grammarPanel">
               <div class="grammar-heading">
@@ -148,7 +148,7 @@
         everything_host:'127.0.0.1',everything_port:8011,wake_words:['ривер','ревер','ривьер'],
         launch_everything_fallback:false,match_threshold:0.7,
         asr_model:'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',asr_threads:4,
-        english_enabled:true,second_asr_model:'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
+        languages:['ru','en'],second_asr_model:'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
         lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
         vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
         partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
@@ -158,17 +158,17 @@
       };
       const defaultGrammarPreview=()=>({
         wake_words:['ривер','ревер','ривьер','ливер'],
-        cancel_words:['отмена','стоп','отбой','забудь','хватит','остановись','stop'],
-        dictation_stop:['стоп ввод','ривер остановись'],
+        cancel_words:['отмена','стоп','отбой','забудь','хватит','остановись','stop','cancel'],
+        dictation_stop:['стоп ввод','ривер остановись','stop typing'],
         intents:[
-          {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти'],url:'',enabled:true,lang:'auto'},
-          {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку'],url:'',enabled:true,lang:'auto'},
-          {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли'],url:'https://www.google.com/search?q={q}',enabled:true,lang:'auto'},
-          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'},
-          {id:'close',kind:'close',label:'закрыть открытую программу',triggers:['закрой'],url:'',enabled:true,lang:'auto'},
-          {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши'],url:'',enabled:true,lang:'auto'},
-          {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай'],url:'',enabled:true,lang:'auto'},
-          {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','запиши','диктовка'],url:'',enabled:true,lang:'auto'},
+          {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти','open','launch','run'],url:'',enabled:true,lang:'auto'},
+          {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку','folder','open folder'],url:'',enabled:true,lang:'auto'},
+          {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли','google search','search google'],url:'https://www.google.com/search?q={q}',enabled:true,lang:'auto'},
+          {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб','search youtube','youtube search'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'},
+          {id:'close',kind:'close',label:'закрыть открытую программу',triggers:['закрой','close','quit'],url:'',enabled:true,lang:'auto'},
+          {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши','kill','end task'],url:'',enabled:true,lang:'auto'},
+          {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай','сколько будет','calculate','how much is'],url:'',enabled:true,lang:'auto'},
+          {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','запиши','диктовка','type','write','dictate'],url:'',enabled:true,lang:'auto'},
           {id:'find',kind:'find',label:'найти файл или папку (окно выбора)',triggers:['найди','найти','поищи','find'],url:'',enabled:true,lang:'auto'},
           {id:'find_folder',kind:'find_folder',label:'найти папку (окно выбора)',triggers:['найди папку','найти папку','поищи папку','find folder'],url:'',enabled:true,lang:'auto'},
           {id:'find_file',kind:'find_file',label:'найти файл (окно выбора)',triggers:['найди файл','найти файл','поищи файл','find file'],url:'',enabled:true,lang:'auto'},
@@ -294,7 +294,7 @@
 
       subscribe('reever://state', e=>setDot(String(e.payload)));
       subscribe('reever://partial', e=>{ const v=String(e.payload||''); $('#partial').textContent=v||'…'; $('#partial2').textContent=v; });
-      subscribe('reever://heard', e=>{ const v=String(e.payload||'').trim(); if(v){ const last=$('#lastCmd'); last.removeAttribute('data-i18n'); last.textContent=v; } });
+      subscribe('reever://heard', e=>{ const v=String(e.payload||'').trim(); if(v){ const last=$('#lastCmd'); last.dataset.heard='1'; last.textContent=v; } });
       subscribe('reever://status', e=>applyStatus(e.payload));
       subscribe('reever://log', e=>appendLog(String(e.payload)));
       let calId=null;
@@ -422,7 +422,37 @@
 
       let grammar=defaultGrammarPreview(), grammarDraft=null;
       const grammarEditor=$('#grammarEditor');
+      // Языки распознавания — как RECOGNITION_LANGUAGES в config.rs: английский включён
+      // всегда, у каждого языка своя модель. Новый язык — строка здесь и там.
+      const RECOGNITION_LANGS=[{code:'en',model:'second_asr_model',locked:true},{code:'ru',model:'asr_model'}];
+      function recognitionLanguages(settings=settingsObj){
+        const chosen=(Array.isArray(settings?.languages)?settings.languages:['ru','en']).map(value=>String(value).trim().toLowerCase());
+        return RECOGNITION_LANGS.filter(lang=>lang.locked||chosen.includes(lang.code)).map(lang=>lang.code);
+      }
+      // Фразы на главной — на языке интерфейса: русские, если интерфейс русский и русский
+      // распознаётся; иначе английские (английский включён всегда).
+      const isCyrillic=value=>/[а-яё]/i.test(value);
+      function phraseLanguage(){ return I18N.locale==='ru'&&recognitionLanguages().includes('ru')?'ru':'en'; }
+      function pickPhrase(values,fallback=''){
+        const list=(values||[]).map(value=>String(value).trim()).filter(Boolean);
+        const russian=phraseLanguage()==='ru';
+        return list.find(value=>isCyrillic(value)===russian)||list[0]||fallback;
+      }
       function grammarWake(){ return (grammar?.wake_words||[]).find(word=>String(word).trim())||'ривер'; }
+      // Wake-слово в английских примерах: «ривер» английская модель слышит как «river».
+      function displayWake(){
+        const words=(grammar?.wake_words||[]).map(word=>String(word).trim()).filter(Boolean);
+        if(phraseLanguage()==='ru') return words[0]||'ривер';
+        const latin=words.find(word=>!isCyrillic(word));
+        if(latin) return latin;
+        return !words.length||words[0].toLowerCase()==='ривер'?'river':words[0];
+      }
+      function renderHomeHint(){
+        const last=$('#lastCmd');
+        if(last.dataset.heard) return;
+        const launch=(grammar?.intents||[]).find(intent=>intent.kind==='launch'&&intent.enabled);
+        last.textContent=t('home.hint',{wake:displayWake(),open:pickPhrase(launch?.triggers,phraseLanguage()==='ru'?'открой':'open')});
+      }
       function grammarExampleRow(command,description){
         const row=el('div',{className:'row'});
         row.append(el('code',{textContent:command}),el('span',{textContent:description}));
@@ -430,12 +460,13 @@
       }
       function renderGrammarExamples(){
         const host=$('#grammarExamples'); host.replaceChildren();
-        const wake=grammarWake();
+        const wake=displayWake(), russian=phraseLanguage()==='ru';
+        renderHomeHint();
         for(const intent of grammar.intents||[]){
           if(!intent.enabled) continue;
           const triggers=(intent.triggers||[]).map(value=>String(value).trim());
           const bare=intent.kind==='launch'&&triggers.includes('');
-          const trigger=triggers.find(value=>value);
+          const trigger=pickPhrase(triggers);
           if(bare){
             host.append(grammarExampleRow(`${wake} X`,t('example.launch',{label:intentLabel(intent)})));
             continue;
@@ -446,7 +477,7 @@
             continue;
           }
           if(intent.kind==='calc'&&trigger){
-            host.append(grammarExampleRow(`${wake} ${trigger} X`,t('example.calc')));
+            host.append(grammarExampleRow(`${wake} ${trigger} X`,t('example.calc',{expr:russian?'33 умножить на 78':'33 times 78'})));
             continue;
           }
           if((intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')&&trigger){
@@ -459,15 +490,17 @@
             continue;
           }
           if(intent.kind==='dictate'&&trigger){
-            const stop=(grammar.dictation_stop||[]).find(word=>String(word).trim())||'стоп ввод';
-            host.append(grammarExampleRow(`${wake} ${trigger} …`,t('example.dictate',{wake,stop})));
+            const stop=pickPhrase(grammar.dictation_stop,russian?'стоп ввод':'stop typing');
+            // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs: is_dictation_stop).
+            const end=russian?'стоп':'stop';
+            const cancel=pickPhrase((grammar.cancel_words||[]).filter(word=>!['стоп','stop','хватит','остановись'].includes(String(word).trim().toLowerCase())),russian?'отмена':'cancel');
+            host.append(grammarExampleRow(`${wake} ${trigger} …`,t('example.dictate',{wake,stop,cancel,end})));
             continue;
           }
           if(trigger) host.append(grammarExampleRow(`${wake} ${trigger} X`,intentLabel(intent)||t('example.command')));
         }
-        host.append(grammarExampleRow(`${wake} выключи комп`,t('example.shutdown')));
-        const cancel=(grammar.cancel_words||[]).find(word=>String(word).trim());
-        host.append(grammarExampleRow(`${wake} ${cancel||'отмена'}`,t('example.cancel')));
+        host.append(grammarExampleRow(`${wake} ${russian?'выключи комп':'shut down computer'}`,t('example.shutdown')));
+        host.append(grammarExampleRow(`${wake} ${pickPhrase(grammar.cancel_words,russian?'отмена':'cancel')}`,t('example.cancel')));
       }
       async function loadGrammar(){
         $('#grammarPreviewNote').hidden=!!tauri;
@@ -555,7 +588,8 @@
           }
           langSelect.onchange=()=>intent.lang=langSelect.value;
           langWrap.append(langSelect,el('div',{className:'hint grammar-language-help',textContent:t('grammar.languageHelp')}));
-          group.append(langWrap);
+          // Язык цели выбирать не из чего, если распознаётся один язык.
+          if(recognitionLanguages().length>1) group.append(langWrap);
           if(intent.kind==='launch'){
             const bareRow=el('label',{className:'cbrow grammar-bare-launch'});
             const bare=el('input',{type:'checkbox'}); bare.checked=getTriggers().some(value=>!String(value).trim());
@@ -563,7 +597,7 @@
               const rest=getTriggers().filter(value=>String(value).trim());
               intent.triggers=bare.checked?['',...rest]:rest;
             };
-            bareRow.append(bare,el('span',{textContent:t('grammar.bareLaunch',{wake:grammarWake()})}));
+            bareRow.append(bare,el('span',{textContent:t('grammar.bareLaunch',{wake:displayWake(),app:phraseLanguage()==='ru'?'фотошоп':'photoshop'})}));
             group.append(bareRow);
           }
           if(intent.kind==='web_chat'){
@@ -658,9 +692,9 @@
         ['interface',[['ui_language','ui_language',null,'instant']]],
         ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
         ['privacy',[['private_log','bool'],['offline_mode','bool']]],
+        ['languages',[['languages','languages']]],
         ['recognition',[
-          ['asr_model','model'],['english_enabled','bool'],['second_asr_model','model'],['lid_model','model_optional'],
-          ['payload_language','language'],['asr_threads','number'],['vad_threshold','number'],['wake_pause_ms','number'],
+          ['lid_model','model_optional'],['payload_language','language'],['asr_threads','number'],['vad_threshold','number'],['wake_pause_ms','number'],
           ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number'],['open_min_similarity','number']]],
         ['dictation',[
           ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_terms','list'],
@@ -668,6 +702,13 @@
         ['everything',[['everything_host','text'],['everything_port','number'],['launch_everything_fallback','bool']]],
         ['system',[['confirm_dangerous','bool'],['confirm_close','bool'],['raise_result','bool']]],
       ];
+      // Настройки смешения языков нужны, только когда языков больше одного; англицизмы —
+      // только для русской диктовки.
+      const SETTING_NEEDS={lid_model:'multi',payload_language:'multi',dictation_english:'ru',dictation_terms:'ru'};
+      function settingVisible(key){
+        const need=SETTING_NEEDS[key], langs=recognitionLanguages();
+        return !need||(need==='multi'?langs.length>1:langs.includes(need));
+      }
       const settingLabel=(key,when='restart')=>`${t('settings.'+key)} — ${t('settings.'+when)}`;
       const settingHelp=key=>I18N.has(`settings.${key}.help`)?t(`settings.${key}.help`):null;
       let cbSeq=0;
@@ -688,23 +729,11 @@
         const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
         let inp;
         if(type==='list'){ inp=el('input',{value:(settingsObj[key]||[]).join(', ')}); inp.oninput=()=>settingsObj[key]=inp.value.split(',').map(s=>s.trim()).filter(Boolean); }
-        else if(type==='model'||type==='model_optional'){
-          inp=el('select');
-          const models=Array.isArray(opts)?opts.slice():[];
-          const selected=settingsObj[key]||'';
-          if(type==='model_optional'){
-            const noModel=el('option',{value:'',textContent:t('settings.noModel')});
-            if(!selected) noModel.selected=true;
-            inp.append(noModel);
-          }
-          if(selected&&!models.includes(selected)) models.unshift(selected);
-          for(const model of models){
-            const missing=model===selected&&!(opts||[]).includes(model);
-            const op=el('option',{value:model,textContent:missing?t('settings.modelMissing',{model}):model});
-            if(model===selected) op.selected=true;
-            inp.append(op);
-          }
-          inp.onchange=()=>settingsObj[key]=inp.value;
+        else if(type==='model'||type==='model_optional') inp=modelSelect(key,opts,type==='model_optional');
+        else if(type==='languages'){
+          wrap.append(languagesEditor(asrModels));
+          if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+          return wrap;
         }
         else if(type==='language'){
           inp=el('select');
@@ -767,6 +796,69 @@
         if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
         return wrap;
       }
+      function modelSelect(key,opts,optional){
+        const inp=el('select');
+        const models=Array.isArray(opts)?opts.slice():[];
+        const selected=settingsObj[key]||'';
+        if(optional){
+          const noModel=el('option',{value:'',textContent:t('settings.noModel')});
+          if(!selected) noModel.selected=true;
+          inp.append(noModel);
+        }
+        if(selected&&!models.includes(selected)) models.unshift(selected);
+        for(const model of models){
+          const missing=model===selected&&!(opts||[]).includes(model);
+          const op=el('option',{value:model,textContent:missing?t('settings.modelMissing',{model}):model});
+          if(model===selected) op.selected=true;
+          inp.append(op);
+        }
+        inp.onchange=()=>settingsObj[key]=inp.value;
+        return inp;
+      }
+      // Языки распознавания: строка на язык с его моделью; английский не убрать,
+      // остальные — × и «+ Добавить язык».
+      function languagesEditor(models){
+        const box=el('div',{className:'lang-editor'});
+        const enabled=recognitionLanguages();
+        const name=code=>I18N.NAMES[code]||code;
+        const setLanguages=codes=>{
+          settingsObj.languages=codes; renderSettings(); renderGrammarExamples();
+          if(grammarDraft) renderGrammarEditor();
+          $('#settingsMsg').textContent=t('settings.languages.changed');
+        };
+        for(const lang of RECOGNITION_LANGS.filter(item=>enabled.includes(item.code))){
+          const row=el('div',{className:'lang-row'});
+          row.append(el('span',{className:'lang-name',textContent:name(lang.code)}));
+          const model=modelSelect(lang.model,models,false);
+          model.setAttribute('aria-label',t('settings.languages.model',{language:name(lang.code)}));
+          row.append(model);
+          if(lang.locked){
+            row.append(el('span',{className:'lang-lock',textContent:t('settings.languages.always'),title:t('settings.languages.alwaysTitle')}));
+          }else{
+            const label=t('settings.languages.remove',{language:name(lang.code)});
+            const remove=el('button',{type:'button',className:'sm lang-remove',textContent:'×',title:label,ariaLabel:label});
+            remove.onclick=()=>setLanguages(enabled.filter(code=>code!==lang.code));
+            row.append(remove);
+          }
+          box.append(row);
+        }
+        const addable=RECOGNITION_LANGS.filter(item=>!enabled.includes(item.code));
+        const addRow=el('div',{className:'lang-add'});
+        const add=el('button',{type:'button',className:'sm',textContent:'+ '+t('settings.languages.add')});
+        add.setAttribute('aria-haspopup','menu');
+        const menu=el('div',{className:'lang-menu',hidden:true,role:'menu'});
+        for(const lang of addable){
+          const item=el('button',{type:'button',className:'sm',role:'menuitem',textContent:name(lang.code)});
+          item.onclick=()=>setLanguages([...enabled,lang.code]);
+          menu.append(item);
+        }
+        if(addable.length) add.onclick=()=>{ menu.hidden=!menu.hidden; };
+        else add.disabled=true;
+        addRow.append(add,menu);
+        if(!addable.length) addRow.append(el('span',{className:'hint',textContent:t('settings.languages.noMore')}));
+        box.append(addRow);
+        return box;
+      }
       let asrModels=[], soundPacks=['default'], autostart=false;
       async function loadSettings(){
         try{ settingsObj=await invoke('get_settings'); }
@@ -775,7 +867,7 @@
         catch(e){ reportError('loadModels',e); }
         try{ autostart=await invoke('get_autostart'); }catch(e){ reportError('readAutostart',e); }
         try{ soundPacks=await invoke('list_sound_packs'); }catch(e){ reportError('loadSoundPacks',e); }
-        renderSettings();
+        renderSettings(); renderGrammarExamples();
       }
       function renderSettings(){
         const models=asrModels;
@@ -786,6 +878,7 @@
           const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:t('settings.group.'+title)}));
           for(const f of fields){
             const [key,type,opts,when]=f;
+            if(!settingVisible(key)) continue;
             g.append(fieldEl(key,type,['asr_model','second_asr_model','lid_model'].includes(key)?models:opts,when));
           }
           F.append(g);

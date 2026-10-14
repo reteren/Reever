@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 8;
+const GRAMMAR_VERSION: u32 = 9;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -25,10 +25,43 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
 const ADDED_CANCEL_WORDS: &[(u32, &str)] =
-    &[(7, "хватит"), (7, "остановись"), (7, "stop")];
+    &[(7, "хватит"), (7, "остановись"), (7, "stop"), (9, "cancel")];
+/// Новые фразы конца диктовки: (версия, фраза).
+const ADDED_DICTATION_STOP: &[(u32, &str)] = &[(9, "stop typing")];
 /// Новые фразы у существующих намерений: (версия, id намерения, фраза). Дописываются
 /// один раз при миграции, если фраза не занята другим намерением.
-const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[(5, "dictate", "запиши")];
+/// Версия 9 — английские фразы: английский распознаётся всегда (Настройки → Языки), а
+/// русская модель слышит «open» как «опен», и транслитерация в сравнении их сводит.
+const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[
+    (5, "dictate", "запиши"),
+    (9, "launch", "open"),
+    (9, "launch", "launch"),
+    (9, "launch", "run"),
+    (9, "folder", "folder"),
+    (9, "folder", "open folder"),
+    (9, "web_google", "google search"),
+    (9, "web_google", "search google"),
+    (9, "web_youtube", "search youtube"),
+    (9, "web_youtube", "youtube search"),
+    (9, "close", "close"),
+    (9, "close", "quit"),
+    (9, "calc", "calculate"),
+    (9, "calc", "how much is"),
+    (9, "dictate", "type"),
+    (9, "dictate", "write"),
+    (9, "dictate", "dictate"),
+    (9, "kill", "kill"),
+    (9, "kill", "end task"),
+];
+/// Английские фразы встроенных системных действий (actions.json), версия 9.
+pub(crate) const ENGLISH_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
+    ("sys_shutdown", &["shut down computer", "turn off computer"]),
+    ("sys_restart", &["restart computer", "reboot computer"]),
+    ("sys_mute", &["mute sound"]),
+    ("sys_play", &["pause music", "play music"]),
+    ("sys_next", &["next track"]),
+    ("sys_prev", &["previous track"]),
+];
 
 fn legacy_version() -> u32 {
     1
@@ -167,56 +200,57 @@ impl Grammar {
                 "хватит".into(),
                 "остановись".into(),
                 "stop".into(),
+                "cancel".into(),
             ],
-            dictation_stop: vec!["стоп ввод".into(), "ривер остановись".into()],
+            dictation_stop: vec!["стоп ввод".into(), "ривер остановись".into(), "stop typing".into()],
             intents: vec![
                 intent(
                     "launch",
                     IntentKind::Launch,
                     "открыть программу или ссылку",
-                    &["", "открой", "запусти"],
+                    &["", "открой", "запусти", "open", "launch", "run"],
                     "",
                 ),
                 intent(
                     "folder",
                     IntentKind::Folder,
                     "открыть папку на компьютере (Everything)",
-                    &["папка", "открой папку"],
+                    &["папка", "открой папку", "folder", "open folder"],
                     "",
                 ),
                 intent(
                     "web_google",
                     IntentKind::Search,
                     "поиск в Google",
-                    &["загугли"],
+                    &["загугли", "google search", "search google"],
                     "https://www.google.com/search?q={q}",
                 ),
                 intent(
                     "web_youtube",
                     IntentKind::Search,
                     "поиск на YouTube",
-                    &["поиск ютуб"],
+                    &["поиск ютуб", "search youtube", "youtube search"],
                     "https://www.youtube.com/results?search_query={q}",
                 ),
                 intent(
                     "close",
                     IntentKind::Close,
                     "закрыть открытую программу",
-                    &["закрой"],
+                    &["закрой", "close", "quit"],
                     "",
                 ),
                 intent(
                     "calc",
                     IntentKind::Calc,
                     "посчитать в калькуляторе",
-                    &["посчитай", "сколько будет"],
+                    &["посчитай", "сколько будет", "calculate", "how much is"],
                     "",
                 ),
                 intent(
                     "dictate",
                     IntentKind::Dictate,
                     "диктовка: ввести текст в поле с курсором",
-                    &["напиши", "запиши", "диктовка"],
+                    &["напиши", "запиши", "диктовка", "type", "write", "dictate"],
                     "",
                 ),
                 intent(
@@ -265,7 +299,7 @@ impl Grammar {
                     "kill",
                     IntentKind::Kill,
                     "завершить программу (как в диспетчере задач)",
-                    &["заверши"],
+                    &["заверши", "kill", "end task"],
                     "",
                 ),
             ],
@@ -292,8 +326,12 @@ impl Grammar {
                 if grammar.wake_words.is_empty() {
                     grammar.wake_words = Self::defaults().wake_words;
                 }
+                let mut actions_changed = false;
                 if grammar.version < GRAMMAR_VERSION {
                     let old_version = grammar.version;
+                    if old_version < 9 {
+                        actions_changed = append_english_system_phrases(actions);
+                    }
                     append_versioned_defaults(&mut grammar);
                     grammar.version = GRAMMAR_VERSION;
                     if let Err(error) = grammar.save(path) {
@@ -302,7 +340,7 @@ impl Grammar {
                         );
                     }
                 }
-                return (grammar, false);
+                return (grammar, actions_changed);
             }
 
             eprintln!(
@@ -339,7 +377,8 @@ impl Grammar {
             grammar.cancel_words = configured_cancel_words;
         }
 
-        let mut migrated = false;
+        // Первый запуск: системные действия из resources/actions.json — с английскими фразами.
+        let mut migrated = append_english_system_phrases(actions);
         let mut keep = Vec::with_capacity(actions.len());
         for action in actions.drain(..) {
             if action.kind != "search" {
@@ -551,6 +590,16 @@ impl Grammar {
 }
 
 fn append_versioned_defaults(grammar: &mut Grammar) {
+    for (introduced_version, phrase) in ADDED_DICTATION_STOP {
+        if grammar.version < *introduced_version
+            && !grammar
+                .dictation_stop
+                .iter()
+                .any(|existing| normalize(existing) == normalize(phrase))
+        {
+            grammar.dictation_stop.push((*phrase).to_string());
+        }
+    }
     for (introduced_version, word) in ADDED_CANCEL_WORDS {
         if grammar.version < *introduced_version
             && !grammar
@@ -623,6 +672,28 @@ fn append_versioned_defaults(grammar: &mut Grammar) {
             grammar.intents.push(addition);
         }
     }
+}
+
+/// Дописать английские фразы встроенным системным действиям (один раз, при переходе
+/// грамматики на версию 9). Фраза, которая уже есть у любого действия, не дублируется.
+fn append_english_system_phrases(actions: &mut [Action]) -> bool {
+    let mut changed = false;
+    for (id, phrases) in ENGLISH_SYSTEM_PHRASES {
+        for phrase in *phrases {
+            let wanted = normalize(phrase);
+            if actions
+                .iter()
+                .any(|action| action.phrases.iter().any(|existing| normalize(existing) == wanted))
+            {
+                continue;
+            }
+            if let Some(action) = actions.iter_mut().find(|action| action.id == *id) {
+                action.phrases.push((*phrase).to_string());
+                changed = true;
+            }
+        }
+    }
+    changed
 }
 
 const TRIGGER_THRESHOLD: f64 = 0.84;
@@ -754,6 +825,67 @@ mod tests {
     use super::{Grammar, Intent, IntentKind};
     use crate::actions::Action;
     use crate::config::Settings;
+
+    /// Только русские фразы: английские (версия 9) проверяются отдельно.
+    fn russian(triggers: &[String]) -> Vec<&str> {
+        triggers
+            .iter()
+            .map(String::as_str)
+            .filter(|trigger| !trigger.is_ascii())
+            .collect()
+    }
+
+    #[test]
+    fn version_nine_migration_adds_english_phrases_once() {
+        let path = temporary_path("v9");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 8;
+        for intent in &mut legacy.intents {
+            intent.triggers.retain(|trigger| !trigger.is_ascii() || trigger.is_empty() || ["gemini", "chatgpt", "chat gpt", "claude", "find", "find folder", "find file"].contains(&trigger.as_str()));
+        }
+        legacy.cancel_words.retain(|word| word != "cancel");
+        legacy.dictation_stop.retain(|word| word != "stop typing");
+        intent_mut(&mut legacy, "close").triggers.push("quit".into());
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+        let mut actions = vec![Action {
+            id: "sys_next".into(),
+            label: "Следующий трек".into(),
+            kind: "system".into(),
+            target: "media_next".into(),
+            verbs: Vec::new(),
+            phrases: vec!["следующий трек".into()],
+        }];
+        let (migrated, actions_changed) = Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+        assert!(actions_changed);
+        assert_eq!(actions[0].phrases, ["следующий трек", "next track"]);
+        let launch = migrated.intents.iter().find(|i| i.id == "launch").unwrap();
+        assert!(launch.triggers.iter().any(|t| t == "open"));
+        // «quit» уже был у «закрой» — не дублируется.
+        let close = migrated.intents.iter().find(|i| i.id == "close").unwrap();
+        assert_eq!(close.triggers.iter().filter(|t| *t == "quit").count(), 1);
+        assert!(migrated.cancel_words.iter().any(|w| w == "cancel"));
+        assert!(migrated.dictation_stop.iter().any(|w| w == "stop typing"));
+        assert!(migrated.validate().is_ok());
+        let (reloaded, changed_again) = Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+        assert_eq!(reloaded, migrated);
+        assert!(!changed_again);
+        assert_eq!(actions[0].phrases.len(), 2);
+    }
+
+    #[test]
+    fn english_commands_match_in_both_scripts() {
+        let grammar = Grammar::defaults();
+        for (text, id, payload) in [
+            ("open notepad", "launch", "notepad"),
+            ("опен фотошоп", "launch", "фотошоп"),
+            ("search youtube cats", "web_youtube", "cats"),
+            ("close discord", "close", "discord"),
+            ("open folder downloads", "folder", "downloads"),
+        ] {
+            let found = grammar.match_trigger(text).unwrap_or_else(|| panic!("{text}"));
+            assert_eq!((found.intent.id.as_str(), found.payload.as_str()), (id, payload), "{text}");
+        }
+    }
 
     fn intent_mut<'a>(grammar: &'a mut Grammar, id: &str) -> &'a mut Intent {
         grammar
@@ -944,19 +1076,17 @@ mod tests {
         );
         assert!(migrated.intents.iter().any(|intent| {
             intent.id == "close"
-                && intent.triggers.len() == 1
-                && intent.triggers[0] == "закрой"
+                && russian(&intent.triggers) == ["закрой"]
                 && intent.enabled
         }));
         assert!(migrated.intents.iter().any(|intent| {
             intent.id == "kill"
-                && intent.triggers.len() == 1
-                && intent.triggers[0] == "заверши"
+                && russian(&intent.triggers) == ["заверши"]
                 && intent.enabled
         }));
         assert!(migrated.intents.iter().any(|intent| {
             intent.id == "calc"
-                && intent.triggers == ["посчитай", "сколько будет"]
+                && russian(&intent.triggers) == ["посчитай", "сколько будет"]
                 && intent.enabled
         }));
         assert!(std::fs::read_to_string(&path)
@@ -1012,7 +1142,7 @@ mod tests {
             .find(|intent| intent.id == "close")
             .unwrap();
         assert!(!close.enabled);
-        assert!(close.triggers.is_empty());
+        assert!(russian(&close.triggers).is_empty());
         assert!(migrated
             .intents
             .iter()
@@ -1040,7 +1170,7 @@ mod tests {
             .find(|intent| intent.id == "calc")
             .unwrap();
         assert!(!calc.enabled);
-        assert_eq!(calc.triggers, ["сколько будет"]);
+        assert_eq!(russian(&calc.triggers), ["сколько будет"]);
         assert!(migrated.validate().is_ok());
         let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
         assert_eq!(reloaded, migrated);
@@ -1093,7 +1223,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 8);
+        assert_eq!(Grammar::defaults().version, 9);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()
@@ -1157,14 +1287,14 @@ mod tests {
             .iter()
             .find(|intent| intent.id == "web_google")
             .unwrap();
-        assert_eq!(google.triggers, vec!["загугли", "гугли новости"]);
+        assert_eq!(russian(&google.triggers), vec!["загугли", "гугли новости"]);
         assert_eq!(google.url, "https://www.google.com/search?q={q}");
         let youtube = grammar
             .intents
             .iter()
             .find(|intent| intent.id == "web_youtube")
             .unwrap();
-        assert_eq!(youtube.triggers, vec!["поиск ютуб", "найди ролики"]);
+        assert_eq!(russian(&youtube.triggers), vec!["поиск ютуб", "найди ролики"]);
         let custom = grammar
             .intents
             .iter()
@@ -1209,7 +1339,7 @@ mod tests {
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
         let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
         assert_eq!(
-            migrated.intents.iter().find(|i| i.id == "dictate").unwrap().triggers,
+            russian(&migrated.intents.iter().find(|i| i.id == "dictate").unwrap().triggers),
             ["напиши", "диктовка", "запиши"]
         );
         let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());

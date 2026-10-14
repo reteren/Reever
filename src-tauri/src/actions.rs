@@ -147,6 +147,8 @@ fn default_actions() -> Vec<Action> {
                 "выключи пк",
                 "оффни пк",
                 "оффни комп",
+                "shut down computer",
+                "turn off computer",
             ],
         ),
         act(
@@ -159,6 +161,8 @@ fn default_actions() -> Vec<Action> {
                 "перезагрузи пк",
                 "ребутни пк",
                 "рестарт",
+                "restart computer",
+                "reboot computer",
             ],
         ),
         act(
@@ -166,28 +170,28 @@ fn default_actions() -> Vec<Action> {
             "Без звука",
             "system",
             "mute",
-            &["выключи звук", "без звука", "мьют"],
+            &["выключи звук", "без звука", "мьют", "mute sound"],
         ),
         act(
             "sys_play",
             "Пауза/Плей",
             "system",
             "media_play_pause",
-            &["пауза", "плей", "останови музыку", "продолжи музыку"],
+            &["пауза", "плей", "останови музыку", "продолжи музыку", "pause music", "play music"],
         ),
         act(
             "sys_next",
             "Следующий трек",
             "system",
             "media_next",
-            &["следующий трек", "переключи трек", "дальше трек"],
+            &["следующий трек", "переключи трек", "дальше трек", "next track"],
         ),
         act(
             "sys_prev",
             "Предыдущий трек",
             "system",
             "media_prev",
-            &["предыдущий трек", "назад трек"],
+            &["предыдущий трек", "назад трек", "previous track"],
         ),
     ]
 }

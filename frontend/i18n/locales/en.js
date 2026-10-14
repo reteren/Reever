@@ -1,6 +1,6 @@
 // English — the reference dictionary: every other locale has exactly these keys
-// (scripts/check-i18n.mjs checks it). Text in «» is a voice phrase: Reever
-// recognises Russian speech, so it stays Russian in every language.
+// (scripts/check-i18n.mjs checks it). Text in «» is a voice phrase; phrases that
+// depend on the recognition languages come in as {placeholders} from index.html.
 I18N.register('en', {
   "app.pickerTitle": "Reever — found",
 
@@ -46,7 +46,7 @@ I18N.register('en', {
   "mode.wake": "Wake word",
   "mode.hotkey": "Hotkey",
 
-  "home.hint": "Say «ривер» and wait for the signal, or say it all at once: «ривер, открой …».",
+  "home.hint": "Say «{wake}» and wait for the signal, or say it all at once: «{wake}, {open} …».",
 
   "grammar.heading": "What you can say",
   "grammar.edit": "Edit",
@@ -73,7 +73,7 @@ I18N.register('en', {
   "grammar.phrases": "Phrases",
   "grammar.targetLanguage": "Target language",
   "grammar.languageHelp": "Auto is the general mode; for «папка», for example, pick English if your folder names are English.",
-  "grammar.bareLaunch": "Open without a keyword (just «{wake} фотошоп»)",
+  "grammar.bareLaunch": "Open without a keyword (just «{wake} {app}»)",
   "grammar.chatUrl": "Chat address",
   "grammar.searchUrl": "URL with {q}",
   "grammar.addSearch": "+ Custom search",
@@ -116,13 +116,13 @@ I18N.register('en', {
   "example.launch": "{label} · just name the program",
   "example.close": "close an open program",
   "example.kill": "like “End task” in Task Manager",
-  "example.calc": "calculator: «33 умножить на 78» (33 times 78)",
+  "example.calc": "calculator: «{expr}»",
   "example.findBoth": "files and folders via Everything; several — a choice window, say the number",
   "example.findFolders": "folders via Everything; several — a choice window, say the number",
   "example.findFiles": "files via Everything; several — a choice window, say the number",
   "example.chat": "{label}: opens the chat and types the question",
   "example.chatDefault": "AI chat",
-  "example.dictate": "dictation into the field with the cursor (or the clipboard); end — «{wake} стоп», «{stop}» or silence; «{wake} отмена» — erase",
+  "example.dictate": "dictation into the field with the cursor (or the clipboard); end — «{wake} {end}», «{stop}» or silence; «{wake} {cancel}» — erase",
   "example.command": "Command",
   "example.shutdown": "system, with confirmation",
   "example.cancel": "cancel the command",
@@ -204,13 +204,14 @@ I18N.register('en', {
   "settings.group.activation": "Activation",
   "settings.group.privacy": "Privacy",
   "settings.group.recognition": "Recognition",
+  "settings.group.languages": "Recognition languages",
   "settings.group.dictation": "Dictation",
   "settings.group.everything": "Everything",
   "settings.group.system": "System",
   "settings.group.os": "OS and sound",
   "settings.ui_language": "Interface language",
   "settings.ui_language.auto": "Same as Windows",
-  "settings.ui_language.help": "Voice commands stay Russian: Reever recognises Russian speech.",
+  "settings.ui_language.help": "Commands on the Home page are shown in this language: Russian in the Russian interface, English in the others. Which languages Reever hears is set in Recognition languages.",
   "settings.activation_mode": "Mode",
   "settings.wake_spotter": "Background «ривер» detector (small model)",
   "settings.wake_spotter.help": "Listens continuously and catches the wake word right away, mid-speech; backs up the large model when it misses it.",
@@ -219,10 +220,16 @@ I18N.register('en', {
   "settings.mute_hotkey": "“Mute microphone” hotkey",
   "settings.private_log": "Private log",
   "settings.offline_mode": "Offline mode",
-  "settings.asr_model": "Russian recognition model",
-  "settings.english_enabled": "Second language (English)",
-  "settings.second_asr_model": "Second language model",
   "settings.lid_model": "Language detector",
+  "settings.languages": "Languages Reever understands",
+  "settings.languages.help": "English is always on. Without Russian, the English model recognizes everything: say commands in English («river open notepad»).",
+  "settings.languages.model": "{language} model",
+  "settings.languages.always": "always on",
+  "settings.languages.alwaysTitle": "English cannot be turned off: English commands and names are always understood",
+  "settings.languages.remove": "Remove {language}",
+  "settings.languages.add": "Add language",
+  "settings.languages.noMore": "No more languages yet",
+  "settings.languages.changed": "Languages changed: press Save, they apply after Reever restarts.",
   "settings.payload_language": "Default command target language",
   "settings.payload_language.help": "Auto: the command is Russian, the name is in whatever language it was said: «ривер поиск ютуб never gonna give you up».",
   "settings.asr_threads": "Recognition threads",

@@ -497,11 +497,58 @@ fn latin_to_cyrillic(text: &str) -> String {
         .join(" ")
 }
 
+/// Произношение английских слов из фраз команд (grammar.rs, версия 9).
+const ENGLISH_COMMAND_WORDS: &[(&str, &str)] = &[
+    ("open", "оупен"),
+    ("close", "клоуз"),
+    ("quit", "квит"),
+    ("launch", "лонч"),
+    ("run", "ран"),
+    ("folder", "фолдер"),
+    ("search", "серч"),
+    ("google", "гугл"),
+    ("type", "тайп"),
+    ("write", "райт"),
+    ("dictate", "диктейт"),
+    ("calculate", "калькулейт"),
+    ("kill", "кил"),
+    ("task", "таск"),
+    ("find", "файнд"),
+    ("file", "файл"),
+    ("cancel", "кэнсел"),
+    ("stop", "стоп"),
+    ("typing", "тайпинг"),
+    ("next", "некст"),
+    ("previous", "привиус"),
+    ("track", "трек"),
+    ("music", "мьюзик"),
+    ("computer", "компьютер"),
+    ("shut", "шат"),
+    ("down", "даун"),
+    ("turn", "тёрн"),
+    ("off", "офф"),
+    ("restart", "рестарт"),
+    ("reboot", "ребут"),
+    ("mute", "мьют"),
+    ("sound", "саунд"),
+    ("pause", "поуз"),
+    ("play", "плей"),
+];
+
 fn transliterate_word(word: &str) -> String {
     match word {
         "youtube" => return "ютуб".into(),
         "tiktok" => return "тик ток".into(),
         _ => {}
+    }
+    // Английские слова команд — как их произносят и как их пишет русская модель:
+    // побуквенно «close» дал бы «клосе», а сказанное «клоуз» ушло бы к «клауд».
+    if let Some(spoken) = ENGLISH_COMMAND_WORDS
+        .iter()
+        .find(|(english, _)| *english == word)
+        .map(|(_, spoken)| *spoken)
+    {
+        return spoken.into();
     }
 
     let chars: Vec<char> = word.chars().collect();
