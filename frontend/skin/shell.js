@@ -55,11 +55,16 @@
       const inset = dy > 0 ? P.r - Math.sqrt(Math.max(0, P.r * P.r - dy * dy)) : 0;
       for (let x = Math.ceil(P.x0 + inset); x < P.x1 - inset; x++) on[y * W + x] = 1;
     }
-    // +1 пиксель вокруг: сглаженный край хрома не должен обрезаться регионом
+    // +1 пиксель вокруг: сглаженный край хрома не должен обрезаться регионом.
+    // Кроме верхней полосы: там Windows подкладывает под прозрачные и полупрозрачные
+    // пиксели региона светлый фон, и кончики шипов обводились белым ореолом. Поэтому
+    // наверху в регион идут только непрозрачные пиксели, без расширения.
+    const TOP = 34;
     const grown = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    for (let y = 0; y < TOP; y++) for (let x = 0; x < W; x++) grown[y * W + x] = data[(y * W + x) * 4 + 3] > 230 ? 1 : 0;
+    for (let y = TOP; y < H; y++) for (let x = 0; x < W; x++) {
       if (!on[y * W + x]) continue;
-      for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= H) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx >= 0 && xx < W) grown[yy * W + xx] = 1; } }
+      for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < TOP || yy >= H) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx >= 0 && xx < W) grown[yy * W + xx] = 1; } }
     }
     // строки → отрезки → прямоугольники (одинаковые отрезки подряд склеиваются)
     const rects = []; let open = new Map();
