@@ -388,6 +388,33 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     }
 
     /// Главный вход: очередной кусок 16 кГц mono из микрофона.
+    /// Можно ли сейчас подогреть модели: простой и речи нет (идущую фразу не задерживаем).
+    pub fn can_keep_warm(&self) -> bool {
+        matches!(self.mode, Mode::Idle) && self.idle_speech_age.is_none()
+    }
+
+    /// Прогон моделей на полсекунде тихого шума. После долгой тишины Windows вытесняет
+    /// память моделей (сотни МБ) на диск, и первая команда тормозила: звук копился в
+    /// очереди и терялся — «разогрев» на первых командах. Результат не используется.
+    pub fn keep_warm(&mut self) {
+        let mut seed = 0x2545_f491u32;
+        let pcm: Vec<i16> = (0..samples(500))
+            .map(|_| {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                ((seed % 401) as i16) - 200
+            })
+            .collect();
+        let _ = self.asr.transcribe(&pcm);
+        if let Some(second) = self.second.as_deref_mut() {
+            let _ = second.transcribe(&pcm);
+        }
+        if let Some(lid) = self.lid.as_deref_mut() {
+            let _ = lid.detect(&pcm);
+        }
+    }
+
     pub fn push_audio(&mut self, pcm: &[i16]) -> Vec<EngineEvent> {
         let mut out = std::mem::take(&mut self.pending_events);
 

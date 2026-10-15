@@ -69,6 +69,9 @@ fn on_stream_error(e: cpal::StreamError) {
 
 /// Запускает захват микрофона. Возвращённый Stream НЕЛЬЗЯ дропать (иначе захват
 /// остановится). Stream !Send -> держим его в worker-потоке.
+/// Сэмплы 16 кГц, выброшенные из-за полной очереди (с последнего чтения).
+pub static DROPPED_SAMPLES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 pub fn start_capture(tx: SyncSender<Vec<i16>>) -> anyhow::Result<Stream> {
     let host = cpal::default_host();
     let device = host
@@ -85,6 +88,8 @@ pub fn start_capture(tx: SyncSender<Vec<i16>>) -> anyhow::Result<Stream> {
     let mut out16: Vec<i16> = Vec::new();
 
     // realtime-callback: только конвертация + неблокирующий send. Никакой тяжёлой работы.
+    // Очередь полна (распознавание не успевает) — кусок теряется; считаем, чтобы это было
+    // видно в журнале, а не догадками.
     macro_rules! build {
         ($t:ty, $to_f32:expr) => {
             device.build_input_stream(
@@ -94,8 +99,8 @@ pub fn start_capture(tx: SyncSender<Vec<i16>>) -> anyhow::Result<Stream> {
                     to_mono(&f32buf, channels, &mut mono);
                     out16.clear();
                     resampler.push(&mono, &mut out16);
-                    if !out16.is_empty() {
-                        let _ = tx.try_send(out16.clone());
+                    if !out16.is_empty() && tx.try_send(out16.clone()).is_err() {
+                        DROPPED_SAMPLES.fetch_add(out16.len(), std::sync::atomic::Ordering::Relaxed);
                     }
                 },
                 on_stream_error,

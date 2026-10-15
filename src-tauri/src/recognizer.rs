@@ -184,9 +184,18 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut mic_level: Option<crate::micwatch::MicLevel> = None;
     let mut mic_checked = std::time::Instant::now();
     let mut meter = crate::events::LevelMeter::new();
+    let trace = std::env::var_os("REEVER_TRACE").is_some();
+    let mut last_warm = std::time::Instant::now();
     loop {
         if stream.is_some() && mic_checked.elapsed() >= Duration::from_secs(2) {
             mic_checked = std::time::Instant::now();
+            let dropped = crate::audio::DROPPED_SAMPLES.swap(0, Ordering::Relaxed);
+            if dropped > 0 {
+                ui_log(app, format!(
+                    "⚠ потерян звук: {} мс — распознавание не успевало за микрофоном",
+                    dropped * 1000 / 16_000
+                ));
+            }
             let now = crate::micwatch::mic_level();
             if let (Some(before), Some(after)) = (mic_level, now) {
                 if let Some(line) = crate::micwatch::describe_change(before, after) {
@@ -243,8 +252,23 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
         worker.poll_triggers(&mut engine);
-        for ev in engine.push_audio(&chunk) {
+        let started = std::time::Instant::now();
+        let events = engine.push_audio(&chunk);
+        let spent = started.elapsed();
+        if trace && spent >= Duration::from_millis(250) {
+            ui_log(app, format!("trace: распознавание заняло {} мс", spent.as_millis()));
+        }
+        for ev in events {
             worker.handle(&mut engine, ev);
+        }
+        // Минута без подогрева — прогоняем модели вхолостую, пока в эфире тихо.
+        if last_warm.elapsed() >= Duration::from_secs(60) && engine.can_keep_warm() {
+            let started = std::time::Instant::now();
+            engine.keep_warm();
+            last_warm = std::time::Instant::now();
+            if trace {
+                ui_log(app, format!("trace: подогрев моделей {} мс", started.elapsed().as_millis()));
+            }
         }
     }
     Ok(())
