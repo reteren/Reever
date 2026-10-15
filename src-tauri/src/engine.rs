@@ -147,15 +147,25 @@ fn pause_before(audio: &[i16], at: usize) -> usize {
     best * FRAME * 1000 / SAMPLE_RATE as usize
 }
 
-/// Начало «ривер» посреди фразы (сэмпл, с небольшим запасом), если перед ним пауза.
-fn mid_phrase_wake(timed: &Timed, audio: &[i16], wake_words: &[String]) -> Option<usize> {
-    timed.words.iter().enumerate().skip(1).find_map(|(_, word)| {
+/// Начало «ривер» посреди фразы (сэмпл, с небольшим запасом), если перед ним пауза —
+/// или если сразу за ним идёт команда (`is_command`: «закрой калькулятор»). В звонке
+/// обращаются на одном дыхании («нет вот он ривер закрой калькулятор», пауза 240 мс),
+/// а «он не сработал на ривер» без команды после — просто разговор.
+fn mid_phrase_wake(
+    timed: &Timed,
+    audio: &[i16],
+    wake_words: &[String],
+    is_command: &dyn Fn(&str) -> bool,
+) -> Option<usize> {
+    timed.words.iter().enumerate().skip(1).find_map(|(index, word)| {
         let is_wake = strip_initial_wake(&word.text, wake_words).is_some_and(|rest| rest.trim().is_empty());
         if !is_wake {
             return None;
         }
         let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
-        (pause_before(audio, at) >= MID_WAKE_PAUSE_MS).then(|| at.saturating_sub(samples(80)))
+        let after: Vec<&str> = timed.words[index + 1..].iter().map(|w| w.text.as_str()).collect();
+        let commanded = after.len() >= 2 && is_command(&after.join(" "));
+        (commanded || pause_before(audio, at) >= MID_WAKE_PAUSE_MS).then(|| at.saturating_sub(samples(80)))
     })
 }
 
@@ -259,6 +269,9 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     spotter: Option<Box<dyn WakeSpotter + Send>>,
     /// Сколько сэмплов прошло с последнего срабатывания детектора wake-слова.
     spot_age: Option<usize>,
+    /// Диагностика (`REEVER_TRACE=1`): в журнал идёт каждая фраза простоя и решение по
+    /// «ривер» — видно, почему обращение не принято.
+    trace: bool,
     /// Словарь англицизмов: «харднес» в русской диктовке → hardness.
     anglicisms: Option<Anglicisms>,
     /// Сэмплов с начала речи текущей фразы простоя (`None` — речи сейчас нет).
@@ -317,6 +330,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             dictation_lang: None,
             spotter: None,
             spot_age: None,
+            trace: std::env::var_os("REEVER_TRACE").is_some(),
             idle_speech_age: None,
             idle_partial_elapsed: 0,
             anglicisms: None,
@@ -391,9 +405,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 let at_phrase_start = self
                     .idle_speech_age
                     .map_or(true, |age| age <= samples(SPOT_WINDOW_MS));
-                if spotter.feed(pcm) && at_phrase_start {
+                let fired = spotter.feed(pcm);
+                if fired && at_phrase_start {
                     self.spot_age = Some(0);
                     out.push(EngineEvent::WakeSpotted);
+                } else if fired && self.trace {
+                    let ms = self.idle_speech_age.unwrap_or(0) * 1000 / SAMPLE_RATE as usize;
+                    out.push(EngineEvent::Log(format!("trace: детектор слышал «ривер» через {ms} мс от начала фразы — не в начале, пропущено")));
                 } else if let Some(age) = self.spot_age.as_mut() {
                     *age = age.saturating_add(pcm.len());
                 }
@@ -1057,6 +1075,18 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 return;
             }
         };
+        if self.trace {
+            let detector = match self.spot_age {
+                Some(age) if age <= audio.len() + samples(SPOT_GRACE_MS) => "слышал «ривер»",
+                Some(_) => "слышал давно",
+                None => "молчал",
+            };
+            out.push(EngineEvent::Log(format!(
+                "trace: фраза простоя {:.1} с «{}» · детектор {detector}",
+                audio.len() as f32 / SAMPLE_RATE as f32,
+                timed.text
+            )));
+        }
 
         // Детектор слышал «ривер» в этой фразе, а GigaAM его не расслышала («река открой…»,
         // пустота) — чиним текст: похожее слово в начале становится wake-словом.
@@ -1082,7 +1112,21 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let Some(rest) = strip_initial_wake(&timed.text, &self.cfg.wake_words) else {
             // В разговоре (звонок) «ривер» звучит посреди речи: фраза началась раньше, и
             // wake не в её начале. После паузы — это обращение: разбираем хвост с «ривер».
-            if let Some(start) = mid_phrase_wake(&timed, audio, &self.cfg.wake_words) {
+            if self.trace {
+                for word in timed.words.iter().skip(1) {
+                    if strip_initial_wake(&word.text, &self.cfg.wake_words).is_some_and(|r| r.trim().is_empty()) {
+                        let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
+                        out.push(EngineEvent::Log(format!(
+                            "trace: «{}» посреди фразы, пауза перед ним {} мс (нужно ≥ {MID_WAKE_PAUSE_MS})",
+                            word.text,
+                            pause_before(audio, at)
+                        )));
+                    }
+                }
+            }
+            let grammar = self.grammar.clone();
+            let is_command = |text: &str| grammar.as_ref().is_some_and(|g| g.match_trigger(text).is_some());
+            if let Some(start) = mid_phrase_wake(&timed, audio, &self.cfg.wake_words, &is_command) {
                 out.push(EngineEvent::Log("wake: «ривер» после паузы посреди речи".into()));
                 let tail = &audio[start..];
                 let result = self.asr.transcribe_timed(tail);
@@ -2648,10 +2692,41 @@ mod tests {
         let mut audio = vec![3000i16; samples(1_000)];
         audio.extend(vec![0i16; samples(400)]);
         audio.extend(vec![3000i16; samples(800)]);
-        assert_eq!(mid_phrase_wake(&timed, &audio, &wake), Some(samples(1_400) - samples(80)));
+        let never = |_: &str| false;
+        assert_eq!(mid_phrase_wake(&timed, &audio, &wake, &never), Some(samples(1_400) - samples(80)));
         // Без паузы — слово в разговоре.
         let solid = vec![3000i16; samples(2_200)];
-        assert_eq!(mid_phrase_wake(&timed, &solid, &wake), None);
+        assert_eq!(mid_phrase_wake(&timed, &solid, &wake, &never), None);
+    }
+
+    #[test]
+    fn wake_without_a_pause_counts_when_a_command_follows() {
+        let word = |text: &str, start: f32| crate::speech::TimedWord { text: text.into(), start, end: start + 0.3 };
+        let wake = vec!["ривер".to_string()];
+        let grammar = Grammar::default();
+        let is_command = |text: &str| grammar.match_trigger(text).is_some();
+        let solid = vec![3000i16; samples(3_000)];
+        // «нет вот он ривер закрой калькулятор» на одном дыхании — обращение.
+        let timed = Timed {
+            text: "нет вот он ривер закрой калькулятор".into(),
+            words: vec![
+                word("нет", 0.0), word("вот", 0.3), word("он", 0.6),
+                word("ривер", 0.9), word("закрой", 1.3), word("калькулятор", 1.7),
+            ],
+        };
+        assert_eq!(mid_phrase_wake(&timed, &solid, &wake, &is_command), Some(samples(900) - samples(80)));
+        // «он не сработал на ривер» — команды после нет, это разговор.
+        let talk = Timed {
+            text: "он не сработал на ривер".into(),
+            words: vec![word("он", 0.0), word("не", 0.2), word("сработал", 0.4), word("на", 0.9), word("ривер", 1.1)],
+        };
+        assert_eq!(mid_phrase_wake(&talk, &solid, &wake, &is_command), None);
+        // «…ривер это крутая штука» — не команда.
+        let chat = Timed {
+            text: "короче ривер это крутая штука".into(),
+            words: vec![word("короче", 0.0), word("ривер", 0.4), word("это", 0.8), word("крутая", 1.0), word("штука", 1.4)],
+        };
+        assert_eq!(mid_phrase_wake(&chat, &solid, &wake, &is_command), None);
     }
 
     fn fast_engine(texts: &[&str]) -> Engine<MockTranscriber, MockVoiceDetector> {
