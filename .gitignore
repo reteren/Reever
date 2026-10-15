@@ -11,3 +11,8 @@
 # Синтетический корпус (scripts/gen-corpus.ps1); manifest.json хранится в git.
 /testdata/corpus/
 /testdata/live/*.wav
+
+# Рабочие файлы impeccable (локальные)
+/.impeccable/config.local.json
+/.impeccable/questions/
+/.impeccable/build/
