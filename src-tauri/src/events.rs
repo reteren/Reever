@@ -1,8 +1,13 @@
 //! Каналы в интерфейс: лог и состояние. Общие для аудио-воркера и диспетчера.
 
-use std::{io::Write, path::PathBuf, sync::Mutex};
+use std::{
+    io::Write,
+    path::PathBuf,
+    sync::Mutex,
+    time::{Duration, Instant},
+};
 
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Журнал в файл (`reever.log` в папке настроек) — чтобы разбирать сбои по факту, а не
 /// по скриншотам. Пишется то же, что видно в UI: при приватном режиме текст команд туда
@@ -52,4 +57,48 @@ pub fn ui_log(app: &AppHandle, msg: impl AsRef<str>) {
 
 pub fn set_state(app: &AppHandle, s: &str) {
     let _ = app.emit("reever://state", s);
+}
+
+/// Уровень микрофона для шара и эквалайзера в окне: RMS 0..1 раз в ~33 мс.
+/// Только пока главное окно видно — в трее интерфейс не должен будить ни GPU, ни IPC.
+/// Видимость спрашивается раз в полсекунды: это синхронный вызов в поток окна.
+pub struct LevelMeter {
+    peak: f32,
+    last_emit: Instant,
+    last_check: Instant,
+    visible: bool,
+}
+
+impl LevelMeter {
+    const EVERY: Duration = Duration::from_millis(33);
+    const CHECK: Duration = Duration::from_millis(500);
+
+    pub fn new() -> Self {
+        let past = Instant::now() - Self::CHECK;
+        Self { peak: 0.0, last_emit: past, last_check: past, visible: false }
+    }
+
+    pub fn push(&mut self, app: &AppHandle, pcm: &[i16]) {
+        if pcm.is_empty() {
+            return;
+        }
+        let sum: f64 = pcm.iter().map(|&s| (s as f64) * (s as f64)).sum();
+        let rms = ((sum / pcm.len() as f64).sqrt() / 32768.0) as f32;
+        self.peak = self.peak.max(rms);
+        if self.last_emit.elapsed() < Self::EVERY {
+            return;
+        }
+        if self.last_check.elapsed() >= Self::CHECK {
+            self.last_check = Instant::now();
+            self.visible = app
+                .get_webview_window("main")
+                .and_then(|w| w.is_visible().ok())
+                .unwrap_or(false);
+        }
+        if self.visible {
+            let _ = app.emit_to("main", "reever://level", (self.peak * 10000.0).round() / 10000.0);
+        }
+        self.peak = 0.0;
+        self.last_emit = Instant::now();
+    }
 }

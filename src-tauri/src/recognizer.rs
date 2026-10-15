@@ -183,6 +183,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     // Громкость микрофона в Windows: её меняют другие программы (Discord в звонке).
     let mut mic_level: Option<crate::micwatch::MicLevel> = None;
     let mut mic_checked = std::time::Instant::now();
+    let mut meter = crate::events::LevelMeter::new();
     loop {
         if stream.is_some() && mic_checked.elapsed() >= Duration::from_secs(2) {
             mic_checked = std::time::Instant::now();
@@ -238,6 +239,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             Err(RecvTimeoutError::Disconnected) => break,
         };
 
+        meter.push(app, &chunk);
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
         worker.poll_triggers(&mut engine);

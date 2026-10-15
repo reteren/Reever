@@ -28,6 +28,7 @@ pub mod picker;
 pub mod procs;
 pub mod recognizer;
 pub mod segmenter;
+pub mod skin;
 pub mod speech;
 pub mod spellcheck;
 pub mod system;
@@ -261,6 +262,7 @@ pub fn run() {
             commands_api::set_ui_language,
             picker::picker_choose,
             picker::picker_close,
+            skin::set_window_shape,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

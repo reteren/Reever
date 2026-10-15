@@ -50,6 +50,8 @@ features = [
   "Win32_System_ProcessStatus",
   "Win32_Storage_FileSystem",
   "Win32_Graphics_Dwm",
+  # skin.rs: фигурное окно по силуэту рамки
+  "Win32_Graphics_Gdi",
   # typing.rs: поле ввода в фокусе (UI Automation) и буфер обмена для диктовки
   "Win32_System_Com",
   "Win32_UI_Accessibility",
