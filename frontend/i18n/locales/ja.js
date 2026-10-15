@@ -4,6 +4,9 @@ I18N.register('ja', {
 
   "win.minimize": "最小化",
   "win.toTray": "トレイに最小化",
+  "win.shade": "コンパクトモード",
+  "win.expand": "フルウィンドウ",
+  "orb.toggle": "マイクのオン / オフ",
 
   "nav.sections": "セクション",
   "nav.home": "ホーム",

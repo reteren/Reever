@@ -16,3 +16,6 @@
 /.impeccable/config.local.json
 /.impeccable/questions/
 /.impeccable/build/
+
+# Промежуточные рендеры рамки (пересобираются из design/reever-frame.blend)
+/design/renders/

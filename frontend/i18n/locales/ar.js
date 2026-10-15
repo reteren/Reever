@@ -4,6 +4,9 @@ I18N.register('ar', {
 
   "win.minimize": "تصغير",
   "win.toTray": "تصغير إلى منطقة الإعلام",
+  "win.shade": "الوضع المضغوط",
+  "win.expand": "النافذة الكاملة",
+  "orb.toggle": "تشغيل / إيقاف الميكروفون",
 
   "nav.sections": "الأقسام",
   "nav.home": "الرئيسية",

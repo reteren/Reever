@@ -6,6 +6,9 @@ I18N.register('en', {
 
   "win.minimize": "Minimize",
   "win.toTray": "Minimize to tray",
+  "win.shade": "Compact mode",
+  "win.expand": "Full window",
+  "orb.toggle": "Microphone on / off",
 
   "nav.sections": "Sections",
   "nav.home": "Home",

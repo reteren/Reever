@@ -4,6 +4,9 @@ I18N.register('zh', {
 
   "win.minimize": "最小化",
   "win.toTray": "最小化到系统托盘",
+  "win.shade": "紧凑模式",
+  "win.expand": "完整窗口",
+  "orb.toggle": "开 / 关麦克风",
 
   "nav.sections": "栏目",
   "nav.home": "主页",

@@ -4,6 +4,9 @@ I18N.register('es', {
 
   "win.minimize": "Minimizar",
   "win.toTray": "Minimizar en la bandeja",
+  "win.shade": "Modo compacto",
+  "win.expand": "Ventana completa",
+  "orb.toggle": "Activar / desactivar micrófono",
 
   "nav.sections": "Secciones",
   "nav.home": "Inicio",

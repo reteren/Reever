@@ -4,6 +4,9 @@ I18N.register('ru', {
 
   "win.minimize": "Свернуть",
   "win.toTray": "Свернуть в трей",
+  "win.shade": "Компактный режим",
+  "win.expand": "Полное окно",
+  "orb.toggle": "Микрофон: вкл / выкл",
 
   "nav.sections": "Разделы",
   "nav.home": "Главная",
