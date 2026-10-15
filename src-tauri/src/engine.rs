@@ -148,7 +148,7 @@ fn pause_before(audio: &[i16], at: usize) -> usize {
 }
 
 /// Начало «ривер» посреди фразы (сэмпл, с небольшим запасом), если перед ним пауза —
-/// или если сразу за ним идёт команда (`is_command`: «закрой калькулятор»). В звонке
+/// или если сразу за ним идёт команда (`is_command`: «закрой калькулятор», «калькулятор»). В звонке
 /// обращаются на одном дыхании («нет вот он ривер закрой калькулятор», пауза 240 мс),
 /// а «он не сработал на ривер» без команды после — просто разговор.
 fn mid_phrase_wake(
@@ -164,7 +164,7 @@ fn mid_phrase_wake(
         }
         let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
         let after: Vec<&str> = timed.words[index + 1..].iter().map(|w| w.text.as_str()).collect();
-        let commanded = after.len() >= 2 && is_command(&after.join(" "));
+        let commanded = !after.is_empty() && is_command(&after.join(" "));
         (commanded || pause_before(audio, at) >= MID_WAKE_PAUSE_MS).then(|| at.saturating_sub(samples(80)))
     })
 }
@@ -1124,8 +1124,16 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     }
                 }
             }
+            // Команда после «ривер»: глагол грамматики с целью («закрой калькулятор») или
+            // точное название действия («калькулятор»).
             let grammar = self.grammar.clone();
-            let is_command = |text: &str| grammar.as_ref().is_some_and(|g| g.match_trigger(text).is_some());
+            let targets: std::collections::HashSet<String> = self.known_targets.keys().cloned().collect();
+            let is_command = |text: &str| {
+                let normalized = normalize(text);
+                (normalized.split_whitespace().count() >= 2
+                    && grammar.as_ref().is_some_and(|g| g.match_trigger(text).is_some()))
+                    || targets.contains(&normalized)
+            };
             if let Some(start) = mid_phrase_wake(&timed, audio, &self.cfg.wake_words, &is_command) {
                 out.push(EngineEvent::Log("wake: «ривер» после паузы посреди речи".into()));
                 let tail = &audio[start..];
@@ -2704,7 +2712,9 @@ mod tests {
         let word = |text: &str, start: f32| crate::speech::TimedWord { text: text.into(), start, end: start + 0.3 };
         let wake = vec!["ривер".to_string()];
         let grammar = Grammar::default();
-        let is_command = |text: &str| grammar.match_trigger(text).is_some();
+        let is_command = |text: &str| {
+            text.split_whitespace().count() >= 2 && grammar.match_trigger(text).is_some() || text == "калькулятор"
+        };
         let solid = vec![3000i16; samples(3_000)];
         // «нет вот он ривер закрой калькулятор» на одном дыхании — обращение.
         let timed = Timed {
@@ -2727,6 +2737,12 @@ mod tests {
             words: vec![word("короче", 0.0), word("ривер", 0.4), word("это", 0.8), word("крутая", 1.0), word("штука", 1.4)],
         };
         assert_eq!(mid_phrase_wake(&chat, &solid, &wake, &is_command), None);
+        // «…с ривером ривер калькулятор» — за «ривер» название действия.
+        let named = Timed {
+            text: "че там с ривером ривер калькулятор".into(),
+            words: vec![word("че", 0.0), word("там", 0.2), word("с", 0.4), word("ривером", 0.5), word("ривер", 1.0), word("калькулятор", 1.4)],
+        };
+        assert_eq!(mid_phrase_wake(&named, &solid, &wake, &is_command), Some(samples(1_000) - samples(80)));
     }
 
     fn fast_engine(texts: &[&str]) -> Engine<MockTranscriber, MockVoiceDetector> {
