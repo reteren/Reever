@@ -19,3 +19,4 @@
 
 # Промежуточные рендеры рамки (пересобираются из design/reever-frame.blend)
 /design/renders/
+/design/*.blend1
