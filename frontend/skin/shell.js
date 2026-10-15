@@ -320,6 +320,15 @@
   new MutationObserver(fitRail).observe($('#rail'), { childList: true, characterData: true, subtree: true });
   new MutationObserver(fitTicker).observe($('#partial'), { childList: true, characterData: true, subtree: true });
 
+  // Подстраховка: не каждая сборка WebView2 сообщает document.hidden, когда окно
+  // спрятано в трей. Раз в секунду спрашиваем само окно: скрыто — петля стоит.
+  if (win) setInterval(async () => {
+    let visible = true;
+    try { visible = await win.isVisible() && !(await win.isMinimized()); } catch { return; }
+    if (!visible && running) stop();
+    else if (visible && !running && !document.hidden) { start(); if (booted) { powerOn(true); sweepNow(0.7, 0.9); } }
+  }, 1000);
+
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { stop(); return; }
     start();
