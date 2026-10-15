@@ -1,5 +1,8 @@
-# Файлы, которые приложение пишет в рантайме (калибровка / сохранение настроек).
-# Без этого tauri dev перезапускает приложение при каждом добавлении фразы.
+# tauri dev перезапускает приложение при изменении файлов в src-tauri. В dev-режиме
+# Reever сам пишет журнал и настройки в resources/ — без этого списка окно
+# перезапускалось бы по кругу от собственного reever.log.
+resources/*.log
 resources/actions.json
 resources/settings.json
 resources/aliases.json
+resources/grammar.json
