@@ -250,9 +250,8 @@ function renderEditor(){
   addRow.append(pInp,pAdd); E.append(addRow);
 
   const foot=el('div',{className:'editrow',style:'margin-top:16px;'});
-  // Один акцент и одно разрушающее действие: три цветные кнопки подряд
-  // в семёрке невозможны и просто шумят.
-  const cal=el('button',{textContent:t('actions.calibrate')}); cal.onclick=()=>calibrate(a);
+  // Калибровка и сохранение — одного вида, удаление — отдельное, пунктиром.
+  const cal=el('button',{className:'default',textContent:t('actions.calibrate')}); cal.onclick=()=>calibrate(a);
   const save=el('button',{className:'default',textContent:t('common.save')}); save.onclick=async()=>{ if(!(a.label||'').trim()){alert(t('actions.needName'));return;} await invoke('save_action',{action:a}); editorDirty=false; await loadActions(); };
   const del=el('button',{className:'danger',textContent:t('common.delete')}); del.onclick=async()=>{ if(!await confirmDiscardActionEdits())return; if(confirm(t('actions.confirmDelete'))){await invoke('delete_action',{id:a.id}); selId=null; await loadActions();} };
   foot.append(cal,save,del); E.append(foot);
