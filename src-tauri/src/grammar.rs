@@ -557,10 +557,19 @@ impl Grammar {
             }
         }
 
-        best.map(|(intent, trigger, _, consumed, _)| TriggerMatch {
-            intent,
-            trigger: trigger.to_string(),
-            payload: words[consumed..].join(" "),
+        best.map(|(intent, trigger, _, consumed, _)| {
+            // Частица после глагола — не часть цели: «открой-ка калькулятор» модель
+            // пишет «открой ка калькулятор», и «ка калькулятор» не находил действие.
+            let start = consumed
+                + words[consumed..]
+                    .iter()
+                    .take_while(|word| matches!(**word, "ка" | "-ка"))
+                    .count();
+            TriggerMatch {
+                intent,
+                trigger: trigger.to_string(),
+                payload: words[start..].join(" "),
+            }
         })
     }
 
@@ -833,6 +842,16 @@ mod tests {
             .map(String::as_str)
             .filter(|trigger| !trigger.is_ascii())
             .collect()
+    }
+
+    #[test]
+    fn particle_ka_after_the_verb_is_not_part_of_the_target() {
+        let grammar = Grammar::defaults();
+        for text in ["открой ка калькулятор", "открой-ка калькулятор", "закрой ка телеграм"] {
+            let matched = grammar.match_trigger(text).expect(text);
+            assert!(!matched.payload.starts_with("ка "), "{text} → {:?}", matched.payload);
+        }
+        assert_eq!(grammar.match_trigger("открой ка калькулятор").unwrap().payload, "калькулятор");
     }
 
     #[test]
