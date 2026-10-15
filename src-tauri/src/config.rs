@@ -208,7 +208,7 @@ fn default_dictation_pause_ms() -> u32 {
     800
 }
 fn default_dictation_idle_ms() -> u32 {
-    5_000
+    3_000
 }
 
 fn default_endpoint_ms() -> u64 {

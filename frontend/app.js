@@ -9,7 +9,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:5000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true
+  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],

@@ -56,7 +56,7 @@ impl Default for EngineConfig {
             confirm_wait_ms: 8_000,
             choice_wait_ms: 15_000,
             dictation_pause_ms: 800,
-            dictation_idle_ms: 5_000,
+            dictation_idle_ms: 3_000,
             dictation_live: false,
         }
     }

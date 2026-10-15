@@ -17,7 +17,7 @@
   "confirm_dangerous": true,
   "confirm_close": false,
   "dictation_clipboard": true,
-  "dictation_idle_ms": 5000,
+  "dictation_idle_ms": 3000,
   "dictation_live": true,
   "dictation_english": true,
   "dictation_terms": [],
