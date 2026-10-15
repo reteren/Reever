@@ -55,7 +55,7 @@ cargo run --release --example eval -- --noise-db -30   # то же с фонов
 | `src-tauri/src/commands_api.rs` | команды для интерфейса |
 | `src-tauri/src/everything.rs` | HTTP-клиент Everything |
 | `src-tauri/src/{launcher,apps,system,winutil}.rs` | запуск, перечисление приложений, системные команды, окна |
-| `frontend/` | интерфейс без сборки: `index.html`, `aero.css`, `tokens.css` |
+| `frontend/` | интерфейс без сборки: `index.html`, `picker.html`, `skin.css`, скин в `skin/` |
 
 Контракт голосового конвейера — `docs/voice-pipeline.md`. Подробная архитектурная документация живёт в отдельном репозитории `Reever-memory`: диаграмма потока данных, карточка на каждую подсистему, зафиксированные решения и список известных проблем.
 

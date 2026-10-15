@@ -31,23 +31,12 @@
         "resizable": false,
         "decorations": false,
         "transparent": true,
-        "shadow": true,
+        "shadow": false,
         "visible": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "center": true,
-        "focus": true,
-        "windowEffects": {
-          "effects": [
-            "acrylic"
-          ],
-          "color": [
-            255,
-            255,
-            255,
-            45
-          ]
-        }
+        "focus": true
       }
     ],
     "security": {
