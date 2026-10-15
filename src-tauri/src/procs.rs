@@ -118,6 +118,17 @@ pub fn running_apps() -> Vec<RunningApp> {
         );
     }
 
+    // Свёрнутое UWP-приложение: Windows отцепляет его CoreWindow от рамки
+    // ApplicationFrameWindow, и оно висит отдельным скрытым окном верхнего уровня с тем
+    // же заголовком. Без этого списка свёрнутый «Калькулятор» не находился для «закрой».
+    let mut detached_core: Vec<(String, u32)> = Vec::new();
+    unsafe {
+        let _ = EnumWindows(
+            Some(collect_detached_core_window),
+            LPARAM(&mut detached_core as *mut Vec<(String, u32)> as isize),
+        );
+    }
+
     let mut grouped: HashMap<String, RunningApp> = HashMap::new();
     let mut roots_by_group: HashMap<String, HashSet<u32>> = HashMap::new();
     let mut visible_windows: Vec<(String, WindowInfo)> = Vec::new();
@@ -128,7 +139,13 @@ pub fn running_apps() -> Vec<RunningApp> {
         let process = if owner_process.exe_name == "applicationframehost" {
             // UWP рисует содержимое в дочернем CoreWindow. Хостовый exe не является
             // приложением пользователя, поэтому группируем по процессу дочернего окна.
-            let Some(core_pid) = find_core_window_process(hwnd_from(window.hwnd)) else {
+            let core_pid = find_core_window_process(hwnd_from(window.hwnd)).or_else(|| {
+                detached_core
+                    .iter()
+                    .find(|(title, _)| *title == window.title)
+                    .map(|(_, pid)| *pid)
+            });
+            let Some(core_pid) = core_pid else {
                 continue;
             };
             let Some(process) = by_pid.get(&core_pid).copied() else {
@@ -584,6 +601,21 @@ unsafe extern "system" fn find_core_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
     }
     *(lparam.0 as *mut Option<u32>) = Some(pid);
     BOOL(0)
+}
+
+unsafe extern "system" fn collect_detached_core_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let mut class_name = [0u16; 256];
+    let length = GetClassNameW(hwnd, &mut class_name);
+    if length <= 0 || !String::from_utf16_lossy(&class_name[..length as usize]).eq_ignore_ascii_case("Windows.UI.Core.CoreWindow") {
+        return BOOL(1);
+    }
+    let title = window_title(hwnd);
+    let mut pid = 0u32;
+    GetWindowThreadProcessId(hwnd, Some(&mut pid));
+    if !title.is_empty() && pid != 0 {
+        (*(lparam.0 as *mut Vec<(String, u32)>)).push((title, pid));
+    }
+    BOOL(1)
 }
 
 fn find_core_window_process(hwnd: HWND) -> Option<u32> {
