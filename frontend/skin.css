@@ -119,18 +119,18 @@ body {
 .pill.ok { color: var(--acc-hot); text-shadow: var(--g3); }
 .pill.bad { color: var(--acc); text-decoration: line-through; text-decoration-thickness: 1px; opacity: .8; }
 
-/* Рельс разделов: клавиши с подписью вдоль, как боковые надписи скинов */
+/* Рельс разделов: клавиши — значок и подпись под ним, горизонтально */
 .navi {
-  position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 10px 0 8px; border-radius: 7px; cursor: pointer; color: var(--acc-3); text-shadow: var(--g1);
+  position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+  padding: 8px 0; border-radius: 7px; cursor: pointer; color: var(--acc-3); text-shadow: var(--g1);
   transition: color .2s, background-color .2s, text-shadow .2s;
 }
 .navi span {
-  writing-mode: vertical-rl; transform: rotate(180deg);
-  font: 500 var(--nav-fs, 17px)/1 var(--f-lcd); font-variation-settings: 'ELSH' 2, 'ELGR' 1; letter-spacing: .08em; text-transform: uppercase;
-  flex: 1; min-height: 0; max-height: 100%; overflow: hidden; white-space: nowrap;
+  font: 500 var(--nav-fs, 14px)/1.05 var(--f-lcd); font-variation-settings: 'ELSH' 2, 'ELGR' 1; letter-spacing: .04em; text-transform: uppercase;
+  max-width: 100%; text-align: center; white-space: nowrap;
 }
-.navi .ico { width: 22px; height: 22px; }
+.navi span.wrap { white-space: normal; overflow-wrap: anywhere; }
+.navi .ico { width: 24px; height: 24px; }
 .navi:hover { color: var(--acc-2); background: var(--acc-5); }
 .navi.on { color: var(--acc-hot); text-shadow: var(--g3); background: linear-gradient(90deg, transparent, var(--acc-5) 30%, var(--acc-5) 70%, transparent); }
 .navi.on::before { content: ''; position: absolute; left: -6px; top: 18%; bottom: 18%; width: 2px; border-radius: 2px; background: var(--acc); box-shadow: 0 0 8px var(--acc); }
@@ -413,7 +413,6 @@ body.shaded #shade { display: block !important; }
   100% { opacity: 1; clip-path: inset(0 0 0 0 round 0); filter: brightness(1); }
 }
 
-[dir=rtl] .navi span { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }

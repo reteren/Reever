@@ -163,11 +163,14 @@
     });
   }
 
-  // ── Подписи рельса: вертикальные, кегль подгоняется под длину слова на языке интерфейса
+  // ── Подписи рельса: горизонтальные; кегль уменьшается, пока слово не влезет
+  // в ширину клавиши, а совсем длинное слово переносится на две строки
   function fitRail() {
     for (const span of document.querySelectorAll('.navi span')) {
-      let fs = 17; span.style.setProperty('--nav-fs', fs + 'px');
-      while (fs > 11 && span.scrollHeight > span.clientHeight + 1) { fs -= 1; span.style.setProperty('--nav-fs', fs + 'px'); }
+      span.classList.remove('wrap');
+      let fs = 14; span.style.setProperty('--nav-fs', fs + 'px');
+      while (fs > 10 && span.scrollWidth > span.clientWidth + 1) { fs -= 1; span.style.setProperty('--nav-fs', fs + 'px'); }
+      if (span.scrollWidth > span.clientWidth + 1) span.classList.add('wrap');
     }
   }
 
