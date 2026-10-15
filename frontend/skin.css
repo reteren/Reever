@@ -322,17 +322,53 @@ fieldset.grp legend {
 ::-webkit-scrollbar-thumb { background: var(--acc-4); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--acc-2); box-shadow: 0 0 6px var(--acc); }
 
-/* ── Лунки в хроме ───────────────────────────────────────────────────── */
+/* ── Кнопки окна: выпуклые стеклянные купола из той же сцены Blender ────────
+   В покое — тёмное блёклое стекло, при наведении купол загорается акцентом
+   с мягким ореолом, при нажатии продавливается внутрь. */
 .lunka {
-  position: absolute; z-index: 4; width: 30px; height: 30px; margin: -15px 0 0 -15px; padding: 0; border: 0; border-radius: 50%;
-  background: transparent; cursor: pointer; display: grid; place-items: center;
-  color: rgba(225, 245, 238, .55); transition: color .2s, transform .08s;
+  --d: 28px;                                   /* диаметр купола */
+  --box: 44px;                                 /* спрайт купола с запасом под блик */
+  position: absolute; z-index: 4; width: var(--box); height: var(--box); margin: calc(var(--box) / -2) 0 0 calc(var(--box) / -2); padding: 0; border: 0;
+  border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+  background: var(--b-off) center / var(--box) var(--box) no-repeat;
+  color: rgba(39, 230, 170, .5);
+  transition: color .18s var(--e-out), transform .22s var(--e-out), filter .22s var(--e-out);
+  -webkit-tap-highlight-color: transparent;
 }
-.lunka .ico { width: 15px; height: 15px; stroke-width: 2.2; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .8)); transition: filter .2s; }
-.lunka:hover { color: var(--acc-hot); }
-.lunka:hover .ico { filter: drop-shadow(0 0 3px var(--acc)) drop-shadow(0 0 8px rgba(39, 230, 170, .8)); }
-.lunka:active { transform: translateY(1px) scale(.94); }
+.lunka::before, .lunka::after {
+  content: ''; position: absolute; left: 50%; top: 50%; border-radius: 50%; pointer-events: none;
+}
+/* горящий купол поверх тёмного — плавно проявляется */
+.lunka::before {
+  width: var(--box); height: var(--box); margin: calc(var(--box) / -2) 0 0 calc(var(--box) / -2);
+  background: var(--b-on) center / var(--box) var(--box) no-repeat;
+  opacity: 0; transition: opacity .22s var(--e-out), filter .22s var(--e-out);
+  filter: drop-shadow(0 0 3px rgba(39, 230, 170, .85)) drop-shadow(0 0 10px rgba(39, 230, 170, .5));
+}
+/* продавливание: тень от кромки лунки ложится на купол сверху */
+.lunka::after {
+  width: var(--d); height: var(--d); margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+  box-shadow: inset 0 3px 5px rgba(0, 12, 8, .75), inset 0 -1px 2px rgba(200, 255, 236, .25);
+  opacity: 0; transition: opacity .2s var(--e-out);
+}
+.lunka .ico {
+  position: relative; z-index: 1; width: calc(var(--d) * .52); height: calc(var(--d) * .52); stroke-width: 2.6;
+  filter: drop-shadow(0 0 2px rgba(39, 230, 170, .35)); transition: filter .18s var(--e-out);
+}
+.lunka:hover { color: #032619; }
+.lunka:hover::before { opacity: 1; }
+.lunka:hover .ico { filter: drop-shadow(0 1px 0 rgba(200, 255, 236, .55)); }
+.lunka:active { transform: translateY(1.5px) scale(.9); filter: brightness(.86); transition-duration: .06s; }
+.lunka:active::before { filter: drop-shadow(0 0 2px rgba(39, 230, 170, .9)) drop-shadow(0 0 6px rgba(39, 230, 170, .45)); }
+.lunka:active::after { opacity: 1; transition-duration: .06s; }
 .lunka:focus-visible { outline: 1px dashed var(--acc-2); outline-offset: 2px; }
+#winShade, #shadeOpen { --b-off: url(skin/btn_shade_off.webp); --b-on: url(skin/btn_shade_on.webp); }
+#winClose, #shadeTray { --b-off: url(skin/btn_close_off.webp); --b-on: url(skin/btn_close_on.webp); }
+#winMin { --b-off: url(skin/btn_min_off.webp); --b-on: url(skin/btn_min_on.webp); --d: 22px; }
+#winShade { --d: 28px; }
+#winClose { --d: 30px; }
+/* в компактной полоске лунки теснее — купола чуть меньше */
+#shadeOpen, #shadeTray { --box: 36px; --d: 23px; }
 #winMin { left: 965px; top: 100px; }
 #winShade { left: 1015px; top: 100px; }
 #winClose { left: 1065px; top: 100px; }
