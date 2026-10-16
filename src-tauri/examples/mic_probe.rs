@@ -3,7 +3,6 @@
 //!
 //!   cargo run --release --example mic_probe -- 20 testdata/live/probe.wav
 
-use std::sync::mpsc::sync_channel;
 use std::time::{Duration, Instant};
 
 fn db(value: f64) -> f64 {
@@ -36,7 +35,7 @@ fn main() -> anyhow::Result<()> {
     let seconds: u64 = args.first().and_then(|s| s.parse().ok()).unwrap_or(20);
     let out = args.get(1).cloned().unwrap_or_else(|| "mic-probe.wav".into());
 
-    let (tx, rx) = sync_channel::<Vec<i16>>(256);
+    let (tx, rx) = reever_lib::audio::audio_channel(256);
     let _stream = reever_lib::audio::start_capture(tx)?;
     println!("громкость микрофона в Windows: {:?}", reever_lib::micwatch::mic_level());
     let started = Instant::now();

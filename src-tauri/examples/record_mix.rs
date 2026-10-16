@@ -230,7 +230,7 @@ fn record(testdata: &Path, cases: Vec<Case>) -> anyhow::Result<()> {
     };
     let total = cases.len();
 
-    let (tx, rx) = mpsc::sync_channel(512);
+    let (tx, rx) = audio::audio_channel(512);
     let stream = audio::start_capture(tx)
         .context("не удалось открыть микрофон; проверьте, что его не заняло другое приложение")?;
     let recording = Arc::new(AtomicBool::new(false));
@@ -245,7 +245,7 @@ fn record(testdata: &Path, cases: Vec<Case>) -> anyhow::Result<()> {
                 match rx.recv_timeout(Duration::from_millis(40)) {
                     Ok(chunk) if recording.load(Ordering::Acquire) => {
                         if let Ok(mut buffer) = samples.lock() {
-                            buffer.extend(chunk);
+                            buffer.extend_from_slice(&chunk);
                         }
                     }
                     Ok(_) | Err(mpsc::RecvTimeoutError::Timeout) => {}

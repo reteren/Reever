@@ -3,7 +3,7 @@
 //! сказано» — в engine.rs; здесь только побочные эффекты.
 
 use std::sync::atomic::Ordering;
-use std::sync::mpsc::{sync_channel, RecvTimeoutError};
+use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter};
 use crate::actions::SharedState;
 use crate::anglicism::Anglicisms;
 use crate::asr::{Asr, AsrConfig};
-use crate::audio::{start_capture, Player};
+use crate::audio::{audio_channel, start_capture, Player};
 use crate::bilingual::LangMode;
 use crate::config::ReeverConfig;
 use crate::dictation::Formatter;
@@ -172,7 +172,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     enable_wake_spotter(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
 
-    let (tx, rx) = sync_channel::<Vec<i16>>(AUDIO_QUEUE);
+    let (tx, rx) = audio_channel(AUDIO_QUEUE);
     // Поток микрофона держим в Option: на паузе/мьюте реально закрываем его
     // (дроп Stream останавливает захват → системный индикатор микрофона гаснет).
     let mut stream = Some(start_capture(tx.clone())?);
@@ -200,9 +200,27 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut meter = crate::events::LevelMeter::new();
     let trace = std::env::var_os("REEVER_TRACE").is_some();
     let mut last_warm = std::time::Instant::now();
+    let mut last_audio_trace = std::time::Instant::now();
     loop {
         if shared.reload.load(Ordering::Relaxed) {
             return Ok(());
+        }
+        if trace && stream.is_some() && last_audio_trace.elapsed() >= Duration::from_secs(60) {
+            let elapsed = last_audio_trace.elapsed().as_secs_f64();
+            let stats = crate::audio::take_callback_stats();
+            let callback_rate = stats.callbacks as f64 / elapsed;
+            let average_frames = if stats.callbacks == 0 {
+                0.0
+            } else {
+                stats.input_frames as f64 / stats.callbacks as f64
+            };
+            ui_log(
+                app,
+                format!(
+                    "trace: аудиоколбэки {callback_rate:.1}/с, средний чанк {average_frames:.0} кадров"
+                ),
+            );
+            last_audio_trace = std::time::Instant::now();
         }
         if stream.is_some() && mic_checked.elapsed() >= Duration::from_secs(2) {
             mic_checked = std::time::Instant::now();
