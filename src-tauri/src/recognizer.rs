@@ -63,10 +63,9 @@ struct Status {
 
 fn emit_status(app: &AppHandle, status: &Mutex<Status>) {
     let Ok(st) = status.lock() else { return };
-    let _ = app.emit(
-        "reever://status",
-        json!({ "asr": st.asr, "model": st.model, "everything": st.everything }),
-    );
+    let payload = json!({ "asr": st.asr, "model": st.model, "everything": st.everything });
+    crate::events::remember_ui_status(&payload);
+    let _ = app.emit("reever://status", payload);
 }
 
 fn set_asr_status(app: &AppHandle, status: &Mutex<Status>, asr: &'static str) {

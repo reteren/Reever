@@ -231,7 +231,12 @@
       }
       ctx.globalCompositeOperation = 'source-over';
     }
-    return { render, resize, count: () => parts.length };
+    return {
+      render,
+      resize,
+      count: () => parts.length,
+      active: () => parts.length > 0 || threads.some(thread => thread.on > 0.01),
+    };
   }
 
   window.SkinOrb = { createCore, createFx };

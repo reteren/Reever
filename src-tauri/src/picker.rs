@@ -2,16 +2,23 @@
 //! экрана (окно `picker`, frontend/picker.html). Выбор — кликом, клавишами или голосом
 //! («третий»); открытие записывается в историю для ранжирования (find::Usage).
 
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
-use serde_json::json;
-use tauri::{AppHandle, Emitter, Manager, State};
+use serde_json::{json, Value};
+use tauri::{webview::WebviewWindowBuilder, AppHandle, Emitter, Manager, State, WebviewWindow, WindowEvent};
 
 use crate::actions::SharedState;
 use crate::config::ReeverConfig;
 use crate::events::ui_log;
 use crate::find::{FindItem, Usage};
 use crate::{launcher, winutil};
+
+static PICKER_CREATE_PENDING: AtomicBool = AtomicBool::new(false);
+static PICKER_READY: AtomicBool = AtomicBool::new(false);
+static PENDING_PICKER: Mutex<Option<Value>> = Mutex::new(None);
 
 /// Показать варианты. `title` — что искали (для заголовка окна).
 /// Возвращает номер окна — по нему аудио-поток узнаёт, что закрыли именно его.
@@ -20,18 +27,113 @@ pub fn show(app: &AppHandle, shared: &SharedState, title: &str, items: &[FindIte
     if let Ok(mut picker) = shared.picker.lock() {
         *picker = items.to_vec();
     }
-    let _ = app.emit_to("picker", "reever://picker", json!({ "title": title, "items": items }));
-    if let Some(window) = app.get_webview_window("picker") {
-        let _ = window.center();
-        let _ = window.show();
-        let _ = window.set_focus();
-        // Команда пришла голосом, без клика — Windows не даёт фокус фоновой программе;
-        // тот же обход, что и при подъёме найденного окна.
-        if let Ok(hwnd) = window.hwnd() {
-            winutil::bring_to_front_raw(hwnd.0 as isize);
-        }
+    if let Ok(mut pending) = PENDING_PICKER.lock() {
+        *pending = Some(json!({ "title": title, "items": items }));
     }
+    ensure_picker(app);
     session
+}
+
+/// Создать окно по требованию. Событие с вариантами отправит picker_ready после подписки страницы.
+fn ensure_picker(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("picker") {
+        if PICKER_READY.load(Ordering::SeqCst) {
+            publish_picker(app, &window);
+        }
+        return;
+    }
+    if PICKER_CREATE_PENDING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    PICKER_READY.store(false, Ordering::SeqCst);
+
+    let Some(window_config) = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == "picker")
+        .cloned()
+    else {
+        PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
+        ui_log(app, "⚠ не найден конфиг окна выбора");
+        mark_current_session_closed(app);
+        return;
+    };
+
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let window = WebviewWindowBuilder::from_config(&app, &window_config)
+            .and_then(|builder| builder.build());
+        let window = match window {
+            Ok(window) => window,
+            Err(error) => {
+                PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
+                ui_log(&app, format!("⚠ окно выбора не создано: {error}"));
+                mark_current_session_closed(&app);
+                return;
+            }
+        };
+
+        attach_picker_window(&app, &window);
+        PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
+        // Закрытие могло прийти, пока WebView создавался. Не оставляем его скрытым в фоне.
+        if PENDING_PICKER.lock().map(|pending| pending.is_none()).unwrap_or(true) {
+            let _ = window.destroy();
+        }
+    });
+}
+
+fn attach_picker_window(app: &AppHandle, window: &WebviewWindow) {
+    let handle = app.clone();
+    let shared = app.state::<Arc<SharedState>>().inner().clone();
+    window.on_window_event(move |event| match event {
+        WindowEvent::CloseRequested { api, .. } => {
+            api.prevent_close();
+            mark_closed(&shared);
+            hide(&handle, &shared);
+        }
+        WindowEvent::Destroyed => {
+            PICKER_READY.store(false, Ordering::SeqCst);
+            PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
+            if PENDING_PICKER.lock().map(|pending| pending.is_some()).unwrap_or(false) {
+                ensure_picker(&handle);
+            }
+        }
+        _ => {}
+    });
+}
+
+/// Вызывается из picker.html после загрузки страницы и завершения подписки на событие.
+#[tauri::command]
+pub fn picker_ready(app: AppHandle) {
+    let Some(window) = app.get_webview_window("picker") else { return };
+    PICKER_READY.store(true, Ordering::SeqCst);
+    publish_picker(&app, &window);
+}
+
+fn publish_picker(app: &AppHandle, window: &WebviewWindow) {
+    let pending = PENDING_PICKER.lock().ok().and_then(|value| value.clone());
+    let Some(payload) = pending else {
+        let _ = window.destroy();
+        return;
+    };
+
+    let _ = app.emit_to("picker", "reever://picker", payload);
+    let _ = window.center();
+    let _ = window.show();
+    let _ = window.set_focus();
+    // Команда пришла голосом, без клика — Windows не даёт фокус фоновой программе;
+    // тот же обход, что и при подъёме найденного окна.
+    if let Ok(hwnd) = window.hwnd() {
+        winutil::bring_to_front_raw(hwnd.0 as isize);
+    }
+}
+
+fn mark_current_session_closed(app: &AppHandle) {
+    if let Some(shared) = app.try_state::<Arc<SharedState>>() {
+        mark_closed(&shared);
+    }
 }
 
 /// Окно закрыто из интерфейса: отметить его номер, чтобы аудио-поток перестал ждать номер.
@@ -45,8 +147,12 @@ pub fn hide(app: &AppHandle, shared: &SharedState) {
     if let Ok(mut picker) = shared.picker.lock() {
         picker.clear();
     }
+    if let Ok(mut pending) = PENDING_PICKER.lock() {
+        *pending = None;
+    }
+    PICKER_READY.store(false, Ordering::SeqCst);
     if let Some(window) = app.get_webview_window("picker") {
-        let _ = window.hide();
+        let _ = window.destroy();
     }
 }
 

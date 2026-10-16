@@ -110,10 +110,12 @@
   let state = 'idle', level = 0, levelRaw = 0, flash = 0, burst = 0;
   function setState(name) {
     state = STATES[name] ? name : 'idle';
+    if (state === 'idle' || state === 'paused') idleEmbersUntil = 0;
     const T = STATES[state];
     for (const k of ['fill', 'energy', 'wave', 'swirl', 'dark', 'glitch', 'orbLight']) S[k].t = T[k];
     $('#ledRec')?.classList.toggle('on', state === 'listening' || state === 'busy');
     document.body.dataset.state = state;
+    wakeLoop();
   }
 
   // ── Эквалайзер: лента громкости голоса, справа — сейчас ─────────────
@@ -189,7 +191,11 @@
 
   // ── Свет ───────────────────────────────────────────────────────────
   const sweep = { x: -0.3, i: 0, speed: 0.8, active: false };
-  function sweepNow(intensity = 0.7, speed = 0.75) { if (reduced || SHOT) return; sweep.x = -0.25; sweep.i = intensity; sweep.speed = speed; sweep.active = true; }
+  function sweepNow(intensity = 0.7, speed = 0.75) {
+    if (reduced || SHOT) return;
+    sweep.x = -0.25; sweep.i = intensity; sweep.speed = speed; sweep.active = true;
+    wakeLoop();
+  }
 
   // ── Петля ──────────────────────────────────────────────────────────
   let frame = null, core = null, fx = null, eq = null;
@@ -197,9 +203,63 @@
   const shadeView = { frame: null, core: null, fx: null };
   let shaded = false;
   let reveal = 0, revealTarget = 0, booted = false, running = false, last = 0, t0 = performance.now(), nextSweep = 6;
+  let loopFrame = 0, loopTimer = 0, sweepTimer = 0, inputActiveUntil = 0;
+  let idleEmbersUntil = performance.now() + 1100;
   const lunkiHover = [0, 0, 0];
 
+  function activeAt(now) {
+    return state === 'listening' || state === 'busy' || state === 'loading'
+      || orbHover || controlHover || now < inputActiveUntil;
+  }
+
+  function springMoving() {
+    let moving = false;
+    for (const spring of Object.values(S)) {
+      if (Math.abs(spring.t - spring.v) > 0.012 || Math.abs(spring.vel) > 0.025) moving = true;
+      else { spring.v = spring.t; spring.vel = 0; }
+    }
+    return moving;
+  }
+
+  function scheduleLoop(now = performance.now()) {
+    if (!running || loopFrame || loopTimer) return;
+    if (activeAt(now)) {
+      loopFrame = requestAnimationFrame(loop);
+      return;
+    }
+    const delay = Math.max(0, 50 - (now - last));
+    loopTimer = setTimeout(() => {
+      loopTimer = 0;
+      if (running && !loopFrame) loopFrame = requestAnimationFrame(loop);
+    }, delay);
+  }
+
+  function armNextSweep() {
+    if (!running || reduced || SHOT || activeAt(performance.now()) || sweepTimer) return;
+    const elapsed = (performance.now() - t0) / 1000;
+    const delay = Math.max(0, (nextSweep - elapsed) * 1000);
+    sweepTimer = setTimeout(() => {
+      sweepTimer = 0;
+      const time = (performance.now() - t0) / 1000;
+      nextSweep = time + 9 + Math.random() * 6;
+      sweepNow(0.45, 0.6);
+    }, delay);
+  }
+
+  function wakeLoop(input = false) {
+    const now = performance.now();
+    if (input) inputActiveUntil = now + 240;
+    if (!running) {
+      running = true;
+      last = now - 50;
+    }
+    if (sweepTimer && activeAt(now)) { clearTimeout(sweepTimer); sweepTimer = 0; }
+    if (activeAt(now) && loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
+    scheduleLoop(now);
+  }
+
   function loop(now) {
+    loopFrame = 0;
     if (!running) return;
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
     const time = (now - t0) / 1000;
@@ -229,12 +289,22 @@
       lunki: [G.lunki[0][0], G.lunki[0][1], S.l0.v, G.lunki[1][0], G.lunki[1][1], S.l1.v, G.lunki[2][0], G.lunki[2][1], S.l2.v],
     });
     if (V.core) V.core.render({ time, fill: Math.max(0, S.fill.v) * Math.min(1, reveal / 300), wave: S.wave.v, energy: Math.max(0, S.energy.v), swirl: S.swirl.v, flash, dark: Math.max(0, S.dark.v), glitch: Math.max(0, S.glitch.v) });
-    if (V.fx) V.fx.render({ mode: booted ? T.mode : 'none', level: lv, energy: Math.max(0, S.energy.v), threads: T.threads && !shaded, burst }, dt);
+    const fxMode = !booted ? 'none' : state === 'idle' && now >= idleEmbersUntil ? 'none' : T.mode;
+    if (V.fx) V.fx.render({ mode: fxMode, level: lv, energy: Math.max(0, S.energy.v), threads: T.threads && !shaded, burst }, dt);
     if (eq && !shaded) eq.render(dt, Math.min(1, level * 1.15), state === 'paused');
-    requestAnimationFrame(loop);
+    const moving = springMoving() || sweep.active || flash > 0.01 || burst > 0.01
+      || Math.abs(levelRaw - level) > 0.005 || (V.fx?.active?.() ?? (V.fx?.count?.() > 0));
+    if (moving || activeAt(now)) scheduleLoop(now);
+    else armNextSweep();
   }
-  function start() { if (running) return; running = true; last = performance.now(); requestAnimationFrame(loop); }
-  function stop() { running = false; }
+  function start() { wakeLoop(); }
+  function stop() {
+    running = false;
+    if (loopFrame) cancelAnimationFrame(loopFrame);
+    if (loopTimer) clearTimeout(loopTimer);
+    if (sweepTimer) clearTimeout(sweepTimer);
+    loopFrame = loopTimer = sweepTimer = 0;
+  }
 
   // ── Включение ──────────────────────────────────────────────────────
   function powerOn(quick) {
@@ -256,27 +326,29 @@
     booted = true;
     powerOn(false);
     S.fill.v = 0; S.fill.vel = 0;
+    wakeLoop(true);
   }
 
   // ── Ввод ──────────────────────────────────────────────────────────
   let orbHover = false;
-  document.addEventListener('mousemove', e => { S.mx.t = e.clientX / scale; S.my.t = e.clientY / scale; S.mouseOn.t = 1; });
-  document.documentElement.addEventListener('mouseleave', () => { S.mouseOn.t = 0; });
+  let controlHover = false;
+  document.addEventListener('mousemove', e => { S.mx.t = e.clientX / scale; S.my.t = e.clientY / scale; S.mouseOn.t = 1; wakeLoop(true); });
+  document.documentElement.addEventListener('mouseleave', () => { S.mouseOn.t = 0; wakeLoop(); });
   [...document.querySelectorAll('#skin .lunka'), ...document.querySelectorAll('#shade .lunka')].forEach((b, n) => {
     const i = n < 3 ? n : n - 3;
-    b.addEventListener('mouseenter', () => { lunkiHover[i] = 1.2; });
-    b.addEventListener('mouseleave', () => { lunkiHover[i] = 0; });
-    b.addEventListener('mousedown', () => { lunkiHover[i] = 2.2; });
-    b.addEventListener('mouseup', () => { lunkiHover[i] = 1.2; });
+    b.addEventListener('mouseenter', () => { lunkiHover[i] = 1.2; controlHover = true; wakeLoop(); });
+    b.addEventListener('mouseleave', () => { lunkiHover[i] = 0; controlHover = false; wakeLoop(); });
+    b.addEventListener('mousedown', () => { lunkiHover[i] = 2.2; wakeLoop(true); });
+    b.addEventListener('mouseup', () => { lunkiHover[i] = 1.2; wakeLoop(); });
   });
   const orbHit = $('#orbHit');
-  orbHit.addEventListener('mouseenter', () => { orbHover = true; });
-  orbHit.addEventListener('mouseleave', () => { orbHover = false; });
-  orbHit.addEventListener('click', () => { $('#pauseBtn')?.click(); flash = 0.6; });
+  orbHit.addEventListener('mouseenter', () => { orbHover = true; wakeLoop(); });
+  orbHit.addEventListener('mouseleave', () => { orbHover = false; wakeLoop(); });
+  orbHit.addEventListener('click', () => { $('#pauseBtn')?.click(); flash = 0.6; wakeLoop(true); });
   const shadeOrb = $('#shadeOrb');
-  shadeOrb.addEventListener('mouseenter', () => { orbHover = true; });
-  shadeOrb.addEventListener('mouseleave', () => { orbHover = false; });
-  shadeOrb.addEventListener('click', () => { $('#pauseBtn')?.click(); flash = 0.6; });
+  shadeOrb.addEventListener('mouseenter', () => { orbHover = true; wakeLoop(); });
+  shadeOrb.addEventListener('mouseleave', () => { orbHover = false; wakeLoop(); });
+  shadeOrb.addEventListener('click', () => { $('#pauseBtn')?.click(); flash = 0.6; wakeLoop(true); });
   $('#shadeDrag').addEventListener('mousedown', e => { if (e.button === 0 && win) win.startDragging().catch(() => {}); });
 
   // ── Компактный режим: окно сжимается в хромовую полоску поверх всех окон ──
@@ -300,8 +372,10 @@
     win?.setAlwaysOnTop(on).catch(() => {});
     document.body.classList.toggle('shaded', on);
     syncShadeText();
+    if (invoke) await invoke('set_compact_mode', { compact: on }).catch(e => console.error('compact state', e));
     if (!reduced && !SHOT) { const el = on ? $('#shade') : null; if (el) { el.classList.remove('power'); void el.offsetWidth; el.classList.add('power'); } else powerOn(true); }
     sweepNow(0.8, 1.2);
+    wakeLoop(true);
   }
   function syncShadeText() {
     const partial = $('#partial')?.textContent.trim();
@@ -317,18 +391,78 @@
   }
   $('#winShade').addEventListener('click', () => setShade(true));
   $('#shadeOpen').addEventListener('click', () => setShade(false));
-  $('#shadeTray').addEventListener('click', () => { try { win?.hide(); } catch (e) { console.error(e); } });
+  $('#shadeTray').addEventListener('click', () => { invoke?.('send_to_tray').catch(e => console.error('tray', e)); });
+  $('#winClose').onclick = () => { invoke?.('send_to_tray').catch(e => console.error('tray', e)); };
+  document.addEventListener('input', () => wakeLoop(true), true);
+  document.addEventListener('keydown', () => wakeLoop(true), true);
+  document.addEventListener('pointerdown', () => wakeLoop(true), true);
   for (const sel of ['#partial', '#lastCmd', '#micLabel']) new MutationObserver(() => shaded && syncShadeText()).observe($(sel), { childList: true, characterData: true, subtree: true });
   $('#drag').addEventListener('mousedown', e => { if (e.button === 0 && win) win.startDragging().catch(() => {}); });
 
   // ── События распознавания ─────────────────────────────────────────
+  const startupLogs = [];
+  let snapshotRestored = false;
+  listen('reever://log', e => { if (!snapshotRestored) startupLogs.push(String(e.payload ?? '')); });
   listen('reever://state', e => setState(String(e.payload)));
-  listen('reever://level', e => { const rms = Number(e.payload) || 0; levelRaw = Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-6) + 54) / 40)); });
-  listen('reever://heard', e => { if (String(e.payload || '').trim()) { flash = 1; burst = 1; invertFlash(); sweepNow(0.8, 1.2); } });
+  listen('reever://level', e => {
+    const rms = Number(e.payload) || 0;
+    levelRaw = state === 'listening' || state === 'busy' ? Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-6) + 54) / 40)) : 0;
+    if (state === 'listening' || state === 'busy') wakeLoop();
+  });
+  listen('reever://heard', e => { if (String(e.payload || '').trim()) { flash = 1; burst = 1; invertFlash(); sweepNow(0.8, 1.2); wakeLoop(true); } });
   listen('reever://partial', () => fitTicker());
   listen('reever://status', e => {
     let s = e.payload; if (typeof s === 'string') { try { s = JSON.parse(s); } catch { return; } }
     $('#ledNet')?.classList.toggle('on', s?.everything === true);
+    invoke?.('cache_ui_status', { status: s }).catch(() => {});
+  });
+
+  function restoreTab(tab) {
+    const selected = document.querySelector(`.navi[data-nav="${tab}"]`) || document.querySelector('.navi[data-nav="home"]');
+    if (!selected) return;
+    document.querySelectorAll('.navi').forEach(node => {
+      const on = node === selected;
+      node.classList.toggle('on', on);
+      node.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.panel').forEach(node => node.classList.toggle('on', node.id === `p-${selected.dataset.nav}`));
+  }
+
+  function restoreLogs(logs) {
+    const history = Array.isArray(logs) ? logs.map(String) : [];
+    let overlap = 0;
+    for (let count = Math.min(history.length, startupLogs.length); count > 0; count--) {
+      if (history.slice(-count).every((line, index) => line === startupLogs[index])) { overlap = count; break; }
+    }
+    const merged = [...history, ...startupLogs.slice(overlap)].slice(-250);
+    const target = $('#log');
+    if (!target) return;
+    target.replaceChildren(...merged.map(message => Object.assign(document.createElement('div'), { className: 'l', textContent: message })));
+    target.scrollTop = target.scrollHeight;
+    snapshotRestored = true;
+  }
+
+  function restoreStatus(status) {
+    if (!status || typeof status !== 'object') return;
+    const makePill = (key, cls = '') => Object.assign(document.createElement('span'), {
+      className: 'pill' + (cls ? ` ${cls}` : ''), textContent: window.t?.(key) || key,
+    });
+    const asr = $('#t-asr');
+    if (asr) asr.replaceChildren(status.asr === 'ready' ? makePill('pill.ready', 'ok')
+      : status.asr === 'error' ? makePill('pill.error', 'bad')
+      : status.asr === 'loading' ? makePill('pill.loading')
+      : document.createElement('span'));
+    const model = $('#t-model');
+    if (model) model.replaceChildren(Object.assign(document.createElement('span'), { textContent: status.model || '—' }));
+    const everything = $('#t-ev');
+    if (everything) everything.replaceChildren(status.everything === true ? makePill('pill.connected', 'ok')
+      : status.everything === false ? makePill('pill.disconnected', 'bad') : makePill('pill.unchecked'));
+    $('#ledNet')?.classList.toggle('on', status.everything === true);
+  }
+
+  document.addEventListener('click', e => {
+    const tab = e.target.closest?.('.navi[data-nav]')?.dataset.nav;
+    if (tab) invoke?.('set_ui_tab', { tab }).catch(() => {});
   });
   new MutationObserver(fitRail).observe($('#rail'), { childList: true, characterData: true, subtree: true });
   new MutationObserver(fitTicker).observe($('#partial'), { childList: true, characterData: true, subtree: true });
@@ -351,6 +485,7 @@
   // ── Старт ─────────────────────────────────────────────────────────
   window.Skin = { channel, setState, sweep: sweepNow, shade: setShade };
   (async () => {
+    const snapshotPromise = invoke ? invoke('get_ui_snapshot').catch(() => null) : Promise.resolve(null);
     fitScale();
     setState('idle');
     try { $('#ver').textContent = invoke ? 'v' + await tauri.app.getVersion() : 'preview'; } catch { }
@@ -365,8 +500,18 @@
       frame.resize(scale);
       await applyShape(frame.imgColor, SKIN);
     } catch (e) { console.error('frame', e); }
+    const snapshot = await snapshotPromise;
+    if (snapshot) {
+      restoreTab(snapshot.tab);
+      restoreLogs(snapshot.log);
+      restoreStatus(snapshot.status);
+      setState(String(snapshot.state || 'idle'));
+      if (snapshot.compact) await setShade(true);
+    } else snapshotRestored = true;
     // Окно показывается только теперь: рамка готова, окно обрезано по её форме.
-    requestAnimationFrame(() => requestAnimationFrame(() => invoke?.('window_ready').catch(() => {})));
+    wakeLoop();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await invoke?.('window_ready').catch(() => {});
     await document.fonts.ready;
     fitRail();
     // демо-состояния для предпросмотра без Tauri: ?demo=listening|busy|paused|…

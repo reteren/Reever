@@ -220,12 +220,17 @@
         });
       }
 
-      tauri?.event?.listen('reever://picker', async event => {
-        const payload = event.payload;
-        await applyLanguage();
-        items = payload?.items || [];
-        render(payload?.title || '');
-      });
+      async function listenForPicker() {
+        if (!tauri?.event?.listen) return;
+        await tauri.event.listen('reever://picker', async event => {
+          const payload = event.payload;
+          await applyLanguage();
+          items = payload?.items || [];
+          render(payload?.title || '');
+        });
+        await invoke('picker_ready');
+      }
+      listenForPicker();
     </script>
   </body>
 </html>

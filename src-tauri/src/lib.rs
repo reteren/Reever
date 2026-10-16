@@ -49,7 +49,7 @@ use config::{LiveConfig, ReeverConfig};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::WebviewWindowBuilder;
-use tauri::{Emitter, Manager, RunEvent, WebviewWindow, WindowEvent};
+use tauri::{Manager, RunEvent, WebviewWindow, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -59,6 +59,7 @@ static SHOW_REQUESTED: AtomicBool = AtomicBool::new(false);
 static MAIN_CREATE_PENDING: AtomicBool = AtomicBool::new(false);
 static MAIN_WINDOW_GENERATION: AtomicU64 = AtomicU64::new(0);
 static INSTANCE_EVENT_HANDLE: AtomicIsize = AtomicIsize::new(0);
+static EXIT_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 fn launched_hidden() -> bool {
     std::env::args().any(|a| a == "--hidden")
@@ -84,7 +85,7 @@ fn window_ready(app: tauri::AppHandle) {
 
 fn show_main(app: &tauri::AppHandle) {
     SHOW_REQUESTED.store(true, Ordering::SeqCst);
-    if let Some(w) = app.get_webview_window("main") {
+    if app.get_webview_window("main").is_some() {
         if WINDOW_SHOWN.load(Ordering::SeqCst) {
             reveal_main(app);
         }
@@ -145,9 +146,14 @@ fn attach_main_window(app: &tauri::AppHandle, window: &WebviewWindow) {
         WindowEvent::Destroyed => {
             events::set_main_visible(false);
             WINDOW_SHOWN.store(false, Ordering::SeqCst);
-            SHOW_REQUESTED.store(false, Ordering::SeqCst);
             MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
             MAIN_WINDOW_GENERATION.fetch_add(1, Ordering::SeqCst);
+            // Если показ запросили во время уничтожения старого WebView, повторяем его
+            // после освобождения метки `main`.
+            if SHOW_REQUESTED.load(Ordering::SeqCst) && !EXIT_REQUESTED.load(Ordering::SeqCst) {
+                let handle = handle.clone();
+                tauri::async_runtime::spawn(async move { show_main(&handle); });
+            }
         }
         _ => {}
     });
@@ -177,7 +183,13 @@ fn signal_existing_instance_or_register() -> bool {
     use windows::Win32::System::Threading::{CreateEventW, SetEvent};
     use windows::core::PCWSTR;
 
-    let name: Vec<u16> = "Local\\com.troid.reever.show-main".encode_utf16().chain(Some(0)).collect();
+    // Демонстрация поиска работает без аудио и не должна будить установленный экземпляр.
+    let event_name = if std::env::var_os("REEVER_FIND_DEMO").is_some() {
+        "Local\\com.troid.reever.find-demo.show-main"
+    } else {
+        "Local\\com.troid.reever.show-main"
+    };
+    let name: Vec<u16> = event_name.encode_utf16().chain(Some(0)).collect();
     let Ok(handle) = (unsafe { CreateEventW(None, false, false, PCWSTR(name.as_ptr())) }) else {
         return false;
     };
@@ -298,7 +310,10 @@ pub fn run() {
                             events::ui_log(app, line);
                         }
                     }
-                    "quit" => app.exit(0),
+                    "quit" => {
+                        EXIT_REQUESTED.store(true, Ordering::SeqCst);
+                        app.exit(0);
+                    }
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
@@ -390,6 +405,7 @@ pub fn run() {
             set_compact_mode,
             events::get_ui_snapshot,
             events::set_ui_tab,
+            events::cache_ui_status,
             commands_api::set_paused,
             commands_api::get_paused,
             commands_api::set_autostart,
@@ -401,15 +417,20 @@ pub fn run() {
             commands_api::set_ui_language,
             picker::picker_choose,
             picker::picker_close,
+            picker::picker_ready,
             skin::set_window_shape,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
     app.run(|_app, event| {
-        if let RunEvent::ExitRequested { api, code: None } = event {
-            // Окна уничтожаются в трейном режиме, но процесс оставляет живыми трей и аудио.
-            api.prevent_exit();
+        match event {
+            RunEvent::ExitRequested { api, code: None, .. } => {
+                // Окна уничтожаются в трейном режиме, но процесс оставляет живыми трей и аудио.
+                api.prevent_exit();
+            }
+            RunEvent::ExitRequested { .. } => EXIT_REQUESTED.store(true, Ordering::SeqCst),
+            _ => {}
         }
     });
 }

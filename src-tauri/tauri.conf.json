@@ -11,6 +11,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Reever",
         "width": 1280,
         "height": 880,
@@ -24,6 +25,7 @@
       },
       {
         "label": "picker",
+        "create": false,
         "title": "Reever",
         "url": "picker.html",
         "width": 620,

@@ -9,6 +9,7 @@ use std::{
 };
 
 use serde::Serialize;
+use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 
 /// Журнал в файл (`reever.log` в папке настроек) — чтобы разбирать сбои по факту, а не
@@ -22,6 +23,7 @@ const UI_LOG_LIMIT: usize = 250;
 static UI_HISTORY: Mutex<VecDeque<String>> = Mutex::new(VecDeque::new());
 static UI_STATE: Mutex<String> = Mutex::new(String::new());
 static UI_TAB: Mutex<String> = Mutex::new(String::new());
+static UI_STATUS: Mutex<Option<Value>> = Mutex::new(None);
 static UI_COMPACT: AtomicBool = AtomicBool::new(false);
 static MAIN_VISIBLE: AtomicBool = AtomicBool::new(false);
 
@@ -30,11 +32,12 @@ pub struct UiSnapshot {
     state: String,
     log: Vec<String>,
     tab: String,
+    status: Option<Value>,
     compact: bool,
 }
 
 fn push_ui_log(log: &mut VecDeque<String>, message: &str) {
-    if log.len() == UI_LOG_LIMIT {
+    while log.len() >= UI_LOG_LIMIT {
         log.pop_front();
     }
     log.push_back(message.to_string());
@@ -91,7 +94,22 @@ pub fn set_state(app: &AppHandle, s: &str) {
 }
 
 pub fn current_state() -> String {
-    UI_STATE.lock().map(|state| state.clone()).unwrap_or_else(|_| "idle".into())
+    UI_STATE
+        .lock()
+        .map(|state| if state.is_empty() { "idle".into() } else { state.clone() })
+        .unwrap_or_else(|_| "idle".into())
+}
+
+/// Последний статус распознавателя нужен новому WebView: раннее событие могло уйти до его загрузки.
+pub fn remember_ui_status(status: &Value) {
+    if let Ok(mut current) = UI_STATUS.lock() {
+        *current = Some(status.clone());
+    }
+}
+
+#[tauri::command]
+pub fn cache_ui_status(status: Value) {
+    remember_ui_status(&status);
 }
 
 pub fn set_main_visible(visible: bool) {
@@ -104,11 +122,15 @@ pub fn set_compact(compact: bool) {
 
 #[tauri::command]
 pub fn set_ui_tab(tab: String) -> Result<(), String> {
-    if !matches!(tab.as_str(), "home" | "actions" | "settings" | "logs") {
+    if !is_ui_tab(&tab) {
         return Err("неизвестная вкладка интерфейса".into());
     }
     *UI_TAB.lock().map_err(|_| "не удалось сохранить вкладку".to_string())? = tab;
     Ok(())
+}
+
+fn is_ui_tab(tab: &str) -> bool {
+    matches!(tab, "home" | "actions" | "settings" | "logs")
 }
 
 #[tauri::command]
@@ -116,7 +138,11 @@ pub fn get_ui_snapshot() -> UiSnapshot {
     UiSnapshot {
         state: current_state(),
         log: UI_HISTORY.lock().map(|log| log.iter().cloned().collect()).unwrap_or_default(),
-        tab: UI_TAB.lock().map(|tab| tab.clone()).unwrap_or_else(|_| "home".into()),
+        tab: UI_TAB
+            .lock()
+            .map(|tab| if tab.is_empty() { "home".into() } else { tab.clone() })
+            .unwrap_or_else(|_| "home".into()),
+        status: UI_STATUS.lock().map(|status| status.clone()).unwrap_or(None),
         compact: UI_COMPACT.load(Ordering::Relaxed),
     }
 }
@@ -182,7 +208,7 @@ impl LevelMeter {
 
 #[cfg(test)]
 mod tests {
-    use super::{push_ui_log, UI_LOG_LIMIT};
+    use super::{is_ui_tab, push_ui_log, UI_LOG_LIMIT};
     use std::collections::VecDeque;
 
     #[test]
@@ -195,5 +221,14 @@ mod tests {
         assert_eq!(log.len(), UI_LOG_LIMIT);
         assert_eq!(log.front().map(String::as_str), Some("line-1"));
         assert_eq!(log.back().map(String::as_str), Some("line-250"));
+    }
+
+    #[test]
+    fn ui_tab_validation_accepts_only_existing_sections() {
+        assert!(is_ui_tab("home"));
+        assert!(is_ui_tab("actions"));
+        assert!(is_ui_tab("settings"));
+        assert!(is_ui_tab("logs"));
+        assert!(!is_ui_tab("unknown"));
     }
 }
