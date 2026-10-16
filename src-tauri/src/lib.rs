@@ -41,39 +41,174 @@ pub mod webchat;
 pub mod winutil;
 
 use std::str::FromStr;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use actions::SharedState;
 use config::{LiveConfig, ReeverConfig};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Emitter, Manager, WindowEvent};
+use tauri::webview::WebviewWindowBuilder;
+use tauri::{Emitter, Manager, RunEvent, WebviewWindow, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-/// Главное окно уже показано при запуске (интерфейсом или запасным таймером).
-static WINDOW_SHOWN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Показывать главное окно только после отрисовки рамки; счётчик сбрасывается при пересоздании.
+static WINDOW_SHOWN: AtomicBool = AtomicBool::new(false);
+static SHOW_REQUESTED: AtomicBool = AtomicBool::new(false);
+static MAIN_CREATE_PENDING: AtomicBool = AtomicBool::new(false);
+static MAIN_WINDOW_GENERATION: AtomicU64 = AtomicU64::new(0);
+static INSTANCE_EVENT_HANDLE: AtomicIsize = AtomicIsize::new(0);
 
 fn launched_hidden() -> bool {
     std::env::args().any(|a| a == "--hidden")
 }
 
-/// Интерфейс готов: рамка нарисована, окно обрезано по ней — показываем окно
-/// (кроме автозапуска в трей). Повторные вызовы ничего не делают.
+fn reveal_main(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        events::set_main_visible(true);
+    }
+}
+
+/// Интерфейс готов: рамка нарисована и форма применена. Вызывается при каждой загрузке.
 #[tauri::command]
 fn window_ready(app: tauri::AppHandle) {
-    if !launched_hidden() && !WINDOW_SHOWN.swap(true, Ordering::SeqCst) {
-        show_main(&app);
+    events::set_state(&app, &events::current_state());
+    if SHOW_REQUESTED.load(Ordering::SeqCst) && !WINDOW_SHOWN.swap(true, Ordering::SeqCst) {
+        reveal_main(&app);
     }
 }
 
 fn show_main(app: &tauri::AppHandle) {
+    SHOW_REQUESTED.store(true, Ordering::SeqCst);
     if let Some(w) = app.get_webview_window("main") {
-        let _ = w.show();
-        let _ = w.unminimize();
-        let _ = w.set_focus();
+        if WINDOW_SHOWN.load(Ordering::SeqCst) {
+            reveal_main(app);
+        }
+        return;
     }
+
+    if MAIN_CREATE_PENDING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "main").cloned() else {
+        MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
+        events::ui_log(app, "⚠ не найден конфиг главного окна");
+        return;
+    };
+
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        // Создание WebView не блокирует обработчик tray/hotkey/IPC.
+        let window = WebviewWindowBuilder::from_config(&app, &window_config)
+            .and_then(|builder| builder.build());
+        let window = match window {
+            Ok(window) => window,
+            Err(error) => {
+                MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
+                events::ui_log(&app, format!("⚠ главное окно не создано: {error}"));
+                return;
+            }
+        };
+
+        let generation = MAIN_WINDOW_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+        WINDOW_SHOWN.store(false, Ordering::SeqCst);
+        attach_main_window(&app, &window);
+        MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
+
+        // Если JS упал до window_ready, оставляем запасной путь показа, как раньше.
+        let handle = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(4));
+            if MAIN_WINDOW_GENERATION.load(Ordering::SeqCst) == generation
+                && SHOW_REQUESTED.load(Ordering::SeqCst)
+                && !WINDOW_SHOWN.swap(true, Ordering::SeqCst)
+            {
+                reveal_main(&handle);
+            }
+        });
+    });
+}
+
+fn attach_main_window(app: &tauri::AppHandle, window: &WebviewWindow) {
+    let handle = app.clone();
+    window.on_window_event(move |event| match event {
+        WindowEvent::CloseRequested { api, .. } => {
+            api.prevent_close();
+            let handle = handle.clone();
+            tauri::async_runtime::spawn(async move { destroy_main(&handle); });
+        }
+        WindowEvent::Destroyed => {
+            events::set_main_visible(false);
+            WINDOW_SHOWN.store(false, Ordering::SeqCst);
+            SHOW_REQUESTED.store(false, Ordering::SeqCst);
+            MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
+            MAIN_WINDOW_GENERATION.fetch_add(1, Ordering::SeqCst);
+        }
+        _ => {}
+    });
+}
+
+fn destroy_main(app: &tauri::AppHandle) {
+    SHOW_REQUESTED.store(false, Ordering::SeqCst);
+    WINDOW_SHOWN.store(false, Ordering::SeqCst);
+    events::set_main_visible(false);
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.destroy();
+    }
+}
+
+#[tauri::command]
+async fn send_to_tray(app: tauri::AppHandle) {
+    destroy_main(&app);
+}
+
+#[tauri::command]
+fn set_compact_mode(compact: bool) {
+    events::set_compact(compact);
+}
+
+fn signal_existing_instance_or_register() -> bool {
+    use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS};
+    use windows::Win32::System::Threading::{CreateEventW, SetEvent};
+    use windows::core::PCWSTR;
+
+    let name: Vec<u16> = "Local\\com.troid.reever.show-main".encode_utf16().chain(Some(0)).collect();
+    let Ok(handle) = (unsafe { CreateEventW(None, false, false, PCWSTR(name.as_ptr())) }) else {
+        return false;
+    };
+    if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+        unsafe {
+            let _ = SetEvent(handle);
+            let _ = CloseHandle(handle);
+        }
+        true
+    } else {
+        INSTANCE_EVENT_HANDLE.store(handle.0 as isize, Ordering::SeqCst);
+        false
+    }
+}
+
+fn listen_for_second_instance(app: tauri::AppHandle) {
+    use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
+    use windows::Win32::System::Threading::{WaitForSingleObject, INFINITE};
+
+    let raw = INSTANCE_EVENT_HANDLE.load(Ordering::SeqCst);
+    if raw == 0 {
+        return;
+    }
+    std::thread::spawn(move || {
+        let event = HANDLE(raw as *mut std::ffi::c_void);
+        loop {
+            if unsafe { WaitForSingleObject(event, INFINITE) } == WAIT_OBJECT_0 {
+                show_main(&app);
+            }
+        }
+    });
 }
 
 /// Защита от DLL-hijacking: убираем текущий каталог и PATH из путей поиска DLL,
@@ -90,7 +225,12 @@ pub fn harden_dll_search() {
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    // Второй запуск отправляет сигнал первому экземпляру и не запускает второй аудиопоток.
+    if signal_existing_instance_or_register() {
+        return;
+    }
+
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
@@ -111,10 +251,11 @@ pub fn run() {
                     if is_mute {
                         let now = !state.paused.load(Ordering::Relaxed);
                         state.paused.store(now, Ordering::Relaxed);
-                        let _ = app.emit("reever://state", if now { "paused" } else { "idle" });
-                        let _ = app.emit("reever://log", if now { "🔇 микрофон заглушён (хоткей)" } else { "🔊 микрофон включён (хоткей)" });
+                        events::set_state(app, if now { "paused" } else { "idle" });
+                        events::ui_log(app, if now { "🔇 микрофон заглушён (хоткей)" } else { "🔊 микрофон включён (хоткей)" });
                     } else {
                         // иначе — push-to-talk
+                        show_main(app);
                         state.force_listen.store(true, Ordering::Relaxed);
                     }
                 })
@@ -151,10 +292,10 @@ pub fn run() {
                         if let Some(state) = app.try_state::<Arc<SharedState>>() {
                             let now = !state.paused.load(Ordering::Relaxed);
                             state.paused.store(now, Ordering::Relaxed);
-                            let _ = app.emit("reever://state", if now { "paused" } else { "idle" });
+                            events::set_state(app, if now { "paused" } else { "idle" });
                             let locale = *uilang::CURRENT.lock().unwrap();
                             let line = uilang::text(locale, if now { "log.paused" } else { "log.resumed" });
-                            let _ = app.emit("reever://log", line);
+                            events::ui_log(app, line);
                         }
                     }
                     "quit" => app.exit(0),
@@ -173,41 +314,11 @@ pub fn run() {
                 .build(app)?;
             app.manage(uilang::TrayItems { show, pause, quit });
 
-            // --- закрытие окна -> прячем в трей ---
-            if let Some(w) = app.get_webview_window("main") {
-                let wc = w.clone();
-                w.on_window_event(move |event| {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        let _ = wc.hide();
-                    }
-                });
-                // Автозапуск (--hidden) -> стартуем в трей; обычный запуск -> окно показывает
-                // интерфейс (`window_ready`), когда рамка нарисована и окно обрезано по ней:
-                // показанное раньше прозрачное окно открывало системный заголовок Windows.
-                // Интерфейс не ответил за 4 с (ошибка) — показываем сами.
-                if !launched_hidden() {
-                    let handle = app.handle().clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_secs(4));
-                        if !WINDOW_SHOWN.swap(true, Ordering::SeqCst) {
-                            show_main(&handle);
-                        }
-                    });
-                }
-            }
-
-            // --- окно выбора «найди»: Alt+F4 — как Esc (спрятать и перестать ждать номер) ---
-            if let Some(w) = app.get_webview_window("picker") {
-                let handle = app.handle().clone();
-                let shared_for_picker = shared.clone();
-                w.on_window_event(move |event| {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        picker::mark_closed(&shared_for_picker);
-                        picker::hide(&handle, &shared_for_picker);
-                    }
-                });
+            // Второй запуск поднимает этот экземпляр, не создавая ещё один аудиопоток.
+            listen_for_second_instance(app.handle().clone());
+            // Автозапуск --hidden оставляет только трей и аудио; обычный запуск создаёт окно.
+            if !launched_hidden() {
+                show_main(app.handle());
             }
 
             // --- глобальные хоткеи: push-to-talk + mute ---
@@ -275,6 +386,10 @@ pub fn run() {
             commands_api::get_settings,
             commands_api::save_settings,
             window_ready,
+            send_to_tray,
+            set_compact_mode,
+            events::get_ui_snapshot,
+            events::set_ui_tab,
             commands_api::set_paused,
             commands_api::get_paused,
             commands_api::set_autostart,
@@ -288,6 +403,13 @@ pub fn run() {
             picker::picker_close,
             skin::set_window_shape,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|_app, event| {
+        if let RunEvent::ExitRequested { api, code: None } = event {
+            // Окна уничтожаются в трейном режиме, но процесс оставляет живыми трей и аудио.
+            api.prevent_exit();
+        }
+    });
 }
