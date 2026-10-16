@@ -82,6 +82,13 @@ pub fn resolve(
     remove_leading_fillers(&mut command_words);
 
     let command = join_command_words(&command_words);
+    // Русская «отмена» — уже решение. На таком коротком слове английская модель пишет
+    // созвучный бред («at me no»), определитель языка порой с ней соглашается, и тогда
+    // отмена уходит во второй вариант, который на отмену не проверяется, а бред
+    // запускает случайное действие (живой журнал 2026-10-16: «at me no» → Dota2).
+    if crate::textnorm::is_cancel(&command, &grammar.cancel_words) {
+        return resolved_ru(&command);
+    }
     let matched = grammar.match_trigger(&command);
     let (consumed, phrase, intent_lang, can_transcribe) = if let Some(found) = matched {
         let consumed = command_words
@@ -551,6 +558,35 @@ mod tests {
         // Цель начинается в 0,90 с, поэтому вырезка начинается за 150 мс до неё.
         assert_eq!(second.seen[0][0], 12_000);
         assert_eq!(lid.seen.len(), 1);
+    }
+
+    #[test]
+    fn russian_cancel_wins_without_asking_english_model_or_lid() {
+        let grammar = Grammar::defaults();
+        let timed = timed(
+            "ривер отмена",
+            &[("ривер", 0.00, 0.30), ("отмена", 0.40, 1.20)],
+        );
+        let pcm = audio(1.5);
+        let mut second = MockTranscriber::new("at me no");
+        let mut lid = MockLid::new(Lang::En, 0.99);
+
+        let result = resolve(
+            &pcm,
+            &timed,
+            "",
+            &wakes(),
+            &grammar, &|_| false,
+            Some(&mut second),
+            Some(&mut lid),
+            LangMode::Auto,
+        );
+
+        assert_eq!(result.text, "отмена");
+        assert_eq!(result.alt, None);
+        assert_eq!(result.payload_lang, Lang::Ru);
+        assert!(second.seen.is_empty());
+        assert!(lid.seen.is_empty());
     }
 
     #[test]
