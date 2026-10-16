@@ -23,6 +23,7 @@ pub mod grammar;
 pub mod input_thread;
 pub mod langid;
 pub mod launcher;
+pub mod local_index;
 pub mod micwatch;
 pub mod picker;
 pub mod procs;
@@ -133,6 +134,10 @@ pub fn run() {
 
             app.manage(LiveConfig::new(cfg.clone()));
             app.manage(shared.clone());
+            let index_dir = app.path().app_config_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let index = local_index::IndexManager::new(index_dir.join("index-v1.bin"));
+            index.apply_source(&cfg.settings.find_source);
+            app.manage(index);
 
             // --- трей ---
             let locale = uilang::resolve(&cfg.settings.ui_language);
@@ -274,6 +279,7 @@ pub fn run() {
             commands_api::cancel_calibration,
             commands_api::get_settings,
             commands_api::save_settings,
+            commands_api::index_status,
             window_ready,
             commands_api::set_paused,
             commands_api::get_paused,

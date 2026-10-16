@@ -547,7 +547,7 @@ fn dispatch_find(
     scope: crate::find::FindScope,
     candidates: &[String],
 ) -> DispatchResult {
-    if cfg.settings.offline_mode {
+    if cfg.settings.offline_mode && cfg.settings.find_source == "everything" {
         ui_log(app, "🔒 офлайн-режим: поиск через Everything отключён");
         return DispatchResult::Done(false);
     }
@@ -593,7 +593,9 @@ fn dispatch_find(
     }
     let usage = crate::find::Usage::load(&shared.usage_path);
     let recent = crate::find::windows_recent();
-    let items = match crate::find::search_with_extension(
+    let manager = app.try_state::<crate::local_index::IndexManager>();
+    let snapshot = manager.as_ref().and_then(|manager| manager.snapshot());
+    let items = match crate::find::search_with_source(
         &cfg.settings.everything_host,
         cfg.settings.everything_port,
         &names,
@@ -601,6 +603,9 @@ fn dispatch_find(
         extension.as_deref(),
         &usage,
         &recent,
+        &cfg.settings.find_source,
+        snapshot.as_deref(),
+        cfg.settings.offline_mode,
     ) {
         Ok(items) => items,
         Err(error) => {
