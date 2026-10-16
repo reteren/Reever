@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from train import TinyDsCnn, evaluate_files, load_rows
+from train import MELS, POINT_CHANNELS, POOL_BINS, PRE_CHANNELS, TinyDsCnn, evaluate_files, load_rows
 
 
 def load_weights(model: TinyDsCnn, path: Path) -> None:
@@ -16,10 +16,10 @@ def load_weights(model: TinyDsCnn, path: Path) -> None:
     if payload[:4] != b"RKW1":
         raise ValueError("ожидался заголовок RKW1")
     shapes = {
-        "pre.weight": (8, 40, 1), "pre.bias": (8,),
-        "depth.weight": (8, 1, 5), "depth.bias": (8,),
-        "point.weight": (12, 8, 1), "point.bias": (12,),
-        "head.weight": (2, 72), "head.bias": (2,),
+        "pre.weight": (PRE_CHANNELS, MELS, 1), "pre.bias": (PRE_CHANNELS,),
+        "depth.weight": (PRE_CHANNELS, 1, 5), "depth.bias": (PRE_CHANNELS,),
+        "point.weight": (POINT_CHANNELS, PRE_CHANNELS, 1), "point.bias": (POINT_CHANNELS,),
+        "head.weight": (2, POINT_CHANNELS * POOL_BINS), "head.bias": (2,),
     }
     offset = 4
     state = {}

@@ -20,7 +20,7 @@ $tmp = Join-Path $env:TEMP 'reever-kws-sapi.wav'
 $rows = New-Object System.Collections.Generic.List[object]
 $index = 0
 
-function Get-Pcm([string]$Text, $Token, [int]$Rate, [int]$Pitch) {
+function Get-Pcm([string]$Text, $Token, [int]$Rate) {
     $stream = New-Object -ComObject SAPI.SpFileStream
     $stream.Format = $format
     $stream.Open($tmp, 3, $false)
@@ -50,8 +50,20 @@ function Write-Wav([string]$Path, [byte[]]$Pcm) {
 
 $ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue
 $pitchValues = if ($ffmpeg) { @(-8, 0, 8) } else { Write-Warning 'ffmpeg не найден: pitch augmentation отключена'; @(0) }
+function Get-WavDataBytes([string]$Path) {
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    for ($offset = 12; $offset + 8 -le $bytes.Length;) {
+        $chunk = [Text.Encoding]::ASCII.GetString($bytes, $offset, 4)
+        $size = [BitConverter]::ToInt32($bytes, $offset + 4)
+        if ($chunk -eq 'data') { return $size }
+        $offset += 8 + $size + ($size % 2)
+    }
+    throw "В WAV не найден data chunk: $Path"
+}
 function Add-OpusVariant([string]$Source, $Row) {
-    if (-not $WithOpus -or -not $ffmpeg) { return }
+    # Одного 24-кбит/с примера из четырёх хватает как канального augmentation;
+    # каждый wav отдельно гонять через два процесса ffmpeg слишком накладно.
+    if (-not $WithOpus -or -not $ffmpeg -or ($index % 4) -ne 0) { return }
     $stem = [IO.Path]::GetFileNameWithoutExtension($Source)
     $ogg = Join-Path $data ($stem + '-opus24k.ogg')
     $dest = Join-Path $data ($stem + '-opus24k.wav')
@@ -59,24 +71,28 @@ function Add-OpusVariant([string]$Source, $Row) {
     if ($LASTEXITCODE -ne 0) { throw "ffmpeg не смог закодировать $Source" }
     & $ffmpeg.Source -v error -y -i $ogg -ac 1 -ar 16000 -c:a pcm_s16le $dest
     if ($LASTEXITCODE -ne 0) { throw "ffmpeg не смог декодировать $ogg" }
+    Remove-Item -LiteralPath $ogg -Force
     $copy = [pscustomobject]@{ file=[IO.Path]::GetFileName($dest); label=$Row.label; voice=$Row.voice; text=$Row.text; keyword_start_s=$Row.keyword_start_s; keyword_end_s=$Row.keyword_end_s; rate=$Row.rate; pitch=$Row.pitch; position=$Row.position; augmentation='opus24k' }
     $rows.Add($copy)
 }
 
 function Apply-Pitch([string]$Path, [int]$Semitones) {
-    if ($Semitones -eq 0 -or -not $ffmpeg) { return }
+    if ($Semitones -eq 0 -or -not $ffmpeg) { return 1.0 }
+    $originalBytes = Get-WavDataBytes $Path
     $factor = [Math]::Pow(2.0, $Semitones / 12.0)
     $factorText = $factor.ToString('0.000000', [Globalization.CultureInfo]::InvariantCulture)
     $tempoText = (1.0 / $factor).ToString('0.000000', [Globalization.CultureInfo]::InvariantCulture)
     $tempPath = [IO.Path]::ChangeExtension($Path, '.pitched.wav')
     & $ffmpeg.Source -v error -y -i $Path -af "asetrate=16000*$factorText,aresample=16000,atempo=$tempoText" -ac 1 -ar 16000 -c:a pcm_s16le $tempPath
     if ($LASTEXITCODE -ne 0) { throw "ffmpeg не смог изменить высоту: $Path" }
+    $pitchScale = (Get-WavDataBytes $tempPath) / [double]$originalBytes
     Move-Item -LiteralPath $tempPath -Destination $Path -Force
+    return $pitchScale
 }
 
 # Слова произносятся отдельным сегментом: манифест хранит точную позицию для обучения.
 $wake = @(
-    @{ word='ривер'; label='1' }, @{ word='ривэр'; label='1' }, @{ word='ривьер'; label='1' },
+    @{ word='ривер'; label='1' }, @{ word='ревер'; label='1' }, @{ word='ривьер'; label='1' },
     @{ word='river'; label='1' }, @{ word='reever'; label='1' }
 )
 $negatives = @(
@@ -87,57 +103,86 @@ $negatives = @(
 $prefixes = @('', 'слушай ', 'давай уточним, ', 'у меня вопрос, ')
 $suffixes = @(', открой заметки', ', подскажи погоду', ', посмотри это', ', расскажи подробнее', '')
 
+$voiceIndex = 0
 foreach ($token in $voices) {
     $voiceName = [string]$token.GetDescription()
-    $isEnglish = $voiceName -match 'English'
+    $languageTags = ([string]$token.GetAttribute('Language')).Split(';', [StringSplitOptions]::RemoveEmptyEntries)
+    $isEnglish = $languageTags | Where-Object { $_.Trim() -match '^(409|0409)$' } | Select-Object -First 1
     $prefixesForVoice = if ($isEnglish) { @('', 'hey ', 'hello ', 'please ') } else { $prefixes }
     $suffixesForVoice = if ($isEnglish) { @(', open notes', ', check this', ', tell me more', ', look it up', '') } else { $suffixes }
     $negativePhrases = if ($isEnglish) {
         @('reverse the guitar direction', 'the engine roars outside', 'we went to the riviera', 'liver for lunch',
           'I prefer a simple interface', 'let us discuss work and plans', 'check the documents and send the result',
-          'open the meeting and share the screen', 'this is a short conversation', 'river bank near the bridge')
+          'open the meeting and share the screen', 'this is a short conversation', 'drive near the bridge')
     } else { $negatives }
+    $positiveWords = @($wake | Where-Object {
+        ($_.word -in @('river', 'reever')) -eq [bool]$isEnglish
+    })
+    $rateIndex = 0
     foreach ($rate in $Rates) {
+        $pitchIndex = 0
         foreach ($pitch in $pitchValues) {
-            foreach ($item in $wake) {
-                if ($item.word -in @('river', 'reever') -and -not $isEnglish) { continue }
-                if ($item.word -notin @('river', 'reever') -and $isEnglish) { continue }
-                $prefix = $prefixesForVoice[$index % $prefixesForVoice.Count]
-                $suffix = $suffixesForVoice[[int][Math]::Floor($index / 3) % $suffixesForVoice.Count]
-                $prefixPcm = if ($prefix) { Get-Pcm $prefix $token $rate $pitch } else { [byte[]]@() }
-                $wordPcm = Get-Pcm $item.word $token $rate $pitch
-                $suffixPcm = if ($suffix) { Get-Pcm $suffix $token $rate $pitch } else { [byte[]]@() }
-                if (($prefix -and -not $prefixPcm.Length) -or -not $wordPcm.Length -or ($suffix -and -not $suffixPcm.Length)) { continue }
-                $pcm = New-Object System.Collections.Generic.List[byte]
-                if ($prefixPcm.Length) { $pcm.AddRange($prefixPcm); $pcm.AddRange([byte[]]::new(3200)) }
-                $kwStart = $pcm.Count / 32000.0
-                $pcm.AddRange($wordPcm)
-                $kwEnd = $pcm.Count / 32000.0
-                if ($suffixPcm.Length) { $pcm.AddRange([byte[]]::new(3200)); $pcm.AddRange($suffixPcm) }
-                $name = 'p-{0:D6}.wav' -f $index
-                $path = Join-Path $data $name
-                Write-Wav $path $pcm.ToArray()
-                Apply-Pitch $path $pitch
-                $position = if (-not $prefix) { 'begin' } elseif (-not $suffix) { 'end' } else { 'middle' }
-                $row = [pscustomobject]@{ file=$name; label=1; voice=$voiceName; text=($prefix + $item.word + $suffix); keyword_start_s=$kwStart; keyword_end_s=$kwEnd; rate=$rate; pitch=$pitch; position=$position; augmentation='pcm' }
-                $rows.Add($row)
-                Add-OpusVariant $path $row
-                $index++
+            # Девять комбинаций на голос покрывают все варианты слова, все три
+            # позиции во фразе и каждую скорость/высоту без лишнего дублирования.
+            $item = $positiveWords[($voiceIndex + $pitchIndex) % $positiveWords.Count]
+            $position = @('begin', 'middle', 'end')[$rateIndex % 3]
+            $prefix = ''
+            $suffix = ''
+            if ($position -ne 'begin') {
+                $prefix = $prefixesForVoice[1 + (($voiceIndex + $pitchIndex) % ($prefixesForVoice.Count - 1))]
             }
-            foreach ($text in $negativePhrases) {
-                $pcm = Get-Pcm $text $token $rate $pitch
-                if (-not $pcm.Length) { continue }
-                $name = 'n-{0:D6}.wav' -f $index
-                $path = Join-Path $data $name
-                Write-Wav $path $pcm
-                Apply-Pitch $path $pitch
-                $row = [pscustomobject]@{ file=$name; label=0; voice=$voiceName; text=$text; keyword_start_s=0; keyword_end_s=0; rate=$rate; pitch=$pitch; augmentation='pcm' }
-                $rows.Add($row)
-                Add-OpusVariant $path $row
-                $index++
+            if ($position -eq 'middle') {
+                $suffix = $suffixesForVoice[($voiceIndex + $rateIndex + $pitchIndex) % ($suffixesForVoice.Count - 1)]
+            } elseif ($position -eq 'begin') {
+                $suffix = $suffixesForVoice[($voiceIndex + $rateIndex + $pitchIndex) % $suffixesForVoice.Count]
             }
+            $prefixPcm = if ($prefix) { Get-Pcm $prefix $token $rate } else { [byte[]]@() }
+            $wordPcm = Get-Pcm $item.word $token $rate
+            $suffixPcm = if ($suffix) { Get-Pcm $suffix $token $rate } else { [byte[]]@() }
+            if (($prefix -and -not $prefixPcm.Length) -or -not $wordPcm.Length -or ($suffix -and -not $suffixPcm.Length)) {
+                $pitchIndex++
+                continue
+            }
+            $pcm = New-Object System.Collections.Generic.List[byte]
+            if ($prefixPcm.Length) { $pcm.AddRange($prefixPcm); $pcm.AddRange([byte[]]::new(3200)) }
+            $kwStart = $pcm.Count / 32000.0
+            $pcm.AddRange($wordPcm)
+            $kwEnd = $pcm.Count / 32000.0
+            if ($suffixPcm.Length) { $pcm.AddRange([byte[]]::new(3200)); $pcm.AddRange($suffixPcm) }
+            $phraseDuration = $pcm.Count / 32000.0
+            $name = 'p-{0:D6}.wav' -f $index
+            $path = Join-Path $data $name
+            Write-Wav $path $pcm.ToArray()
+            $pitchScale = Apply-Pitch $path $pitch
+            $kwStart *= $pitchScale
+            $kwEnd *= $pitchScale
+            $phraseDuration *= $pitchScale
+            $position = if ($kwStart -le 0.01) { 'begin' } elseif ($kwEnd -ge $phraseDuration - 0.01) { 'end' } else { 'middle' }
+            $row = [pscustomobject]@{ file=$name; label=1; voice=$voiceName; text=($prefix + $item.word + $suffix); keyword_start_s=$kwStart.ToString('0.000000', [Globalization.CultureInfo]::InvariantCulture); keyword_end_s=$kwEnd.ToString('0.000000', [Globalization.CultureInfo]::InvariantCulture); rate=$rate; pitch=$pitch; position=$position; augmentation='pcm' }
+            $rows.Add($row)
+            Add-OpusVariant $path $row
+            $index++
+
+            # Для каждого SAPI-голоса сохраняем hard negatives при нейтральной
+            # скорости: полный speed/pitch cross-product нужен позитивному классу.
+            if ($rate -eq 0 -and $pitch -eq 0) {
+                foreach ($text in ($negativePhrases | Select-Object -First 5)) {
+                    $pcm = Get-Pcm $text $token $rate
+                    if (-not $pcm.Length) { continue }
+                    $name = 'n-{0:D6}.wav' -f $index
+                    $path = Join-Path $data $name
+                    Write-Wav $path $pcm
+                    $row = [pscustomobject]@{ file=$name; label=0; voice=$voiceName; text=$text; keyword_start_s=0; keyword_end_s=0; rate=$rate; pitch=$pitch; augmentation='pcm' }
+                    $rows.Add($row)
+                    Add-OpusVariant $path $row
+                    $index++
+                }
+            }
+            $pitchIndex++
         }
+        $rateIndex++
     }
+    $voiceIndex++
 }
 
 $rows | Export-Csv -NoTypeInformation -Encoding UTF8 -Path $manifest
@@ -145,5 +190,6 @@ Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
 Write-Host "Готово: $($rows.Count) WAV -> $data; manifest=$manifest"
 & python (Join-Path $PSScriptRoot 'generate_noise.py') --manifest $manifest
 if ($LASTEXITCODE -ne 0) { throw 'generate_noise.py failed' }
-& python (Join-Path $PSScriptRoot 'make_external.py') --repo-root $root --out (Join-Path $PSScriptRoot 'data\external-testdata.csv') --live-root (Join-Path $PSScriptRoot 'data\live-source')
+& (Join-Path $PSScriptRoot 'kws-general-negatives.ps1')
+& python (Join-Path $PSScriptRoot 'make_external.py') --repo-root $root --out (Join-Path $PSScriptRoot 'data\external-testdata.csv') --live-root (Join-Path $PSScriptRoot 'data\no-live')
 if ($LASTEXITCODE -ne 0) { throw 'make_external.py failed' }

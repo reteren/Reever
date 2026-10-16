@@ -22,6 +22,8 @@ FFT = 512
 MELS = 40
 FRAMES = 60
 POOL_BINS = 6
+PRE_CHANNELS = 16
+POINT_CHANNELS = 24
 MAGIC = b"RKW1"
 
 
@@ -116,8 +118,10 @@ class AudioWindows(Dataset):
         label = int(row["label"])
         n = len(feats)
         if label == 1:
-            kw_start = max(0, int(float(row.get("keyword_start_s", "0")) * RATE / HOP))
-            kw_end = max(kw_start + 1, int(float(row.get("keyword_end_s", "0.35")) * RATE / HOP))
+            kw_start_s = float(row.get("keyword_start_s") or 0.0)
+            kw_end_s = float(row.get("keyword_end_s") or 0.35)
+            kw_start = max(0, int(kw_start_s * RATE / HOP))
+            kw_end = max(kw_start + 1, int(kw_end_s * RATE / HOP))
             center = (kw_start + kw_end) // 2
             # Слово перемещается по временному окну, как при обращении посреди фразы.
             place = int(self.rng.integers(8, FRAMES - 2)) if self.train else FRAMES // 2
@@ -136,10 +140,10 @@ class TinyDsCnn(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.pre = nn.Conv1d(MELS, 8, kernel_size=1)
-        self.depth = nn.Conv1d(8, 8, kernel_size=5, padding=2, groups=8)
-        self.point = nn.Conv1d(8, 12, kernel_size=1)
-        self.head = nn.Linear(12 * POOL_BINS, 2)
+        self.pre = nn.Conv1d(MELS, PRE_CHANNELS, kernel_size=1)
+        self.depth = nn.Conv1d(PRE_CHANNELS, PRE_CHANNELS, kernel_size=5, padding=2, groups=PRE_CHANNELS)
+        self.point = nn.Conv1d(PRE_CHANNELS, POINT_CHANNELS, kernel_size=1)
+        self.head = nn.Linear(POINT_CHANNELS * POOL_BINS, 2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = F.relu(self.pre(x))
@@ -175,11 +179,41 @@ def stream_scores(model: TinyDsCnn, feats: np.ndarray, device: torch.device) -> 
     return np.concatenate(scores)
 
 
-def first_smoothed(scores: np.ndarray, threshold: float) -> int | None:
-    for i in range(2, len(scores)):
-        if sum(float(value) >= threshold for value in scores[i - 2:i + 1]) >= 2:
-            return i
-    return None
+def event_frames(
+    scores: np.ndarray,
+    threshold: float,
+    smooth_window: int = 2,
+    required_hits: int = 2,
+    hysteresis_frames: int = 10,
+) -> list[int]:
+    """Считает события с k-из-n подтверждением и отпусканием по низкому score."""
+    events: list[int] = []
+    recent: list[float] = []
+    fired = False
+    quiet_frames = 0
+    for i, raw_score in enumerate(scores):
+        score = float(raw_score)
+        recent.append(score)
+        if len(recent) > smooth_window:
+            recent.pop(0)
+        if fired:
+            if score < threshold * 0.6:
+                quiet_frames += 1
+                if quiet_frames >= hysteresis_frames:
+                    fired = False
+                    quiet_frames = 0
+                    recent.clear()
+            else:
+                quiet_frames = 0
+        elif len(recent) == smooth_window and sum(value >= threshold for value in recent) >= required_hits:
+            fired = True
+            events.append(i)
+    return events
+
+
+def detection_time_s(frame: int) -> float:
+    # При 600 мс предварительного контекста первая оценка оканчивается на 15 мс сигнала.
+    return 0.015 + frame * HOP / RATE
 
 
 def evaluate_files(model: TinyDsCnn, rows: list[dict[str, str]], root: Path, device: torch.device) -> dict[str, object]:
@@ -191,37 +225,56 @@ def evaluate_files(model: TinyDsCnn, rows: list[dict[str, str]], root: Path, dev
         scores = stream_scores(model, log_mel(np.concatenate((pre_roll, audio))), device)
         results.append((row, scores, len(audio) / RATE))
     thresholds = {}
-    for threshold in (0.35, 0.5, 0.65, 0.8):
+    smoothing = ((2, 2, 10), (2, 2, 20), (3, 2, 10), (3, 2, 20), (3, 2, 30), (5, 3, 20))
+    grid = [(threshold, window, required, release)
+            for threshold in (0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 0.95, 0.99)
+            for window, required, release in smoothing]
+    for threshold, window, required, release in grid:
         positives = [item for item in results if int(item[0]["label"]) == 1]
         negatives = [item for item in results if int(item[0]["label"]) == 0]
         detected, quick_detected, latencies = 0, 0, []
         false_files = 0
+        false_events = 0
+        latency_evaluable = 0
         for row, scores, _duration in positives:
-            kw_start = float(row.get("keyword_start_s", "0"))
-            kw_end = float(row.get("keyword_end_s", "0"))
-            frame = first_smoothed(scores, threshold)
-            if frame is not None:
-                # score-index 0 covers audio through 0.615 s; each next score is 10 ms later.
-                detected_time = 0.615 + frame * HOP / RATE - 0.6
-                delay = detected_time - kw_end
-                if detected_time >= kw_start - 0.03 and detected_time <= kw_end + 1.0:
-                    detected += 1
+            aligned = bool(row.get("keyword_start_s")) and bool(row.get("keyword_end_s"))
+            times = [detection_time_s(frame) for frame in
+                     event_frames(scores, threshold, window, required, release)]
+            if aligned:
+                latency_evaluable += 1
+                kw_start = float(row["keyword_start_s"])
+                kw_end = float(row["keyword_end_s"])
+                candidates = [time for time in times if kw_start - 0.03 <= time <= kw_end + 1.0]
+            else:
+                # Внешний манифест не содержит временной разметки слова: учитываем
+                # любое событие в файле, но не выдаём оценку задержки.
+                kw_end = 0.0
+                candidates = times
+            if candidates:
+                detected += 1
+                if aligned:
+                    delay = min(candidates) - kw_start
                     latencies.append(delay * 1000)
-                    if delay <= 0.30 and delay >= -0.03:
+                    if -0.03 <= delay <= 0.30:
                         quick_detected += 1
         negative_hours = sum(duration for _row, _scores, duration in negatives) / 3600.0
         for _row, scores, _duration in negatives:
-            if first_smoothed(scores, threshold) is not None:
+            count = len(event_frames(scores, threshold, window, required, release))
+            false_events += count
+            if count:
                 false_files += 1
         metrics = {
             "positive_files": len(positives),
             "detected": detected,
             "recall": detected / len(positives) if positives else None,
             "detected_within_300ms": quick_detected,
-            "recall_within_300ms": quick_detected / len(positives) if positives else None,
+            "recall_within_300ms": quick_detected / latency_evaluable if latency_evaluable else None,
+            "latency_evaluable_files": latency_evaluable,
             "false_files": false_files,
+            "false_events": false_events,
             "negative_files": len(negatives),
-            "false_alarms_per_hour": false_files / negative_hours if negative_hours else None,
+            "negative_hours": negative_hours,
+            "false_alarms_per_hour": false_events / negative_hours if negative_hours else None,
             "median_latency_ms": float(np.median(latencies)) if latencies else None,
             "p95_latency_ms": float(np.percentile(latencies, 95)) if latencies else None,
         }
@@ -229,20 +282,24 @@ def evaluate_files(model: TinyDsCnn, rows: list[dict[str, str]], root: Path, dev
             group = [item for item in positives if item[0].get("position") == position]
             hits, quick_hits = 0, 0
             for row, scores, _duration in group:
-                frame = first_smoothed(scores, threshold)
-                if frame is not None:
-                    kw_start = float(row.get("keyword_start_s", "0"))
-                    kw_end = float(row.get("keyword_end_s", "0"))
-                    detected_time = 0.615 + frame * HOP / RATE - 0.6
-                    delay = detected_time - kw_end
-                    if kw_start - 0.03 <= detected_time <= kw_end + 1.0:
-                        hits += 1
-                        if -0.03 <= delay <= 0.30:
-                            quick_hits += 1
-            metrics[f"{position}_recall"] = hits / len(group) if group else None
-            metrics[f"{position}_recall_within_300ms"] = quick_hits / len(group) if group else None
-            metrics[f"{position}_n"] = len(group)
-        thresholds[str(threshold)] = metrics
+                if not row.get("keyword_start_s") or not row.get("keyword_end_s"):
+                    continue
+                kw_start = float(row["keyword_start_s"])
+                kw_end = float(row["keyword_end_s"])
+                candidates = [time for time in
+                              (detection_time_s(frame) for frame in
+                               event_frames(scores, threshold, window, required, release))
+                              if kw_start - 0.03 <= time <= kw_end + 1.0]
+                if candidates:
+                    delay = min(candidates) - kw_start
+                    hits += 1
+                    if -0.03 <= delay <= 0.30:
+                        quick_hits += 1
+            aligned_group = [item for item in group if item[0].get("keyword_start_s") and item[0].get("keyword_end_s")]
+            metrics[f"{position}_recall"] = hits / len(aligned_group) if aligned_group else None
+            metrics[f"{position}_recall_within_300ms"] = quick_hits / len(aligned_group) if aligned_group else None
+            metrics[f"{position}_n"] = len(aligned_group)
+        thresholds[f"{threshold}|{required}/{window}|h{release}"] = metrics
     return thresholds
 
 
@@ -254,6 +311,7 @@ def main() -> None:
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--user-dir", type=Path)
+    p.add_argument("--user-holdout-dir", type=Path)
     args = p.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     rows = load_rows(args.manifest)
@@ -261,13 +319,35 @@ def main() -> None:
         for path in sorted(args.user_dir.glob("*.wav")):
             rows.append({"file": str(path.resolve()), "label": "1", "voice": "user",
                          "keyword_start_s": "0.05", "keyword_end_s": "0.45", "position": "begin"})
+    if args.user_holdout_dir and args.user_holdout_dir.exists():
+        for path in sorted(args.user_holdout_dir.glob("*.wav")):
+            rows.append({"file": str(path.resolve()), "label": "1", "voice": "user_eval",
+                         "keyword_start_s": "", "keyword_end_s": "", "position": ""})
     if not rows:
         raise SystemExit("В манифесте нет аудиофайлов")
     root = args.manifest.parent
-    voices = sorted({row.get("voice", "") for row in rows if row.get("label") == "1" and row.get("voice") != "user"})
-    held = set(voices[-max(1, len(voices) // 5):]) if len(voices) > 1 else set()
-    train_rows = [row for row in rows if row.get("voice", "") not in held or row.get("voice") == "user"]
-    test_rows = [row for row in rows if row.get("voice", "") in held]
+    voices = sorted({row.get("voice", "") for row in rows
+                     if row.get("label") == "1" and row.get("voice") not in {"user", "user_eval"}})
+    held_count = max(1, len(voices) // 5) if len(voices) > 1 else 0
+    english_anchor = next((voice for voice in voices if "English" in voice), None)
+    held_pool = [voice for voice in voices if voice != english_anchor]
+    held_count = min(held_count, len(held_pool))
+    held = set(random.Random(args.seed + 1).sample(held_pool, held_count)) if held_count else set()
+    background_kinds = {"silence", "white_noise", "room_noise", "music_tones"}
+    held_background = {
+        row["file"]
+        for kind in background_kinds
+        for row in sorted(
+            (item for item in rows if item.get("voice") == kind),
+            key=lambda item: item["file"],
+        )[-3:]
+    }
+    test_rows = [
+        row for row in rows
+        if row.get("voice", "") in held or row.get("voice", "") == "user_eval"
+        or row.get("file") in held_background
+    ]
+    train_rows = [row for row in rows if row not in test_rows]
     if not test_rows:
         train_rows, test_rows = rows[:-1], rows[-1:]
     train_ds = AudioWindows(train_rows, root, True)

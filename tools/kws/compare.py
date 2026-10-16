@@ -1,4 +1,4 @@
-"""Сверяет Python и Rust max-score на одном и том же WAV."""
+"""Сверяет потоковые score Python и Rust на одном и том же WAV."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from eval import load_weights
@@ -23,18 +24,25 @@ def main() -> None:
     model = TinyDsCnn()
     load_weights(model, args.weights)
     python_scores = stream_scores(model, log_mel(read_wav(args.wav)), torch.device("cpu"))
-    python_max = float(python_scores.max()) if len(python_scores) else 0.0
-    result = subprocess.run([str(args.rust_exe.resolve()), "--model", str(args.weights.resolve()),
-                             "--wav", str(args.wav.resolve())], cwd=args.cwd.resolve(),
-                            capture_output=True, text=True, check=True)
-    match = re.search(r"max_score=([0-9.]+)", result.stdout)
-    if not match:
-        raise RuntimeError(f"Rust probe не напечатал max_score: {result.stdout} {result.stderr}")
-    rust_max = float(match.group(1))
-    delta = abs(python_max - rust_max)
-    print(f"python_max={python_max:.8f} rust_max={rust_max:.8f} abs_delta={delta:.8f}")
-    if delta > 1e-3:
-        raise SystemExit("numeric comparison failed: tolerance 1e-3")
+    result = subprocess.run(
+        [str(args.rust_exe.resolve()), "--model", str(args.weights.resolve()),
+         "--wav", str(args.wav.resolve()), "--all-scores"],
+        cwd=args.cwd.resolve(), capture_output=True, text=True, check=True,
+    )
+    rust_scores = np.asarray(
+        [float(value) for value in re.findall(r"^score=([0-9.eE+-]+)$", result.stdout, re.MULTILINE)],
+        dtype=np.float32,
+    )
+    if len(python_scores) != len(rust_scores):
+        raise RuntimeError(f"разное число кадров: Python={len(python_scores)}, Rust={len(rust_scores)}")
+    if not len(python_scores):
+        raise RuntimeError("WAV короче 600 мс, сравнивать нечего")
+    deltas = np.abs(python_scores - rust_scores)
+    maximum = float(deltas.max())
+    rms = float(np.sqrt(np.mean(deltas * deltas)))
+    print(f"frames={len(deltas)} max_abs_delta={maximum:.8g} rms_delta={rms:.8g}")
+    if maximum > 1e-3:
+        raise SystemExit("numeric comparison failed: tolerance max abs 1e-3")
 
 
 if __name__ == "__main__":

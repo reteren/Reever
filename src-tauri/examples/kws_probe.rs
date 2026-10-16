@@ -48,7 +48,7 @@ fn read_pcm16_mono(path: &Path) -> anyhow::Result<Vec<f32>> {
 fn main() -> anyhow::Result<()> {
     let mut model_path = None::<PathBuf>;
     let mut wavs = Vec::<PathBuf>::new();
-    let mut threshold = 0.5f32;
+    let mut threshold = 0.65f32;
     let mut dump_scores = false;
     let mut idle_seconds = 0u32;
     let mut args = std::env::args().skip(1);
@@ -110,12 +110,15 @@ fn main() -> anyhow::Result<()> {
         let zeros = vec![0.0f32; HOP_SAMPLES];
         let mut detector = StreamingKws::from_path(&model_path, threshold)?;
         let start = Instant::now();
+        let mut hits = 0usize;
         for _ in 0..idle_seconds as usize * SAMPLE_RATE / HOP_SAMPLES {
-            let _ = detector.feed(&zeros);
+            if detector.feed(&zeros).is_some() {
+                hits += 1;
+            }
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
         println!(
-            "idle_seconds={idle_seconds} elapsed_s={:.6}",
+            "idle_seconds={idle_seconds} hits={hits} elapsed_s={:.6}",
             start.elapsed().as_secs_f64()
         );
     }

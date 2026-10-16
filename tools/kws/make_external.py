@@ -25,8 +25,8 @@ def main() -> None:
                 positive = item.get("scenario") != "negative"
                 rows.append({"file": str(path.resolve()), "label": str(int(positive)),
                              "voice": item.get("voice", "unknown"), "scenario": item.get("scenario", ""),
-                             "text": item.get("text", ""), "keyword_start_s": "0",
-                             "keyword_end_s": "0.45" if positive else "0", "position": "begin" if positive else ""})
+                             "text": item.get("text", ""), "keyword_start_s": "",
+                             "keyword_end_s": "", "position": ""})
     live_dir = args.live_root or (root / "testdata/live")
     live_manifest = live_dir / "live-manifest.json"
     if live_manifest.exists():
@@ -36,8 +36,8 @@ def main() -> None:
                 contains_wake = "ривер" in (item.get("phrase", "") + item.get("expected", "")).casefold()
                 rows.append({"file": str(path.resolve()), "label": str(int(contains_wake)),
                              "voice": item.get("voice", "live microphone"), "scenario": item.get("kind", "live"),
-                             "text": item.get("phrase", ""), "keyword_start_s": "0",
-                             "keyword_end_s": "0.45" if contains_wake else "0", "position": "begin" if contains_wake else ""})
+                             "text": item.get("phrase", ""), "keyword_start_s": "",
+                             "keyword_end_s": "", "position": ""})
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fields = ["file", "label", "voice", "scenario", "text", "keyword_start_s", "keyword_end_s", "position"]
     with args.out.open("w", encoding="utf-8", newline="") as f:

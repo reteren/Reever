@@ -16,9 +16,13 @@ pub const MEL_BINS: usize = 40;
 pub const CONTEXT_FRAMES: usize = 60; // 600 мс
 pub const POOL_BINS: usize = 6;
 const MAGIC: &[u8; 4] = b"RKW1";
-const PRE_OUT: usize = 8;
-const POINT_OUT: usize = 12;
+const PRE_OUT: usize = 16;
+const POINT_OUT: usize = 24;
 const HEAD_INPUT: usize = POINT_OUT * POOL_BINS;
+const SCORE_WINDOW: usize = 2;
+const SCORE_QUORUM: usize = 2;
+const RELEASE_FRAMES: usize = 10;
+const RELEASE_RATIO: f32 = 0.6;
 
 #[derive(Clone)]
 pub struct TinyDsCnn {
@@ -262,11 +266,58 @@ pub struct StreamingKws {
     frontend: MelFrontend,
     samples: VecDeque<f32>,
     frames: VecDeque<[f32; MEL_BINS]>,
-    scores: VecDeque<f32>,
+    gate: ScoreGate,
     since_frame: usize,
+}
+
+struct ScoreGate {
+    scores: VecDeque<f32>,
     threshold: f32,
     fired: bool,
     quiet_frames: usize,
+}
+
+impl ScoreGate {
+    fn new(threshold: f32) -> Self {
+        Self {
+            scores: VecDeque::with_capacity(SCORE_WINDOW),
+            threshold: threshold.clamp(0.01, 0.99),
+            fired: false,
+            quiet_frames: 0,
+        }
+    }
+
+    fn push(&mut self, score: f32) -> Option<f32> {
+        self.scores.push_back(score);
+        if self.scores.len() > SCORE_WINDOW {
+            self.scores.pop_front();
+        }
+        if self.fired {
+            if score < self.threshold * RELEASE_RATIO {
+                self.quiet_frames += 1;
+                if self.quiet_frames >= RELEASE_FRAMES {
+                    self.fired = false;
+                    self.quiet_frames = 0;
+                    self.scores.clear();
+                }
+            } else {
+                self.quiet_frames = 0;
+            }
+            return None;
+        }
+        if self.scores.len() == SCORE_WINDOW
+            && self
+                .scores
+                .iter()
+                .filter(|&&value| value >= self.threshold)
+                .count()
+                >= SCORE_QUORUM
+        {
+            self.fired = true;
+            return Some(score);
+        }
+        None
+    }
 }
 
 impl StreamingKws {
@@ -276,11 +327,8 @@ impl StreamingKws {
             frontend: MelFrontend::new(),
             samples: VecDeque::with_capacity(WINDOW_SAMPLES + HOP_SAMPLES),
             frames: VecDeque::with_capacity(CONTEXT_FRAMES),
-            scores: VecDeque::with_capacity(3),
+            gate: ScoreGate::new(threshold),
             since_frame: 0,
-            threshold: threshold.clamp(0.01, 0.99),
-            fired: false,
-            quiet_frames: 0,
         }
     }
 
@@ -320,26 +368,8 @@ impl StreamingKws {
                     if collect_scores {
                         scores_out.push(score);
                     }
-                    self.scores.push_back(score);
-                    if self.scores.len() > 3 {
-                        self.scores.pop_front();
-                    }
-                    if self.fired {
-                        if score < self.threshold * 0.6 {
-                            self.quiet_frames += 1;
-                            if self.quiet_frames >= 20 {
-                                self.fired = false;
-                                self.quiet_frames = 0;
-                                self.scores.clear();
-                            }
-                        } else {
-                            self.quiet_frames = 0;
-                        }
-                    } else if self.scores.len() == 3
-                        && self.scores.iter().filter(|&&s| s >= self.threshold).count() >= 2
-                    {
-                        self.fired = true;
-                        event = Some(score);
+                    if let Some(hit) = self.gate.push(score) {
+                        event = Some(hit);
                     }
                 }
             }
@@ -397,6 +427,22 @@ mod tests {
         let model = TinyDsCnn::from_bytes(&bytes).unwrap();
         assert!(model.score(&[[0.0; MEL_BINS]; CONTEXT_FRAMES - 1]).is_err());
         assert!((model.score(&[[0.0; MEL_BINS]; CONTEXT_FRAMES]).unwrap() - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn score_gate_requires_two_consecutive_hits_and_ten_quiet_frames_to_rearm() {
+        let mut gate = ScoreGate::new(0.5);
+        assert_eq!(gate.push(0.9), None);
+        assert_eq!(gate.push(0.9), Some(0.9));
+        for _ in 0..9 {
+            assert_eq!(gate.push(0.0), None);
+        }
+        assert_eq!(gate.push(0.9), None);
+        for _ in 0..10 {
+            assert_eq!(gate.push(0.0), None);
+        }
+        assert_eq!(gate.push(0.9), None);
+        assert_eq!(gate.push(0.9), Some(0.9));
     }
 
     #[test]
