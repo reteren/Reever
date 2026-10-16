@@ -63,28 +63,50 @@ fn scoring_forms(text: &str) -> Vec<String> {
     forms
 }
 
+/// Похожесть слова на слово, ниже которой слова считаются разными.
+const WORD_MIN_SIMILARITY: f64 = 0.82;
+/// Склейку сравниваем только у строк близкой длины: это те же звуки, разбитые на слова
+/// иначе («маркноут» / «марк ноут»), а не короткое слово в начале длинного («плей» / «плейлист»).
+const GLUED_MIN_LENGTH_RATIO: f64 = 0.75;
+
+/// Jaro по строке целиком здесь нет намеренно: он засчитывает общие буквы поперёк границ
+/// слов, и бред проходил порог — «отмена» ~ «дота» 0.75, «at me no» ~ «shut down
+/// computer» 0.75 (живой журнал 2026-10-16). Каждое слово должно быть похоже на слово.
+/// Пробовали оставлять его при хотя бы одном совпавшем слове — опорой становятся
+/// короткие и служебные слова («no» ~ «note», «that»), и бред снова запускает действия.
 fn pair_score(left: &[String], right: &[String]) -> f64 {
     let mut best = 0.0_f64;
     for a in left {
         for b in right {
-            let overlap = word_overlap_score(a, b);
-            let left_words = a.split_whitespace().count();
-            let right_words = b.split_whitespace().count();
-            if left_words != right_words && left_words.min(right_words) == 1 {
-                // Одно общее слово среди многословной фразы не должно выигрывать
-                // только за счёт высокого Jaro по общей подстроке.
-                best = best.max(overlap);
-            } else {
-                best = best.max(jaro_winkler(a, b));
-                best = best.max(overlap);
-            }
+            best = best.max(word_overlap_score(a, b));
+            best = best.max(glued_score(a, b));
         }
     }
     best
 }
 
-/// Считает похожесть по словам отдельно от полной фразы. Каждое слово может совпасть
-/// только с одним словом второй фразы, поэтому общий короткий фрагмент не даёт score=1.
+/// Фразы без пробелов: GigaAM и калибровка делят на слова одни и те же звуки по-разному.
+fn glued_score(left: &str, right: &str) -> f64 {
+    let left: String = left.split_whitespace().collect();
+    let right: String = right.split_whitespace().collect();
+    let (shorter, longer) = {
+        let (l, r) = (left.chars().count(), right.chars().count());
+        (l.min(r), l.max(r))
+    };
+    if shorter == 0 || (shorter as f64) < longer as f64 * GLUED_MIN_LENGTH_RATIO {
+        return 0.0;
+    }
+    let similarity = jaro_winkler(&left, &right);
+    if similarity >= WORD_MIN_SIMILARITY {
+        similarity
+    } else {
+        0.0
+    }
+}
+
+/// Похожесть по словам: каждое слово совпадает не более чем с одним словом второй фразы
+/// и приносит свою похожесть, поэтому общий короткий фрагмент не даёт score=1, а лишние
+/// слова с любой стороны снижают оценку.
 fn word_overlap_score(left: &str, right: &str) -> f64 {
     let left_words: Vec<&str> = left.split_whitespace().collect();
     let right_words: Vec<&str> = right.split_whitespace().collect();
@@ -93,21 +115,21 @@ fn word_overlap_score(left: &str, right: &str) -> f64 {
     }
 
     let mut used = vec![false; right_words.len()];
-    let mut matches = 0usize;
+    let mut matched = 0.0_f64;
     for word in &left_words {
         let best = right_words
             .iter()
             .enumerate()
             .filter(|(index, _)| !used[*index])
             .map(|(index, other)| (index, jaro_winkler(word, other)))
-            .filter(|(_, similarity)| *similarity >= 0.82)
+            .filter(|(_, similarity)| *similarity >= WORD_MIN_SIMILARITY)
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        if let Some((index, _)) = best {
+        if let Some((index, similarity)) = best {
             used[index] = true;
-            matches += 1;
+            matched += similarity;
         }
     }
-    (2 * matches) as f64 / (left_words.len() + right_words.len()) as f64
+    2.0 * matched / (left_words.len() + right_words.len()) as f64
 }
 
 pub fn load_actions(path: &Path) -> Vec<Action> {
@@ -257,6 +279,27 @@ mod tests {
     fn word_overlap_contributes_without_making_one_shared_word_a_full_match() {
         assert!(score("act_mqlpc0cc", "студио файл") >= 0.7);
         assert!(word_overlap_score("файл студио", "студио") < 0.7);
+    }
+
+    #[test]
+    fn letters_shared_across_word_boundaries_do_not_match() {
+        // Живой журнал 2026-10-16: английская модель на «ривер отмена».
+        assert!(score("act_mqlp3ixy", "отмена") < 0.7);
+        let shutdown = super::default_actions()
+            .into_iter()
+            .find(|action| action.id == "sys_shutdown")
+            .unwrap();
+        for heard in ["at me no", "let me or no", "at me a no"] {
+            assert!(shutdown.score(&[heard.to_string()]) < 0.7, "{heard}");
+        }
+    }
+
+    #[test]
+    fn same_sounds_split_into_words_differently_still_match() {
+        let marknote = super::act("x", "MarkNote", "shell", "", &["марк ноут"]);
+        assert!(marknote.score(&["маркноут".to_string()]) >= 0.7);
+        let playlist = super::act("y", "Playlist", "shell", "", &["плей лист"]);
+        assert!(playlist.score(&["плей".to_string()]) < 0.7);
     }
 
     #[test]
