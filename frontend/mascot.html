@@ -8,6 +8,11 @@
   canvas { display: block; width: 100%; height: 100%; }
   canvas.head { cursor: grab; }
   canvas.held { cursor: grabbing; }
+  /* появление и уход в режиме «при командах»: из угла с пружинкой и обратно */
+  canvas { transform-origin: 50% 88%; }
+  canvas.gone { opacity: 0; transform: translateY(26%) scale(.55); }
+  canvas.enter { transition: opacity .18s ease-out, transform .42s cubic-bezier(.34, 1.56, .64, 1); }
+  canvas.leave { transition: opacity .3s ease-in, transform .3s cubic-bezier(.5, 0, .75, 0); }
 </style>
 </head>
 <body>
@@ -20,9 +25,10 @@
 // Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями
 // распознавания; контур купола глаза по кадрам — mascot/eye.json (центр и радиусы, доли кадра).
 // Свечение вокруг — размытый силуэт текущего кадра, его сила следует за состоянием и голосом.
+// Размер окна задаёт Rust (настройка «Размер», 100–500 %); всё рисуется в долях исходного окна.
 (function () {
   const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 96, FPS = 24;
-  const SPRITE_W = 120, SPRITE_H = 160, PAD = 22; // окно = спрайт + поля под свечение
+  const SPRITE_W = 120, SPRITE_H = 160, PAD = 22; // окно при 100 % = спрайт + поля под свечение
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
   const EYE_INSET = 0.965;    // линза чуть меньше купола: край прячется под хромовое кольцо
@@ -79,13 +85,16 @@
   invoke('get_ui_snapshot').then((s) => s && setState(String(s.state || 'idle'))).catch(() => {});
 
   // ── Кадры ─────────────────────────────────────────────────────────
-  let frame = 0, idleFrame = 0, mode = 'rest', acc = 0, last = 0, drawn = null, dpr = 1;
+  // k — масштаб окна относительно 100 %, u — пикселей холста на исходный CSS-пиксель
+  let frame = 0, idleFrame = 0, mode = 'rest', acc = 0, last = 0, drawn = null, dpr = 1, k = 1, u = 1;
   const t0 = performance.now();
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
+    k = canvas.clientWidth / (SPRITE_W + 2 * PAD) || 1;
+    u = k * dpr;
     for (const c of [canvas, spr, sil]) { c.width = Math.round(canvas.clientWidth * dpr); c.height = Math.round(canvas.clientHeight * dpr); }
-    eye?.resize(1);
+    eye?.resize(k);
     drawn = null;
   }
   // спрайт и его силуэт перерисовываются, только когда сменился кадр
@@ -94,7 +103,7 @@
     if (!img.complete || !img.naturalWidth) return false;
     if (drawn === img) return true;
     sctx.clearRect(0, 0, spr.width, spr.height);
-    sctx.drawImage(img, PAD * dpr, PAD * dpr, SPRITE_W * dpr, SPRITE_H * dpr);
+    sctx.drawImage(img, PAD * u, PAD * u, SPRITE_W * u, SPRITE_H * u);
     gctx.globalCompositeOperation = 'copy';
     gctx.drawImage(spr, 0, 0);
     gctx.globalCompositeOperation = 'source-in';
@@ -132,10 +141,10 @@
       // свечение: мягко «дышит» и разгорается от голоса и принятой команды
       const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
       if (g > 0.01) {
-        ctx.filter = `blur(${((7 + 5 * Math.min(1.5, g)) * dpr).toFixed(1)}px)`;
+        ctx.filter = `blur(${((7 + 5 * Math.min(1.5, g)) * u).toFixed(1)}px)`;
         ctx.globalAlpha = Math.min(1, 0.75 * g);
         ctx.drawImage(sil, 0, 0);
-        ctx.filter = `blur(${(3 * dpr).toFixed(1)}px)`;
+        ctx.filter = `blur(${(3 * u).toFixed(1)}px)`;
         ctx.globalAlpha = Math.min(1, 0.35 * g);
         ctx.drawImage(sil, 0, 0);
         ctx.filter = 'none';
@@ -147,17 +156,17 @@
         eye.render({ time, fill: Math.max(0, S.fill.v), wave: S.wave.v, energy: Math.max(0, S.energy.v), swirl: S.swirl.v, flash, dark: Math.max(0, S.dark.v), glitch: Math.max(0, S.glitch.v) });
         const rx = e[2] * SPRITE_W * EYE_INSET, ry = e[3] * SPRITE_H * EYE_INSET;
         const cx = PAD + e[0] * SPRITE_W, cy = PAD + e[1] * SPRITE_H;
-        ctx.drawImage(eyeCanvas, (cx - rx) * dpr, (cy - ry) * dpr, 2 * rx * dpr, 2 * ry * dpr);
+        ctx.drawImage(eyeCanvas, (cx - rx) * u, (cy - ry) * u, 2 * rx * u, 2 * ry * u);
       }
     }
-    requestAnimationFrame(tick);
+    if (running) requestAnimationFrame(tick); else loop = false;
   }
 
   // ── Хват за голову ────────────────────────────────────────────────
   function onHead(e) {
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    if (y < PAD || y > PAD + SPRITE_H * HEAD_BOTTOM) return false;
+    if (y < PAD * k || y > (PAD + SPRITE_H * HEAD_BOTTOM) * k) return false;
     const px = sctx.getImageData(Math.floor(x * spr.width / r.width), Math.floor(y * spr.height / r.height), 1, 1).data;
     return px[3] > 40;
   }
@@ -182,9 +191,31 @@
   }
   win.listen('mascot://drop', drop);
 
+  // ── Показ: окно прячет и показывает Rust (режим «при командах») ─────
+  // Пока окно скрыто, петля стоит: ни GPU, ни разбора кадров.
+  let running = true, loop = false;
+  function run() {
+    running = true;
+    if (!loop) { loop = true; last = 0; requestAnimationFrame(tick); }
+  }
+  function animate(cls) {
+    canvas.classList.remove('enter', 'leave');
+    void canvas.offsetWidth;
+    canvas.classList.add(cls);
+  }
+  win.listen('mascot://enter', (e) => {
+    run();
+    if (e.payload) { canvas.classList.remove('enter', 'leave'); canvas.classList.add('gone'); void canvas.offsetWidth; }
+    animate('enter');
+    canvas.classList.remove('gone');
+  });
+  win.listen('mascot://leave', () => { animate('leave'); canvas.classList.add('gone'); });
+  win.listen('mascot://hidden', () => { running = false; });
+
   window.addEventListener('resize', resize);
   resize();
-  requestAnimationFrame(tick);
+  run();
+  win.isVisible().then((visible) => { if (!visible) running = false; }).catch(() => {});
 })();
 </script>
 </body>

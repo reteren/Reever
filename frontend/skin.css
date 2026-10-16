@@ -268,6 +268,19 @@ input[type=number] { font-family: var(--f-data); font-size: 12px; }
 /* Без стрелок-«ползунков»: число вводится с клавиатуры, стрелки только шумели */
 input[type=number] { appearance: textfield; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* Ползунок размера маскота: тонкая шкала и светящаяся ручка */
+.mascot-scale { display: flex; align-items: center; gap: 12px; }
+.mascot-scale input[type=range] {
+  appearance: none; flex: 1; height: 28px; padding: 0; border: 0; background: transparent; box-shadow: none; cursor: pointer;
+}
+.mascot-scale input[type=range]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px; background: rgba(0, 0, 0, .5); box-shadow: 0 0 0 1px var(--acc-4);
+}
+.mascot-scale input[type=range]::-webkit-slider-thumb {
+  appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 3px;
+  background: var(--acc); box-shadow: 0 0 8px var(--acc);
+}
+.mascot-scale-value { min-width: 44px; text-align: right; font: 400 12px/1 var(--f-data); color: var(--acc-hot); text-shadow: var(--g1); }
 
 .editrow { display: flex; gap: 8px; align-items: center; }
 .editrow .grow { flex: 1; min-width: 0; }

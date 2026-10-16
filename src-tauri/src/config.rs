@@ -165,10 +165,23 @@ pub struct Settings {
     /// Модель режима «только английский» (основная, когда русский выключен).
     #[serde(default = "default_english_only_model")]
     pub english_only_model: String,
+    /// Когда показывать маскота: `always`, `commands` (пока слушает и выполняет
+    /// команду) или `never`.
+    #[serde(default = "default_mascot_mode")]
+    pub mascot_mode: String,
+    /// Размер маскота в процентах от исходного, 100..500.
+    #[serde(default = "default_mascot_scale")]
+    pub mascot_scale: u32,
 }
 
 fn default_models_unload_s() -> u32 {
     60
+}
+fn default_mascot_mode() -> String {
+    "always".into()
+}
+fn default_mascot_scale() -> u32 {
+    100
 }
 fn default_find_source() -> String {
     "everything".into()
@@ -377,6 +390,8 @@ fn parse_settings(text: &str) -> Settings {
     restore!("wake_sound", wake_sound, bool);
     restore!("ui_language", ui_language, String);
     restore!("languages", languages, Vec<String>);
+    restore!("mascot_mode", mascot_mode, String);
+    restore!("mascot_scale", mascot_scale, u32);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -433,6 +448,8 @@ impl Default for Settings {
             models_unload_s: default_models_unload_s(),
             find_source: default_find_source(),
             english_only_model: default_english_only_model(),
+            mascot_mode: default_mascot_mode(),
+            mascot_scale: default_mascot_scale(),
         }
     }
 }

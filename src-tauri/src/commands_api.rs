@@ -282,6 +282,23 @@ pub fn set_ui_language(
     Ok(locale.into())
 }
 
+/// Маскот: режим показа и размер применяются сразу, без «Сохранить» и без
+/// перезапуска распознавания.
+#[tauri::command]
+pub fn set_mascot(app: AppHandle, config: State<'_, LiveConfig>, mode: String, scale: u32) -> Result<(), String> {
+    let mode = crate::mascot::normalize_mode(&mode).to_string();
+    let scale = crate::mascot::clamp_scale(scale);
+    let current = config.get();
+    persist_value(&current, "mascot_mode", serde_json::Value::String(mode.clone()))?;
+    persist_value(&current, "mascot_scale", serde_json::Value::from(scale))?;
+    let mut fresh = (*current).clone();
+    fresh.settings.mascot_mode = mode.clone();
+    fresh.settings.mascot_scale = scale;
+    config.set(Arc::new(fresh));
+    crate::mascot::apply(&app, &mode, scale);
+    Ok(())
+}
+
 /// Пауза/возобновление микрофона.
 #[tauri::command]
 pub fn set_paused(state: State<'_, Arc<SharedState>>, paused: bool) {
@@ -382,6 +399,11 @@ fn reapply_hotkeys(app: &AppHandle, mode: &str, ptt: &str, mute: &str) -> Result
 }
 
 fn persist_hotkey(config: &ReeverConfig, key: &str, hotkey: &str) -> Result<(), String> {
+    persist_value(config, key, serde_json::Value::String(hotkey.into()))
+}
+
+/// Записывает одно поле в settings.json, не трогая остальные.
+fn persist_value(config: &ReeverConfig, key: &str, value: serde_json::Value) -> Result<(), String> {
     let mut settings = std::fs::read_to_string(&config.settings_path)
         .ok()
         .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
@@ -390,7 +412,7 @@ fn persist_hotkey(config: &ReeverConfig, key: &str, hotkey: &str) -> Result<(), 
     let object = settings
         .as_object_mut()
         .ok_or_else(|| "settings.json должен содержать объект".to_string())?;
-    object.insert(key.into(), serde_json::Value::String(hotkey.into()));
+    object.insert(key.into(), value);
     let text = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     std::fs::write(&config.settings_path, text).map_err(|e| e.to_string())
 }
