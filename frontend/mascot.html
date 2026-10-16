@@ -17,7 +17,7 @@
 // Кадры 1–36 — подхват: голова тянется, щупальца повисают; 36–84 — бесшовный цикл покачивания.
 (function () {
   const FRAMES = 84, LOOP_FROM = 35, FPS = 24;
-  const HEAD_BOTTOM = 0.62;   // доля высоты кадра: выше — голова, ниже — щупальца
+  const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
   const win = window.__TAURI__.window.getCurrentWindow();
   const { invoke } = window.__TAURI__.core;
