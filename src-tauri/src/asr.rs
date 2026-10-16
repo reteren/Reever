@@ -1,8 +1,10 @@
 //! Офлайн-ASR: GigaAM v3 (русский) через sherpa-onnx. Владелец: воркер `asr`.
 
 use std::{
-    fs,
+    fs::{self, OpenOptions},
+    io::Write,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use anyhow::{bail, Context};
@@ -17,6 +19,55 @@ use crate::{
 };
 
 const MIN_AUDIO_SAMPLES: usize = 3_200; // 0,2 секунды при 16 кГц
+
+/// sherpa-onnx 1.13.8 принимает параметры CPU arena только через `cpu:<файл>`.
+/// Файл живёт лишь до создания сессии и удаляется RAII-объектом.
+pub(crate) struct CpuProviderConfig {
+    path: PathBuf,
+}
+
+impl CpuProviderConfig {
+    pub(crate) fn new() -> anyhow::Result<Self> {
+        static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+        for _ in 0..32 {
+            let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir()
+                .join(format!("reever-ort-cpu-{}-{id}.conf", std::process::id()));
+            let file = match OpenOptions::new().write(true).create_new(true).open(&path) {
+                Ok(file) => file,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => {
+                    return Err(error).with_context(|| {
+                        format!(
+                            "не удалось создать конфигурацию ONNX Runtime {}",
+                            path.display()
+                        )
+                    });
+                }
+            };
+            let config = Self { path };
+            let mut file = file;
+            file.write_all(b"EnableCpuMemArena=0\n").with_context(|| {
+                format!(
+                    "не удалось записать конфигурацию ONNX Runtime {}",
+                    config.path.display()
+                )
+            })?;
+            return Ok(config);
+        }
+        bail!("не удалось создать уникальную конфигурацию ONNX Runtime")
+    }
+
+    pub(crate) fn provider(&self) -> String {
+        format!("cpu:{}", self.path.to_string_lossy())
+    }
+}
+
+impl Drop for CpuProviderConfig {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
 
 pub struct AsrConfig {
     /// Папка модели sherpa-onnx (например, resources/model/<asr_model>).
@@ -54,6 +105,8 @@ impl Asr {
         let mut recognizer_config = OfflineRecognizerConfig::default();
         recognizer_config.model_config.tokens = Some(path_string(&tokens));
         recognizer_config.model_config.num_threads = cfg.num_threads.max(1);
+        let cpu_provider = CpuProviderConfig::new()?;
+        recognizer_config.model_config.provider = Some(cpu_provider.provider());
 
         if qwen_frontend.is_file()
             && qwen_tokenizer.is_dir()
@@ -423,8 +476,23 @@ mod tests {
 
     use sherpa_onnx::Wave;
 
-    use super::{timed_words, Asr, AsrConfig};
+    use super::{timed_words, Asr, AsrConfig, CpuProviderConfig};
     use crate::speech::Transcriber;
+
+    #[test]
+    fn cpu_provider_config_disables_arena_and_removes_its_file() {
+        let config = CpuProviderConfig::new().unwrap();
+        let path = config.path.clone();
+
+        assert!(config.provider().starts_with("cpu:"));
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "EnableCpuMemArena=0\n"
+        );
+
+        drop(config);
+        assert!(!path.exists());
+    }
 
     #[test]
     fn timed_words_group_character_and_sentencepiece_tokens() {

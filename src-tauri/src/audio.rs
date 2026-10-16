@@ -1,7 +1,7 @@
 use std::cell::UnsafeCell;
 use std::fs::File;
 use std::io::BufReader;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TrySendError};
@@ -103,6 +103,15 @@ impl Deref for AudioPacket {
         let slot = &self.pool.slots[self.index];
         // SAFETY: occupied остаётся true, пока жив пакет, поэтому производитель не меняет Vec.
         unsafe { (&*slot.samples.get()).as_slice() }
+    }
+}
+
+impl DerefMut for AudioPacket {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        let slot = &self.pool.slots[self.index];
+        // SAFETY: слот занят только этим пакетом, производитель его не трогает до Drop;
+        // изменяемый доступ нужен, чтобы занулить звук после распознавания.
+        unsafe { (&mut *slot.samples.get()).as_mut_slice() }
     }
 }
 

@@ -8,6 +8,7 @@ use sherpa_onnx::{
     SpokenLanguageIdentificationWhisperConfig,
 };
 
+use crate::asr::CpuProviderConfig;
 use crate::speech::{Lang, LanguageId};
 
 /// Whisper LID выдаёт только код языка, без вероятностей; уверенность здесь
@@ -28,6 +29,7 @@ impl SpeechLid {
 
         let encoder = whisper_part(model_dir, "encoder")?;
         let decoder = whisper_part(model_dir, "decoder")?;
+        let cpu_provider = CpuProviderConfig::new()?;
         let config = SpokenLanguageIdentificationConfig {
             whisper: SpokenLanguageIdentificationWhisperConfig {
                 encoder: Some(encoder.to_string_lossy().into_owned()),
@@ -36,7 +38,7 @@ impl SpeechLid {
             },
             num_threads: num_threads.max(1),
             debug: false,
-            provider: Some("cpu".into()),
+            provider: Some(cpu_provider.provider()),
         };
         let model = SpokenLanguageIdentification::create(&config)
             .context("sherpa-onnx не смог загрузить Whisper LID-модель")?;

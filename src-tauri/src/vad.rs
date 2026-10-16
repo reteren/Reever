@@ -5,6 +5,7 @@ use std::path::Path;
 use anyhow::{bail, Context};
 use sherpa_onnx::{SileroVadModelConfig, VadModelConfig, VoiceActivityDetector as SherpaVad};
 
+use crate::asr::CpuProviderConfig;
 use crate::speech::VoiceDetector;
 
 const SAMPLE_RATE: i32 = 16_000;
@@ -37,11 +38,12 @@ impl SileroVad {
         silero.window_size = SILERO_WINDOW as i32;
         silero.max_speech_duration = 15.0;
 
+        let cpu_provider = CpuProviderConfig::new()?;
         let config = VadModelConfig {
             silero_vad: silero,
             sample_rate: SAMPLE_RATE,
             num_threads: 1,
-            provider: Some("cpu".to_owned()),
+            provider: Some(cpu_provider.provider()),
             ..VadModelConfig::default()
         };
         let detector = SherpaVad::create(&config, 16.0)
