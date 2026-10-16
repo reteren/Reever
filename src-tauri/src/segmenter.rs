@@ -44,6 +44,7 @@ pub enum SegmentEvent {
 pub struct Segmenter {
     cfg: SegmenterConfig,
     frame_remainder: Vec<i16>,
+    frame_buffer: Vec<i16>,
     pre_roll: Vec<i16>,
     candidate_prefix: Vec<i16>,
     candidate_audio: Vec<i16>,
@@ -61,6 +62,7 @@ impl Segmenter {
         Self {
             cfg,
             frame_remainder: Vec::new(),
+            frame_buffer: Vec::new(),
             pre_roll: Vec::new(),
             candidate_prefix: Vec::new(),
             candidate_audio: Vec::new(),
@@ -106,25 +108,51 @@ impl Segmenter {
             return events;
         }
 
-        // Остаток переносится между вызовами, поэтому размер входных чанков не
-        // влияет на границы кадров или на итоговую фразу.
-        let mut buffered = std::mem::take(&mut self.frame_remainder);
-        buffered.extend_from_slice(pcm);
-        let complete_len = buffered.len() / frame_len * frame_len;
+        // Остаток хранится отдельно. Полные кадры берём прямо из входного пакета,
+        // не создавая общий временный Vec и не копируя каждый пакет целиком.
+        if self.frame_remainder.capacity() < frame_len {
+            self.frame_remainder
+                .reserve(frame_len - self.frame_remainder.len());
+        }
+        let mut offset = 0;
+        if !self.frame_remainder.is_empty() {
+            let needed = frame_len - self.frame_remainder.len();
+            if pcm.len() < needed {
+                self.frame_remainder.extend_from_slice(pcm);
+                return events;
+            }
 
-        for start in (0..complete_len).step_by(frame_len) {
+            if self.frame_buffer.capacity() < frame_len {
+                self.frame_buffer.reserve(frame_len - self.frame_buffer.len());
+            }
+            let mut frame = std::mem::take(&mut self.frame_buffer);
+            frame.extend_from_slice(&self.frame_remainder);
+            frame.extend_from_slice(&pcm[..needed]);
+            zero_vec(&mut self.frame_remainder);
             if self.vad_needs_reset {
                 vad.reset();
                 self.vad_needs_reset = false;
             }
-            let frame = &buffered[start..start + frame_len];
+            let speech = vad.is_speech(&frame);
+            self.process_frame(&frame, speech, &mut events);
+            zero_vec(&mut frame);
+            self.frame_buffer = frame;
+            offset = needed;
+        }
+
+        let complete_len = (pcm.len() - offset) / frame_len * frame_len;
+        for start in (offset..offset + complete_len).step_by(frame_len) {
+            if self.vad_needs_reset {
+                vad.reset();
+                self.vad_needs_reset = false;
+            }
+            let frame = &pcm[start..start + frame_len];
             let speech = vad.is_speech(frame);
             self.process_frame(frame, speech, &mut events);
         }
 
-        self.frame_remainder
-            .extend_from_slice(&buffered[complete_len..]);
-        zero_vec(&mut buffered);
+        let tail = &pcm[offset + complete_len..];
+        self.frame_remainder.extend_from_slice(tail);
         events
     }
 
@@ -227,6 +255,7 @@ impl Segmenter {
 
     fn scrub_working_buffers(&mut self) {
         zero_vec(&mut self.frame_remainder);
+        zero_vec(&mut self.frame_buffer);
         zero_vec(&mut self.pre_roll);
         zero_vec(&mut self.candidate_prefix);
         zero_vec(&mut self.candidate_audio);
