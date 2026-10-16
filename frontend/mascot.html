@@ -15,8 +15,9 @@
 <script>
 // Маскот: пререндер из Blender (octobus chrome rig.blend, действие Octo_Grab).
 // Кадры 1–36 — подхват: голова тянется, щупальца повисают; 36–84 — бесшовный цикл покачивания.
+// idle_0001–0048 — поза покоя, в глазу волнуется жидкость (бесшовный цикл).
 (function () {
-  const FRAMES = 84, LOOP_FROM = 35, FPS = 24;
+  const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 48, FPS = 24;
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
   const win = window.__TAURI__.window.getCurrentWindow();
@@ -25,29 +26,32 @@
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  const images = Array.from({ length: FRAMES }, (_, i) => {
+  const load = (name, count) => Array.from({ length: count }, (_, i) => {
     const img = new Image();
-    img.src = `mascot/grab_${String(i + 1).padStart(4, '0')}.webp`;
+    img.src = `mascot/${name}_${String(i + 1).padStart(4, '0')}.webp`;
     return img;
   });
+  const images = load('grab', FRAMES);
+  const idle = load('idle', IDLE_FRAMES);
 
-  let frame = 0, mode = 'rest', acc = 0, last = 0, drawn = -1;
+  let frame = 0, idleFrame = 0, mode = 'rest', acc = 0, last = 0, drawn = null;
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(canvas.clientWidth * dpr);
     canvas.height = Math.round(canvas.clientHeight * dpr);
-    drawn = -1;
+    drawn = null;
   }
   function draw() {
-    const img = images[frame];
-    if (!img.complete || !img.naturalWidth || drawn === frame) return;
+    const img = mode === 'rest' ? idle[idleFrame] : images[frame];
+    if (!img.complete || !img.naturalWidth || drawn === img) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    drawn = frame;
+    drawn = img;
   }
   function advance() {
-    if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
+    if (mode === 'rest') idleFrame = (idleFrame + 1) % IDLE_FRAMES;
+    else if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
     else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) mode = 'rest'; }
   }
   function tick(t) {
