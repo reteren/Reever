@@ -207,12 +207,12 @@ impl Settings {
         self.recognition_languages().contains(&"ru")
     }
 
-    /// Папка основной модели: русская, а без русского — английская.
+    /// Папка основной модели: русская, а без русского — отдельная модель английского режима.
     pub fn primary_asr_model(&self) -> &str {
         if self.russian_enabled() {
             &self.asr_model
         } else {
-            &self.second_asr_model
+            &self.english_only_model
         }
     }
 }
@@ -639,11 +639,33 @@ mod tests {
         let english = parse_settings(r#"{"languages": ["en"]}"#);
         assert_eq!(english.recognition_languages(), ["en"]);
         assert!(!english.russian_enabled());
-        assert_eq!(english.primary_asr_model(), english.second_asr_model);
+        assert_eq!(english.primary_asr_model(), english.english_only_model);
+        assert_eq!(
+            english.primary_asr_model(),
+            "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8"
+        );
 
         // Пустой список и неизвестные коды — всё равно английский.
         let odd = parse_settings(r#"{"languages": ["xx", " RU "]}"#);
         assert_eq!(odd.recognition_languages(), ["en", "ru"]);
-        assert_eq!(parse_settings(r#"{"languages": []}"#).recognition_languages(), ["en"]);
+        assert_eq!(
+            parse_settings(r#"{"languages": []}"#).recognition_languages(),
+            ["en"]
+        );
+    }
+
+    #[test]
+    fn ru_en_uses_secondary_english_model_and_english_only_uses_its_own_model() {
+        let both = parse_settings(
+            r#"{"languages":["ru","en"],"second_asr_model":"parakeet-600m","english_only_model":"parakeet-110m"}"#,
+        );
+        assert_eq!(both.primary_asr_model(), both.asr_model);
+        assert_eq!(both.second_asr_model, "parakeet-600m");
+
+        let english = parse_settings(
+            r#"{"languages":["en"],"second_asr_model":"parakeet-600m","english_only_model":"parakeet-110m"}"#,
+        );
+        assert_eq!(english.primary_asr_model(), "parakeet-110m");
+        assert_eq!(english.second_asr_model, "parakeet-600m");
     }
 }

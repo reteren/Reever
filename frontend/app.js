@@ -4,6 +4,7 @@ const previewSettings={
   launch_everything_fallback:false,match_threshold:0.7,
   asr_model:'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',asr_threads:4,
   languages:['ru','en'],second_asr_model:'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
+  english_only_model:'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8',models_unload_s:60,find_source:'everything',
   lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
@@ -89,7 +90,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'list_actions': return [];
     case 'list_apps': return [];
     case 'list_sound_packs': return ['default'];
-    case 'list_asr_models': return [...new Set([previewSettings.asr_model,previewSettings.second_asr_model,previewSettings.lid_model].filter(Boolean))];
+    case 'list_asr_models': return [...new Set([previewSettings.asr_model,previewSettings.second_asr_model,previewSettings.english_only_model,previewSettings.lid_model].filter(Boolean))];
     case 'get_paused': case 'get_autostart': return false;
     case 'check_everything': return false;
     case 'get_wallpaper': return null;
@@ -549,27 +550,29 @@ $('#grammarSettingsLink').onclick=event=>{
 };
 
 let settingsObj={};
+let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // [ключ настройки, тип, варианты, когда применяется]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
   ['interface',[['ui_language','ui_language',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
-  ['languages',[['languages','languages']]],
+  ['languages',[['languages','languages'],['english_only_model','model']]],
   ['recognition',[
-    ['lid_model','model_optional'],['payload_language','language'],['asr_threads','number'],['vad_threshold','number'],['wake_pause_ms','number'],
+    ['lid_model','model_optional'],['payload_language','language'],['asr_threads','number'],['models_unload_s','number'],['vad_threshold','number'],['wake_pause_ms','number'],
     ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number'],['open_min_similarity','number']]],
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_terms','list'],
     ['dictation_idle_ms','number'],['dictation_pause_ms','number'],['webchat_send','bool']]],
-  ['everything',[['everything_host','text'],['everything_port','number'],['launch_everything_fallback','bool']]],
+  ['everything',[['find_source','select',['everything','local','auto']],['everything_host','text'],['everything_port','number'],['launch_everything_fallback','bool']]],
   ['system',[['confirm_dangerous','bool'],['confirm_close','bool'],['raise_result','bool']]],
 ];
 // Настройки смешения языков нужны, только когда языков больше одного; англицизмы —
 // только для русской диктовки.
-const SETTING_NEEDS={lid_model:'multi',payload_language:'multi',dictation_english:'ru',dictation_terms:'ru'};
+const SETTING_NEEDS={lid_model:'multi',payload_language:'multi',dictation_english:'ru',dictation_terms:'ru',english_only_model:'en-only'};
 function settingVisible(key){
   const need=SETTING_NEEDS[key], langs=recognitionLanguages();
+  if(need==='en-only') return !langs.includes('ru');
   return !need||(need==='multi'?langs.length>1:langs.includes(need));
 }
 // Всё применяется по «Сохранить»; пометка «— сразу» — у того, что действует уже при
@@ -577,6 +580,38 @@ function settingVisible(key){
 const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} — ${t('settings.instant')}`:t('settings.'+key);
 const settingHelp=key=>I18N.has(`settings.${key}.help`)?t(`settings.${key}.help`):null;
 let cbSeq=0;
+function renderIndexStatus(){
+  if(!indexStatusNode) return;
+  const state=indexStatus?.state;
+  if(!['off','scanning','ready'].includes(state)){
+    indexStatusNode.hidden=true;
+    return;
+  }
+  const entries=new Intl.NumberFormat().format(Number(indexStatus.entries)||0);
+  const mib=(Number(indexStatus.bytes)||0)/(1024*1024);
+  const size=`${new Intl.NumberFormat(undefined,{maximumFractionDigits:1}).format(mib)} MiB`;
+  indexStatusNode.textContent=t('settings.indexStatus',{state:t(`settings.indexState.${state}`),entries,size});
+  indexStatusNode.hidden=false;
+}
+async function refreshIndexStatus(){
+  try{
+    const status=await invoke('index_status');
+    if(!status||!['off','scanning','ready'].includes(status.state)){
+      indexStatus=null; renderIndexStatus(); return false;
+    }
+    indexStatus=status; renderIndexStatus(); return true;
+  }catch{
+    // index_status появляется вместе с локальным индексом; старые сборки его не знают.
+    indexStatus=null; renderIndexStatus(); return false;
+  }
+}
+function startIndexStatusPolling(){
+  if(indexStatusTimer) clearInterval(indexStatusTimer);
+  indexStatusTimer=null;
+  refreshIndexStatus().then(supported=>{
+    if(supported) indexStatusTimer=setInterval(()=>{ refreshIndexStatus(); },5000);
+  });
+}
 function fieldEl(key,type,opts,when='save'){
   const lbl=settingLabel(key,when), help=settingHelp(key);
   // Чекбокс в семёрке — подпись справа на одной строке, а не сверху.
@@ -622,7 +657,7 @@ function fieldEl(key,type,opts,when='save'){
     inp.value=I18N.SUPPORTED.includes(current)?current:'auto';
     inp.onchange=()=>changeLanguage(inp.value);
   }
-  else if(type==='select'){ inp=el('select'); for(const o of opts){const op=el('option',{value:o,textContent:I18N.has(`mode.${o}`)?t(`mode.${o}`):o});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }
+  else if(type==='select'){ inp=el('select'); for(const o of opts){const optionKey=`settings.${key}.${o}`;const label=I18N.has(optionKey)?t(optionKey):I18N.has(`mode.${o}`)?t(`mode.${o}`):o;const op=el('option',{value:o,textContent:label});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }
   else if(type==='hotkey'){
     inp=el('button',{type:'button',className:'sm'}); inp.style.minWidth='150px';
     const render=()=>inp.textContent=settingsObj[key]||t('hotkey.none');
@@ -656,9 +691,13 @@ function fieldEl(key,type,opts,when='save'){
       window.addEventListener('keydown',onKey,true);
     };
   }
-  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold','open_min_similarity'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
+  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold','open_min_similarity'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } if(key==='models_unload_s'){ inp.step='1'; inp.min='0'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
   wrap.append(inp);
   if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+  if(key==='find_source'){
+    indexStatusNode=el('div',{className:'hint setting-help setting-index-status',hidden:true});
+    wrap.append(indexStatusNode); renderIndexStatus();
+  }
   return wrap;
 }
 function modelSelect(key,opts,optional){
@@ -694,9 +733,11 @@ function languagesEditor(models){
   for(const lang of RECOGNITION_LANGS.filter(item=>enabled.includes(item.code))){
     const row=el('div',{className:'lang-row'});
     row.append(el('span',{className:'lang-name',textContent:name(lang.code)}));
-    const model=modelSelect(lang.model,models,false);
-    model.setAttribute('aria-label',t('settings.languages.model',{language:name(lang.code)}));
-    row.append(model);
+    if(lang.code!=='en'||enabled.includes('ru')){
+      const model=modelSelect(lang.model,models,false);
+      model.setAttribute('aria-label',t('settings.languages.model',{language:name(lang.code)}));
+      row.append(model);
+    }
     if(lang.locked){
       row.append(el('span',{className:'lang-lock',textContent:t('settings.languages.always'),title:t('settings.languages.alwaysTitle')}));
     }else{
@@ -732,7 +773,7 @@ async function loadSettings(){
   catch(e){ reportError('loadModels',e); }
   try{ autostart=await invoke('get_autostart'); }catch(e){ reportError('readAutostart',e); }
   try{ soundPacks=await invoke('list_sound_packs'); }catch(e){ reportError('loadSoundPacks',e); }
-  renderSettings(); renderGrammarExamples();
+  renderSettings(); renderGrammarExamples(); startIndexStatusPolling();
 }
 function renderSettings(){
   const models=asrModels;
@@ -744,7 +785,7 @@ function renderSettings(){
     for(const f of fields){
       const [key,type,opts,when]=f;
       if(!settingVisible(key)) continue;
-      g.append(fieldEl(key,type,['asr_model','second_asr_model','lid_model'].includes(key)?models:opts,when));
+      g.append(fieldEl(key,type,['asr_model','second_asr_model','english_only_model','lid_model'].includes(key)?models:opts,when));
     }
     F.append(g);
   }
