@@ -24,11 +24,16 @@
     Имя дополнительной sherpa-onnx ASR-модели из GitHub release asr-models.
     По умолчанию sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.
 
+.PARAMETER EnglishOnlyModel
+    Основная sherpa-onnx модель для режима без русского языка.
+    По умолчанию sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8.
+
 .EXAMPLE
     pwsh scripts/fetch-deps.ps1
     pwsh scripts/fetch-deps.ps1 -Force
     pwsh scripts/fetch-deps.ps1 -AsrModel sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16
     pwsh scripts/fetch-deps.ps1 -SecondModel sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8
+    pwsh scripts/fetch-deps.ps1 -EnglishOnlyModel sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8
 #>
 [CmdletBinding()]
 param(
@@ -36,6 +41,7 @@ param(
     [switch]$SkipModels,
     [string]$AsrModel = 'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',
     [string]$SecondModel = 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
+    [string]$EnglishOnlyModel = 'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8',
     [string]$LidModel = 'sherpa-onnx-whisper-base',
     # Фоновый детектор wake-слова (docs/voice-pipeline.md); пустое имя — без него.
     [string]$WakeModel = 'sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16'
@@ -54,6 +60,9 @@ if ([IO.Path]::GetFileName($AsrModel) -ne $AsrModel -or [string]::IsNullOrWhiteS
 }
 if ([IO.Path]::GetFileName($SecondModel) -ne $SecondModel -or [string]::IsNullOrWhiteSpace($SecondModel)) {
     throw "-SecondModel должен быть именем модели без пути: $SecondModel"
+}
+if ([IO.Path]::GetFileName($EnglishOnlyModel) -ne $EnglishOnlyModel -or [string]::IsNullOrWhiteSpace($EnglishOnlyModel)) {
+    throw "-EnglishOnlyModel должен быть именем модели без пути: $EnglishOnlyModel"
 }
 
 # --- вспомогательное ---------------------------------------------------------
@@ -138,7 +147,7 @@ function Install-SherpaModel {
 # --- 1. модели ---------------------------------------------------------------
 if (-not $SkipModels) {
     New-Item -ItemType Directory -Force -Path $ModelDir | Out-Null
-    Write-Step "Модели sherpa-onnx (GigaAM v3 + $SecondModel + $LidModel + Silero VAD)"
+    Write-Step "Модели sherpa-onnx (GigaAM v3 + $SecondModel + $EnglishOnlyModel + $LidModel + Silero VAD)"
     $sileroPath = Join-Path $ModelDir $SileroName
     if ((Test-Path $sileroPath -PathType Leaf) -and -not $Force) {
         Write-Skip $SileroName
@@ -158,6 +167,11 @@ if (-not $SkipModels) {
         Install-SherpaModel -Name $SecondModel
     } else {
         Write-Skip "$SecondModel (совпадает с -AsrModel)"
+    }
+    if ($EnglishOnlyModel -ne $AsrModel -and $EnglishOnlyModel -ne $SecondModel) {
+        Install-SherpaModel -Name $EnglishOnlyModel
+    } else {
+        Write-Skip "$EnglishOnlyModel (уже совпадает с другой ASR-моделью)"
     }
     # Определитель языка цели команды (docs/bilingual.md); пустое имя — без него.
     if (-not [string]::IsNullOrWhiteSpace($LidModel)) {
@@ -183,6 +197,10 @@ if (-not $SkipModels) {
     }
     if ($SecondModel -ne $AsrModel -and -not (Test-SherpaModel (Join-Path $ModelDir $SecondModel))) {
         $missing += "resources/model/$SecondModel (tokens.txt и encoder/decoder/joiner либо model*.onnx)"
+    }
+    if ($EnglishOnlyModel -ne $AsrModel -and $EnglishOnlyModel -ne $SecondModel -and
+        -not (Test-SherpaModel (Join-Path $ModelDir $EnglishOnlyModel))) {
+        $missing += "resources/model/$EnglishOnlyModel (tokens.txt и encoder/decoder/joiner либо model*.onnx)"
     }
     if (-not [string]::IsNullOrWhiteSpace($LidModel) -and -not (Test-WhisperModel (Join-Path $ModelDir $LidModel))) {
         $missing += "resources/model/$LidModel (Whisper encoder/decoder/tokens)"
