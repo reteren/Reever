@@ -1,0 +1,80 @@
+# Детектор wake-слова «ривер»
+
+Дата: 2026-10-16. Исследование без запуска Reever и без доступа к микрофону.
+
+## Краткий итог
+
+- Текущий детектор — не KWS-классификатор, а однопоточный streaming ASR Zipformer для русского: он декодирует поток в текст и ищет там варианты «ривер».
+- На текущем корпусе: **141/150 wake-фраз пойманы (94,0%)**, на 16 фразах без wake — **4 срабатывания (25% файлов)**. Пропуски и ложные срабатывания — на синтетической речи, не на Discord.
+- Самый подходящий долгосрочный путь для нужных произношений — свой небольшой фонетический KWS-классификатор, обученный на объединённом классе вариантов. На период проверки оставить текущий Zipformer вторым каналом на wake-событие. На событии поднимать GigaAM для проверки команды; в простое GigaAM не запускать и не держать загруженной.
+- Готового официального KWS для русского в sherpa-onnx, openWakeWord, microWakeWord или Porcupine не нашёл. Porcupine хорошо подходит для короткого пилота с английским «River/Reever», но требует AccessKey и лицензии и не заявляет русский.
+
+## Как работает текущий детектор
+
+`src-tauri/src/wake.rs:15-128` создаёт `OnlineRecognizer` sherpa-onnx с streaming Zipformer и отдельным потоком. На каждый аудиочанк по 20 мс он подаёт `i16` 16 кГц, декодирует готовые кадры и проверяет промежуточный текст. Первое совпадение за фразу возвращает `true`; после endpoint модель сбрасывается. Параметры — `num_threads = 1`, `greedy_search`, int8 encoder/joiner и обычный decoder; endpoint rules: 1,5 с, 0,6 с и 12 с.
+
+**Акустического порога у wake-детектора нет.** Совпадение текстовое: точное слово; одна правка при той же длине с `normalized_levenshtein >= 0.8`; для первого wake-варианта также любое слово с этим префиксом. Это не confidence threshold. Отдельный порог Silero VAD `0.5` и пауза конца idle-фразы `600 мс` управляют сегментацией, а не вероятностью wake.
+
+Локальные настройки включают детектор и задают `wake_words = [«ривер», «ревер», «ривьер»]`; `river` и `reever` в списке отсутствуют. Префиксное правило первого варианта допускает `риверс`, а нечёткое сравнение — созвучия вроде `ревёт` с `ревер`. Измеренные ложные срабатывания ниже совпадают именно с такими отрицательными примерами.
+
+Модель лежит в `src-tauri/resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/`:
+
+| Файл | Байты |
+|---|---:|
+| `encoder.int8.onnx` | 26 214 060 |
+| `decoder.onnx` | 2 093 080 |
+| `joiner.int8.onnx` | 259 417 |
+| `bpe.model`, `tokens.txt`, `README.md` | 252 683 |
+| **Весь каталог** | **28 819 240 байт = 28,8 MB = 27,5 MiB** |
+
+**ASR не ждёт wake-событие.** `recognizer.rs::run_inner` загружает GigaAM и Silero VAD до включения маленького spotter. При `SegmentEvent::SpeechEnd` в idle `engine.rs::handle_segment_event` вызывает `asr.transcribe_timed`, затем `handle_idle_transcript` проверяет wake и при необходимости исправляет текст по spotter-событию. То есть сейчас GigaAM загружается при старте и распознаёт каждую законченную idle-фразу; Silero VAD тоже загружается и работает в idle. `silero_vad.onnx` на диске — 643 854 байта.
+
+## Замеры текущего Zipformer
+
+Release-проба — [wake_probe.rs](../../src-tauri/examples/wake_probe.rs), запуск из `src-tauri/`: `cargo run --release --example wake_probe -- --verbose`. Прогон без изменений production-кода и без микрофона. Корпус взят из `testdata/manifest.json`: 166 файлов, шесть SAPI-голосов, 150 положительных примеров и 16 отрицательных. В каталоге на диске 380 WAV, но этот прогон использовал только файлы манифеста. Положительным считался любой сценарий, кроме `negative`; файл засчитывался пойманным при хотя бы одном `feed() == true`. Spotter получил три варианта, совпадающих с текущими локальными настройками.
+
+| Показатель | Результат |
+|---|---:|
+| Wake-фразы | 141/150 пойманы, **94,0%**; 9 пропусков |
+| Речь без wake | 4/16 ложных срабатываний, **25% файлов** |
+| Негативы с ложным wake | «включи реверс на гитаре» — 2; «мотор ревёт за окном» — 2 |
+| Пропуски | 002, 004, 033, 054, 085, 087, 088, 095, 119 |
+| Полный повтор корпуса, включая чтение WAV | 13,717 с на 493,02 с аудио; `RTF = 0,0278` (примерно 36× быстрее real time; replay включает I/O) |
+
+Аппаратная конфигурация: Ryzen 7 7800X3D, 8 ядер / 16 потоков. Для memory/CPU использована команда `wake_probe.exe --idle-seconds 25`, подающая spotter 20-мс блоки тишины. Снимок через 10 с: **106 MiB working set, 96,7 MiB private bytes**, CPU-процессное время 0,391 с за 10,01 с (**3,9% одного логического ядра**). При загрузке модели было 94,6 / 79,6 MiB — память выросла при первых кадрах. Это память всего отдельного процесса с sherpa runtime, не дельта чистых весов и не полный Reever.
+
+Исторический замер памяти приложения с загруженной GigaAM — около 300 MB; это отдельный замер Reever от 2026-09-24 (`C:\Memory_Vault\PROJECTS\Reever-memory\MEMORY\ENTITY\Speech-Recognition.md`), не тот же прогон. Полная память будущего Reever с одной малой моделью пока не измерялась. **Оценка:** idle-память приложения будет около базовой памяти Reever плюс выбранный KWS runtime; главное снижение даст выгрузка GigaAM, а не экономия нескольких MiB весов детектора.
+
+Корпус искусственный, поэтому эти числа не предсказывают точность на Discord-компрессии, нескольких говорящих, дистанционном микрофоне или живых акцентах. Метрики также не следует напрямую сравнивать с историческими eval-отчётами: здесь другой текущий манифест, три настроенных алиаса и считается raw-событие spotter, без GigaAM и Engine.
+
+## Кандидаты
+
+Размеры файлов — дисковые размеры. Память и CPU альтернатив на этом Windows-хосте не измерялись; где нет документации, так и указано.
+
+| Вариант | Модель / память / CPU | Языки и произношения | Лицензия и Rust/Windows без Python |
+|---|---|---|---|
+| **sherpa-onnx KWS Zipformer** | У `kws-zipformer-zh-en-3M-2025-12-20` архив 38 MB; выбранные int8 encoder + fp32 decoder + int8 joiner — примерно **5,2 MiB** весов. Указано 3M параметров; `chunk-8` даёт задержку 160 мс, `chunk-16` — 320 мс. Win-RAM/CPU не опубликованы. | Официальные модели: Mandarin; English; новая `zh-en` — Chinese + English. Russian-модели в списке нет. «Open vocabulary» здесь значит любое слово, которое можно представить токенами/фонемами поддерживаемых языков, без переобучения; это не language-agnostic acoustic model. Английское `River/Reever` можно задать английскими телефонами, но русское произношение надо отдельно мерить. | Текущая sherpa-onnx библиотека в Reever (`1.13.8`) уже содержит Rust `KeywordSpotter` API и работает без Python. Код sherpa-onnx — Apache-2.0; отдельно проверять веса: README модели GigaSpeech указывает Apache-2.0, а для zh-en автор обновил ModelScope metadata на Apache-2.0 8 октября 2026; в zh-en релизном архиве нет LICENSE. Training-data provenance остаётся отдельным вопросом. |
+| **openWakeWord** | Для release v0.5.1 общий ONNX frontend: melspectrogram **1,04 MiB** + embedding **1,27 MiB**; конкретная голова добавляет **0,19–1,66 MiB**, всего около **2,5–4,0 MiB** на wakeword. RAM/CPU для Windows официально не указаны. Порог по умолчанию 0,5, настраивается. | Готовые модели — English only. Свое слово можно учить на синтетике; проект рекомендует несколько тысяч positive примеров минимум, а готовые модели обучены на ~30 000 часах negatives. Нужно отдельно покрыть русские фонемы и Discord-канал. | Код Apache-2.0, включённые готовые веса CC BY-NC-SA 4.0. Python — основной API и training stack; ONNX-модель можно запускать нативно через ONNX Runtime без Python, но пришлось бы реализовать/подключить потоковый frontend и threshold/debounce. Готового Rust API нет. |
+| **microWakeWord** | Текущий `okay_nabu.tflite` — **115 400 байт** (0,11 MiB). Потоковые 40 spectrogram features обновляются каждые 10 мс, выход сглаживается несколькими окнами. Windows RAM/CPU не опубликованы; проект рассчитан на маломощные MCU. | Готовые `okay_nabu`, `alexa`, `hey_jarvis` — английские. Можно учить своё слово через Piper-синтез и аугментации; это не обещает русский/accent transfer без соответствующей обучающей речи. В README training назван сложным и ранним. | Код и каталог моделей Apache-2.0. Training Python; инференс может работать через TFLite/LiteRT native без Python, но официального Rust/Windows runtime пути нет — понадобятся C API/FFI или порт. |
+| **Porcupine** | Picovoice заявляет runtime **менее 1 MB** и custom `.ppn` файл **менее 25 KB**; это vendor figures, не измерения RSS/CPU. Компания называет CPU/resource use низким, числового Windows benchmark в документации нет. | Есть 9 языков: English, French, German, Italian, Japanese, Korean, Mandarin, Portuguese, Spanish. Русского нет; можно проверить custom English `River/Reever`, но именно русское произношение остаётся риском. Высокая sensitivity снижает misses ценой ложных тревог. | Проприетарный SDK; обязателен AccessKey, использование подчинено условиям/лимитам аккаунта и возможным fees. Windows SDK есть на C/.NET, официального Rust SDK нет; через C FFI возможно без Python. |
+| **Свой DS-CNN/CRNN** | **Оценка:** 0,1–0,5 MiB int8 весов (0,1–0,5 M параметров), 1–5 MiB рабочей памяти и менее 1% одного ядра Ryzen 7 7800X3D при потоке 16 кГц. Это архитектурная оценка, сети пока нет и эти цифры не измерены. | Один positive класс можно собрать из «ривер / river / ревер / ривьер / reever» и реальных вариантов произношения. Модель не становится универсально мультиязычной без таких примеров; особенно нужны confusable negatives «реверс», «ревёт» и фон звонка. | Лицензия собственного кода/весов зависит от TTS и negative audio. Для native Rust/Windows обучить и экспортировать ONNX; инференс потребует ONNX Runtime API/обёртку, которого как generic runner в проекте нет. Python нужен только для обучения, не для запуска. |
+
+Источники: [sherpa KWS и модели](https://k2-fsa.github.io/sherpa/onnx/kws/pretrained_models/index.html), [sherpa Rust example](https://github.com/k2-fsa/sherpa-onnx/blob/master/rust-api-examples/examples/keyword_spotter.rs), [уточнение лицензии zh-en](https://github.com/k2-fsa/sherpa-onnx/issues/3802); [openWakeWord README](https://github.com/dscripka/openWakeWord), [release v0.5.1 с размерами файлов](https://github.com/dscripka/openWakeWord/releases/tag/v0.5.1); [microWakeWord](https://github.com/kahrendt/microWakeWord), [Apache-2.0 model catalog](https://github.com/esphome/micro-wake-word-models); [Porcupine модели и языки](https://picovoice.ai/docs/model-api/porcupine/), [лицензионные условия](https://picovoice.ai/docs/terms-of-use.html), [vendor resource claims](https://picovoice.ai/products/voice/wake-word/). Текущий русский модельный пакет указывает upstream Vosk-модель, но в локальном README нет отдельной лицензии; см. [обсуждение карточки модели](https://github.com/k2-fsa/sherpa-onnx/issues/3914).
+
+## Рекомендация и риски
+
+Для приоритета «не пропустить первое обращение» я бы не заменял русский Zipformer английской/китайской готовой KWS-моделью. На этапе 2 обучить один собственный high-recall DS-CNN/CRNN на всех целевых вариантах речи, с голосами/скоростями SAPI и отдельными hard negatives. Валидировать порог на holdout-звонках Discord; только на период проверки объединить (`OR`) новое KWS-событие с текущим Zipformer, чтобы новый классификатор не стал единственной точкой отказа. После проверки Zipformer убрать из фонового режима. Ложный кандидат должен лишь поднимать GigaAM, а не исполнять команду без проверки.
+
+**Память в простое:** ориентир по текущему spotter — измеренные 106 MiB working set отдельного release-процесса; полное приложение без GigaAM пока не измерено. Модель собственной KWS по оценке может занимать менее 1 MiB весов, но итоговый working set зададут также Reever, sherpa/ONNX runtime, Silero и Tauri. GigaAM нужно загружать после wake и выгружать после завершения окна команды/возврата в idle; иначе прежние ~300 MB загруженного ASR останутся даже при новом детекторе.
+
+Риски: синтетический SAPI не воспроизводит Discord codec, дальнее поле и реальные акценты; низкий порог повышает срабатывания на созвучных словах; мало негативных минут не позволяет оценить ложные активации в час. Отдельно подтвердить лицензии весов перед включением их в публичный релиз.
+
+### Конкретные изменения этапа 2
+
+| Файл | Функции | Изменение |
+|---|---|---|
+| `src-tauri/src/wake.rs` | `StreamingWakeSpotter::new`, `feed`, `contains_wake` | Заменить text-match ASR на native KWS-инференс, score threshold + debounce/hysteresis; сохранить один hit на wake-фразу и aliases в обучающих данных. |
+| `src-tauri/src/engine.rs` | `push_audio`, `handle_segment_event`, `handle_idle_transcript`, `spot_age` | В Idle не вызывать GigaAM по каждому VAD-сегменту; wake-score открывает окно команды, затем ASR подтверждает wake/команду. Сохранить fallback Zipformer пока KWS не подтверждён на звонках. |
+| `src-tauri/src/recognizer.rs` | `run_inner`, `enable_wake_spotter` | Загружать только KWS на старте; лениво создавать Silero VAD и GigaAM при wake и освобождать после возвращения в Idle. |
+| `src-tauri/src/config.rs`, `grammar.rs` | wake defaults и валидация | Описать варианты произношения в явном виде; threshold настраивать только после ROC/recall проверки. |
+| `src-tauri/Cargo.toml`, `resources/model/`, `scripts/fetch-deps.ps1` | зависимости и доставка весов | При собственном ONNX-классификаторе добавить/выбрать native ONNX Runtime API и доставлять только обученную KWS-модель; этот этап зависимости не менял. |
