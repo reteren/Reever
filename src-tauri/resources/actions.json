@@ -578,29 +578,6 @@
     ]
   },
   {
-    "id": "web_google",
-    "label": "Google",
-    "kind": "search",
-    "target": "https://www.google.com/search?q={q}",
-    "verbs": [],
-    "phrases": [
-      "загугли",
-      "гугл",
-      "поищи"
-    ]
-  },
-  {
-    "id": "web_youtube",
-    "label": "YouTube",
-    "kind": "search",
-    "target": "https://www.youtube.com/results?search_query={q}",
-    "verbs": [],
-    "phrases": [
-      "ютуб",
-      "на ютубе"
-    ]
-  },
-  {
     "id": "sys_next",
     "label": "Следующий трек",
     "kind": "system",

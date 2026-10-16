@@ -1,0 +1,224 @@
+{
+  "wake_words": [
+    "ривер",
+    "ревер",
+    "ривьер",
+    "ливер"
+  ],
+  "cancel_words": [
+    "отмена",
+    "стоп",
+    "отбой",
+    "забудь"
+  ],
+  "dictation_stop": [
+    "стоп ввод",
+    "ривер остановись",
+    "stop typing"
+  ],
+  "version": 9,
+  "intents": [
+    {
+      "id": "launch",
+      "kind": "launch",
+      "label": "открыть программу или ссылку",
+      "triggers": [
+        "",
+        "открой",
+        "запусти",
+        "open",
+        "launch",
+        "run"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "folder",
+      "kind": "folder",
+      "label": "открыть папку на компьютере (Everything)",
+      "triggers": [
+        "папка",
+        "открой папку",
+        "folder",
+        "open folder"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "web_google",
+      "kind": "search",
+      "label": "поиск в Google",
+      "triggers": [
+        "загугли",
+        "google search",
+        "search google"
+      ],
+      "url": "https://www.google.com/search?q={q}",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "web_youtube",
+      "kind": "search",
+      "label": "поиск на YouTube",
+      "triggers": [
+        "поиск ютуб",
+        "search youtube",
+        "youtube search"
+      ],
+      "url": "https://www.youtube.com/results?search_query={q}",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "close",
+      "kind": "close",
+      "label": "закрыть открытую программу",
+      "triggers": [
+        "закрой",
+        "close",
+        "quit"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "calc",
+      "kind": "calc",
+      "label": "посчитать в калькуляторе",
+      "triggers": [
+        "посчитай",
+        "сколько будет",
+        "calculate",
+        "how much is"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "dictate",
+      "kind": "dictate",
+      "label": "диктовка: ввести текст в поле с курсором",
+      "triggers": [
+        "напиши",
+        "запиши",
+        "диктовка",
+        "type",
+        "write",
+        "dictate"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "chat_gemini",
+      "kind": "web_chat",
+      "label": "спросить Gemini (чат в браузере)",
+      "triggers": [
+        "гемини",
+        "гимини",
+        "гимине",
+        "джемини",
+        "джимини",
+        "gemini"
+      ],
+      "url": "https://gemini.google.com/app",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "chat_gpt",
+      "kind": "web_chat",
+      "label": "спросить ChatGPT (чат в браузере)",
+      "triggers": [
+        "чат гпт",
+        "чатгпт",
+        "чат джипити",
+        "чат джи пити",
+        "чат жпт",
+        "chatgpt",
+        "chat gpt"
+      ],
+      "url": "https://chatgpt.com/",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "chat_claude",
+      "kind": "web_chat",
+      "label": "спросить Claude (чат в браузере)",
+      "triggers": [
+        "клауд",
+        "клод",
+        "клауде",
+        "клоуд",
+        "claude"
+      ],
+      "url": "https://claude.ai/new",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "find",
+      "kind": "find",
+      "label": "найти файл или папку (окно выбора)",
+      "triggers": [
+        "найди",
+        "найти",
+        "поищи",
+        "find"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "find_folder",
+      "kind": "find_folder",
+      "label": "найти папку (окно выбора)",
+      "triggers": [
+        "найди папку",
+        "найти папку",
+        "поищи папку",
+        "find folder"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "find_file",
+      "kind": "find_file",
+      "label": "найти файл (окно выбора)",
+      "triggers": [
+        "найди файл",
+        "найти файл",
+        "поищи файл",
+        "find file"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    },
+    {
+      "id": "kill",
+      "kind": "kill",
+      "label": "завершить программу (как в диспетчере задач)",
+      "triggers": [
+        "заверши",
+        "kill",
+        "end task"
+      ],
+      "url": "",
+      "enabled": true,
+      "lang": "auto"
+    }
+  ]
+}
