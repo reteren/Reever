@@ -1077,6 +1077,21 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let Ok(timed) = self.asr.transcribe_timed(self.segmenter.current_audio()) else {
             return;
         };
+        let timed = if matches!(self.mode, Mode::Idle) && self.strict_spotted_wake {
+            match self.spot_age {
+                Some(age) if age <= audio_len + samples(SPOT_GRACE_MS) => {
+                    let Some((_, confirmed)) = confirm_spotted_wake(&timed, &self.cfg.wake_words)
+                    else {
+                        return;
+                    };
+                    confirmed
+                }
+                Some(_) => return,
+                None => timed,
+            }
+        } else {
+            timed
+        };
         let command = match &self.mode {
             Mode::Idle => match strip_initial_wake(&timed.text, &self.cfg.wake_words) {
                 Some(rest) => rest,
@@ -1182,6 +1197,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     out.push(EngineEvent::Log(
                         "wake: детектор сработал, но большая модель не подтвердила «ривер»; фраза не принята".into(),
                     ));
+                    self.spot_age = None;
                     return;
                 }
             }
@@ -1367,6 +1383,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     /// фраза простоя (тогда она обязана начинаться с wake-слова). Конец фразы разберёт
     /// `opening_segment` так же, как обычный старт диктовки.
     fn try_open_dictation(&mut self, idle: bool, out: &mut Vec<EngineEvent>) -> bool {
+        // В lazy-режиме частичный transcript ещё не даёт надёжно подтвердить wake.
+        // Диктовка стартует после полной фразы через handle_idle_transcript.
+        if idle && self.strict_spotted_wake {
+            return false;
+        }
         let Ok(raw) = self.asr.transcribe_verbatim(self.segmenter.current_audio()) else {
             return false;
         };
@@ -2839,6 +2860,70 @@ mod tests {
                 "ложный wake принят: {false_wake}"
             );
         }
+    }
+
+    #[test]
+    fn lazy_spotter_confirms_a_wake_mid_phrase_before_dispatch() {
+        let mut cfg = test_config();
+        cfg.wake_words = vec!["ривер".into()];
+        let (mut engine, _, _, _) = engine(cfg, &["разговор ривер открой загрузки"]);
+        engine.set_strict_spotted_wake(true);
+        engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([
+            false, true,
+        ])))));
+
+        engine.push_audio(&vec![123; samples(600)]);
+        let mut pcm = vec![123; samples(240)];
+        pcm.resize(samples(240 + 250), 0);
+        let events = engine.push_audio(&pcm);
+
+        assert!(contains(&events, &EngineEvent::WakeSpotted), "{events:?}");
+        assert!(
+            contains(
+                &events,
+                &EngineEvent::Command {
+                    text: "открой загрузки".into(),
+                    alt: None,
+                }
+            ),
+            "{events:?}"
+        );
+    }
+
+    #[test]
+    fn lazy_spotter_false_alarm_does_not_dispatch_a_similar_word() {
+        let mut cfg = test_config();
+        cfg.wake_words = vec!["ривер".into()];
+        let (mut engine, _, _, _) = engine(cfg, &["включи реверс на гитаре"]);
+        engine.set_strict_spotted_wake(true);
+        engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([
+            false, true,
+        ])))));
+
+        engine.push_audio(&vec![123; samples(600)]);
+        let mut pcm = vec![123; samples(240)];
+        pcm.resize(samples(240 + 250), 0);
+        let events = engine.push_audio(&pcm);
+
+        assert!(contains(&events, &EngineEvent::WakeSpotted), "{events:?}");
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::Command { .. })),
+            "ложный wake выполнил команду: {events:?}"
+        );
+    }
+
+    #[test]
+    fn lazy_idle_does_not_open_dictation_from_a_partial_wake() {
+        let (mut engine, asr_calls, _, _) = engine(test_config(), &["ривер напиши привет"]);
+        engine.set_strict_spotted_wake(true);
+        engine.mark_spotted_wake();
+        let mut events = Vec::new();
+
+        assert!(!engine.try_open_dictation(true, &mut events));
+        assert!(events.is_empty());
+        assert_eq!(asr_calls.get(), 0);
     }
 
     #[test]
