@@ -123,7 +123,8 @@ impl Segmenter {
             }
 
             if self.frame_buffer.capacity() < frame_len {
-                self.frame_buffer.reserve(frame_len - self.frame_buffer.len());
+                self.frame_buffer
+                    .reserve(frame_len - self.frame_buffer.len());
             }
             let mut frame = std::mem::take(&mut self.frame_buffer);
             frame.extend_from_slice(&self.frame_remainder);
@@ -383,6 +384,72 @@ mod tests {
             .collect()
     }
 
+    fn old_push(
+        segmenter: &mut Segmenter,
+        pcm: &[i16],
+        vad: &mut dyn VoiceDetector,
+    ) -> Vec<SegmentEvent> {
+        let mut events = Vec::new();
+        if let Some(segment) = segmenter.pending_end.take() {
+            events.push(SegmentEvent::SpeechEnd(segment));
+        }
+        let frame_len = vad.frame_len();
+        if frame_len == 0 {
+            return events;
+        }
+
+        let mut buffered = std::mem::take(&mut segmenter.frame_remainder);
+        buffered.extend_from_slice(pcm);
+        let complete_len = buffered.len() / frame_len * frame_len;
+        for start in (0..complete_len).step_by(frame_len) {
+            if segmenter.vad_needs_reset {
+                vad.reset();
+                segmenter.vad_needs_reset = false;
+            }
+            let frame = &buffered[start..start + frame_len];
+            let speech = vad.is_speech(frame);
+            segmenter.process_frame(frame, speech, &mut events);
+        }
+        segmenter
+            .frame_remainder
+            .extend_from_slice(&buffered[complete_len..]);
+        super::zero_vec(&mut buffered);
+        events
+    }
+
+    fn make_test_wav(pcm: &[i16]) -> Vec<u8> {
+        let data_len = (pcm.len() * 2) as u32;
+        let mut wav = Vec::with_capacity(44 + data_len as usize);
+        wav.extend_from_slice(b"RIFF");
+        wav.extend_from_slice(&(36 + data_len).to_le_bytes());
+        wav.extend_from_slice(b"WAVEfmt ");
+        wav.extend_from_slice(&16u32.to_le_bytes());
+        wav.extend_from_slice(&1u16.to_le_bytes());
+        wav.extend_from_slice(&1u16.to_le_bytes());
+        wav.extend_from_slice(&16_000u32.to_le_bytes());
+        wav.extend_from_slice(&32_000u32.to_le_bytes());
+        wav.extend_from_slice(&2u16.to_le_bytes());
+        wav.extend_from_slice(&16u16.to_le_bytes());
+        wav.extend_from_slice(b"data");
+        wav.extend_from_slice(&data_len.to_le_bytes());
+        for sample in pcm {
+            wav.extend_from_slice(&sample.to_le_bytes());
+        }
+        wav
+    }
+
+    fn decode_test_wav(wav: &[u8]) -> Vec<i16> {
+        assert_eq!(&wav[..4], b"RIFF");
+        assert_eq!(&wav[8..12], b"WAVE");
+        assert_eq!(u16::from_le_bytes([wav[22], wav[23]]), 1);
+        assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 16_000);
+        let data_len = u32::from_le_bytes(wav[40..44].try_into().unwrap()) as usize;
+        wav[44..44 + data_len]
+            .chunks_exact(2)
+            .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]))
+            .collect()
+    }
+
     #[test]
     fn pause_of_300ms_does_not_split_phrase_with_600ms_endpoint() {
         let mut segmenter = Segmenter::new(config(0, 20, 600));
@@ -422,7 +489,7 @@ mod tests {
         let mut segmenter = Segmenter::new(cfg);
         let mut vad = MarkerVad::new(160);
         let mut pcm = Vec::new();
-        append_frames(&mut pcm, 10, 160, 15); // в ring-буфере останутся последние 100 мс
+        append_frames(&mut pcm, 10, 160, 15); // останутся последние 100 мс pre-roll
         append_frames(&mut pcm, 1_000, 160, 10);
 
         let events = segmenter.push(&pcm, &mut vad);
@@ -484,6 +551,50 @@ mod tests {
             size_index += 1;
         }
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn frame_buffering_and_events_match_old_path_for_test_wav() {
+        let frame_len = 160;
+        let mut source = Vec::new();
+        append_frames(&mut source, 10, frame_len, 25);
+        append_frames(&mut source, 1_000, frame_len, 20);
+        append_frames(&mut source, 0, frame_len, 70);
+        append_frames(&mut source, 800, frame_len, 24);
+        append_frames(&mut source, 0, frame_len, 70);
+        // Хвост не кратен VAD-кадру: проверяем перенос остатка между пакетами.
+        source.extend_from_slice(&[7, 8, 9, 10, 11, 12, 13]);
+        let pcm = decode_test_wav(&make_test_wav(&source));
+
+        let cfg = config(100, 20, 600);
+        let mut before = Segmenter::new(cfg.clone());
+        let mut before_vad = MarkerVad::new(frame_len);
+        let mut after = Segmenter::new(cfg);
+        let mut after_vad = MarkerVad::new(frame_len);
+        let mut before_events = Vec::new();
+        let mut after_events = Vec::new();
+        let mut offset = 0;
+        let sizes = [37, 503, 1_234, 71, 2_003, 319];
+        let mut size_index = 0;
+        while offset < pcm.len() {
+            let end = (offset + sizes[size_index % sizes.len()]).min(pcm.len());
+            before_events.extend(summarize(old_push(
+                &mut before,
+                &pcm[offset..end],
+                &mut before_vad,
+            )));
+            after_events.extend(summarize(after.push(&pcm[offset..end], &mut after_vad)));
+            offset = end;
+            size_index += 1;
+        }
+
+        assert_eq!(after_events, before_events);
+        assert_eq!(after.frame_remainder, before.frame_remainder);
+        assert_eq!(after.pre_roll, before.pre_roll);
+        assert_eq!(after.candidate_audio, before.candidate_audio);
+        assert_eq!(after.current_audio, before.current_audio);
+        assert_eq!(after.phrase_samples, before.phrase_samples);
+        assert_eq!(after.active, before.active);
     }
 
     #[test]

@@ -1,6 +1,6 @@
+use std::cell::UnsafeCell;
 use std::fs::File;
 use std::io::BufReader;
-use std::cell::UnsafeCell;
 use std::ops::Deref;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -37,7 +37,7 @@ struct AudioSlot {
     samples: UnsafeCell<Vec<i16>>,
 }
 
-// `occupied` передаёт слот между единственным callback-производителем и worker-потребителем.
+// Флаг `occupied` передаёт слот между callback-производителем и worker-потребителем.
 // Пока слот занят, его Vec доступен только владельцу PacketWriter или AudioPacket.
 unsafe impl Sync for AudioSlot {}
 unsafe impl Send for AudioSlot {}
@@ -74,7 +74,7 @@ impl AudioPool {
                 .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
                 .is_ok()
             {
-                // SAFETY: the successful state transition grants this writer exclusive access.
+                // SAFETY: успешный переход состояния даёт этому writer исключительный доступ.
                 unsafe { (&mut *slot.samples.get()).clear() };
                 return Some(PacketWriter {
                     pool: Some(self.clone()),
@@ -120,13 +120,13 @@ struct PacketWriter {
 impl PacketWriter {
     fn samples(&self) -> &[i16] {
         let slot = &self.pool.as_ref().unwrap().slots[self.index];
-        // SAFETY: this writer exclusively owns the occupied slot.
+        // SAFETY: этот writer единолично владеет занятым слотом.
         unsafe { (&*slot.samples.get()).as_slice() }
     }
 
     fn samples_mut(&mut self) -> &mut Vec<i16> {
         let slot = &self.pool.as_ref().unwrap().slots[self.index];
-        // SAFETY: this writer exclusively owns the occupied slot.
+        // SAFETY: этот writer единолично владеет занятым слотом.
         unsafe { &mut *slot.samples.get() }
     }
 
@@ -186,7 +186,11 @@ impl CallbackOutput<'_> {
     fn append_f32(&mut self, samples: &[f32]) {
         let mut offset = 0;
         while offset < samples.len() {
-            if self.writer.as_ref().is_some_and(|writer| writer.samples().len() == OUTPUT_BUFFER_SAMPLES) {
+            if self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.samples().len() == OUTPUT_BUFFER_SAMPLES)
+            {
                 self.flush();
             }
             if self.writer.is_none() {
@@ -198,16 +202,22 @@ impl CallbackOutput<'_> {
             };
             let used = writer.samples().len();
             let count = (OUTPUT_BUFFER_SAMPLES - used).min(samples.len() - offset);
-            writer
-                .samples_mut()
-                .extend(samples[offset..offset + count].iter().map(|&sample| f32_to_i16(sample)));
+            writer.samples_mut().extend(
+                samples[offset..offset + count]
+                    .iter()
+                    .map(|&sample| f32_to_i16(sample)),
+            );
             offset += count;
         }
     }
 
     fn append_iter<I: Iterator<Item = f32>>(&mut self, mut samples: I) {
         loop {
-            if self.writer.as_ref().is_some_and(|writer| writer.samples().len() == OUTPUT_BUFFER_SAMPLES) {
+            if self
+                .writer
+                .as_ref()
+                .is_some_and(|writer| writer.samples().len() == OUTPUT_BUFFER_SAMPLES)
+            {
                 self.flush();
             }
             if self.writer.is_none() {
@@ -228,7 +238,9 @@ impl CallbackOutput<'_> {
     }
 
     fn flush(&mut self) {
-        let Some(writer) = self.writer.take() else { return };
+        let Some(writer) = self.writer.take() else {
+            return;
+        };
         if !writer.samples().is_empty() {
             if let Err(samples) = self.sender.try_send(writer) {
                 *self.dropped = self.dropped.saturating_add(samples);
@@ -283,8 +295,7 @@ impl StreamResampler {
         let mut offset = 0;
         if self.in_len > 0 {
             let copied = (self.need - self.in_len).min(mono.len());
-            self.in_block[self.in_len..self.in_len + copied]
-                .copy_from_slice(&mono[..copied]);
+            self.in_block[self.in_len..self.in_len + copied].copy_from_slice(&mono[..copied]);
             self.in_len += copied;
             offset = copied;
             if self.in_len == self.need {
@@ -314,11 +325,7 @@ impl StreamResampler {
         }
     }
 
-    fn push_converted<I: Iterator<Item = f32>>(
-        &mut self,
-        mono: I,
-        out: &mut CallbackOutput<'_>,
-    ) {
+    fn push_converted<I: Iterator<Item = f32>>(&mut self, mono: I, out: &mut CallbackOutput<'_>) {
         if self.passthrough {
             out.append_iter(mono);
             return;
@@ -346,7 +353,7 @@ impl StreamResampler {
     ) {
         let output_len = {
             let inputs = [input];
-            let mut outputs = [output];
+            let mut outputs = [&mut *output];
             resampler
                 .process_into_buffer(&inputs, &mut outputs, None)
                 .expect("preallocated resampler buffers have the expected size")
@@ -424,7 +431,10 @@ impl CaptureProcessor {
         };
         self.resampler.push_converted(
             data.chunks(channels).map(|frame| {
-                frame.iter().map(|&sample| sample as f32 / 32768.0).sum::<f32>()
+                frame
+                    .iter()
+                    .map(|&sample| sample as f32 / 32768.0)
+                    .sum::<f32>()
                     / channels as f32
             }),
             &mut output,
@@ -503,7 +513,11 @@ pub fn start_capture(tx: AudioSender) -> anyhow::Result<Stream> {
         SampleFormat::F32 => build!(f32, push_f32),
         SampleFormat::I16 => build!(i16, push_i16),
         SampleFormat::U16 => build!(u16, push_u16),
-        other => return Err(anyhow::anyhow!("неподдерживаемый формат сэмплов: {other:?}")),
+        other => {
+            return Err(anyhow::anyhow!(
+                "неподдерживаемый формат сэмплов: {other:?}"
+            ))
+        }
     };
     stream.play()?;
     Ok(stream)
@@ -542,5 +556,191 @@ impl Player {
             }
             Err(e) => eprintln!("[reever] decode error {}: {e}", path.display()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{audio_channel, CaptureProcessor, DROPPED_SAMPLES, TARGET_RATE};
+    use rubato::{FftFixedInOut, Resampler};
+    use std::sync::atomic::Ordering;
+    use std::sync::mpsc::Receiver;
+
+    fn make_test_wav(sample_rate: usize, channels: usize, pcm: &[i16]) -> Vec<u8> {
+        let data_len = (pcm.len() * 2) as u32;
+        let mut wav = Vec::with_capacity(44 + data_len as usize);
+        wav.extend_from_slice(b"RIFF");
+        wav.extend_from_slice(&(36 + data_len).to_le_bytes());
+        wav.extend_from_slice(b"WAVEfmt ");
+        wav.extend_from_slice(&16u32.to_le_bytes());
+        wav.extend_from_slice(&1u16.to_le_bytes());
+        wav.extend_from_slice(&(channels as u16).to_le_bytes());
+        wav.extend_from_slice(&(sample_rate as u32).to_le_bytes());
+        wav.extend_from_slice(&((sample_rate * channels * 2) as u32).to_le_bytes());
+        wav.extend_from_slice(&((channels * 2) as u16).to_le_bytes());
+        wav.extend_from_slice(&16u16.to_le_bytes());
+        wav.extend_from_slice(b"data");
+        wav.extend_from_slice(&data_len.to_le_bytes());
+        for sample in pcm {
+            wav.extend_from_slice(&sample.to_le_bytes());
+        }
+        wav
+    }
+
+    fn decode_test_wav(wav: &[u8]) -> (usize, usize, Vec<i16>) {
+        assert_eq!(&wav[..4], b"RIFF");
+        assert_eq!(&wav[8..12], b"WAVE");
+        assert_eq!(u16::from_le_bytes([wav[20], wav[21]]), 1);
+        let channels = u16::from_le_bytes([wav[22], wav[23]]) as usize;
+        let sample_rate = u32::from_le_bytes(wav[24..28].try_into().unwrap()) as usize;
+        let bits_per_sample = u16::from_le_bytes([wav[34], wav[35]]);
+        assert_eq!(bits_per_sample, 16);
+        let data_len = u32::from_le_bytes(wav[40..44].try_into().unwrap()) as usize;
+        let pcm = wav[44..44 + data_len]
+            .chunks_exact(2)
+            .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]))
+            .collect();
+        (sample_rate, channels, pcm)
+    }
+
+    fn old_mono<T: Copy>(data: &[T], channels: usize, convert: impl Fn(T) -> f32) -> Vec<f32> {
+        data.chunks(channels)
+            .map(|frame| frame.iter().copied().map(&convert).sum::<f32>() / channels as f32)
+            .collect()
+    }
+
+    fn old_resampler(sample_rate: usize, mono: &[f32]) -> Vec<i16> {
+        if sample_rate == TARGET_RATE {
+            return mono
+                .iter()
+                .map(|sample| (sample.clamp(-1.0, 1.0) * 32767.0) as i16)
+                .collect();
+        }
+
+        let mut resampler = FftFixedInOut::<f32>::new(sample_rate, TARGET_RATE, 1024, 1).unwrap();
+        let need = resampler.input_frames_next();
+        let mut in_buf = Vec::new();
+        let mut output = Vec::new();
+        in_buf.extend_from_slice(mono);
+        while in_buf.len() >= need {
+            let block: Vec<f32> = in_buf.drain(..need).collect();
+            let result = resampler.process(&[block], None).unwrap();
+            output.extend(
+                result[0]
+                    .iter()
+                    .map(|sample| (sample.clamp(-1.0, 1.0) * 32767.0) as i16),
+            );
+        }
+        output
+    }
+
+    fn collect_packets(rx: &Receiver<super::AudioPacket>, output: &mut Vec<i16>) {
+        while let Ok(packet) = rx.try_recv() {
+            output.extend_from_slice(&packet);
+        }
+    }
+
+    fn run_capture<T: Copy>(
+        sample_rate: usize,
+        channels: usize,
+        input: &[T],
+        push: fn(&mut CaptureProcessor, &[T]),
+    ) -> Vec<i16> {
+        let (sender, rx) = audio_channel(128);
+        let mut capture = CaptureProcessor::new(sample_rate, channels, sender);
+        let frame_count = input.len() / channels;
+        let callback_frames = [480, 257, 701, 1_024];
+        let mut output = Vec::new();
+        let mut offset = 0;
+        let mut callback_index = 0;
+        while offset < frame_count {
+            let frames =
+                callback_frames[callback_index % callback_frames.len()].min(frame_count - offset);
+            let start = offset * channels;
+            let end = (offset + frames) * channels;
+            push(&mut capture, &input[start..end]);
+            collect_packets(&rx, &mut output);
+            offset += frames;
+            callback_index += 1;
+        }
+        output
+    }
+
+    #[test]
+    fn resampler_output_matches_previous_path_for_test_wavs() {
+        for sample_rate in [44_100, 48_000] {
+            for channels in [1, 2] {
+                let mut source_pcm = Vec::with_capacity(5_000 * channels);
+                for frame in 0..5_000i32 {
+                    let left = ((frame * 97 % 30_001) - 15_000) as i16;
+                    source_pcm.push(left);
+                    if channels == 2 {
+                        source_pcm.push(-left / 2);
+                    }
+                }
+                let (wav_rate, wav_channels, pcm) =
+                    decode_test_wav(&make_test_wav(sample_rate, channels, &source_pcm));
+                assert_eq!((wav_rate, wav_channels), (sample_rate, channels));
+
+                let float_input: Vec<f32> =
+                    pcm.iter().map(|&sample| sample as f32 / 32768.0).collect();
+                let expected = old_resampler(
+                    sample_rate,
+                    &old_mono(&float_input, channels, |sample| sample),
+                );
+                assert_eq!(
+                    run_capture(
+                        sample_rate,
+                        channels,
+                        &float_input,
+                        CaptureProcessor::push_f32
+                    ),
+                    expected,
+                    "F32, {sample_rate} Hz, {channels} channels"
+                );
+
+                let expected = old_resampler(
+                    sample_rate,
+                    &old_mono(&pcm, channels, |sample| sample as f32 / 32768.0),
+                );
+                assert_eq!(
+                    run_capture(sample_rate, channels, &pcm, CaptureProcessor::push_i16),
+                    expected,
+                    "I16, {sample_rate} Hz, {channels} channels"
+                );
+
+                let unsigned_pcm: Vec<u16> = pcm
+                    .iter()
+                    .map(|&sample| (sample as i32 + 32_768) as u16)
+                    .collect();
+                let expected = old_resampler(
+                    sample_rate,
+                    &old_mono(&unsigned_pcm, channels, |sample| {
+                        (sample as f32 - 32_768.0) / 32_768.0
+                    }),
+                );
+                assert_eq!(
+                    run_capture(
+                        sample_rate,
+                        channels,
+                        &unsigned_pcm,
+                        CaptureProcessor::push_u16
+                    ),
+                    expected,
+                    "U16, {sample_rate} Hz, {channels} channels"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn full_queue_drops_samples_and_updates_the_existing_counter() {
+        let (sender, _rx) = audio_channel(0);
+        let mut capture = CaptureProcessor::new(TARGET_RATE, 1, sender);
+        let input = vec![0.25; 1_024];
+        let before = DROPPED_SAMPLES.load(Ordering::Relaxed);
+        capture.push_f32(&input);
+        let after = DROPPED_SAMPLES.load(Ordering::Relaxed);
+        assert_eq!(after - before, input.len());
     }
 }
