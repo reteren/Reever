@@ -761,7 +761,17 @@ function renderSettings(){
   $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'—':(settingsObj.hotkey||'—');
   if(settingsObj.offline_mode) renderEverything(lastStatus?.everything);
 }
-$('#saveSettingsBtn').onclick=async()=>{ try{await invoke('save_settings',{settings:settingsObj}); $('#settingsMsg').textContent=t('settings.saved');}catch(e){$('#settingsMsg').textContent=t('settings.error',{error:e});reportError('saveSettings',e);} };
+// После сохранения — кнопка перезапуска: настройки с пометкой «рестарт» (языки, модели)
+// иначе не действуют, и «только английский» молча оставался русским.
+$('#saveSettingsBtn').onclick=async()=>{
+  const msg=$('#settingsMsg');
+  try{
+    await invoke('save_settings',{settings:settingsObj});
+    const restart=el('button',{type:'button',className:'sm default',textContent:t('settings.restartNow')});
+    restart.onclick=()=>invoke('restart_app').catch(e=>reportError('restartApp',e));
+    msg.replaceChildren(t('settings.saved')+' ',restart);
+  }catch(e){msg.textContent=t('settings.error',{error:e});reportError('saveSettings',e);}
+};
 
 // Язык интерфейса: перевести разметку и перерисовать всё, что построено из кода.
 // Rust сохраняет выбор в settings.json и переводит меню трея.

@@ -198,6 +198,7 @@ I18N.register('it', {
   "settings.grammarLinkSuffix": ".",
   "settings.appliesAfterRestart": "si applica dopo il riavvio",
   "settings.saved": "Salvato. Riavvia per applicare le modifiche.",
+  "settings.restartNow": "Riavvia ora",
   "settings.error": "Errore: {error}",
   "settings.restart": "riavvio",
   "settings.instant": "subito",

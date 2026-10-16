@@ -198,6 +198,7 @@ I18N.register('zh', {
   "settings.grammarLinkSuffix": "。",
   "settings.appliesAfterRestart": "重启后生效",
   "settings.saved": "已保存。重启后生效。",
+  "settings.restartNow": "立即重启",
   "settings.error": "错误：{error}",
   "settings.restart": "重启后",
   "settings.instant": "立即",

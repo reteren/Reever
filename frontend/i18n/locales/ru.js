@@ -198,6 +198,7 @@ I18N.register('ru', {
   "settings.grammarLinkSuffix": ".",
   "settings.appliesAfterRestart": "применится после перезапуска",
   "settings.saved": "Сохранено. Перезапусти для применения.",
+  "settings.restartNow": "Перезапустить сейчас",
   "settings.error": "Ошибка: {error}",
   "settings.restart": "рестарт",
   "settings.instant": "сразу",

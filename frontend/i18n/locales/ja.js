@@ -198,6 +198,7 @@ I18N.register('ja', {
   "settings.grammarLinkSuffix": "にあります。",
   "settings.appliesAfterRestart": "再起動後に反映",
   "settings.saved": "保存しました。反映するには再起動してください。",
+  "settings.restartNow": "今すぐ再起動",
   "settings.error": "エラー：{error}",
   "settings.restart": "再起動後",
   "settings.instant": "すぐに反映",

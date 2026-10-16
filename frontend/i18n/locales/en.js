@@ -200,6 +200,7 @@ I18N.register('en', {
   "settings.grammarLinkSuffix": ".",
   "settings.appliesAfterRestart": "applies after a restart",
   "settings.saved": "Saved. Restart to apply.",
+  "settings.restartNow": "Restart now",
   "settings.error": "Error: {error}",
   "settings.restart": "restart",
   "settings.instant": "instant",

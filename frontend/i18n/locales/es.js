@@ -198,6 +198,7 @@ I18N.register('es', {
   "settings.grammarLinkSuffix": ".",
   "settings.appliesAfterRestart": "se aplica al reiniciar",
   "settings.saved": "Guardado. Reinicia para aplicar los cambios.",
+  "settings.restartNow": "Reiniciar ahora",
   "settings.error": "Error: {error}",
   "settings.restart": "al reiniciar",
   "settings.instant": "al instante",

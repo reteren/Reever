@@ -198,6 +198,7 @@ I18N.register('ar', {
   "settings.grammarLinkSuffix": ".",
   "settings.appliesAfterRestart": "يسري بعد إعادة التشغيل",
   "settings.saved": "تم الحفظ. أعد التشغيل لتطبيق التغييرات.",
+  "settings.restartNow": "إعادة التشغيل الآن",
   "settings.error": "خطأ: {error}",
   "settings.restart": "إعادة التشغيل",
   "settings.instant": "فورًا",

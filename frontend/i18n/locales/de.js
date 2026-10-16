@@ -198,6 +198,7 @@ I18N.register('de', {
   "settings.grammarLinkSuffix": ".",
   "settings.appliesAfterRestart": "wird nach einem Neustart übernommen",
   "settings.saved": "Gespeichert. Starte neu, um die Änderungen zu übernehmen.",
+  "settings.restartNow": "Jetzt neu starten",
   "settings.error": "Fehler: {error}",
   "settings.restart": "Neustart",
   "settings.instant": "sofort",

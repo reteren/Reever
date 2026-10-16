@@ -251,6 +251,7 @@ pub fn run() {
             commands_api::cancel_calibration,
             commands_api::get_settings,
             commands_api::save_settings,
+            commands_api::restart_app,
             commands_api::set_paused,
             commands_api::get_paused,
             commands_api::set_autostart,

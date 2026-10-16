@@ -232,6 +232,13 @@ pub fn get_settings(config: State<'_, Arc<ReeverConfig>>) -> Result<serde_json::
     Ok(settings)
 }
 
+/// Перезапустить Reever: так применяются настройки с пометкой «рестарт» (языки,
+/// модели, активация) — без него сохранённое молча не действовало до следующего запуска.
+#[tauri::command]
+pub fn restart_app(app: tauri::AppHandle) {
+    app.restart();
+}
+
 /// Сохранить settings.json (применяется при перезапуске).
 #[tauri::command]
 pub fn save_settings(
