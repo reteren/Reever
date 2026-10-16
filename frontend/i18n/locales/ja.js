@@ -196,7 +196,6 @@ I18N.register('ja', {
   "settings.grammarLinkPrefix": "起動ワードとフレーズはホームの",
   "settings.grammarLink": "「音声コマンド一覧」→ 編集",
   "settings.grammarLinkSuffix": "にあります。",
-  "settings.appliesAfterRestart": "再起動後に反映",
   "settings.saved": "保存して適用しました。",
   "settings.error": "エラー：{error}",
   "settings.instant": "すぐに反映",

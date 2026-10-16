@@ -196,7 +196,6 @@ I18N.register('it', {
   "settings.grammarLinkPrefix": "La parola di attivazione e le frasi si trovano in Home, ",
   "settings.grammarLink": "“Cosa puoi dire” → Modifica",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "si applica dopo il riavvio",
   "settings.saved": "Salvato e applicato.",
   "settings.error": "Errore: {error}",
   "settings.instant": "subito",

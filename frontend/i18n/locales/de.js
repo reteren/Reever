@@ -196,7 +196,6 @@ I18N.register('de', {
   "settings.grammarLinkPrefix": "Aktivierungswort und Befehle findest du unter Startseite, ",
   "settings.grammarLink": "„Was du sagen kannst“ → Bearbeiten",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "wird nach einem Neustart übernommen",
   "settings.saved": "Gespeichert und übernommen.",
   "settings.error": "Fehler: {error}",
   "settings.instant": "sofort",

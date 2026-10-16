@@ -196,7 +196,6 @@ I18N.register('ar', {
   "settings.grammarLinkPrefix": "توجد كلمة التنبيه والعبارات في الصفحة الرئيسية، ",
   "settings.grammarLink": "“ما يمكنك قوله” → تحرير",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "يسري بعد إعادة التشغيل",
   "settings.saved": "تم الحفظ والتطبيق.",
   "settings.error": "خطأ: {error}",
   "settings.instant": "فورًا",

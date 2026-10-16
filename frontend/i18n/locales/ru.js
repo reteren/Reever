@@ -196,7 +196,6 @@ I18N.register('ru', {
   "settings.grammarLinkPrefix": "Wake-слово и фразы — на Главной, ",
   "settings.grammarLink": "«Что можно сказать» → Изменить",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "применится после перезапуска",
   "settings.saved": "Сохранено и применено.",
   "settings.error": "Ошибка: {error}",
   "settings.instant": "сразу",

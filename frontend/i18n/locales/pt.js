@@ -196,7 +196,6 @@ I18N.register('pt', {
   "settings.grammarLinkPrefix": "A palavra de ativação e as frases ficam em Início, ",
   "settings.grammarLink": "“O que você pode dizer” → Editar",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "aplicado após reiniciar",
   "settings.saved": "Salvo e aplicado.",
   "settings.error": "Erro: {error}",
   "settings.instant": "imediato",

@@ -196,7 +196,6 @@ I18N.register('fr', {
   "settings.grammarLinkPrefix": "Le mot de réveil et les phrases se trouvent dans Accueil, ",
   "settings.grammarLink": "« Que dire » → Modifier",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "s’applique après le redémarrage",
   "settings.saved": "Enregistré et appliqué.",
   "settings.error": "Erreur : {error}",
   "settings.instant": "immédiat",

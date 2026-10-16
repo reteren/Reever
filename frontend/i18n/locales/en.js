@@ -198,7 +198,6 @@ I18N.register('en', {
   "settings.grammarLinkPrefix": "The wake word and phrases are on Home, ",
   "settings.grammarLink": "“What you can say” → Edit",
   "settings.grammarLinkSuffix": ".",
-  "settings.appliesAfterRestart": "applies after a restart",
   "settings.saved": "Saved and applied.",
   "settings.error": "Error: {error}",
   "settings.instant": "instant",

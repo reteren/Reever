@@ -196,7 +196,6 @@ I18N.register('zh', {
   "settings.grammarLinkPrefix": "唤醒词和短语位于主页的",
   "settings.grammarLink": "“可以说什么” → 编辑",
   "settings.grammarLinkSuffix": "。",
-  "settings.appliesAfterRestart": "重启后生效",
   "settings.saved": "已保存并生效。",
   "settings.error": "错误：{error}",
   "settings.instant": "立即",
