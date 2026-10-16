@@ -26,6 +26,7 @@ static UI_TAB: Mutex<String> = Mutex::new(String::new());
 static UI_STATUS: Mutex<Option<Value>> = Mutex::new(None);
 static UI_COMPACT: AtomicBool = AtomicBool::new(false);
 static MAIN_VISIBLE: AtomicBool = AtomicBool::new(false);
+static MASCOT_VISIBLE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize)]
 pub struct UiSnapshot {
@@ -116,6 +117,11 @@ pub fn set_main_visible(visible: bool) {
     MAIN_VISIBLE.store(visible, Ordering::Relaxed);
 }
 
+/// Маскот тоже показывает громкость — жидкостью в глазу.
+pub fn set_mascot_visible(visible: bool) {
+    MASCOT_VISIBLE.store(visible, Ordering::Relaxed);
+}
+
 pub fn set_compact(compact: bool) {
     UI_COMPACT.store(compact, Ordering::Relaxed);
 }
@@ -147,8 +153,8 @@ pub fn get_ui_snapshot() -> UiSnapshot {
     }
 }
 
-/// Уровень микрофона для шара и эквалайзера в окне: RMS 0..1 раз в ~33 мс.
-/// Только пока главное окно видно — в трее интерфейс не должен будить ни GPU, ни IPC.
+/// Уровень микрофона для шара и эквалайзера в окне и для глаза маскота: RMS 0..1 раз в ~33 мс.
+/// Только пока главное окно или маскот видны — иначе интерфейс не должен будить ни GPU, ни IPC.
 /// Видимость спрашивается раз в полсекунды: это синхронный вызов в поток окна.
 pub struct LevelMeter {
     peak: f32,
@@ -173,15 +179,16 @@ impl LevelMeter {
 
         // В трее и между окнами не трогаем PCM вообще: событие lifecycle сбрасывает
         // этот флаг синхронно с уничтожением/показом главного окна.
+        let mascot = MASCOT_VISIBLE.load(Ordering::Relaxed);
         if !MAIN_VISIBLE.load(Ordering::Relaxed) {
             self.visible = false;
-            self.peak = 0.0;
-            return;
-        }
-
-        // После создания WebView и далее раз в полсекунды уточняем видимость окна.
-        // При скрытом окне обнуляем накопленный пик и возвращаемся до расчёта RMS.
-        if !self.visible || self.last_check.elapsed() >= Self::CHECK {
+            if !mascot {
+                self.peak = 0.0;
+                return;
+            }
+        } else if !self.visible || self.last_check.elapsed() >= Self::CHECK {
+            // После создания WebView и далее раз в полсекунды уточняем видимость окна.
+            // При скрытом окне (и без маскота) обнуляем пик и возвращаемся до расчёта RMS.
             self.last_check = Instant::now();
             self.visible = app
                 .get_webview_window("main")
@@ -189,8 +196,10 @@ impl LevelMeter {
                 .unwrap_or(false);
             if !self.visible {
                 MAIN_VISIBLE.store(false, Ordering::Relaxed);
-                self.peak = 0.0;
-                return;
+                if !mascot {
+                    self.peak = 0.0;
+                    return;
+                }
             }
         }
 
@@ -200,7 +209,13 @@ impl LevelMeter {
         if self.last_emit.elapsed() < Self::EVERY {
             return;
         }
-        let _ = app.emit_to("main", "reever://level", (self.peak * 10000.0).round() / 10000.0);
+        let level = (self.peak * 10000.0).round() / 10000.0;
+        if self.visible {
+            let _ = app.emit_to("main", "reever://level", level);
+        }
+        if mascot {
+            let _ = app.emit_to("mascot", "reever://level", level);
+        }
         self.peak = 0.0;
         self.last_emit = Instant::now();
     }

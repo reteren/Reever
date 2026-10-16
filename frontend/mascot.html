@@ -12,63 +12,150 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<script src="skin/orb.js"></script>
 <script>
 // Маскот: пререндер из Blender (octobus chrome rig.blend, действие Octo_Grab).
 // Кадры 1–36 — подхват: голова тянется, щупальца повисают; 36–84 — бесшовный цикл покачивания.
-// idle_0001–0048 — поза покоя, в глазу волнуется жидкость (бесшовный цикл).
+// Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями
+// распознавания; контур купола глаза по кадрам — mascot/eye.json (центр и радиусы, доли кадра).
+// Свечение вокруг — размытый силуэт текущего кадра, его сила следует за состоянием и голосом.
 (function () {
-  const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 48, FPS = 24;
+  const FRAMES = 84, LOOP_FROM = 35, FPS = 24;
+  const SPRITE_W = 120, SPRITE_H = 160, PAD = 22; // окно = спрайт + поля под свечение
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
-  const win = window.__TAURI__.window.getCurrentWindow();
-  const { invoke } = window.__TAURI__.core;
+  const EYE_INSET = 0.965;    // линза чуть меньше купола: край прячется под хромовое кольцо
+  const GLOW = [70, 205, 165]; // акцент, приглушённый до матового
+  const tauri = window.__TAURI__;
+  const win = tauri.window.getCurrentWindow();
+  const { invoke } = tauri.core;
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const ctx = canvas.getContext('2d');
+  const spr = document.createElement('canvas'), sctx = spr.getContext('2d', { willReadFrequently: true });
+  const sil = document.createElement('canvas'), gctx = sil.getContext('2d');
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  const load = (name, count) => Array.from({ length: count }, (_, i) => {
+  const images = Array.from({ length: FRAMES }, (_, i) => {
     const img = new Image();
-    img.src = `mascot/${name}_${String(i + 1).padStart(4, '0')}.webp`;
+    img.src = `mascot/grab_${String(i + 1).padStart(4, '0')}.webp`;
     return img;
   });
-  const images = load('grab', FRAMES);
-  const idle = load('idle', IDLE_FRAMES);
+  let eyes = null;
+  fetch('mascot/eye.json').then((r) => r.json()).then((e) => { eyes = e; }).catch((e) => console.error('mascot eye', e));
 
-  let frame = 0, idleFrame = 0, mode = 'rest', acc = 0, last = 0, drawn = null;
+  const eyeCanvas = document.createElement('canvas');
+  let eye = null;
+  try { eye = window.SkinOrb.createCore(eyeCanvas, 40); } catch (e) { console.error('mascot orb', e); }
+
+  // ── Состояния — те же, что у линзы в главном окне (skin/shell.js) ───
+  const spring = (v, k, c) => ({ v, t: v, vel: 0, k, c });
+  const stepSpring = (s, dt) => { const a = s.k * (s.t - s.v) - s.c * s.vel; s.vel += a * dt; s.v += s.vel * dt; return s.v; };
+  const S = {
+    fill: spring(0, 46, 7.5), energy: spring(0, 30, 10), wave: spring(0, 40, 12), swirl: spring(0, 10, 6),
+    dark: spring(0, 18, 9), glitch: spring(0, 60, 14), glow: spring(0, 14, 7),
+  };
+  const STATES = {
+    idle:      { fill: .17, energy: .55, wave: .14, swirl: 0, dark: 0, glitch: 0, glow: .45 },
+    listening: { fill: .72, energy: 1.0, wave: .32, swirl: 0, dark: 0, glitch: 0, glow: .85 },
+    busy:      { fill: .9, energy: 1.12, wave: .22, swirl: 1, dark: 0, glitch: 0, glow: 1 },
+    loading:   { fill: .3, energy: .6, wave: .1, swirl: .3, dark: 0, glitch: 0, glow: .4 },
+    paused:    { fill: 0, energy: .12, wave: 0, swirl: 0, dark: 1, glitch: 0, glow: .12 },
+    error:     { fill: .22, energy: .5, wave: .1, swirl: 0, dark: .3, glitch: 1, glow: .35 },
+  };
+  let state = 'idle', level = 0, levelRaw = 0, flash = 0;
+  function setState(name) {
+    state = STATES[name] ? name : 'idle';
+    for (const k in S) S[k].t = STATES[state][k];
+  }
+  setState('idle');
+  tauri.event.listen('reever://state', (e) => setState(String(e.payload)));
+  tauri.event.listen('reever://level', (e) => {
+    const rms = Number(e.payload) || 0;
+    levelRaw = state === 'listening' || state === 'busy' ? Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-6) + 54) / 40)) : 0;
+  });
+  tauri.event.listen('reever://heard', (e) => { if (String(e.payload || '').trim()) flash = 1; });
+  invoke('get_ui_snapshot').then((s) => s && setState(String(s.state || 'idle'))).catch(() => {});
+
+  // ── Кадры ─────────────────────────────────────────────────────────
+  let frame = 0, mode = 'rest', acc = 0, last = 0, drawn = -1, dpr = 1;
+  const t0 = performance.now();
 
   function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(canvas.clientWidth * dpr);
-    canvas.height = Math.round(canvas.clientHeight * dpr);
-    drawn = null;
+    dpr = window.devicePixelRatio || 1;
+    for (const c of [canvas, spr, sil]) { c.width = Math.round(canvas.clientWidth * dpr); c.height = Math.round(canvas.clientHeight * dpr); }
+    eye?.resize(1);
+    drawn = -1;
   }
-  function draw() {
-    const img = mode === 'rest' ? idle[idleFrame] : images[frame];
-    if (!img.complete || !img.naturalWidth || drawn === img) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    drawn = img;
+  // спрайт и его силуэт перерисовываются, только когда сменился кадр
+  function prepare() {
+    const img = images[frame];
+    if (!img.complete || !img.naturalWidth) return false;
+    if (drawn === frame) return true;
+    sctx.clearRect(0, 0, spr.width, spr.height);
+    sctx.drawImage(img, PAD * dpr, PAD * dpr, SPRITE_W * dpr, SPRITE_H * dpr);
+    gctx.globalCompositeOperation = 'copy';
+    gctx.drawImage(spr, 0, 0);
+    gctx.globalCompositeOperation = 'source-in';
+    gctx.fillStyle = `rgb(${GLOW.join(',')})`;
+    gctx.fillRect(0, 0, sil.width, sil.height);
+    drawn = frame;
+    return true;
   }
   function advance() {
-    if (mode === 'rest') idleFrame = (idleFrame + 1) % IDLE_FRAMES;
-    else if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
+    if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
     else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) mode = 'rest'; }
   }
   function tick(t) {
-    if (last) acc += (t - last) / 1000;
+    const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
+    acc += dt;
     last = t;
     // Возврат быстрее подхвата: осьминог «ставится» на место.
     const step = 1 / (mode === 'release' ? FPS * 1.6 : FPS);
     while (acc >= step) { acc -= step; advance(); }
-    draw();
+
+    // уровень: быстрая атака, медленный спад — как в главном окне
+    level += (levelRaw - level) * (levelRaw > level ? 0.55 : 0.12);
+    const T = STATES[state], time = (t - t0) / 1000;
+    const lv = state === 'listening' ? level : state === 'busy' ? level * 0.4 : 0;
+    S.fill.t = T.fill + lv * 0.2 + (state === 'loading' ? Math.sin(time * 2.2) * 0.08 : 0);
+    S.wave.t = T.wave + lv * 2.4;
+    S.energy.t = T.energy + lv * 0.5;
+    S.glow.t = T.glow + lv * 0.9;
+    for (const k in S) stepSpring(S[k], dt);
+    flash = Math.max(0, flash - dt * 2.6);
+
+    if (prepare()) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // свечение: мягко «дышит» и разгорается от голоса и принятой команды
+      const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
+      if (g > 0.01) {
+        ctx.filter = `blur(${((7 + 5 * Math.min(1.5, g)) * dpr).toFixed(1)}px)`;
+        ctx.globalAlpha = Math.min(1, 0.75 * g);
+        ctx.drawImage(sil, 0, 0);
+        ctx.filter = `blur(${(3 * dpr).toFixed(1)}px)`;
+        ctx.globalAlpha = Math.min(1, 0.35 * g);
+        ctx.drawImage(sil, 0, 0);
+        ctx.filter = 'none';
+        ctx.globalAlpha = 1;
+      }
+      ctx.drawImage(spr, 0, 0);
+      const e = eyes?.[frame];
+      if (eye && e) {
+        eye.render({ time, fill: Math.max(0, S.fill.v), wave: S.wave.v, energy: Math.max(0, S.energy.v), swirl: S.swirl.v, flash, dark: Math.max(0, S.dark.v), glitch: Math.max(0, S.glitch.v) });
+        const rx = e[2] * SPRITE_W * EYE_INSET, ry = e[3] * SPRITE_H * EYE_INSET;
+        const cx = PAD + e[0] * SPRITE_W, cy = PAD + e[1] * SPRITE_H;
+        ctx.drawImage(eyeCanvas, (cx - rx) * dpr, (cy - ry) * dpr, 2 * rx * dpr, 2 * ry * dpr);
+      }
+    }
     requestAnimationFrame(tick);
   }
 
+  // ── Хват за голову ────────────────────────────────────────────────
   function onHead(e) {
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    if (y > r.height * HEAD_BOTTOM) return false;
-    const px = ctx.getImageData(Math.floor(x * canvas.width / r.width), Math.floor(y * canvas.height / r.height), 1, 1).data;
+    if (y < PAD || y > PAD + SPRITE_H * HEAD_BOTTOM) return false;
+    const px = sctx.getImageData(Math.floor(x * spr.width / r.width), Math.floor(y * spr.height / r.height), 1, 1).data;
     return px[3] > 40;
   }
 

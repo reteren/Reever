@@ -9,10 +9,11 @@ use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
-use crate::events::ui_log;
+use crate::events::{self, ui_log};
 
-/// Отступ от краёв рабочей области, в логических пикселях.
-const MARGIN: f64 = 16.0;
+/// Отступ окна от краёв рабочей области, в логических пикселях. Сам осьминог стоит
+/// ещё на 22 px глубже: поля окна отданы под свечение (frontend/mascot.html, PAD).
+const MARGIN: f64 = 0.0;
 
 pub fn spawn(app: &AppHandle) {
     if app.get_webview_window("mascot").is_some() {
@@ -40,7 +41,9 @@ pub fn spawn(app: &AppHandle) {
             let y = area.position.y + area.size.height as i32 - size.height as i32 - margin;
             let _ = window.set_position(PhysicalPosition::new(x, y));
         }
-        let _ = window.show();
+        if window.show().is_ok() {
+            events::set_mascot_visible(true);
+        }
     });
 }
 
