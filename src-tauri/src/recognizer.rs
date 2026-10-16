@@ -30,11 +30,25 @@ use crate::{everything, textnorm, typing};
 /// пока модель её разбирает (колбэк при переполнении молча выбрасывает чанки).
 const AUDIO_QUEUE: usize = 512;
 
-pub fn run_worker(app: AppHandle, cfg: Arc<ReeverConfig>, shared: Arc<SharedState>) {
-    if let Err(e) = run_inner(&app, &cfg, &shared) {
-        eprintln!("[reever] worker fatal: {e:#}");
-        set_state(&app, "error");
-        ui_log(&app, format!("✖ FATAL: {e}"));
+/// Поток распознавания. «Сохранить» в настройках поднимает `shared.reload`: поток
+/// закрывает микрофон и модели и стартует заново с новыми настройками. После ошибки
+/// старта (неверная модель) ждёт исправленных настроек, а не умирает насовсем.
+pub fn run_worker(app: AppHandle, shared: Arc<SharedState>) {
+    use tauri::Manager;
+    loop {
+        shared.reload.store(false, Ordering::Relaxed);
+        let cfg = app.state::<crate::config::LiveConfig>().get();
+        if let Err(e) = run_inner(&app, &cfg, &shared) {
+            eprintln!("[reever] worker fatal: {e:#}");
+            set_state(&app, "error");
+            ui_log(&app, format!("✖ FATAL: {e}"));
+            while !shared.reload.load(Ordering::Relaxed) {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+        } else if !shared.reload.load(Ordering::Relaxed) {
+            return;
+        }
+        ui_log(&app, "⟳ настройки применены — распознавание перезапускается");
     }
 }
 
@@ -187,6 +201,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let trace = std::env::var_os("REEVER_TRACE").is_some();
     let mut last_warm = std::time::Instant::now();
     loop {
+        if shared.reload.load(Ordering::Relaxed) {
+            return Ok(());
+        }
         if stream.is_some() && mic_checked.elapsed() >= Duration::from_secs(2) {
             mic_checked = std::time::Instant::now();
             let dropped = crate::audio::DROPPED_SAMPLES.swap(0, Ordering::Relaxed);

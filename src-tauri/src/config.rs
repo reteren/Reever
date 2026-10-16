@@ -426,6 +426,24 @@ pub struct ReeverConfig {
     pub settings: Settings,
 }
 
+/// Действующие настройки. «Сохранить» подменяет их на лету, а поток распознавания
+/// перезапускается с новыми — без перезапуска всего Reever.
+pub struct LiveConfig(std::sync::RwLock<std::sync::Arc<ReeverConfig>>);
+
+impl LiveConfig {
+    pub fn new(config: std::sync::Arc<ReeverConfig>) -> Self {
+        Self(std::sync::RwLock::new(config))
+    }
+
+    pub fn get(&self) -> std::sync::Arc<ReeverConfig> {
+        self.0.read().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    pub fn set(&self, config: std::sync::Arc<ReeverConfig>) {
+        *self.0.write().unwrap_or_else(|e| e.into_inner()) = config;
+    }
+}
+
 impl ReeverConfig {
     pub fn resolve(app: &AppHandle) -> tauri::Result<Self> {
         let aliases = std::fs::read_to_string(user_config_path(app, "aliases.json"))

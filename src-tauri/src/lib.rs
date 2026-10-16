@@ -45,7 +45,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use actions::SharedState;
-use config::ReeverConfig;
+use config::{LiveConfig, ReeverConfig};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
@@ -115,7 +115,7 @@ pub fn run() {
             let grammar_path = config::user_config_path(app.handle(), "grammar.json");
             let shared = Arc::new(SharedState::new(actions_path, grammar_path, &cfg.settings));
 
-            app.manage(cfg.clone());
+            app.manage(LiveConfig::new(cfg.clone()));
             app.manage(shared.clone());
 
             // --- трей ---
@@ -230,7 +230,7 @@ pub fn run() {
             let handle = app.handle().clone();
             std::thread::Builder::new()
                 .name("reever-audio".into())
-                .spawn(move || recognizer::run_worker(handle, cfg, shared))
+                .spawn(move || recognizer::run_worker(handle, shared))
                 .expect("failed to spawn audio worker");
 
             Ok(())
@@ -251,7 +251,6 @@ pub fn run() {
             commands_api::cancel_calibration,
             commands_api::get_settings,
             commands_api::save_settings,
-            commands_api::restart_app,
             commands_api::set_paused,
             commands_api::get_paused,
             commands_api::set_autostart,

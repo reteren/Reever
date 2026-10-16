@@ -572,10 +572,12 @@ function settingVisible(key){
   const need=SETTING_NEEDS[key], langs=recognitionLanguages();
   return !need||(need==='multi'?langs.length>1:langs.includes(need));
 }
-const settingLabel=(key,when='restart')=>`${t('settings.'+key)} — ${t('settings.'+when)}`;
+// Всё применяется по «Сохранить»; пометка «— сразу» — у того, что действует уже при
+// изменении поля (язык интерфейса, хоткеи), без «Сохранить».
+const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} — ${t('settings.instant')}`:t('settings.'+key);
 const settingHelp=key=>I18N.has(`settings.${key}.help`)?t(`settings.${key}.help`):null;
 let cbSeq=0;
-function fieldEl(key,type,opts,when='restart'){
+function fieldEl(key,type,opts,when='save'){
   const lbl=settingLabel(key,when), help=settingHelp(key);
   // Чекбокс в семёрке — подпись справа на одной строке, а не сверху.
   if(type==='bool'){
@@ -761,17 +763,9 @@ function renderSettings(){
   $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'—':(settingsObj.hotkey||'—');
   if(settingsObj.offline_mode) renderEverything(lastStatus?.everything);
 }
-// После сохранения — кнопка перезапуска: настройки с пометкой «рестарт» (языки, модели)
-// иначе не действуют, и «только английский» молча оставался русским.
-$('#saveSettingsBtn').onclick=async()=>{
-  const msg=$('#settingsMsg');
-  try{
-    await invoke('save_settings',{settings:settingsObj});
-    const restart=el('button',{type:'button',className:'sm default',textContent:t('settings.restartNow')});
-    restart.onclick=()=>invoke('restart_app').catch(e=>reportError('restartApp',e));
-    msg.replaceChildren(t('settings.saved')+' ',restart);
-  }catch(e){msg.textContent=t('settings.error',{error:e});reportError('saveSettings',e);}
-};
+// Сохранение применяется сразу: Reever перечитывает настройки и перезапускает
+// распознавание (несколько секунд загрузки моделей), окно и всё остальное работают.
+$('#saveSettingsBtn').onclick=async()=>{ try{await invoke('save_settings',{settings:settingsObj}); $('#settingsMsg').textContent=t('settings.saved');}catch(e){$('#settingsMsg').textContent=t('settings.error',{error:e});reportError('saveSettings',e);} };
 
 // Язык интерфейса: перевести разметку и перерисовать всё, что построено из кода.
 // Rust сохраняет выбор в settings.json и переводит меню трея.

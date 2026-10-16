@@ -92,12 +92,12 @@ pub fn open(app: &AppHandle, shared: &SharedState, cfg: &ReeverConfig, item: &Fi
 pub fn picker_choose(
     app: AppHandle,
     shared: State<'_, Arc<SharedState>>,
-    cfg: State<'_, Arc<ReeverConfig>>,
+    cfg: State<'_, crate::config::LiveConfig>,
     index: usize,
 ) -> Result<bool, String> {
     // Отметить до открытия: оно может занять время, а за это время может открыться новое окно.
     mark_closed(&shared);
-    Ok(choose(&app, &shared, &cfg, index))
+    Ok(choose(&app, &shared, &cfg.get(), index))
 }
 
 #[tauri::command]

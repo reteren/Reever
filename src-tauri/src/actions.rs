@@ -316,6 +316,8 @@ pub struct SharedState {
     pub paused: AtomicBool,
     /// Триггер прослушки по хоткею (push-to-talk).
     pub force_listen: AtomicBool,
+    /// Настройки сохранены: поток распознавания перезапускается с новыми.
+    pub reload: AtomicBool,
     /// Текущий push-to-talk хоткей (источник правды для пере-регистрации).
     pub ptt_hotkey: Mutex<String>,
     /// Текущий mute-хоткей (panic-mute). Пусто — выкл.
@@ -361,6 +363,7 @@ impl SharedState {
             actions_path,
             paused: AtomicBool::new(false),
             force_listen: AtomicBool::new(false),
+            reload: AtomicBool::new(false),
             ptt_hotkey: Mutex::new(String::new()),
             mute_hotkey: Mutex::new(String::new()),
             grammar: Mutex::new(grammar),

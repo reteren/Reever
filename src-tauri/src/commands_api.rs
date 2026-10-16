@@ -7,7 +7,7 @@ use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 use crate::actions::{Action, SharedState};
 use crate::apps::{self, AppEntry};
-use crate::config::ReeverConfig;
+use crate::config::{LiveConfig, ReeverConfig};
 use crate::grammar::Grammar;
 
 /// Список всех действий (для UI).
@@ -74,7 +74,8 @@ pub fn list_apps() -> Vec<AppEntry> {
 
 /// Доступные наборы звуков (подпапки sounds/).
 #[tauri::command]
-pub fn list_sound_packs(config: State<'_, Arc<ReeverConfig>>) -> Vec<String> {
+pub fn list_sound_packs(config: State<'_, LiveConfig>) -> Vec<String> {
+    let config = config.get();
     let mut packs: Vec<String> = std::fs::read_dir(&config.sounds_dir)
         .map(|rd| {
             rd.flatten()
@@ -210,7 +211,8 @@ pub fn cancel_calibration(state: State<'_, Arc<SharedState>>) -> Result<(), Stri
 
 /// Прочитать settings.json (для UI).
 #[tauri::command]
-pub fn get_settings(config: State<'_, Arc<ReeverConfig>>) -> Result<serde_json::Value, String> {
+pub fn get_settings(config: State<'_, LiveConfig>) -> Result<serde_json::Value, String> {
+    let config = config.get();
     let txt = std::fs::read_to_string(&config.settings_path).map_err(|e| e.to_string())?;
     let mut settings = match serde_json::from_str::<serde_json::Value>(&txt) {
         Ok(serde_json::Value::Object(object)) => serde_json::Value::Object(object),
@@ -232,31 +234,37 @@ pub fn get_settings(config: State<'_, Arc<ReeverConfig>>) -> Result<serde_json::
     Ok(settings)
 }
 
-/// Перезапустить Reever: так применяются настройки с пометкой «рестарт» (языки,
-/// модели, активация) — без него сохранённое молча не действовало до следующего запуска.
-#[tauri::command]
-pub fn restart_app(app: tauri::AppHandle) {
-    app.restart();
-}
-
-/// Сохранить settings.json (применяется при перезапуске).
+/// Сохранить settings.json и применить сразу: настройки перечитываются, хоткеи
+/// перерегистрируются, поток распознавания перезапускается с новыми моделями и паузами.
 #[tauri::command]
 pub fn save_settings(
-    config: State<'_, Arc<ReeverConfig>>,
+    app: AppHandle,
+    config: State<'_, LiveConfig>,
+    state: State<'_, Arc<SharedState>>,
     settings: serde_json::Value,
 ) -> Result<(), String> {
+    let path = config.get().settings_path.clone();
     let txt = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
-    std::fs::write(&config.settings_path, txt).map_err(|e| e.to_string())
+    std::fs::write(&path, txt).map_err(|e| e.to_string())?;
+    let fresh = ReeverConfig::resolve(&app).map_err(|e| e.to_string())?;
+    let s = &fresh.settings;
+    reapply_hotkeys(&app, &s.activation_mode, &s.hotkey, &s.mute_hotkey)?;
+    *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = s.hotkey.clone();
+    *state.mute_hotkey.lock().map_err(|e| e.to_string())? = s.mute_hotkey.clone();
+    config.set(Arc::new(fresh));
+    state.reload.store(true, Ordering::Relaxed);
+    Ok(())
 }
 
 /// Язык интерфейса: сохраняет выбор и сразу переводит меню трея. Возвращает
 /// итоговый код языка (`auto` раскрывается в язык Windows).
 #[tauri::command]
 pub fn set_ui_language(
-    config: State<'_, Arc<ReeverConfig>>,
+    config: State<'_, LiveConfig>,
     tray: State<'_, crate::uilang::TrayItems>,
     language: String,
 ) -> Result<String, String> {
+    let config = config.get();
     let locale = crate::uilang::resolve(&language);
     crate::uilang::apply_tray(&tray, locale);
     *crate::uilang::CURRENT.lock().map_err(|e| e.to_string())? = locale;
@@ -293,7 +301,8 @@ pub fn get_autostart(app: AppHandle) -> bool {
 
 /// Активная проверка доступности Everything HTTP (для плитки UI, по запросу).
 #[tauri::command]
-pub fn check_everything(config: State<'_, Arc<ReeverConfig>>) -> bool {
+pub fn check_everything(config: State<'_, LiveConfig>) -> bool {
+    let config = config.get();
     if config.settings.offline_mode {
         return false; // офлайн-режим: вообще не трогаем сеть
     }
@@ -380,11 +389,12 @@ fn persist_hotkey(config: &ReeverConfig, key: &str, hotkey: &str) -> Result<(), 
 #[tauri::command(rename_all = "camelCase")]
 pub fn set_hotkey(
     app: AppHandle,
-    config: State<'_, Arc<ReeverConfig>>,
+    config: State<'_, LiveConfig>,
     state: State<'_, Arc<SharedState>>,
     hotkey: String,
     activation_mode: String,
 ) -> Result<(), String> {
+    let config = config.get();
     let mute = state.mute_hotkey.lock().map_err(|e| e.to_string())?.clone();
     reapply_hotkeys(&app, &activation_mode, &hotkey, &mute)?;
     *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = hotkey.clone();
@@ -395,11 +405,12 @@ pub fn set_hotkey(
 #[tauri::command(rename_all = "camelCase")]
 pub fn set_mute_hotkey(
     app: AppHandle,
-    config: State<'_, Arc<ReeverConfig>>,
+    config: State<'_, LiveConfig>,
     state: State<'_, Arc<SharedState>>,
     hotkey: String,
     activation_mode: String,
 ) -> Result<(), String> {
+    let config = config.get();
     let ptt = state.ptt_hotkey.lock().map_err(|e| e.to_string())?.clone();
     reapply_hotkeys(&app, &activation_mode, &ptt, &hotkey)?;
     *state.mute_hotkey.lock().map_err(|e| e.to_string())? = hotkey.clone();
