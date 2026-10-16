@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
@@ -251,9 +251,19 @@ pub fn save_settings(
     reapply_hotkeys(&app, &s.activation_mode, &s.hotkey, &s.mute_hotkey)?;
     *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = s.hotkey.clone();
     *state.mute_hotkey.lock().map_err(|e| e.to_string())? = s.mute_hotkey.clone();
+    let find_source = s.find_source.clone();
     config.set(Arc::new(fresh));
+    if let Some(index) = app.try_state::<crate::local_index::IndexManager>() {
+        index.apply_source(&find_source);
+    }
     state.reload.store(true, Ordering::Relaxed);
     Ok(())
+}
+
+/// Состояние встроенного индекса для UI настроек.
+#[tauri::command]
+pub fn index_status(index: State<'_, crate::local_index::IndexManager>) -> crate::local_index::IndexStatus {
+    index.status()
 }
 
 /// Язык интерфейса: сохраняет выбор и сразу переводит меню трея. Возвращает

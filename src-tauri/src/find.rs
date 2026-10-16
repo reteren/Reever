@@ -650,6 +650,30 @@ pub fn search_with_extension(
     usage: &Usage,
     recent: &HashMap<String, u64>,
 ) -> Result<Vec<FindItem>, String> {
+    search_with_source(host, port, candidates, scope, extension, usage, recent, "everything", None, false)
+}
+
+/// Поиск с выбором источника кандидатов; вычисление оценки и итоговое ранжирование общие.
+pub fn search_with_source(
+    host: &str,
+    port: u16,
+    candidates: &[String],
+    scope: FindScope,
+    extension: Option<&str>,
+    usage: &Usage,
+    recent: &HashMap<String, u64>,
+    source: &str,
+    index: Option<&crate::local_index::DiskIndex>,
+    offline: bool,
+) -> Result<Vec<FindItem>, String> {
+    let use_local = match source {
+        "local" => true,
+        "auto" => offline || everything::ping(host, port).is_err(),
+        _ => false,
+    };
+    if use_local && index.is_none() {
+        return Err("локальный индекс ещё строится".into());
+    }
     let variants = query_variants(candidates);
     let prefix = match (scope, extension) {
         (_, Some(ext)) => format!("file: ext:{ext} "),
@@ -674,7 +698,12 @@ pub fn search_with_extension(
         if std::time::Instant::now() >= deadline && *any_ok {
             return;
         }
-        match everything::search_items(host, port, query, count) {
+        let result = if use_local {
+            Ok(index.unwrap().search_items(query, scope, extension, count))
+        } else {
+            everything::search_items(host, port, query, count)
+        };
+        match result {
             Ok(items) => {
                 *any_ok = true;
                 for (full, folder) in items {
