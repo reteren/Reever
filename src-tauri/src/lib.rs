@@ -52,6 +52,22 @@ use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
+/// Главное окно уже показано при запуске (интерфейсом или запасным таймером).
+static WINDOW_SHOWN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+fn launched_hidden() -> bool {
+    std::env::args().any(|a| a == "--hidden")
+}
+
+/// Интерфейс готов: рамка нарисована, окно обрезано по ней — показываем окно
+/// (кроме автозапуска в трей). Повторные вызовы ничего не делают.
+#[tauri::command]
+fn window_ready(app: tauri::AppHandle) {
+    if !launched_hidden() && !WINDOW_SHOWN.swap(true, Ordering::SeqCst) {
+        show_main(&app);
+    }
+}
+
 fn show_main(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
@@ -166,11 +182,18 @@ pub fn run() {
                         let _ = wc.hide();
                     }
                 });
-                // Автозапуск (--hidden) -> стартуем в трей; обычный запуск -> показываем окно.
-                let hidden = std::env::args().any(|a| a == "--hidden");
-                if !hidden {
-                    let _ = w.show();
-                    let _ = w.set_focus();
+                // Автозапуск (--hidden) -> стартуем в трей; обычный запуск -> окно показывает
+                // интерфейс (`window_ready`), когда рамка нарисована и окно обрезано по ней:
+                // показанное раньше прозрачное окно открывало системный заголовок Windows.
+                // Интерфейс не ответил за 4 с (ошибка) — показываем сами.
+                if !launched_hidden() {
+                    let handle = app.handle().clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_secs(4));
+                        if !WINDOW_SHOWN.swap(true, Ordering::SeqCst) {
+                            show_main(&handle);
+                        }
+                    });
                 }
             }
 
@@ -251,6 +274,7 @@ pub fn run() {
             commands_api::cancel_calibration,
             commands_api::get_settings,
             commands_api::save_settings,
+            window_ready,
             commands_api::set_paused,
             commands_api::get_paused,
             commands_api::set_autostart,

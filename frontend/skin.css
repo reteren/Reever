@@ -427,9 +427,10 @@ body.shaded #shade { display: block !important; }
 .appitem { padding: 5px 8px; border-radius: 4px; cursor: pointer; }
 .appitem:hover { background: var(--acc); color: var(--glass); text-shadow: none; }
 
-/* ── Включение: до готовности рамки экраны тёмные ────────────────────── */
-#skin[data-booting] .lcd { opacity: 0; }
-.lcd.power { animation: crtOn .62s var(--e-out) both; }
+/* ── Включение: экраны с первого кадра — тёмное стекло со сканлайнами,
+   ЭЛТ-включением появляется только их содержимое ─────────────────────── */
+#skin[data-booting] .lcd > * { opacity: 0; }
+.lcd.power > * { animation: crtOn .62s var(--e-out) both; animation-delay: inherit; }
 @keyframes crtOn {
   0% { opacity: 1; clip-path: inset(50% 49% 50% 49% round 4px); filter: brightness(5); }
   30% { clip-path: inset(49.4% 0 49.4% 0 round 4px); filter: brightness(4); }

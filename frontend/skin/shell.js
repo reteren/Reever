@@ -214,7 +214,9 @@
     for (const k in S) step(S[k], dt);
     flash = Math.max(0, flash - dt * 2.6);
     burst = Math.max(0, burst - dt * 3);
-    if (!reduced) { revealTarget = booted ? 1800 : revealTarget; reveal += (revealTarget - reveal) * Math.min(1, dt * 2.1); } else reveal = 1800;
+    // Рамка, линза и кнопки — сразу целиком, без налива хрома: пока хром «наливался»,
+    // сквозь его прозрачные пиксели просвечивал системный заголовок окна.
+    reveal = revealTarget = 1800;
     if (sweep.active) { sweep.x += dt * sweep.speed; if (sweep.x > 1.3) { sweep.active = false; sweep.i = 0; } }
     else if (time > nextSweep) { nextSweep = time + 9 + Math.random() * 6; sweepNow(0.45, 0.6); }
     for (let i = 0; i < 3; i++) S['l' + i].t = lunkiHover[i];
@@ -242,13 +244,16 @@
       const el = $(sel); if (!el) return;
       el.classList.remove('power'); void el.offsetWidth;
       if (reduced) return;
-      el.style.animationDelay = (quick ? i * 0.05 : 0.45 + i * 0.11) + 's';
+      const delay = quick ? i * 0.05 : 0.15 + i * 0.09;
+      el.style.animationDelay = delay + 's';
       el.classList.add('power');
+      // анимация включения висит на содержимом экрана — снимаем её, когда отыграла,
+      // чтобы она не перезапускалась при смене вкладки
+      setTimeout(() => el.classList.remove('power'), (delay + 0.75) * 1000);
     });
   }
   function boot() {
     booted = true;
-    sweepNow(0.9, 0.62);
     powerOn(false);
     S.fill.v = 0; S.fill.vel = 0;
   }
@@ -358,8 +363,10 @@
     try {
       frame = mainView.frame = await window.SkinFrame.create($('#frame'), { color: 'skin/frame_color.webp', normal: 'skin/frame_normal.webp', skin: SKIN });
       frame.resize(scale);
-      applyShape(frame.imgColor, SKIN);
+      await applyShape(frame.imgColor, SKIN);
     } catch (e) { console.error('frame', e); }
+    // Окно показывается только теперь: рамка готова, окно обрезано по её форме.
+    requestAnimationFrame(() => requestAnimationFrame(() => invoke?.('window_ready').catch(() => {})));
     await document.fonts.ready;
     fitRail();
     // демо-состояния для предпросмотра без Tauri: ?demo=listening|busy|paused|…
