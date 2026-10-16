@@ -16,11 +16,12 @@
 <script>
 // Маскот: пререндер из Blender (octobus chrome rig.blend, действие Octo_Grab).
 // Кадры 1–36 — подхват: голова тянется, щупальца повисают; 36–84 — бесшовный цикл покачивания.
+// idle_0001–0096 (действие Octo_Idle) — покой: переминается, поворачивается, перебирает щупальцами.
 // Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями
 // распознавания; контур купола глаза по кадрам — mascot/eye.json (центр и радиусы, доли кадра).
 // Свечение вокруг — размытый силуэт текущего кадра, его сила следует за состоянием и голосом.
 (function () {
-  const FRAMES = 84, LOOP_FROM = 35, FPS = 24;
+  const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 96, FPS = 24;
   const SPRITE_W = 120, SPRITE_H = 160, PAD = 22; // окно = спрайт + поля под свечение
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
@@ -35,11 +36,12 @@
   const sil = document.createElement('canvas'), gctx = sil.getContext('2d');
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  const images = Array.from({ length: FRAMES }, (_, i) => {
+  const load = (name, count) => Array.from({ length: count }, (_, i) => {
     const img = new Image();
-    img.src = `mascot/grab_${String(i + 1).padStart(4, '0')}.webp`;
+    img.src = `mascot/${name}_${String(i + 1).padStart(4, '0')}.webp`;
     return img;
   });
+  const images = load('grab', FRAMES), idle = load('idle', IDLE_FRAMES);
   let eyes = null;
   fetch('mascot/eye.json').then((r) => r.json()).then((e) => { eyes = e; }).catch((e) => console.error('mascot eye', e));
 
@@ -77,20 +79,20 @@
   invoke('get_ui_snapshot').then((s) => s && setState(String(s.state || 'idle'))).catch(() => {});
 
   // ── Кадры ─────────────────────────────────────────────────────────
-  let frame = 0, mode = 'rest', acc = 0, last = 0, drawn = -1, dpr = 1;
+  let frame = 0, idleFrame = 0, mode = 'rest', acc = 0, last = 0, drawn = null, dpr = 1;
   const t0 = performance.now();
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
     for (const c of [canvas, spr, sil]) { c.width = Math.round(canvas.clientWidth * dpr); c.height = Math.round(canvas.clientHeight * dpr); }
     eye?.resize(1);
-    drawn = -1;
+    drawn = null;
   }
   // спрайт и его силуэт перерисовываются, только когда сменился кадр
   function prepare() {
-    const img = images[frame];
+    const img = mode === 'rest' ? idle[idleFrame] : images[frame];
     if (!img.complete || !img.naturalWidth) return false;
-    if (drawn === frame) return true;
+    if (drawn === img) return true;
     sctx.clearRect(0, 0, spr.width, spr.height);
     sctx.drawImage(img, PAD * dpr, PAD * dpr, SPRITE_W * dpr, SPRITE_H * dpr);
     gctx.globalCompositeOperation = 'copy';
@@ -98,12 +100,13 @@
     gctx.globalCompositeOperation = 'source-in';
     gctx.fillStyle = `rgb(${GLOW.join(',')})`;
     gctx.fillRect(0, 0, sil.width, sil.height);
-    drawn = frame;
+    drawn = img;
     return true;
   }
   function advance() {
-    if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
-    else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) mode = 'rest'; }
+    if (mode === 'rest') idleFrame = (idleFrame + 1) % IDLE_FRAMES;
+    else if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
+    else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) { mode = 'rest'; idleFrame = 0; } }
   }
   function tick(t) {
     const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
@@ -139,7 +142,7 @@
         ctx.globalAlpha = 1;
       }
       ctx.drawImage(spr, 0, 0);
-      const e = eyes?.[frame];
+      const e = mode === 'rest' ? eyes?.idle[idleFrame] : eyes?.grab[frame];
       if (eye && e) {
         eye.render({ time, fill: Math.max(0, S.fill.v), wave: S.wave.v, energy: Math.max(0, S.energy.v), swirl: S.swirl.v, flash, dark: Math.max(0, S.dark.v), glitch: Math.max(0, S.glitch.v) });
         const rx = e[2] * SPRITE_W * EYE_INSET, ry = e[3] * SPRITE_H * EYE_INSET;
