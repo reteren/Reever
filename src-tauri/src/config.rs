@@ -154,6 +154,27 @@ pub struct Settings {
     /// Язык интерфейса: `auto` (язык Windows) или код из `uilang::SUPPORTED`.
     #[serde(default = "default_ui_language")]
     pub ui_language: String,
+    /// Через сколько секунд простоя выгружать тяжёлые модели распознавания (в покое
+    /// остаётся только детектор «ривер»); 0 — не выгружать никогда.
+    #[serde(default = "default_models_unload_s")]
+    pub models_unload_s: u32,
+    /// Откуда искать файлы и папки: `everything` (Everything HTTP), `local` (свой
+    /// индекс дисков Reever), `auto` (Everything, если доступен, иначе свой индекс).
+    #[serde(default = "default_find_source")]
+    pub find_source: String,
+    /// Модель режима «только английский» (основная, когда русский выключен).
+    #[serde(default = "default_english_only_model")]
+    pub english_only_model: String,
+}
+
+fn default_models_unload_s() -> u32 {
+    60
+}
+fn default_find_source() -> String {
+    "everything".into()
+}
+fn default_english_only_model() -> String {
+    "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8".into()
 }
 
 /// Языки, которые Reever умеет распознавать, по порядку показа. Английский — первый
@@ -343,6 +364,9 @@ fn parse_settings(text: &str) -> Settings {
     restore!("endpoint_ms", endpoint_ms, u64);
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
+    restore!("models_unload_s", models_unload_s, u32);
+    restore!("find_source", find_source, String);
+    restore!("english_only_model", english_only_model, String);
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
     restore!("dictation_english", dictation_english, bool);
@@ -406,6 +430,9 @@ impl Default for Settings {
             wake_sound: true,
             ui_language: default_ui_language(),
             languages: default_languages(),
+            models_unload_s: default_models_unload_s(),
+            find_source: default_find_source(),
+            english_only_model: default_english_only_model(),
         }
     }
 }
