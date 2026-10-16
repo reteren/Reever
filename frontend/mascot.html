@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Reever</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+  canvas.head { cursor: grab; }
+  canvas.held { cursor: grabbing; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Маскот: пререндер из Blender (octobus chrome rig.blend, действие Octo_Grab).
+// Кадры 1–36 — подхват: голова тянется, щупальца повисают; 36–84 — бесшовный цикл покачивания.
+(function () {
+  const FRAMES = 84, LOOP_FROM = 35, FPS = 24;
+  const HEAD_BOTTOM = 0.62;   // доля высоты кадра: выше — голова, ниже — щупальца
+  const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
+  const win = window.__TAURI__.window.getCurrentWindow();
+  const { invoke } = window.__TAURI__.core;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const images = Array.from({ length: FRAMES }, (_, i) => {
+    const img = new Image();
+    img.src = `mascot/grab_${String(i + 1).padStart(4, '0')}.webp`;
+    return img;
+  });
+
+  let frame = 0, mode = 'rest', acc = 0, last = 0, drawn = -1;
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(canvas.clientWidth * dpr);
+    canvas.height = Math.round(canvas.clientHeight * dpr);
+    drawn = -1;
+  }
+  function draw() {
+    const img = images[frame];
+    if (!img.complete || !img.naturalWidth || drawn === frame) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    drawn = frame;
+  }
+  function advance() {
+    if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
+    else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) mode = 'rest'; }
+  }
+  function tick(t) {
+    if (last) acc += (t - last) / 1000;
+    last = t;
+    // Возврат быстрее подхвата: осьминог «ставится» на место.
+    const step = 1 / (mode === 'release' ? FPS * 1.6 : FPS);
+    while (acc >= step) { acc -= step; advance(); }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  function onHead(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (y > r.height * HEAD_BOTTOM) return false;
+    const px = ctx.getImageData(Math.floor(x * canvas.width / r.width), Math.floor(y * canvas.height / r.height), 1, 1).data;
+    return px[3] > 40;
+  }
+
+  // Окно за курсором ведёт Rust (mascot_drag): захват указателя в WebView2 теряется,
+  // как только окно поехало. Об отпускании кнопки приходит событие mascot://drop.
+  let held = false;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || held || !onHead(e)) return;
+    held = true;
+    canvas.classList.add('held');
+    if (mode !== 'grab') { mode = 'grab'; if (frame >= LOOP_FROM) frame = 0; }
+    invoke('mascot_drag').catch((err) => { console.error('mascot drag', err); drop(); });
+  });
+  canvas.addEventListener('pointermove', (e) => { if (!held) canvas.classList.toggle('head', onHead(e)); });
+  function drop() {
+    if (!held) return;
+    held = false;
+    canvas.classList.remove('held');
+    mode = 'release';
+    frame = Math.min(frame, RELEASE_FROM);
+  }
+  win.listen('mascot://drop', drop);
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

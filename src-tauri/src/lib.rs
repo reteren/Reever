@@ -25,6 +25,7 @@ pub mod langid;
 pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
+pub mod mascot;
 pub mod picker;
 pub mod procs;
 pub mod recognizer;
@@ -340,6 +341,7 @@ pub fn run() {
             if !launched_hidden() {
                 show_main(app.handle());
             }
+            mascot::spawn(app.handle());
 
             // --- глобальные хоткеи: push-to-talk + mute ---
             // источник правды для пере-регистрации на лету (set_hotkey / set_mute_hotkey)
@@ -421,6 +423,7 @@ pub fn run() {
             commands_api::get_wallpaper,
             commands_api::check_everything,
             commands_api::set_ui_language,
+            mascot::mascot_drag,
             picker::picker_choose,
             picker::picker_close,
             picker::picker_ready,

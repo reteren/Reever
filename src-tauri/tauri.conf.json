@@ -39,6 +39,22 @@
         "skipTaskbar": true,
         "center": true,
         "focus": true
+      },
+      {
+        "label": "mascot",
+        "create": false,
+        "title": "Reever",
+        "url": "mascot.html",
+        "width": 120,
+        "height": 160,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false
       }
     ],
     "security": {
