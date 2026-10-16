@@ -2,8 +2,9 @@
 //! события интерфейса, диспетчер. Вся логика «когда фраза закончилась и что в ней
 //! сказано» — в engine.rs; здесь только побочные эффекты.
 
+use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
-use std::sync::mpsc::{sync_channel, RecvTimeoutError};
+use std::sync::mpsc::{channel, sync_channel, Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -21,7 +22,7 @@ use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
 use crate::engine::{DictationEndReason, Engine, EngineConfig, EngineEvent};
 use crate::events::{set_state, ui_log};
 use crate::langid::SpeechLid;
-use crate::speech::LanguageId;
+use crate::speech::{LanguageId, Timed, Transcriber};
 use crate::vad::SileroVad;
 use crate::{everything, textnorm, typing};
 
@@ -29,6 +30,92 @@ use crate::{everything, textnorm, typing};
 /// потоке, поэтому запас ~5 с: длинная фраза в простое не должна терять аудио,
 /// пока модель её разбирает (колбэк при переполнении молча выбрасывает чанки).
 const AUDIO_QUEUE: usize = 512;
+const WAKE_PREROLL_SAMPLES: usize = 16_000;
+const LOADING_AUDIO_LIMIT_SAMPLES: usize = 60 * 16_000;
+
+/// Main ASR в lazy-режиме остаётся типом Engine, но сам объект хранится отдельно:
+/// worker может установить или забрать его, не пересоздавая VAD и wake-spotter.
+#[derive(Clone, Default)]
+struct LazyAsr {
+    inner: Arc<Mutex<Option<Asr>>>,
+}
+
+impl LazyAsr {
+    fn loaded(asr: Asr) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(Some(asr))),
+        }
+    }
+
+    fn install(&self, asr: Asr) {
+        if let Ok(mut slot) = self.inner.lock() {
+            *slot = Some(asr);
+        }
+    }
+
+    fn unload(&self) -> bool {
+        self.inner
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.take())
+            .is_some()
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.inner.lock().is_ok_and(|slot| slot.is_some())
+    }
+}
+
+impl Transcriber for LazyAsr {
+    fn transcribe(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        match self
+            .inner
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.as_mut().map(|asr| asr.transcribe(pcm)))
+        {
+            Some(result) => result,
+            None => Ok(String::new()),
+        }
+    }
+
+    fn transcribe_timed(&mut self, pcm: &[i16]) -> anyhow::Result<Timed> {
+        match self
+            .inner
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.as_mut().map(|asr| asr.transcribe_timed(pcm)))
+        {
+            Some(result) => result,
+            None => Ok(Timed::default()),
+        }
+    }
+
+    fn transcribe_verbatim(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        match self
+            .inner
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.as_mut().map(|asr| asr.transcribe_verbatim(pcm)))
+        {
+            Some(result) => result,
+            None => Ok(String::new()),
+        }
+    }
+}
+
+struct LoadedModels {
+    primary: Asr,
+    second: Option<Asr>,
+    lid: Option<SpeechLid>,
+    warnings: Vec<String>,
+}
+
+#[derive(Clone, Copy)]
+enum LoadReason {
+    Wake,
+    Hotkey,
+}
 
 /// Поток распознавания. «Сохранить» в настройках поднимает `shared.reload`: поток
 /// закрывает микрофон и модели и стартует заново с новыми настройками. После ошибки
@@ -48,7 +135,10 @@ pub fn run_worker(app: AppHandle, shared: Arc<SharedState>) {
         } else if !shared.reload.load(Ordering::Relaxed) {
             return;
         }
-        ui_log(&app, "⟳ настройки применены — распознавание перезапускается");
+        ui_log(
+            &app,
+            "⟳ настройки применены — распознавание перезапускается",
+        );
     }
 }
 
@@ -117,7 +207,14 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     }));
     set_state(app, "loading");
     emit_status(app, &status);
-    ui_log(app, format!("Reever {} · режим активации: {}", env!("CARGO_PKG_VERSION"), s.activation_mode));
+    ui_log(
+        app,
+        format!(
+            "Reever {} · режим активации: {}",
+            env!("CARGO_PKG_VERSION"),
+            s.activation_mode
+        ),
+    );
 
     if s.offline_mode {
         ui_log(
@@ -128,18 +225,28 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         spawn_everything_probe(app, cfg, &status);
     }
 
-    ui_log(
-        app,
-        format!(
-            "загрузка модели распознавания: {}",
-            cfg.asr_model_dir.display()
-        ),
-    );
-    let asr = Asr::new(&AsrConfig {
-        model_dir: cfg.asr_model_dir.clone(),
-        num_threads: s.asr_threads.max(1) as i32,
-    })
-    .inspect_err(|_| set_asr_status(app, &status, "error"))?;
+    let lazy_loading = s.models_unload_s > 0;
+    let asr = if lazy_loading {
+        ui_log(
+            app,
+            "модели распознавания будут загружены после wake или хоткея",
+        );
+        LazyAsr::default()
+    } else {
+        ui_log(
+            app,
+            format!(
+                "загрузка модели распознавания: {}",
+                cfg.asr_model_dir.display()
+            ),
+        );
+        let primary = Asr::new(&AsrConfig {
+            model_dir: cfg.asr_model_dir.clone(),
+            num_threads: s.asr_threads.max(1) as i32,
+        })
+        .inspect_err(|_| set_asr_status(app, &status, "error"))?;
+        LazyAsr::loaded(primary)
+    };
     let vad = SileroVad::new(&cfg.vad_model_path, s.vad_threshold)
         .inspect_err(|_| set_asr_status(app, &status, "error"))?;
     let mut engine = Engine::new(
@@ -157,11 +264,23 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
             dictation_live: s.dictation_live,
         },
-        asr,
+        asr.clone(),
         vad,
     );
+    engine.set_strict_spotted_wake(lazy_loading);
     if s.russian_enabled() {
-        enable_second_language(app, cfg, &mut engine);
+        engine.set_bilingual(None, None, language_mode(s));
+        if !lazy_loading {
+            let (second, lid, warnings) = load_secondary_models(cfg);
+            for warning in warnings {
+                ui_log(app, warning);
+            }
+            engine.set_bilingual(
+                second.map(|model| Box::new(model) as Box<dyn Transcriber + Send>),
+                lid.map(|model| Box::new(model) as Box<dyn LanguageId + Send>),
+                language_mode(s),
+            );
+        }
         enable_anglicisms(app, cfg, &mut engine);
     } else {
         // Только английский: основная модель уже английская, второй язык и словарь
@@ -199,7 +318,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut mic_checked = std::time::Instant::now();
     let mut meter = crate::events::LevelMeter::new();
     let trace = std::env::var_os("REEVER_TRACE").is_some();
+    let mut last_activity = std::time::Instant::now();
     let mut last_warm = std::time::Instant::now();
+    let mut load_rx: Option<Receiver<anyhow::Result<LoadedModels>>> = None;
+    let mut loading_audio: Vec<i16> = Vec::new();
+    let mut load_reason: Option<LoadReason> = None;
+    let mut recent_chunks: VecDeque<Vec<i16>> = VecDeque::new();
+    let mut recent_samples = 0usize;
     loop {
         if shared.reload.load(Ordering::Relaxed) {
             return Ok(());
@@ -208,10 +333,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             mic_checked = std::time::Instant::now();
             let dropped = crate::audio::DROPPED_SAMPLES.swap(0, Ordering::Relaxed);
             if dropped > 0 {
-                ui_log(app, format!(
-                    "⚠ потерян звук: {} мс — распознавание не успевало за микрофоном",
-                    dropped * 1000 / 16_000
-                ));
+                ui_log(
+                    app,
+                    format!(
+                        "⚠ потерян звук: {} мс — распознавание не успевало за микрофоном",
+                        dropped * 1000 / 16_000
+                    ),
+                );
             }
             let now = crate::micwatch::mic_level();
             if let (Some(before), Some(after)) = (mic_level, now) {
@@ -246,7 +374,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                     mic_level = crate::micwatch::mic_level();
                     mic_checked = std::time::Instant::now();
                     match mic_level {
-                        Some(level) => ui_log(app, format!("🔊 микрофон включён (громкость в Windows {} %)", level.percent)),
+                        Some(level) => ui_log(
+                            app,
+                            format!(
+                                "🔊 микрофон включён (громкость в Windows {} %)",
+                                level.percent
+                            ),
+                        ),
                         None => ui_log(app, "🔊 микрофон включён"),
                     }
                 }
@@ -268,23 +402,157 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         meter.push(app, &chunk);
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
+        let model_ready = asr.is_loaded();
+        let loading = load_rx.is_some();
+        if lazy_loading && !model_ready {
+            if loading {
+                append_loading_audio(&mut loading_audio, &chunk);
+            } else {
+                remember_recent_audio(&mut recent_chunks, &mut recent_samples, &chunk);
+                let hotkey_requested = shared.force_listen.load(Ordering::Relaxed);
+                worker.poll_triggers(&mut engine);
+                let hotkey_started =
+                    hotkey_requested && !shared.force_listen.load(Ordering::Relaxed);
+                let calibration_started = worker.calibrating.is_some();
+                if hotkey_started || calibration_started {
+                    loading_audio.extend_from_slice(&chunk);
+                    load_reason = Some(LoadReason::Hotkey);
+                    load_rx = Some(spawn_model_loader(cfg));
+                    last_activity = std::time::Instant::now();
+                    set_asr_status(app, &status, "loading");
+                    set_state(app, "loading");
+                    ui_log(app, "⏳ загружаю модели…");
+                } else {
+                    let started = std::time::Instant::now();
+                    let events = engine.push_audio(&chunk);
+                    let spent = started.elapsed();
+                    let spotted = events
+                        .iter()
+                        .any(|event| matches!(event, EngineEvent::WakeSpotted));
+                    for ev in events {
+                        worker.handle(&mut engine, ev);
+                    }
+                    if spotted {
+                        loading_audio = flatten_chunks(&recent_chunks);
+                        load_reason = Some(LoadReason::Wake);
+                        load_rx = Some(spawn_model_loader(cfg));
+                        last_activity = std::time::Instant::now();
+                        set_asr_status(app, &status, "loading");
+                        set_state(app, "loading");
+                        ui_log(app, "⏳ загружаю модели…");
+                    }
+                    if trace && spent >= Duration::from_millis(250) {
+                        ui_log(
+                            app,
+                            format!("trace: распознавание заняло {} мс", spent.as_millis()),
+                        );
+                    }
+                }
+            }
+
+            if let Some(result) = take_loader_result(&mut load_rx) {
+                let reason = load_reason.take().unwrap_or(LoadReason::Wake);
+                match result {
+                    Ok(loaded) => {
+                        for warning in loaded.warnings {
+                            ui_log(app, warning);
+                        }
+                        asr.install(loaded.primary);
+                        if s.russian_enabled() {
+                            engine.set_bilingual(
+                                loaded
+                                    .second
+                                    .map(|model| Box::new(model) as Box<dyn Transcriber + Send>),
+                                loaded
+                                    .lid
+                                    .map(|model| Box::new(model) as Box<dyn LanguageId + Send>),
+                                language_mode(s),
+                            );
+                        }
+                        if matches!(reason, LoadReason::Wake) {
+                            engine.reset();
+                            engine.mark_spotted_wake();
+                        }
+                        set_asr_status(app, &status, "ready");
+                        worker.sync_grammar(&mut engine);
+                        worker.sync_targets(&mut engine);
+                        let mut replay = std::mem::take(&mut loading_audio);
+                        let events = engine.push_audio(&replay);
+                        replay.fill(0);
+                        for ev in events {
+                            worker.handle(&mut engine, ev);
+                        }
+                        recent_chunks.clear();
+                        recent_samples = 0;
+                        last_activity = std::time::Instant::now();
+                    }
+                    Err(error) => {
+                        loading_audio.fill(0);
+                        loading_audio.clear();
+                        engine.reset();
+                        set_asr_status(app, &status, "error");
+                        set_state(app, "idle");
+                        ui_log(app, format!("⚠ модели не загружены: {error:#}"));
+                        recent_chunks.clear();
+                        recent_samples = 0;
+                    }
+                }
+            }
+            continue;
+        }
+
         worker.poll_triggers(&mut engine);
         let started = std::time::Instant::now();
         let events = engine.push_audio(&chunk);
         let spent = started.elapsed();
-        if trace && spent >= Duration::from_millis(250) {
-            ui_log(app, format!("trace: распознавание заняло {} мс", spent.as_millis()));
-        }
+        let activity = events.iter().any(is_activity_event);
         for ev in events {
             worker.handle(&mut engine, ev);
         }
-        // Минута без подогрева — прогоняем модели вхолостую, пока в эфире тихо.
-        if last_warm.elapsed() >= Duration::from_secs(60) && engine.can_keep_warm() {
+        if activity {
+            last_activity = std::time::Instant::now();
+        }
+        if trace && spent >= Duration::from_millis(250) {
+            ui_log(
+                app,
+                format!("trace: распознавание заняло {} мс", spent.as_millis()),
+            );
+        }
+
+        // 0 — прежний режим с постоянными моделями и периодическим keep-warm.
+        if !lazy_loading && last_warm.elapsed() >= Duration::from_secs(60) && engine.can_keep_warm()
+        {
             let started = std::time::Instant::now();
             engine.keep_warm();
             last_warm = std::time::Instant::now();
             if trace {
-                ui_log(app, format!("trace: подогрев моделей {} мс", started.elapsed().as_millis()));
+                ui_log(
+                    app,
+                    format!(
+                        "trace: подогрев моделей {} мс",
+                        started.elapsed().as_millis()
+                    ),
+                );
+            }
+        }
+
+        // В lazy-режиме выгружаем только в чистом Idle. keep_warm не вызывается для
+        // отсутствующих моделей: следующий триггер загрузит их в фоне.
+        if lazy_loading
+            && asr.is_loaded()
+            && s.models_unload_s > 0
+            && last_activity.elapsed() >= Duration::from_secs(s.models_unload_s as u64)
+            && engine.can_keep_warm()
+            && worker.confirm_op.is_none()
+            && worker.calibrating.is_none()
+            && worker.dictation.is_none()
+            && worker.choice_session.is_none()
+        {
+            engine.set_bilingual(None, None, language_mode(s));
+            if asr.unload() {
+                ui_log(app, "модели распознавания выгружены после простоя");
+                set_asr_status(app, &status, "ready");
+                last_activity = std::time::Instant::now();
             }
         }
     }
@@ -322,53 +590,49 @@ where
     let dir = crate::config::resource(app, &format!("model/{}", s.wake_spotter_model));
     match crate::wake::StreamingWakeSpotter::new(&dir, &s.wake_words) {
         Ok(spotter) => {
-            ui_log(app, format!("✓ фоновый детектор «ривер»: {}", s.wake_spotter_model));
+            ui_log(
+                app,
+                format!("✓ фоновый детектор «ривер»: {}", s.wake_spotter_model),
+            );
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         Err(e) => ui_log(app, format!("⚠ фоновый детектор «ривер» недоступен: {e:#}")),
     }
 }
 
-/// Второй язык цели команды («ривер поиск ютуб never gonna give you up»): вторая модель
-/// распознаёт вырезанную цель, определитель языка выбирает вариант (docs/bilingual.md).
-/// Нет модели на диске — не фатально: работаем только по-русски и пишем об этом в лог.
-fn enable_second_language<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
-where
-    T: crate::speech::Transcriber,
-    V: crate::speech::VoiceDetector,
-{
+/// Загружает вторую модель и LID после основной. Отсутствие этих моделей не
+/// блокирует команды на основном языке: bilingual.rs использует текстовые эвристики.
+fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>, Vec<String>) {
     let s = &cfg.settings;
+    let mut warnings = Vec::new();
     let second = match Asr::new(&AsrConfig {
         model_dir: cfg.second_model_dir.clone(),
         num_threads: s.asr_threads.max(1) as i32,
     }) {
-        Ok(asr) => asr,
-        Err(e) => {
-            ui_log(app, format!("⚠ второй язык недоступен: {e:#}"));
-            return;
+        Ok(asr) => Some(asr),
+        Err(error) => {
+            warnings.push(format!("⚠ второй язык недоступен: {error:#}"));
+            None
         }
     };
-    let lid: Option<Box<dyn LanguageId + Send>> = match &cfg.lid_model_dir {
-        Some(dir) => match SpeechLid::new(dir, 1) {
-            Ok(lid) => Some(Box::new(lid)),
-            Err(e) => {
-                ui_log(
-                    app,
-                    format!("⚠ определитель языка недоступен ({e:#}) — только эвристика"),
-                );
-                None
-            }
-        },
-        None => None,
+    let lid = if second.is_some() {
+        match &cfg.lid_model_dir {
+            Some(dir) => match SpeechLid::new(dir, 1) {
+                Ok(lid) => Some(lid),
+                Err(error) => {
+                    warnings.push(format!(
+                        "⚠ определитель языка недоступен ({error:#}) — только эвристика"
+                    ));
+                    None
+                }
+            },
+            None => None,
+        }
+    } else {
+        None
     };
-    let mode = match s.payload_language.as_str() {
-        "ru" => LangMode::Ru,
-        "en" => LangMode::En,
-        _ => LangMode::Auto,
-    };
-    ui_log(
-        app,
-        format!(
+    if second.is_some() {
+        warnings.push(format!(
             "✓ второй язык: {} · определитель: {} · язык цели: {}",
             s.second_asr_model,
             if lid.is_some() {
@@ -377,9 +641,101 @@ where
                 "эвристика"
             },
             s.payload_language
-        ),
-    );
-    engine.set_bilingual(Some(Box::new(second)), lid, mode);
+        ));
+    }
+    (second, lid, warnings)
+}
+
+fn language_mode(settings: &crate::config::Settings) -> LangMode {
+    match settings.payload_language.as_str() {
+        "ru" => LangMode::Ru,
+        "en" => LangMode::En,
+        _ => LangMode::Auto,
+    }
+}
+
+fn spawn_model_loader(cfg: &ReeverConfig) -> Receiver<anyhow::Result<LoadedModels>> {
+    let cfg = cfg.clone();
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        let loaded = (|| {
+            let primary = Asr::new(&AsrConfig {
+                model_dir: cfg.asr_model_dir.clone(),
+                num_threads: cfg.settings.asr_threads.max(1) as i32,
+            })?;
+            let (second, lid, warnings) = if cfg.settings.russian_enabled() {
+                load_secondary_models(&cfg)
+            } else {
+                (None, None, Vec::new())
+            };
+            Ok(LoadedModels {
+                primary,
+                second,
+                lid,
+                warnings,
+            })
+        })();
+        let _ = tx.send(loaded);
+    });
+    rx
+}
+
+fn take_loader_result(
+    receiver: &mut Option<Receiver<anyhow::Result<LoadedModels>>>,
+) -> Option<anyhow::Result<LoadedModels>> {
+    let rx = receiver.as_ref()?;
+    match rx.try_recv() {
+        Ok(result) => {
+            receiver.take();
+            Some(result)
+        }
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+            receiver.take();
+            Some(Err(anyhow::anyhow!(
+                "поток загрузки моделей завершился без результата"
+            )))
+        }
+        Err(std::sync::mpsc::TryRecvError::Empty) => None,
+    }
+}
+
+fn remember_recent_audio(chunks: &mut VecDeque<Vec<i16>>, sample_count: &mut usize, chunk: &[i16]) {
+    chunks.push_back(chunk.to_vec());
+    *sample_count = sample_count.saturating_add(chunk.len());
+    while *sample_count > WAKE_PREROLL_SAMPLES {
+        let Some(oldest) = chunks.pop_front() else {
+            break;
+        };
+        *sample_count = sample_count.saturating_sub(oldest.len());
+    }
+}
+
+fn flatten_chunks(chunks: &VecDeque<Vec<i16>>) -> Vec<i16> {
+    let sample_count = chunks.iter().map(Vec::len).sum();
+    let mut audio = Vec::with_capacity(sample_count);
+    for chunk in chunks {
+        audio.extend_from_slice(chunk);
+    }
+    audio
+}
+
+fn append_loading_audio(audio: &mut Vec<i16>, chunk: &[i16]) {
+    audio.extend_from_slice(chunk);
+}
+
+fn is_activity_event(event: &EngineEvent) -> bool {
+    matches!(
+        event,
+        EngineEvent::WakeSpotted
+            | EngineEvent::WakeHeard
+            | EngineEvent::Command { .. }
+            | EngineEvent::Confirm(_)
+            | EngineEvent::Choice(_)
+            | EngineEvent::Calibration { .. }
+            | EngineEvent::DictationStart
+            | EngineEvent::DictationEnd(_)
+            | EngineEvent::State("listening" | "busy")
+    )
 }
 
 /// Побочные эффекты событий Engine. Отдельная структура, чтобы не таскать пять
@@ -494,32 +850,44 @@ impl Worker<'_> {
         T: crate::speech::Transcriber,
         V: crate::speech::VoiceDetector,
     {
-        if self.targets_checked.is_some_and(|at| at.elapsed() < Duration::from_secs(1)) {
+        if self
+            .targets_checked
+            .is_some_and(|at| at.elapsed() < Duration::from_secs(1))
+        {
             return;
         }
         self.targets_checked = Some(std::time::Instant::now());
-        let Some(targets) = self.shared.actions.lock().ok().map(|actions| {
-            actions
-                .iter()
-                .flat_map(|action| {
-                    action
-                        .phrases
-                        .iter()
-                        .chain(std::iter::once(&action.label))
-                        .map(|target| (target.clone(), action.id.clone()))
-                })
-                .collect::<Vec<(String, String)>>()
-        }) else {
+        let Some(actions) = self.shared.actions.lock().ok() else {
             return;
         };
         use std::hash::{Hash, Hasher};
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        targets.hash(&mut hasher);
-        let fingerprint = hasher.finish();
-        if self.targets_fingerprint != Some(fingerprint) {
-            engine.set_known_targets(targets);
-            self.targets_fingerprint = Some(fingerprint);
+        let mut count = 0usize;
+        for action in actions.iter() {
+            for target in action.phrases.iter().chain(std::iter::once(&action.label)) {
+                target.hash(&mut hasher);
+                action.id.hash(&mut hasher);
+                count += 1;
+            }
         }
+        count.hash(&mut hasher);
+        let fingerprint = hasher.finish();
+        if self.targets_fingerprint == Some(fingerprint) {
+            return;
+        }
+        let targets = actions
+            .iter()
+            .flat_map(|action| {
+                action
+                    .phrases
+                    .iter()
+                    .chain(std::iter::once(&action.label))
+                    .map(|target| (target.clone(), action.id.clone()))
+            })
+            .collect::<Vec<(String, String)>>();
+        drop(actions);
+        engine.set_known_targets(targets);
+        self.targets_fingerprint = Some(fingerprint);
     }
 
     /// Внешние триггеры из UI/хоткеев: калибровка и push-to-talk.
@@ -578,7 +946,11 @@ impl Worker<'_> {
                 ui_log(self.app, "● слушаю команду…");
                 self.wake_sound();
             }
-            EngineEvent::WakeSpotted => self.wake_sound(),
+            EngineEvent::WakeSpotted => {
+                if self.cfg.settings.models_unload_s == 0 {
+                    self.wake_sound();
+                }
+            }
             EngineEvent::Partial(t) => {
                 if !self.private() {
                     let _ = self.app.emit("reever://partial", t);
@@ -644,7 +1016,10 @@ impl Worker<'_> {
         if !wait.is_zero() && !session.focus_logged {
             // Один раз за диктовку — что было в фокусе: по журналу видно, почему поле не нашлось.
             session.focus_logged = true;
-            ui_log(self.app, format!("⚠ поле ввода не найдено: {}", typing::describe_focus()));
+            ui_log(
+                self.app,
+                format!("⚠ поле ввода не найдено: {}", typing::describe_focus()),
+            );
         }
         None
     }
@@ -744,7 +1119,10 @@ impl Worker<'_> {
 
     /// Конец диктовки: что так и не нашло поле — последняя попытка, затем буфер обмена.
     fn settle_pending(&mut self) {
-        let has_pending = self.dictation.as_ref().is_some_and(|session| !session.pending.is_empty());
+        let has_pending = self
+            .dictation
+            .as_ref()
+            .is_some_and(|session| !session.pending.is_empty());
         if !has_pending {
             return;
         }
@@ -766,7 +1144,11 @@ impl Worker<'_> {
             session.clipboard_before = Some(typing::get_clipboard_text());
         }
         let rest = rest.replace('\n', "\r\n");
-        let rest = if session.typed_chars == 0 { rest.trim_start().to_string() } else { rest };
+        let rest = if session.typed_chars == 0 {
+            rest.trim_start().to_string()
+        } else {
+            rest
+        };
         session.clipboard.push_str(&rest);
         if typing::set_clipboard(&session.clipboard).is_err() {
             ui_log(self.app, "⚠ буфер обмена занят — текст потерян");
@@ -917,7 +1299,10 @@ impl Worker<'_> {
             return;
         }
         if text.trim().is_empty() {
-            ui_log(self.app, "… номер не услышал — выбери в окне мышью или клавишами");
+            ui_log(
+                self.app,
+                "… номер не услышал — выбери в окне мышью или клавишами",
+            );
             set_state(self.app, "idle");
             return;
         }
@@ -937,7 +1322,10 @@ impl Worker<'_> {
                 if self.private() {
                     ui_log(self.app, "… не понял номер — выбери в окне");
                 } else {
-                    ui_log(self.app, format!("… не понял номер «{text}» — выбери в окне"));
+                    ui_log(
+                        self.app,
+                        format!("… не понял номер «{text}» — выбери в окне"),
+                    );
                 }
             }
         }

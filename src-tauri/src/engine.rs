@@ -10,9 +10,12 @@ use crate::dictation::{
 use crate::grammar::{Grammar, IntentKind};
 use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
 use crate::speech::{
-    samples, Lang, LanguageId, Timed, TimedWord, Transcriber, VoiceDetector, WakeSpotter, SAMPLE_RATE,
+    samples, Lang, LanguageId, Timed, TimedWord, Transcriber, VoiceDetector, WakeSpotter,
+    SAMPLE_RATE,
 };
-use crate::textnorm::{is_no, is_yes, normalize, starts_with_wake, strip_leading_fillers, strip_wake};
+use crate::textnorm::{
+    is_no, is_yes, normalize, starts_with_wake, strip_leading_fillers, strip_wake,
+};
 
 #[derive(Clone, Debug)]
 pub struct EngineConfig {
@@ -128,7 +131,9 @@ fn pause_before(audio: &[i16], at: usize) -> usize {
     const FRAME: usize = 160;
     let energies: Vec<f64> = audio
         .chunks(FRAME)
-        .map(|frame| (frame.iter().map(|&s| (s as f64).powi(2)).sum::<f64>() / frame.len() as f64).sqrt())
+        .map(|frame| {
+            (frame.iter().map(|&s| (s as f64).powi(2)).sum::<f64>() / frame.len() as f64).sqrt()
+        })
         .collect();
     if energies.is_empty() {
         return 0;
@@ -141,7 +146,11 @@ fn pause_before(audio: &[i16], at: usize) -> usize {
     // Слово могло начаться до отметки модели на ~150 мс: ищем тишину, кончающуюся рядом.
     let mut best = 0;
     for end in at_frame.saturating_sub(15)..=at_frame.min(energies.len()) {
-        let run = energies[..end].iter().rev().take_while(|&&energy| energy < quiet).count();
+        let run = energies[..end]
+            .iter()
+            .rev()
+            .take_while(|&&energy| energy < quiet)
+            .count();
         best = best.max(run);
     }
     best * FRAME * 1000 / SAMPLE_RATE as usize
@@ -157,27 +166,42 @@ fn mid_phrase_wake(
     wake_words: &[String],
     is_command: &dyn Fn(&str) -> bool,
 ) -> Option<usize> {
-    timed.words.iter().enumerate().skip(1).find_map(|(index, word)| {
-        let is_wake = strip_initial_wake(&word.text, wake_words).is_some_and(|rest| rest.trim().is_empty());
-        if !is_wake {
-            return None;
-        }
-        let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
-        let after: Vec<&str> = timed.words[index + 1..].iter().map(|w| w.text.as_str()).collect();
-        let commanded = !after.is_empty() && is_command(&after.join(" "));
-        (commanded || pause_before(audio, at) >= MID_WAKE_PAUSE_MS).then(|| at.saturating_sub(samples(80)))
-    })
+    timed
+        .words
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find_map(|(index, word)| {
+            let is_wake = strip_initial_wake(&word.text, wake_words)
+                .is_some_and(|rest| rest.trim().is_empty());
+            if !is_wake {
+                return None;
+            }
+            let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
+            let after: Vec<&str> = timed.words[index + 1..]
+                .iter()
+                .map(|w| w.text.as_str())
+                .collect();
+            let commanded = !after.is_empty() && is_command(&after.join(" "));
+            (commanded || pause_before(audio, at) >= MID_WAKE_PAUSE_MS)
+                .then(|| at.saturating_sub(samples(80)))
+        })
 }
 
 /// Слова, которые в диктовке после «ривер» заканчивают её, оставляя текст («ривер стоп»);
 /// остальные слова отмены («ривер отмена») стирают продиктованное.
 fn is_dictation_stop(text: &str) -> bool {
-    let words: Vec<String> = normalize(text).split_whitespace().map(String::from).collect();
+    let words: Vec<String> = normalize(text)
+        .split_whitespace()
+        .map(String::from)
+        .collect();
     !words.is_empty()
         && words.len() <= 2
         && words.iter().any(|word| {
-            matches!(word.as_str(), "стоп" | "stop" | "хватит" | "стопни" | "все" | "всё")
-                || word.starts_with("останов")
+            matches!(
+                word.as_str(),
+                "стоп" | "stop" | "хватит" | "стопни" | "все" | "всё"
+            ) || word.starts_with("останов")
                 || word.starts_with("законч")
         })
 }
@@ -267,6 +291,8 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     /// Язык диктовки, выбранный голосом («по-английски»); `None` — автоматически.
     dictation_lang: Option<Lang>,
     spotter: Option<Box<dyn WakeSpotter + Send>>,
+    /// Lazy-режим требует подтверждения найденного wake основной ASR-моделью.
+    strict_spotted_wake: bool,
     /// Сколько сэмплов прошло с последнего срабатывания детектора wake-слова.
     spot_age: Option<usize>,
     /// Диагностика (`REEVER_TRACE=1`): в журнал идёт каждая фраза простоя и решение по
@@ -295,8 +321,8 @@ const FAST_END_MS: u32 = 300;
 /// Длиннее этого фраза — не короткая команда (разговор, звонок): досрочно не проверяем.
 const FAST_END_MAX_PHRASE_MS: usize = 5_000;
 
-/// Срабатывание детектора позже этого от начала речи — слово в середине фразы
-/// («включи реверс»), а не обращение: wake говорят первым.
+/// Старый eager-режим принимает детектор только в начале речи; lazy-режим принимает
+/// срабатывание в любом месте и проверяет его основной ASR.
 const SPOT_WINDOW_MS: u32 = 1_000;
 
 /// Срабатывание детектора засчитывается фразе, если было не раньше этого до её конца
@@ -329,6 +355,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             lang_mode: LangMode::Auto,
             dictation_lang: None,
             spotter: None,
+            strict_spotted_wake: false,
             spot_age: None,
             trace: std::env::var_os("REEVER_TRACE").is_some(),
             idle_speech_age: None,
@@ -387,6 +414,16 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.spot_age = None;
     }
 
+    pub fn set_strict_spotted_wake(&mut self, strict: bool) {
+        self.strict_spotted_wake = strict;
+    }
+
+    /// После ленивой загрузки аудио повторно подаётся с pre-roll. Сохраняем факт,
+    /// что этот буфер начался от подтверждённого триггера, даже если spotter уже сбросил endpoint.
+    pub fn mark_spotted_wake(&mut self) {
+        self.spot_age = Some(0);
+    }
+
     /// Главный вход: очередной кусок 16 кГц mono из микрофона.
     /// Можно ли сейчас подогреть модели: простой и речи нет (идущую фразу не задерживаем).
     pub fn can_keep_warm(&self) -> bool {
@@ -433,7 +470,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     .idle_speech_age
                     .map_or(true, |age| age <= samples(SPOT_WINDOW_MS));
                 let fired = spotter.feed(pcm);
-                if fired && at_phrase_start {
+                if fired && (at_phrase_start || self.strict_spotted_wake) {
                     self.spot_age = Some(0);
                     out.push(EngineEvent::WakeSpotted);
                 } else if fired && self.trace {
@@ -856,11 +893,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     Mode::Listening(state) => {
                         out.push(EngineEvent::State("busy"));
                         let result = match state.kind {
-                            ListenKind::Command | ListenKind::Choice => match self.fast_timed.take() {
-                                Some(timed) => Ok(timed),
-                                None => self.asr.transcribe_timed(&audio),
+                            ListenKind::Command | ListenKind::Choice => {
+                                match self.fast_timed.take() {
+                                    Some(timed) => Ok(timed),
+                                    None => self.asr.transcribe_timed(&audio),
+                                }
+                                .map(|timed| self.second_language_only(&audio, timed))
                             }
-                            .map(|timed| self.second_language_only(&audio, timed)),
                             // Английское «yes/no» русская модель не слышит вовсе (пустой
                             // текст) — тогда ответ слушает вторая модель, как и английскую цель.
                             ListenKind::Confirm => self
@@ -1043,7 +1082,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 Some(rest) => rest,
                 None => return,
             },
-            Mode::Listening(state) => join_command(&state.prefix, &self.strip_repeated_wake(&timed.text)),
+            Mode::Listening(state) => {
+                join_command(&state.prefix, &self.strip_repeated_wake(&timed.text))
+            }
             _ => return,
         };
         if !self.is_known_command(&command) {
@@ -1068,7 +1109,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let grammar = self.grammar.as_ref().unwrap_or(&fallback);
         let target = match grammar.match_trigger(&command) {
             Some(found)
-                if matches!(found.intent.kind, IntentKind::Launch | IntentKind::Close | IntentKind::Kill) =>
+                if matches!(
+                    found.intent.kind,
+                    IntentKind::Launch | IntentKind::Close | IntentKind::Kill
+                ) =>
             {
                 normalize(&found.payload)
             }
@@ -1079,7 +1123,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         // «анти гравити» — начало «анти гравити идея» другого действия: короткая пауза
         // посреди названия не должна открыть другую программу, такую цель дослушиваем.
         // «маркноут» и «маркноут маркноут» у одного действия — не помеха.
-        let Some(owner) = self.known_targets.get(&target).filter(|owner| !owner.is_empty()) else {
+        let Some(owner) = self
+            .known_targets
+            .get(&target)
+            .filter(|owner| !owner.is_empty())
+        else {
             return false;
         };
         let longer = format!("{target} ");
@@ -1120,15 +1168,35 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let spotted = self
             .spot_age
             .is_some_and(|age| age <= audio.len() + samples(SPOT_GRACE_MS));
-        let timed = if spotted && strip_initial_wake(&timed.text, &self.cfg.wake_words).is_none() {
+        let timed = if spotted && self.strict_spotted_wake {
+            match confirm_spotted_wake(&timed, &self.cfg.wake_words) {
+                Some((index, confirmed)) => {
+                    if index > 0 {
+                        out.push(EngineEvent::Log(
+                            "wake: большая модель подтвердила «ривер» посреди фразы".into(),
+                        ));
+                    }
+                    confirmed
+                }
+                None => {
+                    out.push(EngineEvent::Log(
+                        "wake: детектор сработал, но большая модель не подтвердила «ривер»; фраза не принята".into(),
+                    ));
+                    return;
+                }
+            }
+        } else if spotted && strip_initial_wake(&timed.text, &self.cfg.wake_words).is_none() {
             match repair_wake(&timed, &self.cfg.wake_words, audio.len(), &is_russian_word) {
                 Some(repaired) => {
-                    out.push(EngineEvent::Log("wake: «ривер» подтвердил фоновый детектор".into()));
+                    out.push(EngineEvent::Log(
+                        "wake: «ривер» подтвердил фоновый детектор".into(),
+                    ));
                     repaired
                 }
                 None => {
                     out.push(EngineEvent::Log(
-                        "wake: детектор слышал «ривер», большая модель — нет; фраза не принята".into(),
+                        "wake: детектор слышал «ривер», большая модель — нет; фраза не принята"
+                            .into(),
                     ));
                     timed
                 }
@@ -1141,8 +1209,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             // wake не в её начале. После паузы — это обращение: разбираем хвост с «ривер».
             if self.trace {
                 for word in timed.words.iter().skip(1) {
-                    if strip_initial_wake(&word.text, &self.cfg.wake_words).is_some_and(|r| r.trim().is_empty()) {
-                        let at = ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
+                    if strip_initial_wake(&word.text, &self.cfg.wake_words)
+                        .is_some_and(|r| r.trim().is_empty())
+                    {
+                        let at =
+                            ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
                         out.push(EngineEvent::Log(format!(
                             "trace: «{}» посреди фразы, пауза перед ним {} мс (нужно ≥ {MID_WAKE_PAUSE_MS})",
                             word.text,
@@ -1154,15 +1225,20 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             // Команда после «ривер»: глагол грамматики с целью («закрой калькулятор») или
             // точное название действия («калькулятор»).
             let grammar = self.grammar.clone();
-            let targets: std::collections::HashSet<String> = self.known_targets.keys().cloned().collect();
+            let targets: std::collections::HashSet<String> =
+                self.known_targets.keys().cloned().collect();
             let is_command = |text: &str| {
                 let normalized = normalize(text);
                 (normalized.split_whitespace().count() >= 2
-                    && grammar.as_ref().is_some_and(|g| g.match_trigger(text).is_some()))
+                    && grammar
+                        .as_ref()
+                        .is_some_and(|g| g.match_trigger(text).is_some()))
                     || targets.contains(&normalized)
             };
             if let Some(start) = mid_phrase_wake(&timed, audio, &self.cfg.wake_words, &is_command) {
-                out.push(EngineEvent::Log("wake: «ривер» после паузы посреди речи".into()));
+                out.push(EngineEvent::Log(
+                    "wake: «ривер» после паузы посреди речи".into(),
+                ));
                 let tail = &audio[start..];
                 let result = self.asr.transcribe_timed(tail);
                 if result.as_ref().is_ok_and(|tail_timed| {
@@ -1183,6 +1259,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             self.begin_listening(ListenKind::Command, rest.to_string());
             out.push(EngineEvent::State("listening"));
         } else {
+            if spotted && self.strict_spotted_wake {
+                out.push(EngineEvent::WakeHeard);
+            }
             out.push(EngineEvent::State("busy"));
             let resolved = self.resolve_command(audio, &timed, "");
             out.push(EngineEvent::Command {
@@ -1307,7 +1386,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.idle_speech_age = None;
         let (pre_roll, soft_max, max) = DICTATION_LIMITS;
         self.segmenter.set_limits(pre_roll, soft_max, max);
-        self.segmenter.set_end_silence_ms(self.cfg.dictation_pause_ms);
+        self.segmenter
+            .set_end_silence_ms(self.cfg.dictation_pause_ms);
         self.mode = Mode::Dictating(DictationState {
             idle_remaining: samples(self.cfg.dictation_idle_ms.max(1_000)),
             speech_started: true,
@@ -1316,7 +1396,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         });
         let text = self.before_wake_word(&trim_words(&raw, skip, 0));
         if !text.trim().is_empty() {
-            let text = if self.dictation_lang == Some(Lang::En) { text } else { self.english_words(text) };
+            let text = if self.dictation_lang == Some(Lang::En) {
+                text
+            } else {
+                self.english_words(text)
+            };
             out.push(EngineEvent::DictationPartial(text));
         }
         true
@@ -1372,7 +1456,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             };
             let start = ((start_s.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
             let cropped = &audio[start..];
-            let min_len = if skip < timed.words.len() { samples(200) } else { samples(600) };
+            let min_len = if skip < timed.words.len() {
+                samples(200)
+            } else {
+                samples(600)
+            };
             if cropped.len() >= min_len {
                 let ru = self.asr.transcribe_verbatim(cropped).unwrap_or_default();
                 return self.dictation_text(cropped, ru);
@@ -1537,10 +1625,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         // акцентом уверенно говорит «ru», а русская модель слышит транслит или пустоту.
         let en_raw = second.transcribe_verbatim(audio).unwrap_or_default();
         if mode == LangMode::En {
-            return if en_raw.trim().is_empty() { ru_raw } else { en_raw };
+            return if en_raw.trim().is_empty() {
+                ru_raw
+            } else {
+                en_raw
+            };
         }
-        let long_enough =
-            audio.len() as f32 * 1000.0 / SAMPLE_RATE as f32 >= MIN_LID_DURATION_MS;
+        let long_enough = audio.len() as f32 * 1000.0 / SAMPLE_RATE as f32 >= MIN_LID_DURATION_MS;
         let lid = match self.lid.as_deref_mut() {
             Some(lid) if long_enough => lid.detect(audio).ok(),
             _ => None,
@@ -1562,10 +1653,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         };
         // «ревер» — запись wake-слова, а не river: иначе «ревер стоп» перестаёт быть командой.
         let is_russian = |word: &str| {
-            if strip_initial_wake(word, &self.cfg.wake_words).is_some_and(|rest| rest.trim().is_empty()) {
+            if strip_initial_wake(word, &self.cfg.wake_words)
+                .is_some_and(|rest| rest.trim().is_empty())
+            {
                 return Some(true);
             }
-            crate::spellcheck::misspelled_ratio("ru-RU", word).map(|(ratio, count)| count == 1 && ratio == 0.0)
+            crate::spellcheck::misspelled_ratio("ru-RU", word)
+                .map(|(ratio, count)| count == 1 && ratio == 0.0)
         };
         anglicisms.restore(&text, &is_russian)
     }
@@ -1684,7 +1778,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let normalized: Vec<String> = words.iter().map(|word| normalize(word)).collect();
         match normalized.iter().position(|word| {
             !word.is_empty()
-                && strip_initial_wake(word, &self.cfg.wake_words).is_some_and(|rest| rest.trim().is_empty())
+                && strip_initial_wake(word, &self.cfg.wake_words)
+                    .is_some_and(|rest| rest.trim().is_empty())
         }) {
             Some(index) => words[..index].join(" "),
             None => raw.to_string(),
@@ -1792,6 +1887,60 @@ fn repair_wake(
         text: text_words.join(" "),
         words: timed_words,
     })
+}
+
+/// Lazy-режим не полагается на fuzzy `strip_wake` для ложных KWS-совпадений вроде
+/// «ревёт» и «реверс». Принимает точное wake-слово, склейку wake+хвост или односимвольную
+/// ошибку ASR, только если она не является словарным русским словом.
+fn confirm_spotted_wake(timed: &Timed, wake_words: &[String]) -> Option<(usize, Timed)> {
+    let words: Vec<&str> = timed.text.split_whitespace().collect();
+    let canonical = normalize(wake_words.first()?);
+    if canonical.is_empty() {
+        return None;
+    }
+    let index = words.iter().position(|word| {
+        let word = normalize(word);
+        if wake_words.iter().any(|wake| normalize(wake) == word) {
+            return true;
+        }
+        if let Some(tail) = word.strip_prefix(&canonical) {
+            if tail.chars().count() >= 2 {
+                return true;
+            }
+        }
+        let word_len = word.chars().count();
+        let wake_len = canonical.chars().count();
+        word_len <= wake_len
+            && wake_len.saturating_sub(word_len) <= 1
+            && strsim::levenshtein(&word, &canonical) == 1
+            && is_russian_word(&word) == Some(false)
+    })?;
+
+    let recognized = normalize(words[index]);
+    let exact = wake_words.iter().any(|wake| normalize(wake) == recognized)
+        || recognized.starts_with(&canonical)
+            && recognized
+                .chars()
+                .count()
+                .saturating_sub(canonical.chars().count())
+                >= 2;
+    let mut confirmed_words = Vec::with_capacity(words.len() - index);
+    confirmed_words.push(if exact { recognized } else { canonical.clone() });
+    confirmed_words.extend(words.iter().skip(index + 1).map(|word| normalize(word)));
+
+    let mut confirmed = timed.clone();
+    confirmed.text = confirmed_words.join(" ");
+    if timed.words.len() == words.len() {
+        confirmed.words = timed.words.iter().skip(index).cloned().collect();
+        if !exact {
+            if let Some(first) = confirmed.words.first_mut() {
+                first.text = canonical;
+            }
+        }
+    } else {
+        confirmed.words.clear();
+    }
+    Some((index, confirmed))
 }
 
 /// Словарное ли русское слово (проверка орфографии Windows); `None` — словаря нет.
@@ -2574,7 +2723,9 @@ mod tests {
         let (mut engine, _, _, _) = engine(test_config(), &["мм", "да"]);
         engine.listen_confirm();
         let mut events = engine.push_audio(&phrase(123, 120));
-        assert!(!events.iter().any(|event| matches!(event, EngineEvent::Confirm(_))));
+        assert!(!events
+            .iter()
+            .any(|event| matches!(event, EngineEvent::Confirm(_))));
         events.extend(engine.push_audio(&phrase(123, 120)));
         assert!(contains(&events, &EngineEvent::Confirm(true)));
     }
@@ -2596,13 +2747,16 @@ mod tests {
         engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([true])))));
         let events = engine.push_audio(&phrase(123, 120));
         assert!(contains(&events, &EngineEvent::WakeSpotted), "{events:?}");
-        assert!(contains(
-            &events,
-            &EngineEvent::Command {
-                text: "открой загрузки".into(),
-                alt: None
-            }
-        ), "{events:?}");
+        assert!(
+            contains(
+                &events,
+                &EngineEvent::Command {
+                    text: "открой загрузки".into(),
+                    alt: None
+                }
+            ),
+            "{events:?}"
+        );
     }
 
     #[test]
@@ -2610,7 +2764,9 @@ mod tests {
         let (mut engine, _, _, _) = engine(test_config(), &["река открой загрузки"]);
         engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::new()))));
         let events = engine.push_audio(&phrase(123, 120));
-        assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
+        assert!(!events
+            .iter()
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
     }
 
     #[test]
@@ -2626,14 +2782,77 @@ mod tests {
             repair_wake(&timed("рибер открой хром"), &wake, long, &dict).map(|t| t.text),
             Some("ривер открой хром".into())
         );
-        assert_eq!(repair_wake(&timed("мотор ревет за окном"), &wake, long, &dict), None);
-        assert_eq!(repair_wake(&timed("река открой хром"), &wake, long, &dict), None);
+        assert_eq!(
+            repair_wake(&timed("мотор ревет за окном"), &wake, long, &dict),
+            None
+        );
+        assert_eq!(
+            repair_wake(&timed("река открой хром"), &wake, long, &dict),
+            None
+        );
         assert_eq!(
             repair_wake(&timed("ре"), &wake, samples(800), &dict).map(|t| t.text),
             Some("ривер".into())
         );
         let no_dictionary = |_: &str| None;
-        assert_eq!(repair_wake(&timed("рибер открой хром"), &wake, long, &no_dictionary), None);
+        assert_eq!(
+            repair_wake(&timed("рибер открой хром"), &wake, long, &no_dictionary),
+            None
+        );
+    }
+
+    #[test]
+    fn strict_spotter_confirmation_finds_wake_mid_phrase_and_rejects_similar_words() {
+        let wake = vec!["ривер".to_string(), "ревер".to_string()];
+        let timed = Timed {
+            text: "разговор ривер открой хром".into(),
+            words: [
+                ("разговор", 0.0, 0.4),
+                ("ривер", 0.5, 0.8),
+                ("открой", 0.9, 1.2),
+                ("хром", 1.3, 1.5),
+            ]
+            .into_iter()
+            .map(|(text, start, end)| TimedWord {
+                text: text.into(),
+                start,
+                end,
+            })
+            .collect(),
+        };
+        let (index, confirmed) = confirm_spotted_wake(&timed, &wake).unwrap();
+        assert_eq!(index, 1);
+        assert_eq!(confirmed.text, "ривер открой хром");
+        assert_eq!(confirmed.words[0].text, "ривер");
+
+        for false_wake in ["мотор ревет за окном", "включи реверс на гитаре"]
+        {
+            assert!(
+                confirm_spotted_wake(
+                    &Timed {
+                        text: false_wake.into(),
+                        words: Vec::new()
+                    },
+                    &wake
+                )
+                .is_none(),
+                "ложный wake принят: {false_wake}"
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_spotter_accepts_a_hit_after_the_start_of_a_phrase() {
+        let (mut engine, _, _, _) = engine(test_config(), &[""]);
+        engine.set_strict_spotted_wake(true);
+        engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([
+            false, false, false, false, true,
+        ])))));
+        for _ in 0..4 {
+            engine.push_audio(&vec![123; samples(300)]);
+        }
+        let events = engine.push_audio(&vec![123; samples(300)]);
+        assert!(contains(&events, &EngineEvent::WakeSpotted), "{events:?}");
     }
 
     #[test]
@@ -2657,8 +2876,13 @@ mod tests {
             let mut engine = dictation_engine(&["ривер напиши", &heard]);
             engine.push_audio(&phrase(123, 700));
             let events = engine.push_audio(&phrase(123, 200));
-            assert!(contains(&events, &EngineEvent::DictationEnd(reason)), "{word}: {events:?}");
-            assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
+            assert!(
+                contains(&events, &EngineEvent::DictationEnd(reason)),
+                "{word}: {events:?}"
+            );
+            assert!(!events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::Command { .. })));
         }
     }
 
@@ -2668,7 +2892,10 @@ mod tests {
         engine.push_audio(&phrase(123, 700));
         let events = engine.push_audio(&phrase(123, 200));
         assert_eq!(dictated(&events), vec!["вот и всё".to_string()]);
-        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Stopped)));
+        assert!(contains(
+            &events,
+            &EngineEvent::DictationEnd(DictationEndReason::Stopped)
+        ));
     }
 
     #[test]
@@ -2683,25 +2910,44 @@ mod tests {
         let mut pcm = vec![123; samples(1_200)];
         pcm.resize(samples(1_200 + 300), 0);
         let events = engine.push_audio(&pcm);
-        assert!(contains(&events, &EngineEvent::DictationStart), "{events:?}");
         assert!(
-            events.iter().any(|e| matches!(e, EngineEvent::DictationPartial(t) if t == "привет мир")),
+            contains(&events, &EngineEvent::DictationStart),
+            "{events:?}"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, EngineEvent::DictationPartial(t) if t == "привет мир")),
             "{events:?}"
         );
         assert_eq!(dictated(&events), vec!["привет мир".to_string()]);
-        assert!(!events.iter().any(|event| matches!(event, EngineEvent::Command { .. })));
+        assert!(!events
+            .iter()
+            .any(|event| matches!(event, EngineEvent::Command { .. })));
     }
 
     #[test]
     fn one_breath_dictation_honours_river_cancel_and_stop_at_the_end() {
         let mut engine = dictation_engine(&["ривер напиши итак я хочу ривер отмена"]);
         let events = engine.push_audio(&phrase(123, 700));
-        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Cancelled)), "{events:?}");
+        assert!(
+            contains(
+                &events,
+                &EngineEvent::DictationEnd(DictationEndReason::Cancelled)
+            ),
+            "{events:?}"
+        );
         assert!(dictated(&events).is_empty(), "{events:?}");
 
         let mut engine = dictation_engine(&["ривер напиши итак я хочу ривер стоп"; 2]);
         let events = engine.push_audio(&phrase(123, 700));
-        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Stopped)), "{events:?}");
+        assert!(
+            contains(
+                &events,
+                &EngineEvent::DictationEnd(DictationEndReason::Stopped)
+            ),
+            "{events:?}"
+        );
         assert_eq!(dictated(&events), vec!["итак я хочу".to_string()]);
     }
 
@@ -2713,22 +2959,37 @@ mod tests {
         let at = samples(1_400);
         let pause = pause_before(&audio, at);
         assert!((380..=420).contains(&pause), "{pause}");
-        assert_eq!(pause_before(&vec![3000i16; samples(1_000)], samples(500)), 0);
+        assert_eq!(
+            pause_before(&vec![3000i16; samples(1_000)], samples(500)),
+            0
+        );
     }
 
     #[test]
     fn wake_after_a_pause_mid_phrase_starts_a_command() {
-        let word = |text: &str, start: f32| crate::speech::TimedWord { text: text.into(), start, end: start + 0.3 };
+        let word = |text: &str, start: f32| crate::speech::TimedWord {
+            text: text.into(),
+            start,
+            end: start + 0.3,
+        };
         let timed = Timed {
             text: "ну короче ривер открой".into(),
-            words: vec![word("ну", 0.0), word("короче", 0.3), word("ривер", 1.4), word("открой", 1.8)],
+            words: vec![
+                word("ну", 0.0),
+                word("короче", 0.3),
+                word("ривер", 1.4),
+                word("открой", 1.8),
+            ],
         };
         let wake = vec!["ривер".to_string()];
         let mut audio = vec![3000i16; samples(1_000)];
         audio.extend(vec![0i16; samples(400)]);
         audio.extend(vec![3000i16; samples(800)]);
         let never = |_: &str| false;
-        assert_eq!(mid_phrase_wake(&timed, &audio, &wake, &never), Some(samples(1_400) - samples(80)));
+        assert_eq!(
+            mid_phrase_wake(&timed, &audio, &wake, &never),
+            Some(samples(1_400) - samples(80))
+        );
         // Без паузы — слово в разговоре.
         let solid = vec![3000i16; samples(2_200)];
         assert_eq!(mid_phrase_wake(&timed, &solid, &wake, &never), None);
@@ -2736,40 +2997,74 @@ mod tests {
 
     #[test]
     fn wake_without_a_pause_counts_when_a_command_follows() {
-        let word = |text: &str, start: f32| crate::speech::TimedWord { text: text.into(), start, end: start + 0.3 };
+        let word = |text: &str, start: f32| crate::speech::TimedWord {
+            text: text.into(),
+            start,
+            end: start + 0.3,
+        };
         let wake = vec!["ривер".to_string()];
         let grammar = Grammar::default();
         let is_command = |text: &str| {
-            text.split_whitespace().count() >= 2 && grammar.match_trigger(text).is_some() || text == "калькулятор"
+            text.split_whitespace().count() >= 2 && grammar.match_trigger(text).is_some()
+                || text == "калькулятор"
         };
         let solid = vec![3000i16; samples(3_000)];
         // «нет вот он ривер закрой калькулятор» на одном дыхании — обращение.
         let timed = Timed {
             text: "нет вот он ривер закрой калькулятор".into(),
             words: vec![
-                word("нет", 0.0), word("вот", 0.3), word("он", 0.6),
-                word("ривер", 0.9), word("закрой", 1.3), word("калькулятор", 1.7),
+                word("нет", 0.0),
+                word("вот", 0.3),
+                word("он", 0.6),
+                word("ривер", 0.9),
+                word("закрой", 1.3),
+                word("калькулятор", 1.7),
             ],
         };
-        assert_eq!(mid_phrase_wake(&timed, &solid, &wake, &is_command), Some(samples(900) - samples(80)));
+        assert_eq!(
+            mid_phrase_wake(&timed, &solid, &wake, &is_command),
+            Some(samples(900) - samples(80))
+        );
         // «он не сработал на ривер» — команды после нет, это разговор.
         let talk = Timed {
             text: "он не сработал на ривер".into(),
-            words: vec![word("он", 0.0), word("не", 0.2), word("сработал", 0.4), word("на", 0.9), word("ривер", 1.1)],
+            words: vec![
+                word("он", 0.0),
+                word("не", 0.2),
+                word("сработал", 0.4),
+                word("на", 0.9),
+                word("ривер", 1.1),
+            ],
         };
         assert_eq!(mid_phrase_wake(&talk, &solid, &wake, &is_command), None);
         // «…ривер это крутая штука» — не команда.
         let chat = Timed {
             text: "короче ривер это крутая штука".into(),
-            words: vec![word("короче", 0.0), word("ривер", 0.4), word("это", 0.8), word("крутая", 1.0), word("штука", 1.4)],
+            words: vec![
+                word("короче", 0.0),
+                word("ривер", 0.4),
+                word("это", 0.8),
+                word("крутая", 1.0),
+                word("штука", 1.4),
+            ],
         };
         assert_eq!(mid_phrase_wake(&chat, &solid, &wake, &is_command), None);
         // «…с ривером ривер калькулятор» — за «ривер» название действия.
         let named = Timed {
             text: "че там с ривером ривер калькулятор".into(),
-            words: vec![word("че", 0.0), word("там", 0.2), word("с", 0.4), word("ривером", 0.5), word("ривер", 1.0), word("калькулятор", 1.4)],
+            words: vec![
+                word("че", 0.0),
+                word("там", 0.2),
+                word("с", 0.4),
+                word("ривером", 0.5),
+                word("ривер", 1.0),
+                word("калькулятор", 1.4),
+            ],
         };
-        assert_eq!(mid_phrase_wake(&named, &solid, &wake, &is_command), Some(samples(1_000) - samples(80)));
+        assert_eq!(
+            mid_phrase_wake(&named, &solid, &wake, &is_command),
+            Some(samples(1_000) - samples(80))
+        );
     }
 
     fn fast_engine(texts: &[&str]) -> Engine<MockTranscriber, MockVoiceDetector> {
@@ -2783,14 +3078,21 @@ mod tests {
         );
         engine.set_grammar(Grammar::defaults());
         engine.set_known_targets(
-            [("маркноут", "mark"), ("маркноут маркноут", "mark"), ("анти гравити", "ag"), ("анти гравити идея", "ide")]
-                .map(|(target, action)| (target.to_string(), action.to_string())),
+            [
+                ("маркноут", "mark"),
+                ("маркноут маркноут", "mark"),
+                ("анти гравити", "ag"),
+                ("анти гравити идея", "ide"),
+            ]
+            .map(|(target, action)| (target.to_string(), action.to_string())),
         );
         engine
     }
 
     /// Мс тишины после речи, когда пришла команда (`None` — не пришла).
-    fn command_after(engine: &mut Engine<MockTranscriber, MockVoiceDetector>) -> Option<(u32, String)> {
+    fn command_after(
+        engine: &mut Engine<MockTranscriber, MockVoiceDetector>,
+    ) -> Option<(u32, String)> {
         let mut pcm = vec![123i16; samples(240)];
         pcm.resize(samples(240 + 1_500), 0);
         for (index, chunk) in pcm.chunks(160).enumerate() {
@@ -2815,7 +3117,11 @@ mod tests {
     #[test]
     fn unknown_or_ambiguous_targets_wait_for_the_full_pause() {
         // Свободный текст (поиск) и цель, с которой начинается другая, — полная пауза.
-        for said in ["ривер загугли маркноут", "ривер открой анти гравити", "ривер открой фотошоп"] {
+        for said in [
+            "ривер загугли маркноут",
+            "ривер открой анти гравити",
+            "ривер открой фотошоп",
+        ] {
             let mut engine = fast_engine(&[said, said]);
             let (silence, _) = command_after(&mut engine).expect("команда");
             assert!(silence >= 900, "{said}: команда через {silence} мс тишины");
@@ -2869,7 +3175,13 @@ mod tests {
         let mut engine = dictation_engine(&["ривер напиши", "и вот это всё ривер отмена"]);
         engine.push_audio(&phrase(123, 700));
         let events = engine.push_audio(&phrase(123, 200));
-        assert!(contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Cancelled)), "{events:?}");
+        assert!(
+            contains(
+                &events,
+                &EngineEvent::DictationEnd(DictationEndReason::Cancelled)
+            ),
+            "{events:?}"
+        );
         assert!(dictated(&events).is_empty());
     }
 
@@ -2878,7 +3190,8 @@ mod tests {
         let mut cfg = test_config();
         cfg.dictation_pause_ms = 120;
         cfg.dictation_live = true;
-        let (mut engine, _, _, _) = engine(cfg, &["ривер напиши", "привет", "привет мир", "привет мир"]);
+        let (mut engine, _, _, _) =
+            engine(cfg, &["ривер напиши", "привет", "привет мир", "привет мир"]);
         engine.set_grammar(crate::grammar::Grammar::defaults());
         engine.push_audio(&phrase(123, 700));
         // длинная фраза: 900 мс речи — успевают промежуточные распознавания
@@ -2886,7 +3199,9 @@ mod tests {
         pcm.resize(samples(900 + 300), 0);
         let events = engine.push_audio(&pcm);
         assert!(
-            events.iter().any(|e| matches!(e, EngineEvent::DictationPartial(t) if t.starts_with("привет"))),
+            events
+                .iter()
+                .any(|e| matches!(e, EngineEvent::DictationPartial(t) if t.starts_with("привет"))),
             "{events:?}"
         );
     }

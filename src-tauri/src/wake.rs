@@ -7,8 +7,11 @@
 use std::path::Path;
 
 use anyhow::{bail, Context};
-use sherpa_onnx::{OnlineRecognizer, OnlineRecognizerConfig, OnlineStream, OnlineTransducerModelConfig};
+use sherpa_onnx::{
+    OnlineRecognizer, OnlineRecognizerConfig, OnlineStream, OnlineTransducerModelConfig,
+};
 
+use crate::asr::CpuProviderConfig;
 use crate::speech::{WakeSpotter, SAMPLE_RATE};
 use crate::textnorm::normalize;
 
@@ -25,7 +28,10 @@ impl StreamingWakeSpotter {
     /// `model_dir` — sherpa-onnx-streaming-zipformer-*: encoder/decoder/joiner + tokens.txt.
     pub fn new(model_dir: &Path, wake_words: &[String]) -> anyhow::Result<Self> {
         if !model_dir.is_dir() {
-            bail!("модель детектора wake-слова не найдена: {}", model_dir.display());
+            bail!(
+                "модель детектора wake-слова не найдена: {}",
+                model_dir.display()
+            );
         }
         let file = |stem: &str| -> anyhow::Result<String> {
             let mut candidates: Vec<_> = std::fs::read_dir(model_dir)?
@@ -48,13 +54,16 @@ impl StreamingWakeSpotter {
         };
 
         let mut config = OnlineRecognizerConfig::default();
+        let cpu_provider = CpuProviderConfig::new()?;
         config.model_config.transducer = OnlineTransducerModelConfig {
             encoder: Some(file("encoder")?),
             decoder: Some(file("decoder")?),
             joiner: Some(file("joiner")?),
         };
-        config.model_config.tokens = Some(model_dir.join("tokens.txt").to_string_lossy().into_owned());
+        config.model_config.tokens =
+            Some(model_dir.join("tokens.txt").to_string_lossy().into_owned());
         config.model_config.num_threads = 1;
+        config.model_config.provider = Some(cpu_provider.provider());
         config.decoding_method = Some("greedy_search".into());
         // Конец фразы — чтобы текст не копился бесконечно и wake снова мог сработать.
         config.enable_endpoint = true;
@@ -98,8 +107,10 @@ impl WakeSpotter for StreamingWakeSpotter {
             return false;
         }
         self.buffer.clear();
-        self.buffer.extend(pcm.iter().map(|sample| *sample as f32 / 32_768.0));
-        self.stream.accept_waveform(SAMPLE_RATE as i32, &self.buffer);
+        self.buffer
+            .extend(pcm.iter().map(|sample| *sample as f32 / 32_768.0));
+        self.stream
+            .accept_waveform(SAMPLE_RATE as i32, &self.buffer);
         while self.recognizer.is_ready(&self.stream) {
             self.recognizer.decode(&self.stream);
         }
