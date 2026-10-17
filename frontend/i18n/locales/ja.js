@@ -217,6 +217,8 @@ I18N.register('ja', {
   "settings.mascot_mode.commands": "コマンド中のみ",
   "settings.mascot_mode.never": "表示しない",
   "settings.mascot_mode.help": "「コマンド中のみ」では、Reeverが聞き取りを始めるとタコが現れ、コマンドの1秒後に消えます。",
+  "settings.mascot_bubble": "マスコットの上に吹き出し",
+  "settings.mascot_bubble.help": "話している間、タコの上の小さなターミナルに話した内容が表示されます。長いメッセージ（«напиши …»、«гемини …»）は話すそばから書き込まれます。マスコットが画面にいるときに動作します。",
   "settings.mascot_scale": "サイズ",
   "settings.activation_mode": "モード",
   "settings.wake_spotter": "バックグラウンドの «ривер» 検出器（小型モデル）",

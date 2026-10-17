@@ -219,6 +219,8 @@ I18N.register('en', {
   "settings.mascot_mode.commands": "During commands",
   "settings.mascot_mode.never": "Never",
   "settings.mascot_mode.help": "In “During commands” mode the octopus appears when Reever starts listening and leaves a second after the command.",
+  "settings.mascot_bubble": "Speech bubble above the mascot",
+  "settings.mascot_bubble.help": "While you speak, a small terminal above the octopus shows what you say. Long messages («напиши …», «гемини …») fill in as you talk. Works while the mascot is on screen.",
   "settings.mascot_scale": "Size",
   "settings.activation_mode": "Mode",
   "settings.wake_spotter": "Background «ривер» detector (small model)",

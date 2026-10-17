@@ -217,6 +217,8 @@ I18N.register('zh', {
   "settings.mascot_mode.commands": "执行命令时",
   "settings.mascot_mode.never": "从不",
   "settings.mascot_mode.help": "在“执行命令时”模式下，Reever 开始聆听时章鱼出现，命令完成一秒后离开。",
+  "settings.mascot_bubble": "吉祥物上方的对话气泡",
+  "settings.mascot_bubble.help": "说话时，章鱼上方的小终端会显示你说的话。长消息（«напиши …»、«гемини …»）会随说随写。仅在吉祥物显示在屏幕上时有效。",
   "settings.mascot_scale": "大小",
   "settings.activation_mode": "模式",
   "settings.wake_spotter": "后台 «ривер» 检测器（小型模型）",

@@ -217,6 +217,8 @@ I18N.register('de', {
   "settings.mascot_mode.commands": "Während Befehlen",
   "settings.mascot_mode.never": "Nie",
   "settings.mascot_mode.help": "Im Modus „Während Befehlen“ erscheint der Oktopus, sobald Reever zuhört, und verschwindet eine Sekunde nach dem Befehl.",
+  "settings.mascot_bubble": "Sprechblase über dem Maskottchen",
+  "settings.mascot_bubble.help": "Während du sprichst, zeigt ein kleines Terminal über dem Oktopus das Gesagte. Lange Nachrichten («напиши …», «гемини …») entstehen beim Sprechen. Funktioniert, solange das Maskottchen auf dem Bildschirm ist.",
   "settings.mascot_scale": "Größe",
   "settings.activation_mode": "Modus",
   "settings.wake_spotter": "Hintergrunddetektor für «ривер» (kleines Modell)",

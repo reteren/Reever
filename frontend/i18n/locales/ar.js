@@ -217,6 +217,8 @@ I18N.register('ar', {
   "settings.mascot_mode.commands": "أثناء الأوامر",
   "settings.mascot_mode.never": "أبدًا",
   "settings.mascot_mode.help": "في وضع «أثناء الأوامر» يظهر الأخطبوط عندما يبدأ Reever بالاستماع ويختفي بعد ثانية من تنفيذ الأمر.",
+  "settings.mascot_bubble": "فقاعة كلام فوق التميمة",
+  "settings.mascot_bubble.help": "أثناء حديثك تعرض طرفية صغيرة فوق الأخطبوط ما تقوله. الرسائل الطويلة («напиши …»، «гемини …») تُكتب أثناء الكلام. تعمل ما دامت التميمة على الشاشة.",
   "settings.mascot_scale": "الحجم",
   "settings.activation_mode": "النمط",
   "settings.wake_spotter": "كاشف «ривер» في الخلفية (نموذج صغير)",

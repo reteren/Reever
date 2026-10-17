@@ -290,17 +290,21 @@ pub fn set_mascot(
     config: State<'_, LiveConfig>,
     mode: String,
     scale: u32,
+    bubble: bool,
 ) -> Result<(), String> {
     let mode = crate::mascot::normalize_mode(&mode).to_string();
     let scale = crate::mascot::clamp_scale(scale);
     let current = config.get();
     persist_value(&current, "mascot_mode", serde_json::Value::String(mode.clone()))?;
     persist_value(&current, "mascot_scale", serde_json::Value::from(scale))?;
+    persist_value(&current, "mascot_bubble", serde_json::Value::Bool(bubble))?;
     let mut fresh = (*current).clone();
     fresh.settings.mascot_mode = mode.clone();
     fresh.settings.mascot_scale = scale;
+    fresh.settings.mascot_bubble = bubble;
     config.set(Arc::new(fresh));
     crate::mascot::apply(&app, &mode, scale);
+    crate::bubble::configure(&app, bubble);
     Ok(())
 }
 

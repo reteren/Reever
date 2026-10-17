@@ -217,6 +217,8 @@ I18N.register('it', {
   "settings.mascot_mode.commands": "Durante i comandi",
   "settings.mascot_mode.never": "Mai",
   "settings.mascot_mode.help": "In modalità «Durante i comandi» il polpo compare quando Reever inizia ad ascoltare e se ne va un secondo dopo il comando.",
+  "settings.mascot_bubble": "Fumetto sopra la mascotte",
+  "settings.mascot_bubble.help": "Mentre parli, un piccolo terminale sopra il polpo mostra ciò che dici. I messaggi lunghi («напиши …», «гемини …») si compongono mentre parli. Funziona finché la mascotte è sullo schermo.",
   "settings.mascot_scale": "Dimensione",
   "settings.activation_mode": "Modalità",
   "settings.wake_spotter": "Rilevatore di «ривер» in background (modello piccolo)",

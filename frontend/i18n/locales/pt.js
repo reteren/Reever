@@ -217,6 +217,8 @@ I18N.register('pt', {
   "settings.mascot_mode.commands": "Durante os comandos",
   "settings.mascot_mode.never": "Nunca",
   "settings.mascot_mode.help": "No modo «Durante os comandos», o polvo aparece quando o Reever começa a ouvir e sai um segundo após o comando.",
+  "settings.mascot_bubble": "Balão sobre o mascote",
+  "settings.mascot_bubble.help": "Enquanto você fala, um pequeno terminal acima do polvo mostra o que você diz. Mensagens longas («напиши …», «гемини …») vão sendo escritas enquanto fala. Funciona enquanto o mascote está na tela.",
   "settings.mascot_scale": "Tamanho",
   "settings.activation_mode": "Modo",
   "settings.wake_spotter": "Detector de «ривер» em segundo plano (modelo pequeno)",

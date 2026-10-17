@@ -169,6 +169,9 @@ pub struct Settings {
     /// Размер маскота в процентах от исходного, 100..500.
     #[serde(default = "default_mascot_scale")]
     pub mascot_scale: u32,
+    /// Пузырь-терминал над маскотом со сказанным по ходу речи.
+    #[serde(default = "default_true")]
+    pub mascot_bubble: bool,
 }
 
 fn default_models_unload_s() -> u32 {
@@ -385,6 +388,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("languages", languages, Vec<String>);
     restore!("mascot_mode", mascot_mode, String);
     restore!("mascot_scale", mascot_scale, u32);
+    restore!("mascot_bubble", mascot_bubble, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -442,6 +446,7 @@ impl Default for Settings {
             english_only_model: default_english_only_model(),
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),
+            mascot_bubble: true,
         }
     }
 }

@@ -10,7 +10,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100
+  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -555,7 +555,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
   ['interface',[['ui_language','ui_language',null,'instant']]],
-  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant']]],
+  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages'],['english_only_model','model']]],
@@ -620,8 +620,9 @@ function fieldEl(key,type,opts,when='save'){
     const wrap=el('div',{className:help?'setting-with-help':''});
     const row=el('div',{className:'cbrow'});
     const id='cb'+(++cbSeq);
-    const inp=el('input',{type:'checkbox',id}); inp.checked=!!settingsObj[key];
-    inp.onchange=()=>settingsObj[key]=inp.checked;
+    const inp=el('input',{type:'checkbox',id}); inp.checked=key==='mascot_bubble'?settingsObj[key]!==false:!!settingsObj[key];
+    // Пузырь маскота включается сразу, без «Сохранить».
+    inp.onchange=()=>{ settingsObj[key]=inp.checked; if(key==='mascot_bubble') applyMascot(); };
     const lab=el('label',{htmlFor:id,textContent:lbl});
     row.append(inp,lab); wrap.append(row);
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
@@ -837,7 +838,7 @@ function rerender(){
   $('#settingsMsg').textContent='';
 }
 async function applyMascot(){
-  try{ await invoke('set_mascot',{mode:settingsObj.mascot_mode||'always',scale:Number(settingsObj.mascot_scale)||100}); }
+  try{ await invoke('set_mascot',{mode:settingsObj.mascot_mode||'always',scale:Number(settingsObj.mascot_scale)||100,bubble:settingsObj.mascot_bubble!==false}); }
   catch(e){ $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('mascot',e); }
 }
 async function changeLanguage(preference){

@@ -217,6 +217,8 @@ I18N.register('es', {
   "settings.mascot_mode.commands": "Durante los comandos",
   "settings.mascot_mode.never": "Nunca",
   "settings.mascot_mode.help": "En el modo «Durante los comandos», el pulpo aparece cuando Reever empieza a escuchar y se va un segundo después del comando.",
+  "settings.mascot_bubble": "Bocadillo sobre la mascota",
+  "settings.mascot_bubble.help": "Mientras hablas, un pequeño terminal sobre el pulpo muestra lo que dices. Los mensajes largos («напиши …», «гемини …») se escriben sobre la marcha. Funciona mientras la mascota está en pantalla.",
   "settings.mascot_scale": "Tamaño",
   "settings.activation_mode": "Modo",
   "settings.wake_spotter": "Detector en segundo plano de «ривер» (modelo pequeño)",

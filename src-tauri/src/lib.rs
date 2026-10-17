@@ -25,6 +25,7 @@ pub mod langid;
 pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
+pub mod bubble;
 pub mod mascot;
 pub mod picker;
 pub mod procs;
@@ -425,6 +426,7 @@ pub fn run() {
             mascot::mascot_layout,
             mascot::mascot_rest,
             mascot::mascot_orb,
+            bubble::bubble_layout,
             commands_api::set_mascot,
             picker::picker_choose,
             picker::picker_close,

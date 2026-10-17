@@ -1468,6 +1468,10 @@ impl Worker<'_> {
         if wanted.is_empty() && session.live.typed.is_empty() {
             return;
         }
+        // готовый кусок диктовки — пузырю над маскотом (frontend/bubble.html)
+        if !private && !wanted.trim().is_empty() {
+            let _ = self.app.emit("reever://said", wanted.clone());
+        }
         let target = self.dictation_target(FIELD_WAIT);
         let flushed = match target {
             Some(target) => self.flush_pending(target),

@@ -217,6 +217,8 @@ I18N.register('fr', {
   "settings.mascot_mode.commands": "Pendant les commandes",
   "settings.mascot_mode.never": "Jamais",
   "settings.mascot_mode.help": "En mode « Pendant les commandes », la pieuvre apparaît quand Reever commence à écouter et repart une seconde après la commande.",
+  "settings.mascot_bubble": "Bulle au-dessus de la mascotte",
+  "settings.mascot_bubble.help": "Pendant que vous parlez, un petit terminal au-dessus de la pieuvre affiche ce que vous dites. Les longs messages («напиши …», «гемини …») s’écrivent au fil de la parole. Fonctionne tant que la mascotte est à l’écran.",
   "settings.mascot_scale": "Taille",
   "settings.activation_mode": "Mode",
   "settings.wake_spotter": "Détecteur «ривер» en arrière-plan (modèle léger)",

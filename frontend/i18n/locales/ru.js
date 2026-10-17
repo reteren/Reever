@@ -217,6 +217,8 @@ I18N.register('ru', {
   "settings.mascot_mode.commands": "Во время команд",
   "settings.mascot_mode.never": "Никогда",
   "settings.mascot_mode.help": "В режиме «Во время команд» осьминог появляется, когда Reever начинает слушать, и уходит через секунду после команды.",
+  "settings.mascot_bubble": "Пузырь над маскотом со сказанным",
+  "settings.mascot_bubble.help": "Пока говоришь, над осьминогом появляется терминал, куда пишется сказанное. Длинное сообщение («напиши …», «гемини …») набирается по ходу речи. Работает, когда маскот на экране.",
   "settings.mascot_scale": "Размер",
   "settings.activation_mode": "Режим",
   "settings.wake_spotter": "Фоновый детектор «ривер» (маленькая модель)",

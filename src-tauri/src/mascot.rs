@@ -23,6 +23,7 @@ use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
+use crate::bubble;
 use crate::config::LiveConfig;
 use crate::events::{self, ui_log};
 
@@ -61,6 +62,8 @@ static DRAGGING: AtomicBool = AtomicBool::new(false);
 static SHOWN: AtomicBool = AtomicBool::new(false);
 /// Осьминог стоит на месте (не летит) — только тогда окно ловит мышь, и только над ним.
 static RESTING: AtomicBool = AtomicBool::new(false);
+/// Маскот уже уходит в портал (пузырь над ним гаснет сразу, не дожидаясь конца ухода).
+static LEAVING: AtomicBool = AtomicBool::new(false);
 
 pub fn normalize_mode(mode: &str) -> &'static str {
     match mode.trim() {
@@ -107,8 +110,17 @@ fn orb(app: &AppHandle, action: &str) {
     let _ = app.emit_to("main", "mascot://orb", action);
 }
 
-fn mode() -> String {
+pub(crate) fn mode() -> String {
     MODE.lock().map(|mode| mode.clone()).unwrap_or_default()
+}
+
+pub(crate) fn scale() -> u32 {
+    SCALE.load(Ordering::Relaxed)
+}
+
+/// Маскот на экране и не уходит — над ним можно показывать пузырь.
+pub(crate) fn on_screen() -> bool {
+    SHOWN.load(Ordering::Relaxed) && !LEAVING.load(Ordering::Relaxed)
 }
 
 fn command_active() -> bool {
@@ -119,6 +131,7 @@ fn command_active() -> bool {
 pub fn spawn(app: &AppHandle) {
     let settings = app.state::<LiveConfig>().get().settings.clone();
     apply(app, &settings.mascot_mode, settings.mascot_scale);
+    bubble::configure(app, settings.mascot_bubble);
 }
 
 /// Применяет режим и размер: создаёт, показывает, прячет или уничтожает окно.
@@ -157,6 +170,7 @@ pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
             }
         }
     }
+    bubble::sync(app);
 }
 
 /// Режим `commands`: появиться, когда Reever начал слушать, и уйти через секунду
@@ -200,6 +214,8 @@ fn hide_later(window: WebviewWindow, generation: u64) {
         }
         let _ = window.emit("mascot://leave", ());
         let app = window.app_handle().clone();
+        LEAVING.store(true, Ordering::Relaxed);
+        bubble::notify(&app);
         let to_orb = events::main_visible();
         if to_orb {
             std::thread::sleep(TELEPORT);
@@ -226,7 +242,9 @@ fn show(window: &WebviewWindow) {
     if fresh {
         events::set_mascot_visible(true);
     }
+    LEAVING.store(false, Ordering::Relaxed);
     let _ = window.emit("mascot://enter", fresh);
+    bubble::notify(window.app_handle());
 }
 
 fn hide(window: &WebviewWindow) {
@@ -234,7 +252,9 @@ fn hide(window: &WebviewWindow) {
         events::set_mascot_visible(false);
     }
     RESTING.store(false, Ordering::Relaxed);
+    LEAVING.store(false, Ordering::Relaxed);
     let _ = window.emit("mascot://hidden", ());
+    bubble::notify(window.app_handle());
 }
 
 /// mascot.html: осьминог приземлился (true) или взлетел/исчез (false).
@@ -308,6 +328,7 @@ fn create(app: &AppHandle) {
             let y = area.position.y + area.size.height as i32 - (size.height as f64 * corner).round() as i32 - margin;
             let _ = window.set_position(PhysicalPosition::new(x, y));
         }
+        bubble::place(&app);
         // режим, размер или состояние могли смениться, пока окно создавалось
         let mode = mode();
         let current = SCALE.load(Ordering::Relaxed);
@@ -338,6 +359,7 @@ fn resize_keep_corner(window: &WebviewWindow, scale: u32) {
         let y = position.y + (size.height as f64 * old_corner - new_size.height as f64 * corner).round() as i32;
         let _ = window.set_position(PhysicalPosition::new(x, y));
     }
+    bubble::place(window.app_handle());
 }
 
 /// Перетаскивание за голову. Захват указателя в WebView2 теряется, как только окно
@@ -356,6 +378,7 @@ pub fn mascot_drag(window: WebviewWindow) {
             if let Some(p) = cursor() {
                 if p.x != last.x || p.y != last.y {
                     let _ = window.set_position(PhysicalPosition::new(origin.x + p.x - start.x, origin.y + p.y - start.y));
+                    bubble::place(window.app_handle());
                     last = p;
                 }
             }
