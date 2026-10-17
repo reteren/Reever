@@ -7,6 +7,7 @@
 //! Из src-tauri:
 //!   cargo run --release --example cold_wake_probe
 //!   cargo run --release --example cold_wake_probe -- --load-ms 3000 --preroll-ms 1000,2000,3000
+//!   cargo run --release --example cold_wake_probe -- --english --asr sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8
 
 use std::path::{Path, PathBuf};
 
@@ -48,6 +49,8 @@ struct Outcome {
     rejected: bool,
     /// Сигнал «слушаю» или команда — на негативной фразе это ложное срабатывание.
     woke: bool,
+    /// Что услышала основная модель в фразах простоя (нужен REEVER_TRACE=1).
+    heard: Vec<String>,
 }
 
 fn collect(events: Vec<EngineEvent>, out: &mut Outcome) {
@@ -60,8 +63,16 @@ fn collect(events: Vec<EngineEvent>, out: &mut Outcome) {
                     out.command = Some(text);
                 }
             }
-            EngineEvent::Log(line) if line.render("en").contains("did not confirm") => {
-                out.rejected = true
+            EngineEvent::Log(line) => {
+                let line = line.render("en");
+                if line.contains("did not confirm") {
+                    out.rejected = true;
+                }
+                if let Some(heard) = line.split('«').nth(1).and_then(|rest| rest.split('»').next()) {
+                    if line.starts_with("trace: idle phrase") {
+                        out.heard.push(heard.to_string());
+                    }
+                }
             }
             _ => {}
         }
@@ -150,13 +161,15 @@ fn main() -> anyhow::Result<()> {
             ..EngineConfig::default()
         },
         Asr::new(&AsrConfig {
-            model_dir: models.join(ASR),
+            model_dir: models.join(arg("--asr").unwrap_or_else(|| ASR.into())),
             num_threads: 4,
         })?,
         SileroVad::new(&models.join("silero_vad.onnx"), 0.5)?,
     );
     engine.set_grammar(Grammar::defaults());
     engine.set_strict_spotted_wake(true);
+    // Режим «только английский»: основная модель английская (--asr <Parakeet en>).
+    engine.set_english_primary(args.iter().any(|value| value == "--english"));
     engine.set_wake_spotter(Some(Box::new(StreamingWakeSpotter::new(
         &models.join(SPOTTER),
         &wake_words,
@@ -216,6 +229,9 @@ fn main() -> anyhow::Result<()> {
                 line.push_str(&format!(" fired@{}ms", fired_at * 1000 / 16_000 - LEAD_MS as usize));
             }
             cold_ok[slot] += usize::from(out.command.is_some());
+            if slot == 0 && out.command.is_none() && !out.heard.is_empty() {
+                line.push_str(&format!(" heard={:?}", out.heard));
+            }
             line.push_str(&format!(" pre{}={}", preroll_ms, verdict(&out)));
         }
         if verbose {

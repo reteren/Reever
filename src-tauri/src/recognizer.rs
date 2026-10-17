@@ -291,6 +291,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         // англицизмов (русская диктовка) не нужны. Ru = «как услышала основная модель».
         ui_log(app, crate::msg!("log.englishOnly"));
         engine.set_bilingual(None, None, LangMode::Ru);
+        engine.set_english_primary(true);
     }
     enable_wake_spotter(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");

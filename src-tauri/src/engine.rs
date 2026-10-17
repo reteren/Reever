@@ -298,6 +298,9 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     /// Детектор сработал в начале фразы, а не посреди речи: такое «ривер» можно чинить
     /// по `repair_wake`, как без ленивой загрузки.
     spot_at_start: bool,
+    /// Основная модель английская (режим «только английский»): «ривер» она пишет
+    /// английскими словами — см. `strip_english_wake`.
+    english_primary: bool,
     /// Диагностика (`REEVER_TRACE=1`): в журнал идёт каждая фраза простоя и решение по
     /// «ривер» — видно, почему обращение не принято.
     trace: bool,
@@ -361,6 +364,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             strict_spotted_wake: false,
             spot_age: None,
             spot_at_start: false,
+            english_primary: false,
             trace: std::env::var_os("REEVER_TRACE").is_some(),
             idle_speech_age: None,
             idle_partial_elapsed: 0,
@@ -420,6 +424,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
 
     pub fn set_strict_spotted_wake(&mut self, strict: bool) {
         self.strict_spotted_wake = strict;
+    }
+
+    pub fn set_english_primary(&mut self, english: bool) {
+        self.english_primary = english;
     }
 
     /// После ленивой загрузки аудио повторно подаётся с pre-roll. Сохраняем факт,
@@ -905,6 +913,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                     None => self.asr.transcribe_timed(&audio),
                                 }
                                 .map(|timed| self.second_language_only(&audio, timed))
+                                .map(|timed| self.drop_english_wake(timed, state.kind))
                             }
                             // Английское «yes/no» русская модель не слышит вовсе (пустой
                             // текст) — тогда ответ слушает вторая модель, как и английскую цель.
@@ -1083,11 +1092,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let Ok(timed) = self.asr.transcribe_timed(self.segmenter.current_audio()) else {
             return;
         };
+        // Журнал подтверждения попадает в out, только если команда выполняется досрочно,
+        // иначе его напишет разбор полной фразы.
+        let mut notes = Vec::new();
         let timed = if matches!(self.mode, Mode::Idle) && self.strict_spotted_wake {
             match self.spot_age {
                 Some(age) if age <= audio_len + samples(SPOT_GRACE_MS) => {
-                    let Some((_, confirmed)) = confirm_spotted_wake(&timed, &self.cfg.wake_words)
-                    else {
+                    let Some(confirmed) = self.confirm_wake(&timed, audio_len, &mut notes) else {
                         return;
                     };
                     confirmed
@@ -1111,6 +1122,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         if !self.is_known_command(&command) {
             return;
         }
+        out.append(&mut notes);
         if let Some(audio) = self.segmenter.finish_now() {
             self.fast_timed = Some(timed);
             self.handle_segment_event(SegmentEvent::SpeechEnd(audio), out);
@@ -1193,33 +1205,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             .spot_age
             .is_some_and(|age| age <= audio.len() + samples(SPOT_GRACE_MS));
         let timed = if spotted && self.strict_spotted_wake {
-            // Детектор слышал «ривер» в начале фразы, а GigaAM написала его неузнаваемо:
-            // те же осторожные правила, что без ленивой загрузки (обрывок в одно слово или
-            // несловарные слова в начале). Посреди речи — только подтверждение.
-            let repaired = || {
-                if !self.spot_at_start || timed.text.trim().is_empty() {
-                    return None;
-                }
-                repair_wake(&timed, &self.cfg.wake_words, audio.len(), &is_russian_word)
-            };
-            match confirm_spotted_wake(&timed, &self.cfg.wake_words)
-                .map(|(index, confirmed)| (index > 0, confirmed))
-                .or_else(|| {
-                    repaired().map(|fixed| {
-                        out.push(EngineEvent::Log(
-                            "wake: the wake word was confirmed by the background detector".into(),
-                        ));
-                        (false, fixed)
-                    })
-                }) {
-                Some((mid_phrase, confirmed)) => {
-                    if mid_phrase {
-                        out.push(EngineEvent::Log(
-                            "wake: the main model confirmed the wake word mid-phrase".into(),
-                        ));
-                    }
-                    confirmed
-                }
+            match self.confirm_wake(&timed, audio.len(), out) {
+                Some(confirmed) => confirmed,
                 None => {
                     // Пустой текст — модели ещё грузятся (фраза будет проиграна заново
                     // после загрузки) или один шум: подтверждать нечего, в журнал не пишем.
@@ -1841,6 +1828,63 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
     }
 
+    /// Подтверждение «ривер», услышанного детектором, основной моделью (ленивый режим).
+    /// Wake в любом месте фразы по `confirm_spotted_wake`; если детектор сработал в начале
+    /// фразы, а модель записала слово неузнаваемо, — английские записи (`strip_english_wake`)
+    /// и осторожная починка `repair_wake`, как без ленивой загрузки. Посреди речи —
+    /// только подтверждение, иначе обычный разговор запускал бы команды.
+    fn confirm_wake(
+        &self,
+        timed: &Timed,
+        audio_len: usize,
+        out: &mut Vec<EngineEvent>,
+    ) -> Option<Timed> {
+        if let Some((index, confirmed)) = confirm_spotted_wake(timed, &self.cfg.wake_words) {
+            if index > 0 {
+                out.push(EngineEvent::Log(
+                    "wake: the main model confirmed the wake word mid-phrase".into(),
+                ));
+            }
+            return Some(confirmed);
+        }
+        if !self.spot_at_start || timed.text.trim().is_empty() {
+            return None;
+        }
+        if self.english_primary {
+            if let Some(rest) = strip_english_wake(&timed.text) {
+                out.push(EngineEvent::Log(
+                    "wake: the English model wrote the wake word as an English word; confirmed by the background detector".into(),
+                ));
+                let canonical = normalize(self.cfg.wake_words.first()?);
+                return Some(Timed {
+                    text: format!("{canonical} {rest}").trim().to_string(),
+                    words: Vec::new(),
+                });
+            }
+        }
+        let fixed = repair_wake(timed, &self.cfg.wake_words, audio_len, &is_russian_word)?;
+        out.push(EngineEvent::Log(
+            "wake: the wake word was confirmed by the background detector".into(),
+        ));
+        Some(fixed)
+    }
+
+    /// Ответ на сигнал «слушаю» в режиме «только английский»: «ривер», повторённое перед
+    /// командой, английская модель пишет как «right …» — убираем. Только для команды:
+    /// в диктовке «Every day…» — это текст.
+    fn drop_english_wake(&self, timed: Timed, kind: ListenKind) -> Timed {
+        if !self.english_primary || kind != ListenKind::Command {
+            return timed;
+        }
+        match strip_english_wake(&timed.text) {
+            Some(rest) => Timed {
+                text: rest,
+                words: Vec::new(),
+            },
+            None => timed,
+        }
+    }
+
     fn strip_repeated_wake(&self, text: &str) -> String {
         strip_initial_wake(text, &self.cfg.wake_words).unwrap_or_else(|| text.trim().to_string())
     }
@@ -2012,6 +2056,25 @@ fn is_russian_word(word: &str) -> Option<bool> {
 
 /// Обращения, которые люди ставят перед именем: «эй ривер», «слушай ривер открой …».
 const WAKE_LEAD_INS: [&str; 8] = ["эй", "ну", "а", "слушай", "окей", "ок", "так", "хей"];
+
+/// Как английская модель (Parakeet, режим «только английский») пишет русское «ривер»:
+/// по журналу — «right», по корпусу — «every», «ever», «ere», «a rever», «a really»,
+/// «a liver», «eriver», «rivier», «revers», склеенное с командой «revacroidge». Это обычные
+/// английские слова, поэтому вызывающий засчитывает их только вместе с детектором в начале
+/// фразы или в ответе на сигнал. `Some(хвост)` — первое слово (после «a/i/uh …») — wake.
+fn strip_english_wake(text: &str) -> Option<String> {
+    const LEADS: [&str; 7] = ["a", "i", "uh", "um", "oh", "ah", "the"];
+    const SPELLINGS: [&str; 16] = [
+        "right", "really", "ever", "every", "ere", "river", "rivers", "liver", "reever", "rever",
+        "revere", "revers", "reverse", "rivier", "riva", "eriver",
+    ];
+    let normalized = normalize(text);
+    let words: Vec<&str> = normalized.split_whitespace().collect();
+    let skip = usize::from(words.len() > 1 && LEADS.contains(&words[0]));
+    let word = *words.get(skip)?;
+    let spelled = SPELLINGS.contains(&word) || word.starts_with("riv") || word.starts_with("rev");
+    spelled.then(|| words[skip + 1..].join(" "))
+}
 
 fn strip_initial_wake(text: &str, wake_words: &[String]) -> Option<String> {
     // Нечёткость (опечатки ASR) решает textnorm::strip_wake, но он ищет wake в первых двух
@@ -2983,6 +3046,59 @@ mod tests {
         let events = engine.push_audio(&pcm);
 
         assert!(contains(&events, &EngineEvent::WakeHeard), "{events:?}");
+    }
+
+    #[test]
+    fn english_model_spellings_of_the_wake_word() {
+        for (heard, rest) in [
+            ("Right, open notepad.", "open notepad"),
+            ("a rever is a crow", "is a crow"),
+            ("I really will push", "will push"),
+            ("every zachroi telegram", "zachroi telegram"),
+            ("right", ""),
+        ] {
+            assert_eq!(strip_english_wake(heard).as_deref(), Some(rest), "«{heard}»");
+        }
+        for heard in ["open notepad", "all of it right now", "a cat"] {
+            assert_eq!(strip_english_wake(heard), None, "«{heard}»");
+        }
+    }
+
+    #[test]
+    fn english_only_mode_takes_right_as_the_wake_word_only_with_the_detector() {
+        let lazy_engine = |heard: &str, detector: VecDeque<bool>| {
+            let mut cfg = test_config();
+            cfg.wake_words = vec!["ривер".into()];
+            let (mut engine, _, _, _) = engine(cfg, &[heard]);
+            engine.set_strict_spotted_wake(true);
+            engine.set_english_primary(true);
+            engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(detector))));
+            engine.push_audio(&vec![123; samples(600)]);
+            let mut pcm = vec![123; samples(240)];
+            pcm.resize(samples(240 + 250), 0);
+            engine.push_audio(&pcm)
+        };
+
+        let events = lazy_engine("right open notepad", VecDeque::from([false, true]));
+        assert!(
+            contains(
+                &events,
+                &EngineEvent::Command {
+                    text: "open notepad".into(),
+                    alt: None,
+                }
+            ),
+            "{events:?}"
+        );
+
+        // Без срабатывания детектора «right» — обычное слово.
+        let events = lazy_engine("right open notepad", VecDeque::from([false, false]));
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::Command { .. })),
+            "{events:?}"
+        );
     }
 
     #[test]
