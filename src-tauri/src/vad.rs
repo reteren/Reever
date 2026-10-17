@@ -22,10 +22,10 @@ impl SileroVad {
     /// `model` — путь к silero_vad.onnx. `threshold` — порог вероятности речи (0..1).
     pub fn new(model: &Path, threshold: f32) -> anyhow::Result<Self> {
         if !model.is_file() {
-            bail!("модель Silero VAD не найдена: {}", model.display());
+            bail!("Silero VAD model not found: {}", model.display());
         }
         if !threshold.is_finite() || !(0.0..=1.0).contains(&threshold) {
-            bail!("порог Silero VAD должен быть конечным числом от 0 до 1");
+            bail!("the Silero VAD threshold must be a finite number from 0 to 1");
         }
 
         let mut silero = SileroVadModelConfig::default();
@@ -47,7 +47,7 @@ impl SileroVad {
             ..VadModelConfig::default()
         };
         let detector = SherpaVad::create(&config, 16.0)
-            .context("не удалось создать sherpa-onnx Silero VAD")?;
+            .context("failed to create the sherpa-onnx Silero VAD")?;
 
         Ok(Self {
             detector,

@@ -29,7 +29,7 @@ impl StreamingWakeSpotter {
     pub fn new(model_dir: &Path, wake_words: &[String]) -> anyhow::Result<Self> {
         if !model_dir.is_dir() {
             bail!(
-                "модель детектора wake-слова не найдена: {}",
+                "wake word detector model not found: {}",
                 model_dir.display()
             );
         }
@@ -50,7 +50,7 @@ impl StreamingWakeSpotter {
                 .into_iter()
                 .next()
                 .map(|path| path.to_string_lossy().into_owned())
-                .with_context(|| format!("в {} нет {stem}*.onnx", model_dir.display()))
+                .with_context(|| format!("no {stem}*.onnx in {}", model_dir.display()))
         };
 
         let mut config = OnlineRecognizerConfig::default();
@@ -71,7 +71,7 @@ impl StreamingWakeSpotter {
         config.rule2_min_trailing_silence = 0.6;
         config.rule3_min_utterance_length = 12.0;
         let recognizer = OnlineRecognizer::create(&config)
-            .context("sherpa-onnx не смог загрузить модель детектора wake-слова")?;
+            .context("sherpa-onnx failed to load the wake word detector model")?;
         let stream = recognizer.create_stream();
         Ok(Self {
             recognizer,

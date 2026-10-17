@@ -39,7 +39,7 @@ pub struct TinyDsCnn {
 impl TinyDsCnn {
     pub fn load(path: &Path) -> anyhow::Result<Self> {
         let bytes =
-            std::fs::read(path).with_context(|| format!("чтение весов {}", path.display()))?;
+            std::fs::read(path).with_context(|| format!("reading weights {}", path.display()))?;
         Self::from_bytes(&bytes)
     }
 
@@ -55,7 +55,7 @@ impl TinyDsCnn {
         let expected = MAGIC.len() + count * 4;
         if bytes.len() != expected || bytes.get(..4) != Some(MAGIC.as_slice()) {
             bail!(
-                "неверный формат RKW1 или размер весов: {} (ожидалось {expected})",
+                "bad RKW1 format or weight size: {} (expected {expected})",
                 bytes.len()
             );
         }
@@ -91,7 +91,7 @@ impl TinyDsCnn {
             .chain(model.head_bias.iter())
             .any(|x| !x.is_finite())
         {
-            bail!("веса KWS содержат NaN или бесконечность");
+            bail!("KWS weights contain NaN or infinity");
         }
         Ok(model)
     }
@@ -100,7 +100,7 @@ impl TinyDsCnn {
     pub fn score(&self, frames: &[[f32; MEL_BINS]]) -> anyhow::Result<f32> {
         if frames.len() != CONTEXT_FRAMES {
             bail!(
-                "модели нужны {CONTEXT_FRAMES} кадров, получено {}",
+                "the model needs {CONTEXT_FRAMES} frames, got {}",
                 frames.len()
             );
         }

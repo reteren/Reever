@@ -44,7 +44,7 @@ pub fn title_keyword(url: &str) -> String {
 /// и не появилось, текст кладётся в буфер обмена, чтобы вставить его вручную.
 pub fn open_and_send(url: &str, text: &str, send: bool) -> anyhow::Result<ChatOutcome> {
     if !launcher::shell_open(url) {
-        bail!("браузер не открыл {url}");
+        bail!("the browser did not open {url}");
     }
     let keyword = title_keyword(url);
     let started = Instant::now();
@@ -73,12 +73,12 @@ pub fn open_and_send(url: &str, text: &str, send: bool) -> anyhow::Result<ChatOu
     let progress = typing::type_pieces(target, &[Piece::Text(text.to_string())]);
     if !progress.remaining.is_empty() {
         typing::set_clipboard(text)?;
-        bail!("фокус ушёл из поля чата — вопрос в буфере обмена");
+        bail!("focus left the chat field — the question is in the clipboard");
     }
     if send {
         sleep(Duration::from_millis(150));
         if !typing::press_enter(target) {
-            bail!("не удалось отправить вопрос — нажми Enter сам");
+            bail!("failed to send the question — press Enter yourself");
         }
     }
     Ok(ChatOutcome::Typed)

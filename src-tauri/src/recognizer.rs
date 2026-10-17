@@ -21,6 +21,7 @@ use crate::dictation::Formatter;
 use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
 use crate::engine::{DictationEndReason, Engine, EngineConfig, EngineEvent};
 use crate::events::{set_state, ui_log};
+use crate::uilang::Msg;
 use crate::grammar::{Grammar, IntentKind};
 use crate::langid::SpeechLid;
 use crate::speech::{LanguageId, Timed, Transcriber};
@@ -110,7 +111,7 @@ enum ModelLoadEvent {
     Secondary {
         second: Option<Asr>,
         lid: Option<SpeechLid>,
-        warnings: Vec<String>,
+        warnings: Vec<Msg>,
     },
 }
 
@@ -131,17 +132,14 @@ pub fn run_worker(app: AppHandle, shared: Arc<SharedState>) {
         if let Err(e) = run_inner(&app, &cfg, &shared) {
             eprintln!("[reever] worker fatal: {e:#}");
             set_state(&app, "error");
-            ui_log(&app, format!("✖ FATAL: {e}"));
+            ui_log(&app, crate::msg!("log.fatal", error = e));
             while !shared.reload.load(Ordering::Relaxed) {
                 std::thread::sleep(Duration::from_millis(200));
             }
         } else if !shared.reload.load(Ordering::Relaxed) {
             return;
         }
-        ui_log(
-            &app,
-            "⟳ настройки применены — распознавание перезапускается",
-        );
+        ui_log(&app, crate::msg!("log.restarting"));
     }
 }
 
@@ -191,9 +189,9 @@ fn spawn_everything_probe(app: &AppHandle, cfg: &ReeverConfig, status: &Arc<Mute
         ui_log(
             &app,
             if ok {
-                "✓ Everything HTTP доступен"
+                crate::msg!("log.everything.ok")
             } else {
-                "⚠ Everything HTTP НЕ доступен — для «открой папку» поставь Everything 1.5a + HTTP-сервер"
+                crate::msg!("log.everything.down")
             },
         );
     });
@@ -211,17 +209,24 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     emit_status(app, &status);
     ui_log(
         app,
-        format!(
-            "Reever {} · режим активации: {}",
-            env!("CARGO_PKG_VERSION"),
-            s.activation_mode
+        crate::msg!(
+            "log.started",
+            version = env!("CARGO_PKG_VERSION"),
+            mode = crate::uilang::text(
+                crate::uilang::current(),
+                match s.activation_mode.as_str() {
+                    "hotkey" => "activation.hotkey",
+                    "wake" => "activation.wake",
+                    _ => "activation.both",
+                }
+            )
         ),
     );
 
     if s.offline_mode {
         ui_log(
             app,
-            "🔒 офлайн-режим: веб-поиск и Everything HTTP отключены (нулевой сетевой трафик)",
+            crate::msg!("log.offline"),
         );
     } else {
         spawn_everything_probe(app, cfg, &status);
@@ -231,16 +236,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let asr = if lazy_loading {
         ui_log(
             app,
-            "модели распознавания будут загружены после wake или хоткея",
+            crate::msg!("log.models.lazy"),
         );
         LazyAsr::default()
     } else {
         ui_log(
             app,
-            format!(
-                "загрузка модели распознавания: {}",
-                cfg.asr_model_dir.display()
-            ),
+            crate::msg!("log.models.loading", path = cfg.asr_model_dir.display()),
         );
         let primary = Asr::new(&AsrConfig {
             model_dir: cfg.asr_model_dir.clone(),
@@ -287,7 +289,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     } else {
         // Только английский: основная модель уже английская, второй язык и словарь
         // англицизмов (русская диктовка) не нужны. Ru = «как услышала основная модель».
-        ui_log(app, "языки распознавания: только английский");
+        ui_log(app, crate::msg!("log.englishOnly"));
         engine.set_bilingual(None, None, LangMode::Ru);
     }
     enable_wake_spotter(app, cfg, &mut engine);
@@ -313,7 +315,14 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         choice_session: None,
     };
     set_state(app, "idle");
-    ui_log(app, "✓ готов. «ривер» — и команду сразу или после сигнала. Хоткей — то же без «ривер». «отмена» — стоп.");
+    ui_log(
+        app,
+        crate::msg!(
+            "log.ready",
+            wake = s.wake_words.first().map(String::as_str).unwrap_or("ривер"),
+            cancel = cfg.settings.cancel_words.first().map(String::as_str).unwrap_or("отмена")
+        ),
+    );
 
     // Громкость микрофона в Windows: её меняют другие программы (Discord в звонке).
     let mut mic_level: Option<crate::micwatch::MicLevel> = None;
@@ -357,7 +366,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             ui_log(
                 app,
                 format!(
-                    "trace: аудиоколбэки {callback_rate:.1}/с, средний чанк {average_frames:.0} кадров"
+                    "trace: audio callbacks {callback_rate:.1}/s, average chunk {average_frames:.0} frames"
                 ),
             );
             last_audio_trace = std::time::Instant::now();
@@ -368,10 +377,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             if dropped > 0 {
                 ui_log(
                     app,
-                    format!(
-                        "⚠ потерян звук: {} мс — распознавание не успевало за микрофоном",
-                        dropped * 1000 / 16_000
-                    ),
+                    crate::msg!("log.audioDropped", ms = dropped * 1000 / 16_000),
                 );
             }
             let now = crate::micwatch::mic_level();
@@ -416,7 +422,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                     queued.fill(0);
                 }
                 set_state(app, "paused");
-                ui_log(app, "🔇 микрофон отключён (поток закрыт)");
+                ui_log(app, crate::msg!("log.mic.closed"));
             }
             std::thread::sleep(Duration::from_millis(150));
             continue;
@@ -431,16 +437,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                     match mic_level {
                         Some(level) => ui_log(
                             app,
-                            format!(
-                                "🔊 микрофон включён (громкость в Windows {} %)",
-                                level.percent
-                            ),
+                            crate::msg!("log.mic.onLevel", percent = level.percent),
                         ),
-                        None => ui_log(app, "🔊 микрофон включён"),
+                        None => ui_log(app, crate::msg!("log.mic.on")),
                     }
                 }
                 Err(e) => {
-                    ui_log(app, format!("⚠ микрофон недоступен: {e}"));
+                    ui_log(app, crate::msg!("log.mic.unavailable", error = e));
                     std::thread::sleep(Duration::from_millis(500));
                     continue;
                 }
@@ -464,7 +467,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 if append_loading_audio(&mut loading_audio, &chunk) && !loading_audio_truncated {
                     ui_log(
                         app,
-                        "⚠ загрузка моделей затянулась — буфер аудио достиг предела",
+                        crate::msg!("log.models.bufferFull"),
                     );
                 }
                 loading_audio_truncated |= loading_audio.len() >= LOADING_AUDIO_LIMIT_SAMPLES;
@@ -479,7 +482,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                     last_activity = std::time::Instant::now();
                     set_asr_status(app, &status, "loading");
                     set_state(app, "loading");
-                    ui_log(app, "⏳ загружаю модели…");
+                    ui_log(app, crate::msg!("log.models.loadingNow"));
                 } else {
                     let started = std::time::Instant::now();
                     let events = engine.push_audio(&chunk);
@@ -499,12 +502,12 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         last_activity = std::time::Instant::now();
                         set_asr_status(app, &status, "loading");
                         set_state(app, "loading");
-                        ui_log(app, "⏳ загружаю модели…");
+                        ui_log(app, crate::msg!("log.models.loadingNow"));
                     }
                     if trace && spent >= Duration::from_millis(250) {
                         ui_log(
                             app,
-                            format!("trace: распознавание заняло {} мс", spent.as_millis()),
+                            format!("trace: recognition took {} ms", spent.as_millis()),
                         );
                     }
                 }
@@ -520,7 +523,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         engine.reset();
                         set_asr_status(app, &status, "error");
                         set_state(app, "idle");
-                        ui_log(app, format!("⚠ модели не загружены: {error:#}"));
+                        ui_log(app, crate::msg!("log.models.failed", error = format!("{error:#}")));
                         clear_recent_audio(&mut recent_chunks, &mut recent_samples);
                         loading_audio_truncated = false;
                     }
@@ -560,7 +563,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                                 Err(error) => {
                                     ui_log(
                                         app,
-                                        format!("⚠ вторые модели не загрузились: {error:#}"),
+                                        crate::msg!("log.models.secondFailed", error = format!("{error:#}")),
                                     );
                                     engine.set_bilingual(None, None, language_mode(s));
                                     secondary_ready = true;
@@ -582,7 +585,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                                 Some(staged_audio.take().unwrap_or_else(|| replay.clone()));
                             pending_command_reason = staged_reason.take().or(Some(reason));
                             set_state(app, "loading");
-                            ui_log(app, "⏳ жду загрузку второго языка для первой команды…");
+                            ui_log(app, crate::msg!("log.models.waitSecond"));
                         }
                         replay.fill(0);
                         clear_recent_audio(&mut recent_chunks, &mut recent_samples);
@@ -608,7 +611,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 if append_loading_audio(&mut loading_audio, &chunk) && !loading_audio_truncated {
                     ui_log(
                         app,
-                        "⚠ загрузка моделей затянулась — буфер аудио достиг предела",
+                        crate::msg!("log.models.bufferFull"),
                     );
                 }
                 loading_audio_truncated |= loading_audio.len() >= LOADING_AUDIO_LIMIT_SAMPLES;
@@ -618,7 +621,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                     if append_loading_audio(audio, &chunk) && !loading_audio_truncated {
                         ui_log(
                             app,
-                            "⚠ загрузка моделей затянулась — буфер аудио достиг предела",
+                            crate::msg!("log.models.bufferFull"),
                         );
                     }
                     loading_audio_truncated |= audio.len() >= LOADING_AUDIO_LIMIT_SAMPLES;
@@ -639,7 +642,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                             let reason = pending_command_reason.take().unwrap_or(LoadReason::Wake);
                             let truncated = append_loading_audio(&mut replay, &loading_audio);
                             if truncated {
-                                ui_log(app, "⚠ команда длиннее буфера ожидания языковой модели");
+                                ui_log(app, crate::msg!("log.models.commandTooLong"));
                             }
                             loading_audio.fill(0);
                             loading_audio.clear();
@@ -673,14 +676,14 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         }
                     }
                     Err(error) => {
-                        ui_log(app, format!("⚠ второй язык не загрузился: {error:#}"));
+                        ui_log(app, crate::msg!("log.models.secondFailed", error = format!("{error:#}")));
                         engine.set_bilingual(None, None, language_mode(s));
                         load_rx.take();
                         if let Some(mut replay) = pending_command_audio.take() {
                             let reason = pending_command_reason.take().unwrap_or(LoadReason::Wake);
                             let truncated = append_loading_audio(&mut replay, &loading_audio);
                             if truncated {
-                                ui_log(app, "⚠ команда длиннее буфера ожидания языковой модели");
+                                ui_log(app, crate::msg!("log.models.commandTooLong"));
                             }
                             loading_audio.fill(0);
                             loading_audio.clear();
@@ -716,7 +719,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         }
                     }
                     Ok(ModelLoadEvent::Primary(_)) => {
-                        ui_log(app, "⚠ загрузчик моделей вернул этапы не по порядку");
+                        ui_log(app, "⚠ model loader returned stages out of order");
                     }
                 }
             }
@@ -766,7 +769,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             pending_command_audio = Some(staged_audio.take().unwrap_or_else(|| chunk.to_vec()));
             pending_command_reason = staged_reason.take().or(Some(LoadReason::Wake));
             set_state(app, "loading");
-            ui_log(app, "⏳ жду загрузку второго языка для первой команды…");
+            ui_log(app, crate::msg!("log.models.waitSecond"));
         } else if has_command {
             if let Some(audio) = staged_audio.as_mut() {
                 audio.fill(0);
@@ -781,7 +784,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         if trace && spent >= Duration::from_millis(250) {
             ui_log(
                 app,
-                format!("trace: распознавание заняло {} мс", spent.as_millis()),
+                format!("trace: recognition took {} ms", spent.as_millis()),
             );
         }
 
@@ -795,7 +798,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 ui_log(
                     app,
                     format!(
-                        "trace: подогрев моделей {} мс",
+                        "trace: model warm-up {} ms",
                         started.elapsed().as_millis()
                     ),
                 );
@@ -817,7 +820,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         {
             engine.set_bilingual(None, None, language_mode(s));
             if asr.unload() {
-                ui_log(app, "модели распознавания выгружены после простоя");
+                ui_log(app, crate::msg!("log.models.unloaded"));
                 set_asr_status(app, &status, "ready");
                 last_activity = std::time::Instant::now();
             }
@@ -840,7 +843,7 @@ where
     }
     match Anglicisms::load(&cfg.anglicisms_path, &s.dictation_terms) {
         Ok(anglicisms) => engine.set_anglicisms(Some(anglicisms)),
-        Err(error) => ui_log(app, format!("⚠ словарь англицизмов не загружен: {error:#}")),
+        Err(error) => ui_log(app, crate::msg!("log.anglicismsFailed", error = format!("{error:#}"))),
     }
 }
 
@@ -860,17 +863,17 @@ where
         Ok(spotter) => {
             ui_log(
                 app,
-                format!("✓ фоновый детектор «ривер»: {}", s.wake_spotter_model),
+                crate::msg!("log.spotter.ok", model = &s.wake_spotter_model),
             );
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
-        Err(e) => ui_log(app, format!("⚠ фоновый детектор «ривер» недоступен: {e:#}")),
+        Err(e) => ui_log(app, crate::msg!("log.spotter.failed", error = format!("{e:#}"))),
     }
 }
 
 /// Загружает вторую модель и LID после основной. Отсутствие этих моделей не
 /// блокирует команды на основном языке: bilingual.rs использует текстовые эвристики.
-fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>, Vec<String>) {
+fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>, Vec<Msg>) {
     let s = &cfg.settings;
     let mut warnings = Vec::new();
     let second = match Asr::new(&AsrConfig {
@@ -879,7 +882,7 @@ fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>,
     }) {
         Ok(asr) => Some(asr),
         Err(error) => {
-            warnings.push(format!("⚠ второй язык недоступен: {error:#}"));
+            warnings.push(crate::msg!("log.second.unavailable", error = format!("{error:#}")));
             None
         }
     };
@@ -888,9 +891,7 @@ fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>,
             Some(dir) => match SpeechLid::new(dir, 1) {
                 Ok(lid) => Some(lid),
                 Err(error) => {
-                    warnings.push(format!(
-                        "⚠ определитель языка недоступен ({error:#}) — только эвристика"
-                    ));
+                    warnings.push(crate::msg!("log.lid.unavailable", error = format!("{error:#}")));
                     None
                 }
             },
@@ -900,16 +901,19 @@ fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>,
         None
     };
     if second.is_some() {
-        warnings.push(format!(
-            "✓ второй язык: {} · определитель: {} · язык цели: {}",
-            s.second_asr_model,
-            if lid.is_some() {
-                s.lid_model.as_str()
-            } else {
-                "эвристика"
-            },
-            s.payload_language
-        ));
+        warnings.push(match &lid {
+            Some(_) => crate::msg!(
+                "log.second.ok",
+                model = &s.second_asr_model,
+                lid = &s.lid_model,
+                target = &s.payload_language
+            ),
+            None => crate::msg!(
+                "log.second.okHeuristic",
+                model = &s.second_asr_model,
+                target = &s.payload_language
+            ),
+        });
     }
     (second, lid, warnings)
 }
@@ -928,7 +932,7 @@ fn install_secondary_models<T, V>(
     settings: &crate::config::Settings,
     second: Option<Asr>,
     lid: Option<SpeechLid>,
-    warnings: Vec<String>,
+    warnings: Vec<Msg>,
 ) where
     T: crate::speech::Transcriber,
     V: crate::speech::VoiceDetector,
@@ -982,7 +986,7 @@ fn take_loader_event(
         Err(std::sync::mpsc::TryRecvError::Disconnected) => {
             receiver.take();
             Some(Err(anyhow::anyhow!(
-                "поток загрузки моделей завершился без результата"
+                "the model loader thread ended without a result"
             )))
         }
         Err(std::sync::mpsc::TryRecvError::Empty) => None,
@@ -1139,7 +1143,7 @@ impl Worker<'_> {
             self.cancel_words = grammar.cancel_words.clone();
         }
         if self.grammar_version.is_some() {
-            ui_log(self.app, "✓ фразы команд обновлены");
+            ui_log(self.app, crate::msg!("log.grammarUpdated"));
         }
         engine.set_grammar(grammar);
         self.grammar_version = Some(version);
@@ -1203,7 +1207,7 @@ impl Worker<'_> {
             (None, Some(id)) => {
                 ui_log(
                     self.app,
-                    "● калибровка — говори фразу для действия (можно несколько подряд)…",
+                    crate::msg!("log.calibration.start"),
                 );
                 self.sound("start.wav");
                 engine.start_calibration();
@@ -1213,7 +1217,7 @@ impl Worker<'_> {
             (Some(cur), p) if p.as_deref() != Some(cur.as_str()) => {
                 engine.stop_calibration();
                 self.calibrating = None;
-                ui_log(self.app, "✓ калибровка завершена");
+                ui_log(self.app, crate::msg!("log.calibration.done"));
                 set_state(self.app, "idle");
             }
             _ => {}
@@ -1230,7 +1234,7 @@ impl Worker<'_> {
             && self.calibrating.is_none()
             && self.confirm_op.is_none();
         if hotkey_started {
-            ui_log(self.app, "● хоткей — слушаю команду…");
+            ui_log(self.app, crate::msg!("log.listen.hotkey"));
             self.sound("start.wav");
             self.dictation = None;
             engine.listen_command();
@@ -1325,7 +1329,7 @@ impl Worker<'_> {
         match ev {
             EngineEvent::State(s) => set_state(self.app, s),
             EngineEvent::WakeHeard => {
-                ui_log(self.app, "● слушаю команду…");
+                ui_log(self.app, crate::msg!("log.listen"));
                 self.wake_sound();
             }
             EngineEvent::WakeSpotted => {
@@ -1344,10 +1348,10 @@ impl Worker<'_> {
             EngineEvent::Calibration { text, alt } => self.calibration(&text, alt.as_deref()),
             EngineEvent::Timeout => {
                 if self.confirm_op.take().is_some() {
-                    ui_log(self.app, "↩ не дождался подтверждения — отменено");
+                    ui_log(self.app, crate::msg!("log.confirm.timeout"));
                     self.sound("error.wav");
                 } else {
-                    ui_log(self.app, "⌛ команды не было");
+                    ui_log(self.app, crate::msg!("log.noCommand"));
                 }
                 let _ = self.app.emit("reever://partial", String::new());
                 set_state(self.app, "idle");
@@ -1365,7 +1369,13 @@ impl Worker<'_> {
         let idle_s = self.cfg.settings.dictation_idle_ms.clamp(2_000, 600_000) / 1000;
         ui_log(
             self.app,
-            format!("✎ диктовка: говори — текст печатается в поле с курсором; конец — {idle_s} с тишины или «ривер стоп» (текст остаётся); «ривер отмена» — стереть"),
+            crate::msg!(
+                "log.dictation.start",
+                seconds = idle_s,
+                wake = self.cfg.settings.wake_words.first().map(String::as_str).unwrap_or("ривер"),
+                stop = if self.cfg.settings.russian_enabled() { "стоп" } else { "stop" },
+                cancel = self.cancel_words.first().map(String::as_str).unwrap_or("отмена")
+            ),
         );
         // Цепочка сигналов: «ривер» уже прозвучал (детектор/пауза) — теперь «принял команду».
         self.wake_sound();
@@ -1400,7 +1410,7 @@ impl Worker<'_> {
             session.focus_logged = true;
             ui_log(
                 self.app,
-                format!("⚠ поле ввода не найдено: {}", typing::describe_focus()),
+                crate::msg!("log.dictation.noField", focus = typing::describe_focus()),
             );
         }
         None
@@ -1483,20 +1493,20 @@ impl Worker<'_> {
         session.live.typed.clear();
         session.last_preview.clear();
         session.live_broken = false;
-        let note = if rest.is_empty() {
-            ""
-        } else {
+        let waiting = !rest.is_empty();
+        if waiting {
             session.pending.push_str(&rest);
-            " → ⏳ ждёт поле ввода"
-        };
+        }
         if wanted.is_empty() {
             return;
         }
-        if private {
-            ui_log(self.app, format!("✎ продиктовано{note}"));
-        } else {
-            ui_log(self.app, format!("✎ «{}»{note}", wanted.trim()));
-        }
+        let line = match (private, waiting) {
+            (true, false) => crate::msg!("log.dictation.typed.private"),
+            (true, true) => crate::msg!("log.dictation.waiting.private"),
+            (false, false) => crate::msg!("log.dictation.typed", text = wanted.trim()),
+            (false, true) => crate::msg!("log.dictation.waiting", text = wanted.trim()),
+        };
+        ui_log(self.app, line);
     }
 
     /// Конец диктовки: что так и не нашло поле — последняя попытка, затем буфер обмена.
@@ -1519,7 +1529,7 @@ impl Worker<'_> {
         };
         let rest = std::mem::take(&mut session.pending);
         if !clipboard_enabled {
-            ui_log(self.app, "⚠ нет поля ввода — продиктованное пропущено");
+            ui_log(self.app, crate::msg!("log.dictation.dropped"));
             return;
         }
         if session.clipboard_before.is_none() {
@@ -1533,7 +1543,7 @@ impl Worker<'_> {
         };
         session.clipboard.push_str(&rest);
         if typing::set_clipboard(&session.clipboard).is_err() {
-            ui_log(self.app, "⚠ буфер обмена занят — текст потерян");
+            ui_log(self.app, crate::msg!("log.dictation.clipboardBusy"));
             session.clipboard.clear();
         }
     }
@@ -1555,23 +1565,26 @@ impl Worker<'_> {
         }
         self.settle_pending();
         let session = self.dictation.take().unwrap_or_default();
-        let why = match reason {
-            DictationEndReason::Silence => "тишина",
-            DictationEndReason::Stopped => "стоп",
-            DictationEndReason::Command => "новая команда",
-            DictationEndReason::Error => "ошибка распознавания",
-            DictationEndReason::Cancelled => "отмена",
-        };
-        let mut summary = format!(
-            "✓ диктовка завершена ({why}): напечатано символов — {}",
-            session.typed_chars
+        let why = crate::uilang::text(
+            crate::uilang::current(),
+            match reason {
+                DictationEndReason::Silence => "dictation.end.silence",
+                DictationEndReason::Stopped => "dictation.end.stopped",
+                DictationEndReason::Command => "dictation.end.command",
+                DictationEndReason::Error => "dictation.end.error",
+                DictationEndReason::Cancelled => "dictation.end.cancelled",
+            },
         );
-        if !session.clipboard.is_empty() {
-            summary.push_str(&format!(
-                "; в буфере обмена — {} (вставь Ctrl+V)",
-                session.clipboard.chars().count()
-            ));
-        }
+        let summary = if session.clipboard.is_empty() {
+            crate::msg!("log.dictation.end", why = why, typed = session.typed_chars)
+        } else {
+            crate::msg!(
+                "log.dictation.endClipboard",
+                why = why,
+                typed = session.typed_chars,
+                clipboard = session.clipboard.chars().count()
+            )
+        };
         ui_log(self.app, summary);
         match reason {
             DictationEndReason::Command => {}
@@ -1594,12 +1607,14 @@ impl Worker<'_> {
         if let Some(before) = &session.clipboard_before {
             let _ = typing::set_clipboard(before.as_deref().unwrap_or(""));
         }
-        let mut summary = format!("↩ диктовка отменена: стёрто символов — {erased}");
-        if erased < total {
-            summary.push_str(&format!(" из {total} (окно сменилось — остаток не тронут)"));
-        }
+        let locale = crate::uilang::current();
+        let mut summary = if erased < total {
+            crate::msg!("log.dictation.cancelledPartly", erased = erased, total = total).render(locale)
+        } else {
+            crate::msg!("log.dictation.cancelled", erased = erased).render(locale)
+        };
         if session.clipboard_before.is_some() {
-            summary.push_str("; буфер обмена восстановлен");
+            summary.push_str(crate::uilang::text(locale, "log.dictation.clipboardRestored"));
         }
         ui_log(self.app, summary);
         self.sound("error.wav");
@@ -1612,17 +1627,17 @@ impl Worker<'_> {
     {
         let _ = self.app.emit("reever://partial", String::new());
         if self.private() {
-            ui_log(self.app, "📝 распознано (приватный режим)");
+            ui_log(self.app, crate::msg!("log.heard.private"));
         } else {
             // Второй вариант (другой язык) — по журналу видно, что услышала вторая модель.
             match alt.filter(|alt| alt.trim() != text.trim()) {
-                Some(alt) => ui_log(self.app, format!("📝 «{text}» · другой язык: «{alt}»")),
+                Some(alt) => ui_log(self.app, crate::msg!("log.heardAlt", text = text, alt = alt)),
                 None => ui_log(self.app, format!("📝 «{text}»")),
             }
             let _ = self.app.emit("reever://heard", text.to_string());
         }
         if textnorm::is_cancel(text, &self.cancel_words) {
-            ui_log(self.app, "↩ отменено");
+            ui_log(self.app, crate::msg!("log.cancelled"));
             self.sound("error.wav");
             set_state(self.app, "idle");
             return;
@@ -1637,7 +1652,7 @@ impl Worker<'_> {
             DispatchResult::Choose(count) => {
                 ui_log(
                     self.app,
-                    format!("🔎 найдено {count} — скажи номер («третий») или выбери в окне"),
+                    crate::msg!("log.choose", count = count),
                 );
                 self.choice_session = Some(self.shared.picker_session.load(Ordering::SeqCst));
                 engine.listen_choice();
@@ -1645,9 +1660,9 @@ impl Worker<'_> {
             DispatchResult::Confirm(pending) => {
                 ui_log(
                     self.app,
-                    format!(
-                        "❓ {} — подтверди голосом: «да» / «нет» (yes / no)",
-                        pending.describe()
+                    crate::msg!(
+                        "log.confirm",
+                        action = pending.describe().render(crate::uilang::current())
                     ),
                 );
                 self.confirm_sound();
@@ -1683,14 +1698,14 @@ impl Worker<'_> {
         if text.trim().is_empty() {
             ui_log(
                 self.app,
-                "… номер не услышал — выбери в окне мышью или клавишами",
+                crate::msg!("log.choice.notHeard"),
             );
             set_state(self.app, "idle");
             return;
         }
         if textnorm::is_cancel(text, &self.cancel_words) {
             crate::picker::hide(self.app, self.shared);
-            ui_log(self.app, "↩ выбор отменён");
+            ui_log(self.app, crate::msg!("log.choice.cancelled"));
             self.sound("error.wav");
             set_state(self.app, "idle");
             return;
@@ -1702,11 +1717,11 @@ impl Worker<'_> {
             }
             None => {
                 if self.private() {
-                    ui_log(self.app, "… не понял номер — выбери в окне");
+                    ui_log(self.app, crate::msg!("log.choice.unclear.private"));
                 } else {
                     ui_log(
                         self.app,
-                        format!("… не понял номер «{text}» — выбери в окне"),
+                        crate::msg!("log.choice.unclear", text = text),
                     );
                 }
             }
@@ -1719,11 +1734,14 @@ impl Worker<'_> {
             return;
         };
         if yes {
-            ui_log(self.app, format!("⚙ выполняю: {}", pending.describe()));
+            ui_log(
+                self.app,
+                crate::msg!("log.executing", action = pending.describe().render(crate::uilang::current())),
+            );
             let ok = execute_pending(self.app, &pending);
             self.sound(if ok { "success.wav" } else { "error.wav" });
         } else {
-            ui_log(self.app, "↩ отменено");
+            ui_log(self.app, crate::msg!("log.cancelled"));
             self.sound("error.wav");
         }
         set_state(self.app, "idle");
@@ -1740,7 +1758,7 @@ impl Worker<'_> {
         }
         candidates.retain(|candidate| !candidate.is_empty());
         if candidates.is_empty() {
-            ui_log(self.app, "⚠ калибровка: ничего не распознано, повтори");
+            ui_log(self.app, crate::msg!("log.calibration.nothing"));
             let _ = self.app.emit("reever://calibrated", id);
             return;
         }
@@ -1769,14 +1787,15 @@ impl Worker<'_> {
             self.shared.persist();
         }
         if self.private() {
-            ui_log(self.app, format!("✓ калибровка «{id}»: фраза записана"));
+            ui_log(self.app, crate::msg!("log.calibration.saved.private", action = &id));
         } else {
             ui_log(
                 self.app,
-                format!(
-                    "✓ калибровка «{id}»: «{phrase}»{}",
-                    if added { "" } else { " (уже есть)" }
-                ),
+                if added {
+                    crate::msg!("log.calibration.saved", action = &id, phrase = phrase)
+                } else {
+                    crate::msg!("log.calibration.exists", action = &id, phrase = phrase)
+                },
             );
         }
         self.sound("success.wav");

@@ -39,7 +39,7 @@ impl CpuProviderConfig {
                 Err(error) => {
                     return Err(error).with_context(|| {
                         format!(
-                            "не удалось создать конфигурацию ONNX Runtime {}",
+                            "failed to create the ONNX Runtime config {}",
                             path.display()
                         )
                     });
@@ -49,13 +49,13 @@ impl CpuProviderConfig {
             let mut file = file;
             file.write_all(b"EnableCpuMemArena=0\n").with_context(|| {
                 format!(
-                    "не удалось записать конфигурацию ONNX Runtime {}",
+                    "failed to write the ONNX Runtime config {}",
                     config.path.display()
                 )
             })?;
             return Ok(config);
         }
-        bail!("не удалось создать уникальную конфигурацию ONNX Runtime")
+        bail!("failed to create a unique ONNX Runtime config")
     }
 
     pub(crate) fn provider(&self) -> String {
@@ -84,7 +84,7 @@ impl Asr {
     pub fn new(cfg: &AsrConfig) -> anyhow::Result<Self> {
         let model_dir = &cfg.model_dir;
         if !model_dir.is_dir() {
-            bail!("каталог ASR-модели не найден: {}", model_dir.display());
+            bail!("ASR model folder not found: {}", model_dir.display());
         }
 
         let tokens = model_dir.join("tokens.txt");
@@ -125,7 +125,7 @@ impl Asr {
         } else if let (Some(encoder), Some(decoder), Some(joiner)) = (encoder, decoder, joiner) {
             if !tokens.is_file() {
                 bail!(
-                    "не найден tokens.txt для NeMo transducer-модели в {}",
+                    "tokens.txt for the NeMo transducer model not found in {}",
                     model_dir.display()
                 );
             }
@@ -138,7 +138,7 @@ impl Asr {
         } else if let Some(model) = ctc_model {
             if !tokens.is_file() {
                 bail!(
-                    "не найден tokens.txt для NeMo CTC-модели в {}",
+                    "tokens.txt for the NeMo CTC model not found in {}",
                     model_dir.display()
                 );
             }
@@ -149,7 +149,7 @@ impl Asr {
         } else if let (Some(encoder), Some(decoder)) = (whisper_encoder, whisper_decoder) {
             let Some(whisper_tokens) = whisper_tokens else {
                 bail!(
-                    "не найден tokens.txt для Whisper-модели в {}",
+                    "tokens.txt for the Whisper model not found in {}",
                     model_dir.display()
                 );
             };
@@ -172,16 +172,16 @@ impl Asr {
         } else {
             let found = onnx_files(model_dir)?;
             bail!(
-                "в {} не найдена поддерживаемая sherpa-onnx модель; нужны encoder*.onnx + decoder*.onnx + joiner*.onnx + tokens.txt (NeMo transducer), model*.onnx + tokens.txt (CTC), Whisper *-encoder*.onnx + *-decoder*.onnx + tokens.txt либо Qwen3 conv_frontend.onnx + encoder*.onnx + decoder*.onnx + tokenizer/. ONNX-файлы: {}{}",
+                "no supported sherpa-onnx model in {}; expected encoder*.onnx + decoder*.onnx + joiner*.onnx + tokens.txt (NeMo transducer), model*.onnx + tokens.txt (CTC), Whisper *-encoder*.onnx + *-decoder*.onnx + tokens.txt or Qwen3 conv_frontend.onnx + encoder*.onnx + decoder*.onnx + tokenizer/. ONNX files: {}{}",
                 model_dir.display(),
-                if found.is_empty() { "нет".into() } else { found.join(", ") },
-                if tokens.is_file() { "" } else { "; также отсутствует tokens.txt" }
+                if found.is_empty() { "none".into() } else { found.join(", ") },
+                if tokens.is_file() { "" } else { "; tokens.txt is missing too" }
             );
         }
 
         let recognizer = OfflineRecognizer::create(&recognizer_config).with_context(|| {
             format!(
-                "sherpa-onnx не смог загрузить модель из {}",
+                "sherpa-onnx failed to load the model from {}",
                 model_dir.display()
             )
         })?;
@@ -218,7 +218,7 @@ impl Asr {
         self.recognizer.decode(&stream);
         let result = stream
             .get_result()
-            .context("sherpa-onnx не вернул результат распознавания")?;
+            .context("sherpa-onnx returned no recognition result")?;
         Ok(Some(result))
     }
 }
@@ -371,7 +371,7 @@ fn is_special_token(token: &str) -> bool {
 
 fn best_onnx(dir: &Path, prefix: &str) -> anyhow::Result<Option<PathBuf>> {
     let mut candidates: Vec<PathBuf> = fs::read_dir(dir)
-        .with_context(|| format!("не удалось прочитать каталог модели {}", dir.display()))?
+        .with_context(|| format!("failed to read the model folder {}", dir.display()))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| {
@@ -404,7 +404,7 @@ fn best_onnx(dir: &Path, prefix: &str) -> anyhow::Result<Option<PathBuf>> {
 
 fn best_onnx_component(dir: &Path, marker: &str) -> anyhow::Result<Option<PathBuf>> {
     let mut candidates: Vec<PathBuf> = fs::read_dir(dir)
-        .with_context(|| format!("не удалось прочитать каталог модели {}", dir.display()))?
+        .with_context(|| format!("failed to read the model folder {}", dir.display()))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| {
@@ -437,7 +437,7 @@ fn best_onnx_component(dir: &Path, marker: &str) -> anyhow::Result<Option<PathBu
 
 fn best_file_with_suffix(dir: &Path, suffix: &str) -> anyhow::Result<Option<PathBuf>> {
     let mut candidates: Vec<PathBuf> = fs::read_dir(dir)
-        .with_context(|| format!("не удалось прочитать каталог модели {}", dir.display()))?
+        .with_context(|| format!("failed to read the model folder {}", dir.display()))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| {
@@ -453,7 +453,7 @@ fn best_file_with_suffix(dir: &Path, suffix: &str) -> anyhow::Result<Option<Path
 
 fn onnx_files(dir: &Path) -> anyhow::Result<Vec<String>> {
     let mut files: Vec<String> = fs::read_dir(dir)
-        .with_context(|| format!("не удалось прочитать каталог модели {}", dir.display()))?
+        .with_context(|| format!("failed to read the model folder {}", dir.display()))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.is_file() && path.extension().is_some_and(|ext| ext == "onnx"))

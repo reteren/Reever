@@ -56,7 +56,7 @@ fn ensure_picker(app: &AppHandle) {
         .cloned()
     else {
         PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-        ui_log(app, "⚠ не найден конфиг окна выбора");
+        ui_log(app, "⚠ picker window config not found");
         mark_current_session_closed(app);
         return;
     };
@@ -69,7 +69,7 @@ fn ensure_picker(app: &AppHandle) {
             Ok(window) => window,
             Err(error) => {
                 PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-                ui_log(&app, format!("⚠ окно выбора не создано: {error}"));
+                ui_log(&app, format!("⚠ picker window was not created: {error}"));
                 mark_current_session_closed(&app);
                 return;
             }
@@ -168,7 +168,7 @@ pub fn choose(app: &AppHandle, shared: &SharedState, cfg: &ReeverConfig, index: 
         item
     });
     let Some(item) = item else {
-        ui_log(app, format!("⚠ варианта №{} нет в списке", index + 1));
+        ui_log(app, crate::msg!("log.choice.missing", number = index + 1));
         return false;
     };
     hide(app, shared);
@@ -178,7 +178,7 @@ pub fn choose(app: &AppHandle, shared: &SharedState, cfg: &ReeverConfig, index: 
 /// Открыть найденное: папку — в Проводнике, файл — программой по умолчанию.
 pub fn open(app: &AppHandle, shared: &SharedState, cfg: &ReeverConfig, item: &FindItem) -> bool {
     if cfg.settings.private_log {
-        ui_log(app, if item.folder { "📂 открываю папку" } else { "📄 открываю файл" });
+        ui_log(app, if item.folder { crate::msg!("log.openingFolder") } else { crate::msg!("log.openingFile") });
     } else {
         ui_log(app, format!("{} {}", if item.folder { "📂" } else { "📄" }, item.path));
     }
@@ -210,6 +210,6 @@ pub fn picker_choose(
 pub fn picker_close(app: AppHandle, shared: State<'_, Arc<SharedState>>) -> Result<(), String> {
     mark_closed(&shared);
     hide(&app, &shared);
-    ui_log(&app, "↩ выбор закрыт");
+    ui_log(&app, crate::msg!("log.choice.closed"));
     Ok(())
 }

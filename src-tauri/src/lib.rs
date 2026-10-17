@@ -100,7 +100,7 @@ fn show_main(app: &tauri::AppHandle) {
 
     let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "main").cloned() else {
         MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
-        events::ui_log(app, "⚠ не найден конфиг главного окна");
+        events::ui_log(app, "⚠ main window config not found");
         return;
     };
 
@@ -113,7 +113,7 @@ fn show_main(app: &tauri::AppHandle) {
             Ok(window) => window,
             Err(error) => {
                 MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
-                events::ui_log(&app, format!("⚠ главное окно не создано: {error}"));
+                events::ui_log(&app, format!("⚠ main window was not created: {error}"));
                 return;
             }
         };
@@ -266,7 +266,7 @@ pub fn run() {
                         let now = !state.paused.load(Ordering::Relaxed);
                         state.paused.store(now, Ordering::Relaxed);
                         events::set_state(app, if now { "paused" } else { "idle" });
-                        events::ui_log(app, if now { "🔇 микрофон заглушён (хоткей)" } else { "🔊 микрофон включён (хоткей)" });
+                        events::ui_log(app, if now { crate::msg!("log.mic.mutedHotkey") } else { crate::msg!("log.mic.onHotkey") });
                     } else {
                         // иначе — push-to-talk
                         show_main(app);
@@ -311,9 +311,7 @@ pub fn run() {
                             let now = !state.paused.load(Ordering::Relaxed);
                             state.paused.store(now, Ordering::Relaxed);
                             events::set_state(app, if now { "paused" } else { "idle" });
-                            let locale = *uilang::CURRENT.lock().unwrap();
-                            let line = uilang::text(locale, if now { "log.paused" } else { "log.resumed" });
-                            events::ui_log(app, line);
+                            events::ui_log(app, if now { crate::msg!("log.paused") } else { crate::msg!("log.resumed") });
                         }
                     }
                     "quit" => {

@@ -40,9 +40,9 @@ pub fn open_and_type(keys: &str) -> anyhow::Result<()> {
         Some(window) => window,
         None => {
             if !launcher::launch_uwp(CALCULATOR_AUMID) && !launcher::shell_open("calc.exe") {
-                bail!("не удалось запустить калькулятор Windows");
+                bail!("failed to start Windows Calculator");
             }
-            wait_for_calculator_window().context("окно калькулятора не появилось за 3 секунды")?
+            wait_for_calculator_window().context("the Calculator window did not appear within 3 seconds")?
         }
     };
 
@@ -58,19 +58,19 @@ pub fn open_and_type(keys: &str) -> anyhow::Result<()> {
     }
 
     ensure_calculator_foreground(window)?;
-    send_virtual_key(VK_ESCAPE).context("не удалось сбросить ввод калькулятора")?;
+    send_virtual_key(VK_ESCAPE).context("failed to reset Calculator input")?;
     sleep(KEY_DELAY);
 
     for ch in keys.chars() {
         ensure_calculator_foreground(window)
-            .with_context(|| format!("фокус покинул калькулятор перед вводом {ch:?}"))?;
+            .with_context(|| format!("focus left Calculator before typing {ch:?}"))?;
 
         // Enter is the reliable equivalent of '=' across calculator layouts.
         if ch == '=' {
             send_virtual_key(windows::Win32::UI::Input::KeyboardAndMouse::VK_RETURN)
-                .context("не удалось отправить Enter в калькулятор")?;
+                .context("failed to send Enter to Calculator")?;
         } else {
-            send_unicode_char(ch).with_context(|| format!("не удалось ввести символ {ch:?}"))?;
+            send_unicode_char(ch).with_context(|| format!("failed to type {ch:?}"))?;
         }
         sleep(KEY_DELAY);
     }
@@ -111,7 +111,7 @@ fn wait_for_calculator_window() -> anyhow::Result<HWND> {
             return Ok(window);
         }
         if Instant::now() >= deadline {
-            bail!("калькулятор не создал видимое окно за 3 секунды");
+            bail!("Calculator did not show a window within 3 seconds");
         }
         sleep(Duration::from_millis(100));
     }
@@ -119,7 +119,7 @@ fn wait_for_calculator_window() -> anyhow::Result<HWND> {
 
 fn activate_calculator(window: HWND) -> anyhow::Result<()> {
     if !unsafe { IsWindow(window) }.as_bool() {
-        bail!("окно калькулятора уже закрыто");
+        bail!("the Calculator window is already closed");
     }
 
     for _ in 0..8 {
@@ -149,7 +149,7 @@ fn activate_calculator(window: HWND) -> anyhow::Result<()> {
         }
     }
 
-    bail!("Windows не передал фокус калькулятору; ввод отменён")
+    bail!("Windows did not give focus to Calculator; input cancelled")
 }
 
 fn ensure_calculator_foreground(window: HWND) -> anyhow::Result<()> {
@@ -158,7 +158,7 @@ fn ensure_calculator_foreground(window: HWND) -> anyhow::Result<()> {
     if foreground == window || root == window {
         Ok(())
     } else {
-        bail!("активное окно изменилось; ввод в калькулятор остановлен")
+        bail!("the active window changed; Calculator input stopped")
     }
 }
 
@@ -170,7 +170,7 @@ fn send_engineering_shortcut() -> anyhow::Result<()> {
         keyboard_input(two, 0, KEYEVENTF_KEYUP),
         keyboard_input(VK_MENU, 0, KEYEVENTF_KEYUP),
     ];
-    send_inputs(&inputs).context("не удалось переключить калькулятор в инженерный режим")
+    send_inputs(&inputs).context("failed to switch Calculator to scientific mode")
 }
 
 fn send_virtual_key(key: VIRTUAL_KEY) -> anyhow::Result<()> {
@@ -212,7 +212,7 @@ fn keyboard_input(key: VIRTUAL_KEY, scan: u16, flags: KEYBD_EVENT_FLAGS) -> INPU
 fn send_inputs(inputs: &[INPUT]) -> anyhow::Result<()> {
     let sent = unsafe { SendInput(inputs, size_of::<INPUT>() as i32) };
     if sent != inputs.len() as u32 {
-        bail!("SendInput передал {sent} из {} нажатий", inputs.len());
+        bail!("SendInput delivered {sent} of {} key presses", inputs.len());
     }
     Ok(())
 }

@@ -121,7 +121,7 @@ fn text_target_local() -> Option<isize> {
 fn describe_focus_local() -> String {
     let foreground = unsafe { GetForegroundWindow() };
     if foreground.0.is_null() {
-        return "нет активного окна".into();
+        return "no active window".into();
     }
     let mut pid = 0u32;
     let thread = unsafe { GetWindowThreadProcessId(foreground, Some(&mut pid)) };
@@ -140,16 +140,16 @@ fn describe_focus_local() -> String {
                 .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
                 .ok()
                 .and_then(|value| value.CurrentIsReadOnly().ok())
-                .map(|ro| if ro.as_bool() { "только чтение" } else { "редактируемое" })
-                .unwrap_or("без ValuePattern");
-            Some(format!("UIA тип {control}, pid {element_pid}, {readonly}"))
+                .map(|ro| if ro.as_bool() { "read-only" } else { "editable" })
+                .unwrap_or("no ValuePattern");
+            Some(format!("UIA type {control}, pid {element_pid}, {readonly}"))
         }
     });
     format!(
-        "окно класса «{}», pid {pid}, системный курсор: {}, {}",
+        "window class «{}», pid {pid}, system caret: {}, {}",
         class_name(foreground),
-        if caret { "есть" } else { "нет" },
-        uia.unwrap_or_else(|| "UIA: нет элемента".into())
+        if caret { "yes" } else { "no" },
+        uia.unwrap_or_else(|| "UIA: no element".into())
     )
 }
 
@@ -338,15 +338,15 @@ fn current_focus(target: isize) -> anyhow::Result<HWND> {
     ensure_foreground_window(target)?;
     let thread = unsafe { GetWindowThreadProcessId(hwnd_from(target), None) };
     if thread == 0 {
-        bail!("не удалось определить поток целевого окна");
+        bail!("failed to find the target window thread");
     }
     let mut info = GUITHREADINFO {
         cbSize: size_of::<GUITHREADINFO>() as u32,
         ..Default::default()
     };
-    unsafe { GetGUIThreadInfo(thread, &mut info) }.context("не удалось прочитать фокус")?;
+    unsafe { GetGUIThreadInfo(thread, &mut info) }.context("failed to read the focus")?;
     if info.hwndFocus.0.is_null() {
-        bail!("в целевом окне нет сфокусированного поля");
+        bail!("the target window has no focused field");
     }
     Ok(info.hwndFocus)
 }
@@ -355,15 +355,15 @@ fn ensure_target(target: isize, expected_focus: HWND) -> anyhow::Result<()> {
     ensure_foreground_window(target)?;
     let thread = unsafe { GetWindowThreadProcessId(hwnd_from(target), None) };
     if thread == 0 {
-        bail!("не удалось определить поток целевого окна");
+        bail!("failed to find the target window thread");
     }
     let mut info = GUITHREADINFO {
         cbSize: size_of::<GUITHREADINFO>() as u32,
         ..Default::default()
     };
-    unsafe { GetGUIThreadInfo(thread, &mut info) }.context("не удалось проверить поле ввода")?;
+    unsafe { GetGUIThreadInfo(thread, &mut info) }.context("failed to check the input field")?;
     if info.hwndFocus.0 != expected_focus.0 {
-        bail!("фокусное поле сменилось — ввод остановлен");
+        bail!("the focused field changed — typing stopped");
     }
     Ok(())
 }
@@ -376,7 +376,7 @@ fn ensure_foreground_window(target: isize) -> anyhow::Result<()> {
     if foreground.0 as isize == target || root.0 as isize == target || owner.0 as isize == target {
         Ok(())
     } else {
-        bail!("активное окно сменилось — ввод остановлен")
+        bail!("the active window changed — typing stopped")
     }
 }
 
@@ -421,7 +421,7 @@ fn set_clipboard_local(text: &str) -> anyhow::Result<()> {
     let wide: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
     let owner = CLIPBOARD_OWNER.with(|owner| *owner);
     if owner.0.is_null() {
-        bail!("не удалось создать владельца буфера обмена");
+        bail!("failed to create a clipboard owner");
     }
     unsafe {
         // Буфер бывает занят другой программой — несколько коротких попыток.
@@ -434,22 +434,22 @@ fn set_clipboard_local(text: &str) -> anyhow::Result<()> {
             sleep(Duration::from_millis(20));
         }
         if !opened {
-            bail!("буфер обмена занят другой программой");
+            bail!("the clipboard is held by another program");
         }
         let result = (|| -> anyhow::Result<()> {
-            EmptyClipboard().context("не удалось очистить буфер обмена")?;
+            EmptyClipboard().context("failed to empty the clipboard")?;
             let memory = GlobalAlloc(GMEM_MOVEABLE, wide.len() * 2)
-                .context("не удалось выделить память под буфер обмена")?;
+                .context("failed to allocate clipboard memory")?;
             let ptr = GlobalLock(memory) as *mut u16;
             if ptr.is_null() {
                 let _ = GlobalFree(memory);
-                bail!("не удалось заблокировать память буфера обмена");
+                bail!("failed to lock clipboard memory");
             }
             std::ptr::copy_nonoverlapping(wide.as_ptr(), ptr, wide.len());
             let _ = GlobalUnlock(memory);
             if let Err(error) = SetClipboardData(CF_UNICODETEXT, HANDLE(memory.0 as *mut c_void)) {
                 let _ = GlobalFree(memory);
-                return Err(error).context("не удалось записать текст в буфер обмена");
+                return Err(error).context("failed to write text to the clipboard");
             }
             Ok(())
         })();
@@ -562,7 +562,7 @@ pub fn describe_focus() -> String {
 pub fn set_clipboard(text: &str) -> anyhow::Result<()> {
     let owned = text.to_string();
     crate::input_thread::call(move || set_clipboard_local(&owned))
-        .unwrap_or_else(|| Err(anyhow::anyhow!("поток ввода недоступен")))
+        .unwrap_or_else(|| Err(anyhow::anyhow!("the input thread is unavailable")))
 }
 
 /// Текст, напечатанный в поле по ходу речи, и его выравнивание с новым вариантом: стереть

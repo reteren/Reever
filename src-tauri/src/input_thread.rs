@@ -39,7 +39,7 @@ fn sender() -> Option<mpsc::Sender<Job>> {
                 .name("reever-input".into())
                 .spawn(move || run(rx));
             if let Err(error) = spawned {
-                eprintln!("[reever] поток ввода не запущен: {error}");
+                eprintln!("[reever] input thread did not start: {error}");
             }
             Mutex::new(tx)
         })

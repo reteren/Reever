@@ -34,11 +34,11 @@ pub enum PendingAction {
 
 impl PendingAction {
     /// Что сказать в лог при вопросе «подтверди».
-    pub fn describe(&self) -> String {
+    pub fn describe(&self) -> crate::uilang::LogText {
         match self {
-            PendingAction::System(op) => op.clone(),
-            PendingAction::Close(app) => format!("закрыть {}", app_title(app)),
-            PendingAction::Kill(app) => format!("завершить {}", app_title(app)),
+            PendingAction::System(op) => op.clone().into(),
+            PendingAction::Close(app) => crate::msg!("log.pending.close", app = app_title(app)).into(),
+            PendingAction::Kill(app) => crate::msg!("log.pending.kill", app = app_title(app)).into(),
         }
     }
 }
@@ -57,13 +57,13 @@ pub fn execute_pending(app: &AppHandle, pending: &PendingAction) -> bool {
         PendingAction::System(op) => system::run_system(op),
         PendingAction::Close(target) => match crate::procs::close_app(target) {
             Ok(n) => {
-                ui_log(app, format!("✕ закрываю {} (окон: {n})", app_title(target)));
+                ui_log(app, crate::msg!("log.closing", app = app_title(target), windows = n));
                 n > 0
             }
             Err(e) => {
                 ui_log(
                     app,
-                    format!("⚠ не удалось закрыть {}: {e:#}", app_title(target)),
+                    crate::msg!("log.closeFailed", app = app_title(target), error = format!("{e:#}")),
                 );
                 false
             }
@@ -72,14 +72,14 @@ pub fn execute_pending(app: &AppHandle, pending: &PendingAction) -> bool {
             Ok(n) => {
                 ui_log(
                     app,
-                    format!("☠ завершено {} (процессов: {n})", app_title(target)),
+                    crate::msg!("log.killed", app = app_title(target), processes = n),
                 );
                 n > 0
             }
             Err(e) => {
                 ui_log(
                     app,
-                    format!("⚠ не удалось завершить {}: {e:#}", app_title(target)),
+                    crate::msg!("log.killFailed", app = app_title(target), error = format!("{e:#}")),
                 );
                 false
             }
@@ -375,7 +375,7 @@ pub fn dispatch(
             if system::is_dangerous(&op) && cfg.settings.confirm_dangerous {
                 ui_log(
                     app,
-                    format!("⚙ {} — подтверди голосом: «да» / «отмена»", action.label),
+                    crate::msg!("log.confirmSystem", action = &action.label),
                 );
                 return DispatchResult::Confirm(PendingAction::System(op));
             }
@@ -383,7 +383,7 @@ pub fn dispatch(
             let score = action.score(&[normalized]);
             ui_log(
                 app,
-                format!("⚙ система: {} (score {score:.2})", action.label),
+                crate::msg!("log.system", action = &action.label, score = format!("{score:.2}")),
             );
             DispatchResult::Done(system::run_system(&op))
         }
@@ -393,7 +393,7 @@ pub fn dispatch(
                 let score = launch_action_score(action, &[text, alt.unwrap_or("")], &grammar);
                 ui_log(
                     app,
-                    format!("↪ действие «{}» (score {score:.2})", action.label),
+                    crate::msg!("log.action", action = &action.label, score = format!("{score:.2}")),
                 );
                 if run_action(app, cfg, action) {
                     any = true;
@@ -403,19 +403,19 @@ pub fn dispatch(
         }
         Route::LaunchFallback(target) => {
             if cfg.settings.offline_mode {
-                ui_log(app, "🔒 офлайн-режим: поиск программ (Everything) отключён");
+                ui_log(app, crate::msg!("log.offline.appSearch"));
                 return DispatchResult::Done(false);
             }
             if !cfg.settings.launch_everything_fallback {
-                ui_log(app, "∅ нет такого действия (добавь и откалибруй)");
+                ui_log(app, crate::msg!("log.noAction"));
                 return DispatchResult::Done(false);
             }
 
             let query = cfg.aliases.app(&target).unwrap_or_else(|| target.clone());
             if cfg.settings.private_log {
-                ui_log(app, "🔎 (fallback) поиск программ…");
+                ui_log(app, crate::msg!("log.appSearch.private"));
             } else {
-                ui_log(app, format!("🔎 (fallback) поиск программ: «{query}»"));
+                ui_log(app, crate::msg!("log.appSearch", query = &query));
             }
             let outcome = everything::find_executables(
                 &cfg.settings.everything_host,
@@ -443,7 +443,13 @@ pub fn dispatch(
         }
         Route::Dictate(_) => {
             // Диктовку ведёт Engine; сюда попадает только команда, пришедшая в обход него.
-            ui_log(app, "⚠ диктовка запускается голосом: «ривер напиши …»");
+            ui_log(
+                app,
+                crate::msg!(
+                    "log.dictateByVoice",
+                    wake = cfg.settings.wake_words.first().map(String::as_str).unwrap_or("ривер")
+                ),
+            );
             DispatchResult::Done(false)
         }
         Route::Calc(candidates) => {
@@ -452,11 +458,11 @@ pub fn dispatch(
                 .find_map(|candidate| calc::parse_expression(candidate));
             let Some(expression) = expression else {
                 if cfg.settings.private_log {
-                    ui_log(app, "⚠ не понял выражение (частный режим)");
+                    ui_log(app, crate::msg!("log.calc.badExpression.private"));
                 } else {
                     ui_log(
                         app,
-                        format!("⚠ не понял выражение «{}»", candidates.join(" / ")),
+                        crate::msg!("log.calc.badExpression", expression = candidates.join(" / ")),
                     );
                 }
                 return DispatchResult::Done(false);
@@ -465,7 +471,7 @@ pub fn dispatch(
             match calcapp::open_and_type(&expression.keys) {
                 Ok(()) => {
                     if cfg.settings.private_log {
-                        ui_log(app, "🧮 считаю");
+                        ui_log(app, crate::msg!("log.calc.private"));
                     } else if let Some(value) = expression.value {
                         ui_log(app, format!("🧮 {} = {value}", expression.pretty));
                     } else {
@@ -477,12 +483,12 @@ pub fn dispatch(
                     if cfg.settings.private_log {
                         ui_log(
                             app,
-                            "⚠ не удалось ввести выражение в калькулятор (частный режим)",
+                            crate::msg!("log.calc.typeFailed.private"),
                         );
                     } else {
                         ui_log(
                             app,
-                            format!("⚠ не удалось ввести выражение в калькулятор: {error:#}"),
+                            crate::msg!("log.calc.typeFailed", error = format!("{error:#}")),
                         );
                     }
                     DispatchResult::Done(false)
@@ -495,7 +501,7 @@ pub fn dispatch(
         Route::Kill(candidates) => dispatch_process_control(app, cfg, &actions, &candidates, true),
         Route::Search { label, url } => {
             if cfg.settings.offline_mode {
-                ui_log(app, "🔒 офлайн-режим: веб-поиск отключён");
+                ui_log(app, crate::msg!("log.offline.webSearch"));
                 return DispatchResult::Done(false);
             }
             if cfg.settings.private_log {
@@ -508,7 +514,7 @@ pub fn dispatch(
         Route::Find { scope, candidates } => dispatch_find(app, cfg, shared, scope, &candidates),
         Route::WebChat { label, url, text } => {
             if cfg.settings.offline_mode {
-                ui_log(app, "🔒 офлайн-режим: чат в браузере отключён");
+                ui_log(app, crate::msg!("log.offline.chat"));
                 return DispatchResult::Done(false);
             }
             if cfg.settings.private_log {
@@ -521,18 +527,18 @@ pub fn dispatch(
                 Ok(crate::webchat::ChatOutcome::Clipboard) => {
                     ui_log(
                         app,
-                        "📋 поле ввода чата не нашлось — вопрос в буфере обмена, вставь Ctrl+V",
+                        crate::msg!("log.chat.clipboard"),
                     );
                     DispatchResult::Done(false)
                 }
                 Err(error) => {
-                    ui_log(app, format!("⚠ чат: {error:#}"));
+                    ui_log(app, crate::msg!("log.chat.failed", error = format!("{error:#}")));
                     DispatchResult::Done(false)
                 }
             }
         }
         Route::Unknown => {
-            ui_log(app, "⚠ не распознал команду");
+            ui_log(app, crate::msg!("log.unknownCommand"));
             DispatchResult::Done(false)
         }
     }
@@ -548,19 +554,19 @@ fn dispatch_find(
     candidates: &[String],
 ) -> DispatchResult {
     if cfg.settings.offline_mode && cfg.settings.find_source == "everything" {
-        ui_log(app, "🔒 офлайн-режим: поиск через Everything отключён");
+        ui_log(app, crate::msg!("log.offline.find"));
         return DispatchResult::Done(false);
     }
-    let what = match scope {
-        crate::find::FindScope::Folder => "папку",
-        crate::find::FindScope::File => "файл",
-        crate::find::FindScope::Any => "файл или папку",
+    let query = candidates.join(" / ");
+    let line = match (scope, cfg.settings.private_log) {
+        (crate::find::FindScope::Folder, true) => crate::msg!("log.find.folder.private"),
+        (crate::find::FindScope::Folder, false) => crate::msg!("log.find.folder", query = &query),
+        (crate::find::FindScope::File, true) => crate::msg!("log.find.file.private"),
+        (crate::find::FindScope::File, false) => crate::msg!("log.find.file", query = &query),
+        (crate::find::FindScope::Any, true) => crate::msg!("log.find.any.private"),
+        (crate::find::FindScope::Any, false) => crate::msg!("log.find.any", query = &query),
     };
-    if cfg.settings.private_log {
-        ui_log(app, format!("🔎 ищу {what}"));
-    } else {
-        ui_log(app, format!("🔎 ищу {what}: «{}»", candidates.join(" / ")));
-    }
+    ui_log(app, line);
     // «… формат X»: имя — до слова «формат», формат — из закрытого словаря (find::FORMATS).
     let mut names: Vec<String> = Vec::new();
     let mut spoken_formats: Vec<String> = Vec::new();
@@ -576,19 +582,19 @@ fn dispatch_find(
     let extension = crate::find::resolve_extension(&spoken_formats);
     if !spoken_formats.is_empty() {
         match &extension {
-            Some(ext) => ui_log(app, format!("🔎 формат: .{ext}")),
+            Some(ext) => ui_log(app, crate::msg!("log.find.format", ext = ext)),
             None => {
                 if cfg.settings.private_log {
-                    ui_log(app, "⚠ формат не распознан");
+                    ui_log(app, crate::msg!("log.find.badFormat.private"));
                 } else {
-                    ui_log(app, format!("⚠ формат не распознан: «{}»", spoken_formats.join(" / ")));
+                    ui_log(app, crate::msg!("log.find.badFormat", format = spoken_formats.join(" / ")));
                 }
                 return DispatchResult::Done(false);
             }
         }
     }
     if names.is_empty() && extension.is_none() {
-        ui_log(app, "∅ пустой запрос");
+        ui_log(app, crate::msg!("log.find.empty"));
         return DispatchResult::Done(false);
     }
     let usage = crate::find::Usage::load(&shared.usage_path);
@@ -611,16 +617,16 @@ fn dispatch_find(
         Err(error) => {
             // Текст ошибки может содержать кусок ответа с путями — не в приватном режиме.
             if cfg.settings.private_log {
-                ui_log(app, "⚠ Everything недоступен");
+                ui_log(app, crate::msg!("log.everythingDown.private"));
             } else {
-                ui_log(app, format!("⚠ Everything недоступен: {error}"));
+                ui_log(app, crate::msg!("log.everythingDown", error = error));
             }
             return DispatchResult::Done(false);
         }
     };
     match items.len() {
         0 => {
-            ui_log(app, "∅ ничего не нашёл");
+            ui_log(app, crate::msg!("log.find.nothing"));
             DispatchResult::Done(false)
         }
         1 => DispatchResult::Done(crate::picker::open(app, shared, cfg, &items[0])),
@@ -649,11 +655,11 @@ fn dispatch_process_control(
         crate::procs::match_app(candidates, &apps, actions, cfg.settings.match_threshold)
     else {
         if cfg.settings.private_log {
-            ui_log(app, "∅ не нашёл открытую программу (частный режим)");
+            ui_log(app, crate::msg!("log.proc.notFound.private"));
         } else {
             ui_log(
                 app,
-                format!("∅ не нашёл открытую программу «{}»", candidates.join(" / ")),
+                crate::msg!("log.proc.notFound", name = candidates.join(" / ")),
             );
         }
         return DispatchResult::Done(false);
@@ -663,18 +669,20 @@ fn dispatch_process_control(
     if cfg.settings.private_log {
         ui_log(
             app,
-            format!(
-                "🔎 найдена открытая программа (совпадение: {}, score {:.2})",
-                private_match_source(&found.matched_by),
-                found.score
+            crate::msg!(
+                "log.proc.found.private",
+                by = crate::uilang::text(crate::uilang::current(), found.matched_by.key()),
+                score = format!("{:.2}", found.score)
             ),
         );
     } else {
         ui_log(
             app,
-            format!(
-                "🔎 найдена открытая программа «{title}» по {} (score {:.2})",
-                found.matched_by, found.score
+            crate::msg!(
+                "log.proc.found",
+                app = &title,
+                by = found.matched_by.describe(crate::uilang::current()),
+                score = format!("{:.2}", found.score)
             ),
         );
     }
@@ -683,12 +691,12 @@ fn dispatch_process_control(
         if cfg.settings.private_log {
             ui_log(
                 app,
-                "⚠ отказ: нельзя завершить защищённый системный процесс",
+                crate::msg!("log.proc.protected.private"),
             );
         } else {
             ui_log(
                 app,
-                format!("⚠ отказ: «{title}» — защищённый системный процесс"),
+                crate::msg!("log.proc.protected", app = &title),
             );
         }
         return DispatchResult::Done(false);
@@ -703,14 +711,14 @@ fn dispatch_process_control(
         if cfg.settings.private_log {
             ui_log(
                 app,
-                "❔ подтверди закрытие найденной программы голосом: «да» / «нет»",
+                crate::msg!("log.proc.confirm.private"),
             );
         } else {
             ui_log(
                 app,
-                format!(
-                    "❔ {} — подтверди голосом: «да» / «нет»",
-                    pending.describe()
+                crate::msg!(
+                    "log.proc.confirm",
+                    action = pending.describe().render(crate::uilang::current())
                 ),
             );
         }
@@ -720,19 +728,6 @@ fn dispatch_process_control(
     }
 }
 
-fn private_match_source(matched_by: &str) -> &'static str {
-    if matched_by.starts_with("действие") {
-        "действие"
-    } else if matched_by.starts_with("заголовок окна") {
-        "заголовок окна"
-    } else if matched_by.starts_with("описание") {
-        "описание"
-    } else if matched_by.starts_with("exe") {
-        "имя exe"
-    } else {
-        "название программы"
-    }
-}
 
 fn urlencode(s: &str) -> String {
     let mut out = String::with_capacity(s.len() * 3);
@@ -774,7 +769,7 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
     };
     match action.kind.as_str() {
         "folder" => {
-            ui_log(app, format!("📁 открываю: {target}"));
+            ui_log(app, crate::msg!("log.openFolder", target = &target));
             launch_with_raise(cfg, &hint, || {
                 everything::open_folders(&[PathBuf::from(&target)]) > 0
             })
@@ -784,11 +779,11 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
             launch_with_raise(cfg, &hint, || launcher::launch_uwp(&target))
         }
         _ if winutil::is_web_url(&target) => {
-            ui_log(app, format!("🌐 открываю: {target}"));
+            ui_log(app, crate::msg!("log.openUrl", target = &target));
             open_url(cfg, &hint, &target, || launcher::shell_open(&target))
         }
         _ => {
-            ui_log(app, format!("▶ запуск: {target}"));
+            ui_log(app, crate::msg!("log.launch", target = &target));
             launch_with_raise(cfg, &hint, || launcher::shell_open(&target))
         }
     }
@@ -800,11 +795,11 @@ fn handle_launch(app: &AppHandle, cfg: &ReeverConfig, outcome: SearchOutcome, hi
         return false;
     }
     if outcome.paths.is_empty() {
-        ui_log(app, "∅ программа не найдена");
+        ui_log(app, crate::msg!("log.appNotFound"));
         return false;
     }
     let target = outcome.paths[0].clone();
-    ui_log(app, format!("▶ запуск: {}", target.display()));
+    ui_log(app, crate::msg!("log.launch", target = target.display()));
     let hint = hint.to_string();
     launch_with_raise(cfg, &hint, || launcher::launch(&target))
 }

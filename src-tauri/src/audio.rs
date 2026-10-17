@@ -493,7 +493,7 @@ pub fn start_capture(tx: AudioSender) -> anyhow::Result<Stream> {
     let host = cpal::default_host();
     let device = host
         .default_input_device()
-        .ok_or_else(|| anyhow::anyhow!("нет устройства ввода (микрофона)"))?;
+        .ok_or_else(|| anyhow::anyhow!("no input device (microphone)"))?;
     let supported = device.default_input_config()?;
     let in_rate = supported.sample_rate().0 as usize;
     let channels = supported.channels() as usize;
@@ -524,7 +524,7 @@ pub fn start_capture(tx: AudioSender) -> anyhow::Result<Stream> {
         SampleFormat::U16 => build!(u16, push_u16),
         other => {
             return Err(anyhow::anyhow!(
-                "неподдерживаемый формат сэмплов: {other:?}"
+                "unsupported sample format: {other:?}"
             ))
         }
     };
@@ -552,7 +552,7 @@ impl Player {
         let file = match File::open(path) {
             Ok(f) => BufReader::new(f),
             Err(e) => {
-                eprintln!("[reever] звук не найден {}: {e}", path.display());
+                eprintln!("[reever] sound not found {}: {e}", path.display());
                 return;
             }
         };

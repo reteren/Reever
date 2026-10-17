@@ -1,11 +1,31 @@
-//! Язык интерфейса для того, что рисует сам Rust: меню трея и строки журнала о паузе.
+//! Язык интерфейса для того, что рисует сам Rust: меню трея и строки журнала.
 //! Интерфейс окна переводится в frontend/i18n; здесь — те же десять языков и тот же
 //! выбор: `ui_language` в settings.json, `auto` — язык Windows.
+//!
+//! Словари — `src-tauri/locales/<код>.json`, плоские `ключ → строка` с подстановками
+//! `{name}`. Английский — эталон и запасной вариант: нет строки в выбранном языке —
+//! берётся английская, нет и её — сам ключ.
+
+use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use tauri::menu::MenuItem;
 use tauri::Wry;
 
 pub const SUPPORTED: [&str; 10] = ["en", "ru", "de", "es", "pt", "it", "fr", "zh", "ja", "ar"];
+
+const SOURCES: [(&str, &str); 10] = [
+    ("en", include_str!("../locales/en.json")),
+    ("ru", include_str!("../locales/ru.json")),
+    ("de", include_str!("../locales/de.json")),
+    ("es", include_str!("../locales/es.json")),
+    ("pt", include_str!("../locales/pt.json")),
+    ("it", include_str!("../locales/it.json")),
+    ("fr", include_str!("../locales/fr.json")),
+    ("zh", include_str!("../locales/zh.json")),
+    ("ja", include_str!("../locales/ja.json")),
+    ("ar", include_str!("../locales/ar.json")),
+];
 
 /// Текущий язык интерфейса (для строк, которые Rust шлёт в журнал).
 pub static CURRENT: std::sync::Mutex<&'static str> = std::sync::Mutex::new("en");
@@ -42,64 +62,116 @@ fn system_locale() -> String {
     String::from_utf16_lossy(&buffer[..length as usize - 1])
 }
 
-/// Строка трея или журнала на языке `locale`.
-pub fn text(locale: &str, key: &str) -> &'static str {
-    let row: [&'static str; 10] = match key {
-        "tray.show" => [
-            "Show settings",
-            "Показать настройки",
-            "Einstellungen anzeigen",
-            "Mostrar ajustes",
-            "Mostrar configurações",
-            "Mostra impostazioni",
-            "Afficher les paramètres",
-            "显示设置",
-            "設定を表示",
-            "عرض الإعدادات",
-        ],
-        "tray.pause" => [
-            "Pause / resume microphone",
-            "Пауза / Продолжить микрофон",
-            "Mikrofon pausieren / fortsetzen",
-            "Pausar / reanudar micrófono",
-            "Pausar / retomar microfone",
-            "Metti in pausa / riprendi microfono",
-            "Suspendre / reprendre le micro",
-            "暂停 / 恢复麦克风",
-            "マイクを一時停止 / 再開",
-            "إيقاف الميكروفون مؤقتًا / استئنافه",
-        ],
-        "tray.quit" => [
-            "Quit", "Выход", "Beenden", "Salir", "Sair", "Esci", "Quitter", "退出", "終了", "خروج",
-        ],
-        "log.paused" => [
-            "⏸ microphone paused",
-            "⏸ микрофон на паузе",
-            "⏸ Mikrofon pausiert",
-            "⏸ micrófono en pausa",
-            "⏸ microfone em pausa",
-            "⏸ microfono in pausa",
-            "⏸ micro en pause",
-            "⏸ 麦克风已暂停",
-            "⏸ マイクを一時停止しました",
-            "⏸ الميكروفون متوقف مؤقتًا",
-        ],
-        "log.resumed" => [
-            "▶ microphone active",
-            "▶ микрофон активен",
-            "▶ Mikrofon aktiv",
-            "▶ micrófono activo",
-            "▶ microfone ativo",
-            "▶ microfono attivo",
-            "▶ micro actif",
-            "▶ 麦克风已启用",
-            "▶ マイクが有効です",
-            "▶ الميكروفون نشط",
-        ],
-        _ => return "",
+pub fn current() -> &'static str {
+    CURRENT.lock().map(|locale| *locale).unwrap_or("en")
+}
+
+fn dictionaries() -> &'static HashMap<&'static str, HashMap<String, String>> {
+    static DICTIONARIES: OnceLock<HashMap<&'static str, HashMap<String, String>>> = OnceLock::new();
+    DICTIONARIES.get_or_init(|| {
+        SOURCES
+            .iter()
+            .map(|(code, source)| (*code, serde_json::from_str(source).unwrap_or_default()))
+            .collect()
+    })
+}
+
+/// Строка на языке `locale` без подстановок.
+pub fn text<'a>(locale: &str, key: &'a str) -> &'a str {
+    let dictionaries = dictionaries();
+    dictionaries
+        .get(locale)
+        .and_then(|dictionary| dictionary.get(key))
+        .or_else(|| dictionaries.get("en").and_then(|dictionary| dictionary.get(key)))
+        .map(String::as_str)
+        .unwrap_or(key)
+}
+
+/// Строка на языке `locale` с подстановкой `{name}`; неизвестные `{…}` остаются как есть.
+pub fn tr(locale: &str, key: &str, args: &[(&str, String)]) -> String {
+    let template = text(locale, key);
+    let mut out = String::with_capacity(template.len());
+    let mut rest = template;
+    while let Some(start) = rest.find('{') {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 1..];
+        let value = after.find('}').and_then(|end| {
+            let name = &after[..end];
+            args.iter().find(|(arg, _)| *arg == name).map(|(_, value)| (value, end))
+        });
+        match value {
+            Some((value, end)) => {
+                out.push_str(value);
+                rest = &after[end + 1..];
+            }
+            None => {
+                out.push('{');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Сообщение для журнала: ключ словаря и подстановки. Переводится при показе —
+/// окно получает его на языке интерфейса, а `reever.log` всегда по-английски.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Msg {
+    pub key: &'static str,
+    pub args: Vec<(&'static str, String)>,
+}
+
+impl Msg {
+    pub fn render(&self, locale: &str) -> String {
+        tr(locale, self.key, &self.args)
+    }
+}
+
+/// `msg!("log.key", name = value, …)` — сообщение журнала; значения через `Display`.
+#[macro_export]
+macro_rules! msg {
+    ($key:literal $(, $name:ident = $value:expr)* $(,)?) => {
+        $crate::uilang::Msg {
+            key: $key,
+            args: vec![$((stringify!($name), ($value).to_string())),*],
+        }
     };
-    let index = SUPPORTED.iter().position(|code| *code == locale).unwrap_or(0);
-    row[index]
+}
+
+/// Строка журнала: переводимое сообщение или текст как есть (услышанная фраза,
+/// путь, диагностика `trace:` — у неё нет перевода).
+#[derive(Clone, Debug, PartialEq)]
+pub enum LogText {
+    Msg(Msg),
+    Raw(String),
+}
+
+impl LogText {
+    pub fn render(&self, locale: &str) -> String {
+        match self {
+            LogText::Msg(msg) => msg.render(locale),
+            LogText::Raw(text) => text.clone(),
+        }
+    }
+}
+
+impl From<Msg> for LogText {
+    fn from(msg: Msg) -> Self {
+        LogText::Msg(msg)
+    }
+}
+
+impl From<String> for LogText {
+    fn from(text: String) -> Self {
+        LogText::Raw(text)
+    }
+}
+
+impl From<&str> for LogText {
+    fn from(text: &str) -> Self {
+        LogText::Raw(text.to_string())
+    }
 }
 
 /// Подписи меню трея на языке `locale`.
@@ -122,12 +194,42 @@ mod tests {
         assert!(SUPPORTED.contains(&resolve("auto")));
     }
 
+    fn placeholders(text: &str) -> Vec<&str> {
+        let mut names: Vec<&str> = text
+            .split('{')
+            .skip(1)
+            .filter_map(|part| part.split_once('}').map(|(name, _)| name))
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        names
+    }
+
+    /// Как scripts/check-i18n.mjs для окна: у каждого языка ровно ключи английского
+    /// и те же подстановки — иначе строка тихо уйдёт по-английски или потеряет имя.
     #[test]
-    fn every_language_has_every_tray_string() {
-        for key in ["tray.show", "tray.pause", "tray.quit", "log.paused", "log.resumed"] {
-            for locale in SUPPORTED {
-                assert!(!text(locale, key).is_empty(), "{locale} {key}");
+    fn every_language_has_every_key_with_same_placeholders() {
+        let dictionaries = dictionaries();
+        let reference = &dictionaries["en"];
+        assert!(reference.len() > 50, "en.json не разобрался");
+        for code in SUPPORTED {
+            let dictionary = &dictionaries[code];
+            for (key, english) in reference {
+                let text = dictionary.get(key).unwrap_or_else(|| panic!("{code}: нет {key}"));
+                assert!(!text.trim().is_empty(), "{code}: пусто {key}");
+                assert_eq!(placeholders(text), placeholders(english), "{code}: {key}");
+            }
+            for key in dictionary.keys() {
+                assert!(reference.contains_key(key), "{code}: лишний {key}");
             }
         }
+    }
+
+    #[test]
+    fn placeholders_fill_and_unknown_ones_stay() {
+        let msg = crate::msg!("log.launch", target = "C:\\a.exe");
+        assert_eq!(msg.render("en"), "▶ launching: C:\\a.exe");
+        assert_eq!(tr("en", "missing.key", &[]), "missing.key");
+        assert_eq!(tr("en", "log.launch", &[]), "▶ launching: {target}");
     }
 }

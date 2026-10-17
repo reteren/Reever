@@ -12,6 +12,8 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::uilang::LogText;
+
 /// Журнал в файл (`reever.log` в папке настроек) — чтобы разбирать сбои по факту, а не
 /// по скриншотам. Пишется то же, что видно в UI: при приватном режиме текст команд туда
 /// не попадает и так. Больше `LOG_LIMIT` — старый журнал уходит в `reever.old.log`.
@@ -20,7 +22,8 @@ const LOG_LIMIT: u64 = 1024 * 1024;
 const UI_LOG_LIMIT: usize = 250;
 
 /// Небольшое состояние процесса переживает уничтожение WebView главного окна.
-static UI_HISTORY: Mutex<VecDeque<String>> = Mutex::new(VecDeque::new());
+/// Строки хранятся непереведёнными: новое окно получит их на текущем языке интерфейса.
+static UI_HISTORY: Mutex<VecDeque<LogText>> = Mutex::new(VecDeque::new());
 static UI_STATE: Mutex<String> = Mutex::new(String::new());
 static UI_TAB: Mutex<String> = Mutex::new(String::new());
 static UI_STATUS: Mutex<Option<Value>> = Mutex::new(None);
@@ -37,11 +40,11 @@ pub struct UiSnapshot {
     compact: bool,
 }
 
-fn push_ui_log(log: &mut VecDeque<String>, message: &str) {
+fn push_ui_log(log: &mut VecDeque<LogText>, message: LogText) {
     while log.len() >= UI_LOG_LIMIT {
         log.pop_front();
     }
-    log.push_back(message.to_string());
+    log.push_back(message);
 }
 
 pub fn init_log_file(path: PathBuf) {
@@ -75,16 +78,20 @@ fn append_log(message: &str) {
     }
 }
 
-pub fn ui_log(app: &AppHandle, msg: impl AsRef<str>) {
-    let m = msg.as_ref();
+/// Строка в журнал окна (на языке интерфейса) и в `reever.log` (всегда по-английски:
+/// файл читают при разборе сбоев, и он не должен зависеть от выбранного языка).
+pub fn ui_log(app: &AppHandle, msg: impl Into<LogText>) {
+    let msg = msg.into();
+    let english = msg.render("en");
     // stdout — только в dev; в релизе ничего не печатаем (нет утечки в консоль).
     #[cfg(debug_assertions)]
-    println!("[reever] {m}");
-    append_log(m);
+    println!("[reever] {english}");
+    append_log(&english);
+    let shown = msg.render(crate::uilang::current());
     if let Ok(mut log) = UI_HISTORY.lock() {
-        push_ui_log(&mut log, m);
+        push_ui_log(&mut log, msg);
     }
-    let _ = app.emit("reever://log", m.to_string());
+    let _ = app.emit("reever://log", shown);
 }
 
 pub fn set_state(app: &AppHandle, s: &str) {
@@ -130,9 +137,9 @@ pub fn set_compact(compact: bool) {
 #[tauri::command]
 pub fn set_ui_tab(tab: String) -> Result<(), String> {
     if !is_ui_tab(&tab) {
-        return Err("неизвестная вкладка интерфейса".into());
+        return Err("unknown UI tab".into());
     }
-    *UI_TAB.lock().map_err(|_| "не удалось сохранить вкладку".to_string())? = tab;
+    *UI_TAB.lock().map_err(|_| "failed to save the UI tab".to_string())? = tab;
     Ok(())
 }
 
@@ -144,7 +151,13 @@ fn is_ui_tab(tab: &str) -> bool {
 pub fn get_ui_snapshot() -> UiSnapshot {
     UiSnapshot {
         state: current_state(),
-        log: UI_HISTORY.lock().map(|log| log.iter().cloned().collect()).unwrap_or_default(),
+        log: UI_HISTORY
+            .lock()
+            .map(|log| {
+                let locale = crate::uilang::current();
+                log.iter().map(|line| line.render(locale)).collect()
+            })
+            .unwrap_or_default(),
         tab: UI_TAB
             .lock()
             .map(|tab| if tab.is_empty() { "home".into() } else { tab.clone() })
@@ -231,12 +244,12 @@ mod tests {
     fn ui_log_history_keeps_only_the_latest_entries() {
         let mut log = VecDeque::new();
         for i in 0..=UI_LOG_LIMIT {
-            push_ui_log(&mut log, &format!("line-{i}"));
+            push_ui_log(&mut log, format!("line-{i}").into());
         }
 
         assert_eq!(log.len(), UI_LOG_LIMIT);
-        assert_eq!(log.front().map(String::as_str), Some("line-1"));
-        assert_eq!(log.back().map(String::as_str), Some("line-250"));
+        assert_eq!(log.front().map(|line| line.render("en")).as_deref(), Some("line-1"));
+        assert_eq!(log.back().map(|line| line.render("en")).as_deref(), Some("line-250"));
     }
 
     #[test]

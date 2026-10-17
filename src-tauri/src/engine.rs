@@ -94,7 +94,7 @@ pub enum EngineEvent {
     /// Диктовка закончилась.
     DictationEnd(DictationEndReason),
     /// Диагностика для лога (без распознанного текста — приватность решает glue).
-    Log(String),
+    Log(crate::uilang::LogText),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -475,7 +475,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     out.push(EngineEvent::WakeSpotted);
                 } else if fired && self.trace {
                     let ms = self.idle_speech_age.unwrap_or(0) * 1000 / SAMPLE_RATE as usize;
-                    out.push(EngineEvent::Log(format!("trace: детектор слышал «ривер» через {ms} мс от начала фразы — не в начале, пропущено")));
+                    out.push(EngineEvent::Log(format!("trace: the detector heard the wake word {ms} ms into the phrase — not at its start, skipped").into()));
                 } else if let Some(age) = self.spot_age.as_mut() {
                     *age = age.saturating_add(pcm.len());
                 }
@@ -752,10 +752,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 ListenKind::Command => out.push(EngineEvent::Timeout),
                 ListenKind::Choice => out.push(EngineEvent::Choice(String::new())),
                 ListenKind::Confirm => {
-                    out.push(EngineEvent::Log(format!(
-                        "подтверждение: ответа не было {} с — отмена",
-                        self.wait_ms(ListenKind::Confirm) / 1000
-                    )));
+                    out.push(EngineEvent::Log(
+                        crate::msg!("log.confirm.noAnswer", seconds = self.wait_ms(ListenKind::Confirm) / 1000).into(),
+                    ));
                     out.push(EngineEvent::Confirm(false));
                 }
             },
@@ -827,7 +826,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 }
                 Ok(_) => {}
                 Err(error) => {
-                    out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                    out.push(EngineEvent::Log(crate::msg!("log.asrError", error = error).into()));
                     out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
                     self.return_to_idle(true, out);
                 }
@@ -852,7 +851,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 }
             }
             Err(error) => {
-                out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                out.push(EngineEvent::Log(crate::msg!("log.asrError", error = error).into()));
                 if matches!(self.mode, Mode::Dictating(_)) {
                     out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
                 }
@@ -979,7 +978,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                     let no = is_no(&text);
                                     if !yes && !no && state.empty_segments < MAX_EMPTY_SEGMENTS {
                                         out.push(EngineEvent::Log(
-                                            "подтверждение: ни «да», ни «нет» — жду ответ".into(),
+                                            crate::msg!("log.confirm.unclearWaiting").into(),
                                         ));
                                         self.prepare_segmenter(self.cfg.command_pause_ms);
                                         self.mode = Mode::Listening(ListenState {
@@ -994,9 +993,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                         if !yes {
                                             out.push(EngineEvent::Log(
                                                 if no {
-                                                    "подтверждение: услышан отказ"
+                                                    crate::msg!("log.confirm.no")
                                                 } else {
-                                                    "подтверждение: ответ не разобран — отмена"
+                                                    crate::msg!("log.confirm.unclear")
                                                 }
                                                 .into(),
                                             ));
@@ -1007,9 +1006,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 }
                             },
                             Err(error) => {
-                                out.push(EngineEvent::Log(format!(
-                                    "Ошибка распознавания: {error}"
-                                )));
+                                out.push(EngineEvent::Log(
+                                    crate::msg!("log.asrError", error = error).into(),
+                                ));
                                 self.return_to_idle(true, out);
                             }
                         }
@@ -1036,9 +1035,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 self.mode = Mode::Calibrating;
                             }
                             Err(error) => {
-                                out.push(EngineEvent::Log(format!(
-                                    "Ошибка распознавания: {error}"
-                                )));
+                                out.push(EngineEvent::Log(
+                                    crate::msg!("log.asrError", error = error).into(),
+                                ));
                                 self.return_to_idle(true, out);
                             }
                         }
@@ -1161,21 +1160,24 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let timed = match result {
             Ok(timed) => timed,
             Err(error) => {
-                out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                out.push(EngineEvent::Log(crate::msg!("log.asrError", error = error).into()));
                 return;
             }
         };
         if self.trace {
             let detector = match self.spot_age {
-                Some(age) if age <= audio.len() + samples(SPOT_GRACE_MS) => "слышал «ривер»",
-                Some(_) => "слышал давно",
-                None => "молчал",
+                Some(age) if age <= audio.len() + samples(SPOT_GRACE_MS) => "heard the wake word",
+                Some(_) => "heard it long ago",
+                None => "silent",
             };
-            out.push(EngineEvent::Log(format!(
-                "trace: фраза простоя {:.1} с «{}» · детектор {detector}",
-                audio.len() as f32 / SAMPLE_RATE as f32,
-                timed.text
-            )));
+            out.push(EngineEvent::Log(
+                format!(
+                    "trace: idle phrase {:.1} s «{}» · detector {detector}",
+                    audio.len() as f32 / SAMPLE_RATE as f32,
+                    timed.text
+                )
+                .into(),
+            ));
         }
 
         // Детектор слышал «ривер» в этой фразе, а GigaAM его не расслышала («река открой…»,
@@ -1188,14 +1190,14 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 Some((index, confirmed)) => {
                     if index > 0 {
                         out.push(EngineEvent::Log(
-                            "wake: большая модель подтвердила «ривер» посреди фразы".into(),
+                            "wake: the main model confirmed the wake word mid-phrase".into(),
                         ));
                     }
                     confirmed
                 }
                 None => {
                     out.push(EngineEvent::Log(
-                        "wake: детектор сработал, но большая модель не подтвердила «ривер»; фраза не принята".into(),
+                        "wake: the detector fired, but the main model did not confirm the wake word; phrase ignored".into(),
                     ));
                     self.spot_age = None;
                     return;
@@ -1205,13 +1207,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             match repair_wake(&timed, &self.cfg.wake_words, audio.len(), &is_russian_word) {
                 Some(repaired) => {
                     out.push(EngineEvent::Log(
-                        "wake: «ривер» подтвердил фоновый детектор".into(),
+                        "wake: the wake word was confirmed by the background detector".into(),
                     ));
                     repaired
                 }
                 None => {
                     out.push(EngineEvent::Log(
-                        "wake: детектор слышал «ривер», большая модель — нет; фраза не принята"
+                        "wake: the detector heard the wake word, the main model did not; phrase ignored"
                             .into(),
                     ));
                     timed
@@ -1230,11 +1232,14 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     {
                         let at =
                             ((word.start.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio.len());
-                        out.push(EngineEvent::Log(format!(
-                            "trace: «{}» посреди фразы, пауза перед ним {} мс (нужно ≥ {MID_WAKE_PAUSE_MS})",
-                            word.text,
-                            pause_before(audio, at)
-                        )));
+                        out.push(EngineEvent::Log(
+                            format!(
+                                "trace: «{}» mid-phrase, pause before it {} ms (need ≥ {MID_WAKE_PAUSE_MS})",
+                                word.text,
+                                pause_before(audio, at)
+                            )
+                            .into(),
+                        ));
                     }
                 }
             }
@@ -1253,7 +1258,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             };
             if let Some(start) = mid_phrase_wake(&timed, audio, &self.cfg.wake_words, &is_command) {
                 out.push(EngineEvent::Log(
-                    "wake: «ривер» после паузы посреди речи".into(),
+                    "wake: the wake word after a pause mid-speech".into(),
                 ));
                 let tail = &audio[start..];
                 let result = self.asr.transcribe_timed(tail);
@@ -1434,7 +1439,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let timed = match self.asr.transcribe_timed(audio) {
             Ok(timed) => timed,
             Err(error) => {
-                out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                out.push(EngineEvent::Log(crate::msg!("log.asrError", error = error).into()));
                 out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
                 self.return_to_idle(true, out);
                 return;
@@ -1518,7 +1523,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let raw = match self.asr.transcribe_verbatim(audio) {
             Ok(raw) => raw,
             Err(error) => {
-                out.push(EngineEvent::Log(format!("Ошибка распознавания: {error}")));
+                out.push(EngineEvent::Log(crate::msg!("log.asrError", error = error).into()));
                 out.push(EngineEvent::DictationEnd(DictationEndReason::Error));
                 self.return_to_idle(true, out);
                 return;
@@ -1544,8 +1549,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         if let Some(lang) = language_switch(&norm) {
             self.dictation_lang = Some(lang);
             out.push(EngineEvent::Log(match lang {
-                Lang::En => "✎ диктовка: английский".into(),
-                Lang::Ru => "✎ диктовка: русский".into(),
+                Lang::En => crate::msg!("log.dictation.english").into(),
+                Lang::Ru => crate::msg!("log.dictation.russian").into(),
             }));
             self.begin_dictation();
             out.push(EngineEvent::State("listening"));
@@ -2535,7 +2540,7 @@ mod tests {
         let events = engine.push_audio(&phrase(123, 120));
 
         assert!(events.iter().any(
-            |event| matches!(event, EngineEvent::Log(message) if message.contains("mock failure"))
+            |event| matches!(event, EngineEvent::Log(message) if message.render("en").contains("mock failure"))
         ));
         assert!(contains(&events, &EngineEvent::State("idle")));
         assert!(!contains(&events, &EngineEvent::Timeout));

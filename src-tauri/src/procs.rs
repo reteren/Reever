@@ -62,8 +62,37 @@ pub struct AppMatch {
     pub app: RunningApp,
     /// Похожесть 0..1.
     pub score: f64,
-    /// По чему совпало — для лога: «exe», «описание», «заголовок окна», действие.
-    pub matched_by: String,
+    /// По чему совпало — для лога: exe, описание, заголовок окна, действие.
+    pub matched_by: MatchSource,
+}
+
+/// По чему нашлась открытая программа.
+#[derive(Clone, Debug, PartialEq)]
+pub enum MatchSource {
+    /// Действие, чья цель — этот exe; внутри — подпись действия.
+    Action(String),
+    Exe,
+    Description,
+    WindowTitle,
+}
+
+impl MatchSource {
+    /// Ключ словаря без подробностей — для частного режима журнала.
+    pub fn key(&self) -> &'static str {
+        match self {
+            MatchSource::Action(_) => "match.action",
+            MatchSource::Exe => "match.exe",
+            MatchSource::Description => "match.description",
+            MatchSource::WindowTitle => "match.windowTitle",
+        }
+    }
+
+    pub fn describe(&self, locale: &str) -> String {
+        match self {
+            MatchSource::Action(label) => crate::msg!("match.actionNamed", action = label).render(locale),
+            other => crate::uilang::text(locale, other.key()).to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -320,7 +349,7 @@ pub fn match_app(
         })
         .collect();
 
-    let mut best: Option<(usize, f64, u8, String)> = None;
+    let mut best: Option<(usize, f64, u8, MatchSource)> = None;
     for (app_index, app) in apps.iter().enumerate() {
         let app_key = path_key(&app.exe_path);
         for (action_index, target_key, score) in &action_targets {
@@ -331,14 +360,11 @@ pub fn match_app(
                     app_index,
                     *score,
                     4,
-                    format!(
-                        "действие «{}»",
-                        if action.label.is_empty() {
-                            action.id.as_str()
-                        } else {
-                            action.label.as_str()
-                        }
-                    ),
+                    MatchSource::Action(if action.label.is_empty() {
+                        action.id.clone()
+                    } else {
+                        action.label.clone()
+                    }),
                     threshold,
                 );
             }
@@ -349,7 +375,7 @@ pub fn match_app(
             app_index,
             text_score(candidates, &[app.exe_name.as_str()]),
             3,
-            "exe".into(),
+            MatchSource::Exe,
             threshold,
         );
         consider_match(
@@ -357,7 +383,7 @@ pub fn match_app(
             app_index,
             text_score(candidates, &[app.description.as_str()]),
             3,
-            "описание".into(),
+            MatchSource::Description,
             threshold,
         );
         consider_match(
@@ -368,7 +394,7 @@ pub fn match_app(
                 &app.titles.iter().map(String::as_str).collect::<Vec<_>>(),
             ),
             1,
-            "заголовок окна".into(),
+            MatchSource::WindowTitle,
             threshold,
         );
     }
@@ -401,12 +427,12 @@ pub fn close_app(app: &RunningApp) -> anyhow::Result<usize> {
 pub fn kill_app(app: &RunningApp) -> anyhow::Result<usize> {
     if is_protected(&app.exe_name) {
         anyhow::bail!(
-            "завершение системной программы «{}» запрещено",
+            "terminating the system program \"{}\" is not allowed",
             app.exe_name
         );
     }
 
-    let processes = snapshot_processes().context("не удалось получить снимок процессов")?;
+    let processes = snapshot_processes().context("failed to take a process snapshot")?;
     let by_pid: HashMap<u32, &ProcessInfo> = processes.iter().map(|p| (p.pid, p)).collect();
     let wanted_path = path_key(&app.exe_path);
     let mut targets = Vec::new();
@@ -426,7 +452,7 @@ pub fn kill_app(app: &RunningApp) -> anyhow::Result<usize> {
         }
     }
     if targets.is_empty() {
-        anyhow::bail!("процессы {} уже не запущены", app.exe_path.display());
+        anyhow::bail!("processes of {} are no longer running", app.exe_path.display());
     }
 
     let mut cursor = 0;
@@ -444,7 +470,7 @@ pub fn kill_app(app: &RunningApp) -> anyhow::Result<usize> {
         if let Some(process) = by_pid.get(pid) {
             if is_protected(&process.exe_name) {
                 anyhow::bail!(
-                    "дерево {} содержит защищённый процесс {} (pid {})",
+                    "the {} process tree contains the protected process {} (pid {})",
                     app.exe_name,
                     process.exe_name,
                     pid
@@ -475,10 +501,10 @@ pub fn kill_app(app: &RunningApp) -> anyhow::Result<usize> {
 
     if terminated == 0 {
         anyhow::bail!(
-            "не удалось завершить процессы {}: {}",
+            "failed to terminate {} processes: {}",
             app.exe_name,
             if failures.is_empty() {
-                "нет доступных процессов".into()
+                "no accessible processes".into()
             } else {
                 failures.join("; ")
             }
@@ -649,7 +675,7 @@ fn window_title(hwnd: HWND) -> String {
 
 fn snapshot_processes() -> anyhow::Result<Vec<ProcessInfo>> {
     let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }
-        .context("CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS) завершился ошибкой")?;
+        .context("CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS) failed")?;
     let mut process_entry = PROCESSENTRY32W::default();
     process_entry.dwSize = size_of::<PROCESSENTRY32W>() as u32;
     let mut processes = Vec::new();
@@ -849,11 +875,11 @@ fn resolve_shortcut_target(shortcut: &Path) -> Option<PathBuf> {
 }
 
 fn consider_match(
-    best: &mut Option<(usize, f64, u8, String)>,
+    best: &mut Option<(usize, f64, u8, MatchSource)>,
     app_index: usize,
     score: f64,
     priority: u8,
-    matched_by: String,
+    matched_by: MatchSource,
     threshold: f64,
 ) {
     if score < threshold {
@@ -1150,7 +1176,7 @@ mod tests {
         let youtube = app("youtube", "YouTube", &["YouTube"]);
         let found = match_name("youtube", &[chrome, youtube]).unwrap();
         assert_eq!(found.app.exe_name, "youtube");
-        assert_eq!(found.matched_by, "exe");
+        assert_eq!(found.matched_by, super::MatchSource::Exe);
     }
 
     #[test]
@@ -1186,7 +1212,7 @@ mod tests {
             phrases: vec!["фотошоп".into()],
         };
         let found = match_app(&["фотошоп".into()], &[app], &[action], 0.84).unwrap();
-        assert_eq!(found.matched_by, "действие «Photoshop»");
+        assert_eq!(found.matched_by, super::MatchSource::Action("Photoshop".into()));
         assert_eq!(found.score, 1.0);
 
         let _ = fs::remove_file(shortcut_path);

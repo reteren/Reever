@@ -54,11 +54,11 @@ pub fn set_window_shape(window: tauri::WebviewWindow, rects: Vec<[f64; 4]>) -> R
         let bytes = (header_rects + phys.len()) * std::mem::size_of::<RECT>();
         let region = ExtCreateRegion(None, bytes as u32, buf.as_ptr() as *const RGNDATA);
         if region.is_invalid() {
-            return Err("ExtCreateRegion: регион не создан".into());
+            return Err("ExtCreateRegion: region not created".into());
         }
         // После успешного SetWindowRgn регион принадлежит системе — удалять нельзя.
         if SetWindowRgn(hwnd, region, true) == 0 {
-            return Err("SetWindowRgn не применился".into());
+            return Err("SetWindowRgn did not apply".into());
         }
     }
     Ok(())

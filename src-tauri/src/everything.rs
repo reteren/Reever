@@ -66,7 +66,7 @@ fn url_encode(s: &str) -> String {
 fn http_get(host: &str, port: u16, path: &str) -> Result<String, String> {
     let addr = format!("{host}:{port}");
     let mut stream =
-        TcpStream::connect(&addr).map_err(|e| format!("нет связи с {addr}: {e}"))?;
+        TcpStream::connect(&addr).map_err(|e| format!("cannot connect to {addr}: {e}"))?;
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
     let req = format!(
@@ -89,7 +89,7 @@ fn search_raw(host: &str, port: u16, query: &str, count: usize) -> Result<Vec<Pa
 
     let body = http_get(host, port, &path)?;
     let resp: EvtResponse = serde_json::from_str(&body)
-        .map_err(|e| format!("не разобрал ответ ({e}); тело: {:.160}", body))?;
+        .map_err(|e| format!("could not parse the response ({e}); body: {:.160}", body))?;
 
     let paths: Vec<PathBuf> = resp
         .results
@@ -117,7 +117,7 @@ pub fn search_items(
     );
     let body = http_get(host, port, &path)?;
     let resp: EvtResponse = serde_json::from_str(&body)
-        .map_err(|e| format!("не разобрал ответ ({e}); тело: {:.160}", body))?;
+        .map_err(|e| format!("could not parse the response ({e}); body: {:.160}", body))?;
     Ok(resp
         .results
         .into_iter()

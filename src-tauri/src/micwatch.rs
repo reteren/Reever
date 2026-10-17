@@ -31,23 +31,22 @@ fn mic_level_local() -> Option<MicLevel> {
 }
 
 /// Строка журнала о смене громкости; `None` — менять нечего или изменение мелкое.
-pub fn describe_change(before: MicLevel, after: MicLevel) -> Option<String> {
+pub fn describe_change(before: MicLevel, after: MicLevel) -> Option<crate::uilang::Msg> {
     if before == after || (before.muted == after.muted && before.percent.abs_diff(after.percent) < 3) {
         return None;
     }
     if after.muted != before.muted {
         return Some(if after.muted {
-            "🎚 микрофон выключен в Windows — Reever ничего не слышит".into()
+            crate::msg!("log.mic.mutedInWindows")
         } else {
-            format!("🎚 микрофон снова включён в Windows ({} %)", after.percent)
+            crate::msg!("log.mic.unmutedInWindows", percent = after.percent)
         });
     }
-    let hint = if after.percent + 15 <= before.percent {
-        " — Reever будет слышать тише; громкость меняет другая программа (например, автоусиление Discord в звонке)"
+    Some(if after.percent + 15 <= before.percent {
+        crate::msg!("log.mic.volumeDropped", before = before.percent, after = after.percent)
     } else {
-        ""
-    };
-    Some(format!("🎚 громкость микрофона в Windows: {} % → {} %{hint}", before.percent, after.percent))
+        crate::msg!("log.mic.volume", before = before.percent, after = after.percent)
+    })
 }
 
 #[cfg(test)]
@@ -65,14 +64,15 @@ mod tests {
 
     #[test]
     fn a_big_drop_names_the_likely_cause() {
-        let line = describe_change(level(87, false), level(30, false)).unwrap();
-        assert!(line.contains("87 % → 30 %") && line.contains("Discord"), "{line}");
-        let line = describe_change(level(30, false), level(87, false)).unwrap();
+        let line = describe_change(level(87, false), level(30, false)).unwrap().render("en");
+        assert!(line.contains("87% → 30%") && line.contains("Discord"), "{line}");
+        let line = describe_change(level(30, false), level(87, false)).unwrap().render("en");
         assert!(!line.contains("Discord"), "{line}");
     }
 
     #[test]
     fn mute_is_reported() {
-        assert!(describe_change(level(87, false), level(87, true)).unwrap().contains("выключен"));
+        let line = describe_change(level(87, false), level(87, true)).unwrap().render("en");
+        assert!(line.contains("muted"), "{line}");
     }
 }
