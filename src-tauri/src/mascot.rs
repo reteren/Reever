@@ -24,13 +24,12 @@ use crate::events::{self, ui_log};
 /// Отступ окна от краёв рабочей области, в логических пикселях. Сам осьминог стоит
 /// ещё глубже: поля окна отданы под свечение (frontend/mascot.html, PAD).
 const MARGIN: f64 = 0.0;
-/// Окно при 100 %: вдвое больше осьминога, чтобы в полёте ничего не обрезалось. В покое
-/// видна только середина 164×204 (спрайт 120×160 и поля под свечение), остальное
-/// отрезано регионом окна (mascot.html). Её правый нижний угол — на 3/4 окна.
-const BASE_W: f64 = 328.0;
-const BASE_H: f64 = 408.0;
-const VISIBLE_RIGHT: f64 = 0.75;
-const VISIBLE_BOTTOM: f64 = 0.75;
+/// Видимая часть окна при 100 %: спрайт 120×160 и поля под свечение. Само окно больше
+/// в `BIG` раз (до двух), чтобы в полёте ничего не обрезалось; лишнее в покое отрезано
+/// регионом окна (mascot.html). Видимая часть — по центру окна.
+const VISIBLE_W: f64 = 164.0;
+const VISIBLE_H: f64 = 204.0;
+const MAX_BIG: f64 = 2.0;
 /// Сколько маскот ещё виден после команды в режиме `commands`.
 const LINGER: Duration = Duration::from_millis(1000);
 /// Длина анимации ухода в mascot.html (58 кадров при 48 к/с) — окно прячется после неё.
@@ -38,6 +37,9 @@ const LEAVE: Duration = Duration::from_millis(1260);
 
 static MODE: Mutex<String> = Mutex::new(String::new());
 static SCALE: AtomicU32 = AtomicU32::new(100);
+/// Во сколько раз окно больше видимой части, в тысячных. Windows не даёт окну быть больше
+/// экрана, поэтому на крупных размерах запас под полёт меньше двукратного.
+static BIG: AtomicU32 = AtomicU32::new(2000);
 /// Поколение показа: отложенное скрытие срабатывает, только если с тех пор ничего не менялось.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 static DRAGGING: AtomicBool = AtomicBool::new(false);
@@ -52,6 +54,26 @@ pub fn normalize_mode(mode: &str) -> &'static str {
 
 pub fn clamp_scale(scale: u32) -> u32 {
     scale.clamp(100, 500)
+}
+
+/// Запас под полёт для размера `scale`: вдвое, но так, чтобы окно влезло в монитор.
+fn big_for(monitor: Option<tauri::Monitor>, scale: u32) -> f64 {
+    let factor = scale as f64 / 100.0;
+    let Some(monitor) = monitor else { return MAX_BIG };
+    let size = monitor.size().to_logical::<f64>(monitor.scale_factor());
+    let fit = (0.97 * size.width / (VISIBLE_W * factor)).min(0.97 * size.height / (VISIBLE_H * factor));
+    fit.clamp(1.0, MAX_BIG)
+}
+
+/// Правый нижний угол видимой части — в этой доле окна.
+fn visible_corner(big: f64) -> f64 {
+    0.5 + 0.5 / big
+}
+
+/// Раскладка для mascot.html: размер в процентах и запас окна под полёт.
+#[tauri::command]
+pub fn mascot_layout() -> (u32, f64) {
+    (SCALE.load(Ordering::Relaxed), BIG.load(Ordering::Relaxed) as f64 / 1000.0)
 }
 
 fn mode() -> String {
@@ -153,11 +175,14 @@ fn create(app: &AppHandle) {
         ui_log(app, "⚠ не найден конфиг окна маскота");
         return;
     };
-    let factor = SCALE.load(Ordering::Relaxed) as f64 / 100.0;
+    let scale = SCALE.load(Ordering::Relaxed);
+    let factor = scale as f64 / 100.0;
+    let big = big_for(app.primary_monitor().ok().flatten(), scale);
+    BIG.store((big * 1000.0).round() as u32, Ordering::Relaxed);
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let built = WebviewWindowBuilder::from_config(&app, &window_config)
-            .map(|builder| builder.inner_size(BASE_W * factor, BASE_H * factor))
+            .map(|builder| builder.inner_size(VISIBLE_W * big * factor, VISIBLE_H * big * factor))
             .and_then(|builder| builder.build());
         let window = match built {
             Ok(window) => window,
@@ -170,15 +195,16 @@ fn create(app: &AppHandle) {
         if let (Ok(Some(monitor)), Ok(size)) = (window.primary_monitor(), window.outer_size()) {
             let area = monitor.work_area();
             let margin = (MARGIN * monitor.scale_factor()).round() as i32;
-            let x = area.position.x + area.size.width as i32 - (size.width as f64 * VISIBLE_RIGHT).round() as i32 - margin;
-            let y = area.position.y + area.size.height as i32 - (size.height as f64 * VISIBLE_BOTTOM).round() as i32 - margin;
+            let corner = visible_corner(big);
+            let x = area.position.x + area.size.width as i32 - (size.width as f64 * corner).round() as i32 - margin;
+            let y = area.position.y + area.size.height as i32 - (size.height as f64 * corner).round() as i32 - margin;
             let _ = window.set_position(PhysicalPosition::new(x, y));
         }
         // режим, размер или состояние могли смениться, пока окно создавалось
         let mode = mode();
-        let scale = SCALE.load(Ordering::Relaxed);
-        if (scale as f64 / 100.0 - factor).abs() > f64::EPSILON {
-            resize_keep_corner(&window, scale);
+        let current = SCALE.load(Ordering::Relaxed);
+        if current != scale {
+            resize_keep_corner(&window, current);
         }
         if mode == "never" {
             let _ = window.destroy();
@@ -192,12 +218,16 @@ fn create(app: &AppHandle) {
 fn resize_keep_corner(window: &WebviewWindow, scale: u32) {
     let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) else { return };
     let factor = scale as f64 / 100.0;
-    if window.set_size(LogicalSize::new(BASE_W * factor, BASE_H * factor)).is_err() {
+    let old_corner = visible_corner(BIG.load(Ordering::Relaxed) as f64 / 1000.0);
+    let big = big_for(window.current_monitor().ok().flatten(), scale);
+    BIG.store((big * 1000.0).round() as u32, Ordering::Relaxed);
+    if window.set_size(LogicalSize::new(VISIBLE_W * big * factor, VISIBLE_H * big * factor)).is_err() {
         return;
     }
     if let Ok(new_size) = window.outer_size() {
-        let x = position.x + ((size.width as f64 - new_size.width as f64) * VISIBLE_RIGHT).round() as i32;
-        let y = position.y + ((size.height as f64 - new_size.height as f64) * VISIBLE_BOTTOM).round() as i32;
+        let corner = visible_corner(big);
+        let x = position.x + (size.width as f64 * old_corner - new_size.width as f64 * corner).round() as i32;
+        let y = position.y + (size.height as f64 * old_corner - new_size.height as f64 * corner).round() as i32;
         let _ = window.set_position(PhysicalPosition::new(x, y));
     }
 }

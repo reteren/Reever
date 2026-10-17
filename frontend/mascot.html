@@ -22,13 +22,16 @@
 // Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями распознавания;
 // купол глаза по кадрам — mascot/anim.json (eye: центр и две полуоси эллипса, доли кадра, и насколько
 // глаз смотрит в камеру). Свечение — размытый силуэт текущего кадра, следует за состоянием и голосом.
-// Окно вдвое больше осьминога, чтобы в полёте ничего не обрезалось; в покое лишнее отрезано
-// регионом (set_window_shape) и не ловит клики. Размер окна задаёт Rust (100–500 %).
+// Окно до двух раз больше осьминога, чтобы в полёте ничего не обрезалось; в покое лишнее отрезано
+// регионом (set_window_shape) и не ловит клики. Размер и этот запас задаёт Rust (mascot_layout):
+// на крупных размерах окно не может быть больше экрана, и запас меньше.
 (function () {
   const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 96, FLY_FRAMES = 58, FPS = 24, FLY_FPS = 48;
-  const WIN_W = 328, WIN_H = 408;               // окно при 100 %
-  const SPR_X = 104, SPR_Y = 124, SPR_W = 120, SPR_H = 160; // осьминог в покое
-  const PAD = 22;                               // поля под свечение вокруг него — видимая часть окна
+  const SPR_W = 120, SPR_H = 160;  // осьминог в покое при 100 %
+  const PAD = 22;                   // поля под свечение вокруг него — видимая часть окна
+  const FLY_W = 328, FLY_H = 408;   // кадр полёта при 100 %, с тем же центром, что и окно
+  // окно при 100 % — видимая часть × запас (big); осьминог в покое — по центру
+  let big = 2, WIN_W = 328, WIN_H = 408, SPR_X = 104, SPR_Y = 124;
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
   const EYE_INSET = 0.97;     // линза чуть меньше купола: край прячется под хромовое кольцо
@@ -98,6 +101,8 @@
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
+    WIN_W = (SPR_W + 2 * PAD) * big; WIN_H = (SPR_H + 2 * PAD) * big;
+    SPR_X = (WIN_W - SPR_W) / 2; SPR_Y = (WIN_H - SPR_H) / 2;
     k = canvas.clientWidth / WIN_W || 1;
     u = k * dpr;
     for (const c of [canvas, spr, sil]) { c.width = Math.round(canvas.clientWidth * dpr); c.height = Math.round(canvas.clientHeight * dpr); }
@@ -108,7 +113,7 @@
   // текущий кадр: картинка, её прямоугольник в окне и данные глаза
   function current() {
     if (mode === 'gone') return null;
-    if (flying()) return { img: SETS[mode][frame], rect: [0, 0, WIN_W, WIN_H], eye: anim?.eye[mode][frame] };
+    if (flying()) return { img: SETS[mode][frame], rect: [(WIN_W - FLY_W) / 2, (WIN_H - FLY_H) / 2, FLY_W, FLY_H], eye: anim?.eye[mode][frame] };
     if (mode === 'rest') return { img: SETS.idle[idleFrame], rect: [SPR_X, SPR_Y, SPR_W, SPR_H], eye: anim?.eye.idle[idleFrame] };
     return { img: SETS.grab[frame], rect: [SPR_X, SPR_Y, SPR_W, SPR_H], eye: anim?.eye.grab[frame] };
   }
@@ -276,8 +281,13 @@
   win.listen('mascot://leave', () => { if (!held && mode !== 'gone') fly('leave'); });
   win.listen('mascot://hidden', () => { running = false; entered = false; if (flying()) vanish(); mode = 'gone'; });
 
-  window.addEventListener('resize', resize);
+  // запас окна знает Rust; пока ответа нет — двукратный
+  function relayout() {
+    invoke('mascot_layout').then(([, b]) => { big = b || 2; resize(); }).catch(() => resize());
+  }
+  window.addEventListener('resize', relayout);
   resize();
+  relayout();
   run();
   // окно могли показать раньше, чем страница загрузилась, — тогда «enter» уже пролетел мимо
   // ответ мог прийти уже после «enter» — тогда он устарел и петлю не трогает
