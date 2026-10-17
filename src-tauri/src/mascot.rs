@@ -43,6 +43,13 @@ static BIG: AtomicU32 = AtomicU32::new(2000);
 /// Поколение показа: отложенное скрытие срабатывает, только если с тех пор ничего не менялось.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 static DRAGGING: AtomicBool = AtomicBool::new(false);
+/// Маскот на экране. Само окно после создания не прячется и не обрезается регионом
+/// никогда: и показ скрытого прозрачного окна без рамки, и смена его региона Windows
+/// сопровождает кадром со стандартной белой рамкой. Спрятанный маскот — пустой холст
+/// (mascot.html), а клики окно пропускает сквозь себя (см. `watch_cursor`).
+static SHOWN: AtomicBool = AtomicBool::new(false);
+/// Осьминог стоит на месте (не летит) — только тогда окно ловит мышь, и только над ним.
+static RESTING: AtomicBool = AtomicBool::new(false);
 
 pub fn normalize_mode(mode: &str) -> &'static str {
     match mode.trim() {
@@ -70,10 +77,10 @@ fn visible_corner(big: f64) -> f64 {
     0.5 + 0.5 / big
 }
 
-/// Раскладка для mascot.html: размер в процентах и запас окна под полёт.
+/// Раскладка для mascot.html: размер в процентах, запас окна под полёт и виден ли маскот.
 #[tauri::command]
-pub fn mascot_layout() -> (u32, f64) {
-    (SCALE.load(Ordering::Relaxed), BIG.load(Ordering::Relaxed) as f64 / 1000.0)
+pub fn mascot_layout() -> (u32, f64, bool) {
+    (SCALE.load(Ordering::Relaxed), BIG.load(Ordering::Relaxed) as f64 / 1000.0, SHOWN.load(Ordering::Relaxed))
 }
 
 fn mode() -> String {
@@ -104,6 +111,7 @@ pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
     match (mode, window) {
         ("never", Some(window)) => {
             events::set_mascot_visible(false);
+            SHOWN.store(false, Ordering::Relaxed);
             let _ = window.destroy();
         }
         ("never", None) => {}
@@ -153,21 +161,54 @@ fn hide_later(window: WebviewWindow, generation: u64) {
 }
 
 fn show(window: &WebviewWindow) {
-    if window.is_visible().unwrap_or(false) {
-        // уже на экране (возможно, посреди ухода) — вернуть без повторного появления
-        let _ = window.emit("mascot://enter", false);
-        return;
-    }
-    if window.show().is_ok() {
+    // уже на экране (возможно, посреди ухода) — вернуть без повторного появления
+    let fresh = !SHOWN.swap(true, Ordering::Relaxed);
+    if fresh {
         events::set_mascot_visible(true);
-        let _ = window.emit("mascot://enter", true);
     }
+    let _ = window.emit("mascot://enter", fresh);
 }
 
 fn hide(window: &WebviewWindow) {
-    events::set_mascot_visible(false);
-    let _ = window.hide();
+    if SHOWN.swap(false, Ordering::Relaxed) {
+        events::set_mascot_visible(false);
+    }
+    RESTING.store(false, Ordering::Relaxed);
     let _ = window.emit("mascot://hidden", ());
+}
+
+/// mascot.html: осьминог приземлился (true) или взлетел/исчез (false).
+#[tauri::command]
+pub fn mascot_rest(rest: bool) {
+    RESTING.store(rest, Ordering::Relaxed);
+}
+
+/// Окно больше осьминога и прозрачно почти целиком, но прозрачные пиксели WebView2 всё
+/// равно ловят клики. Поэтому окно пропускает мышь сквозь себя везде, кроме видимой части
+/// с осьминогом в покое: поток следит за курсором и переключает это на границе.
+fn watch_cursor(window: WebviewWindow) {
+    std::thread::spawn(move || {
+        let mut catching: Option<bool> = None;
+        loop {
+            std::thread::sleep(Duration::from_millis(40));
+            let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) else { return };
+            let over = DRAGGING.load(Ordering::Relaxed)
+                || (SHOWN.load(Ordering::Relaxed)
+                    && RESTING.load(Ordering::Relaxed)
+                    && cursor().is_some_and(|p| {
+                        let big = BIG.load(Ordering::Relaxed) as f64 / 1000.0;
+                        let (half_w, half_h) = (size.width as f64 / big / 2.0, size.height as f64 / big / 2.0);
+                        let (cx, cy) = (position.x as f64 + size.width as f64 / 2.0, position.y as f64 + size.height as f64 / 2.0);
+                        (p.x as f64 - cx).abs() <= half_w && (p.y as f64 - cy).abs() <= half_h
+                    }));
+            if catching != Some(over) {
+                if window.set_ignore_cursor_events(!over).is_err() {
+                    return;
+                }
+                catching = Some(over);
+            }
+        }
+    });
 }
 
 fn create(app: &AppHandle) {
@@ -181,8 +222,10 @@ fn create(app: &AppHandle) {
     BIG.store((big * 1000.0).round() as u32, Ordering::Relaxed);
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
+        // Создаётся далеко за экраном: первый показ окна без рамки Windows сопровождает
+        // кадром со стандартной рамкой, и пусть он мелькнёт там, где его никто не видит.
         let built = WebviewWindowBuilder::from_config(&app, &window_config)
-            .map(|builder| builder.inner_size(VISIBLE_W * big * factor, VISIBLE_H * big * factor))
+            .map(|builder| builder.inner_size(VISIBLE_W * big * factor, VISIBLE_H * big * factor).position(-30000.0, -30000.0))
             .and_then(|builder| builder.build());
         let window = match built {
             Ok(window) => window,
@@ -191,6 +234,11 @@ fn create(app: &AppHandle) {
                 return;
             }
         };
+        // Окно показывается один раз и навсегда (там же, за экраном); дальше маскот
+        // появляется и прячется только рисованием (см. SHOWN), мышь — сквозь окно.
+        let _ = window.set_ignore_cursor_events(true);
+        let _ = window.show();
+        watch_cursor(window.clone());
         // Рабочая область, а не весь монитор: иначе маскот уедет под панель задач.
         if let (Ok(Some(monitor)), Ok(size)) = (window.primary_monitor(), window.outer_size()) {
             let area = monitor.work_area();

@@ -22,9 +22,9 @@
 // Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями распознавания;
 // купол глаза по кадрам — mascot/anim.json (eye: центр и две полуоси эллипса, доли кадра, и насколько
 // глаз смотрит в камеру). Свечение — размытый силуэт текущего кадра, следует за состоянием и голосом.
-// Окно до двух раз больше осьминога, чтобы в полёте ничего не обрезалось; в покое лишнее отрезано
-// регионом (set_window_shape) и не ловит клики. Размер и этот запас задаёт Rust (mascot_layout):
-// на крупных размерах окно не может быть больше экрана, и запас меньше.
+// Окно до двух раз больше осьминога, чтобы в полёте ничего не обрезалось; клики оно пропускает
+// сквозь себя везде, кроме осьминога в покое (это ведёт Rust, ему сообщает mascot_rest). Размер
+// и запас задаёт Rust (mascot_layout): на крупных размерах окно не больше экрана, и запас меньше.
 (function () {
   const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 96, FLY_FRAMES = 58, FPS = 24, FLY_FPS = 48;
   const SPR_W = 120, SPR_H = 160;  // осьминог в покое при 100 %
@@ -108,7 +108,6 @@
     for (const c of [canvas, spr, sil]) { c.width = Math.round(canvas.clientWidth * dpr); c.height = Math.round(canvas.clientHeight * dpr); }
     eye?.resize(k);
     drawn = null;
-    if (!flying()) restShape();
   }
   // текущий кадр: картинка, её прямоугольник в окне и данные глаза
   function current() {
@@ -199,10 +198,8 @@
   }
 
   // ── Полёт: окно летит по траектории из Blender, от позиции покоя ──
-  function restShape() {
-    const r = [SPR_X - PAD, SPR_Y - PAD, SPR_X + SPR_W + PAD, SPR_Y + SPR_H + PAD].map((v) => v * k);
-    invoke('set_window_shape', { rects: [r] }).catch((e) => console.error('mascot shape', e));
-  }
+  // осьминог стоит — окно ловит мышь над ним; летит или исчез — мышь проходит насквозь
+  const setResting = (rest) => invoke('mascot_rest', { rest }).catch(() => {});
   function moveAlongPath() {
     const p = anim?.path[mode][frame];
     if (!home || !p) return;
@@ -217,19 +214,20 @@
       try { home = await win.outerPosition(); } catch { home = null; }
     }
     mode = kind; frame = 0; acc = 0; drawn = null;
-    invoke('set_window_shape', { rects: [] }).catch(() => {});
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setResting(false);
     moveAlongPath();
   }
   function land() {
     goHome();
     mode = 'rest'; idleFrame = 0; frame = 0;
-    restShape();
+    setResting(true);
   }
+  // улетел: холст пуст, окно возвращается на место
   function vanish() {
     mode = 'gone'; frame = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     goHome();
-    restShape();
   }
 
   // ── Хват за голову ────────────────────────────────────────────────
@@ -262,8 +260,9 @@
   }
   win.listen('mascot://drop', drop);
 
-  // ── Показ: окно прячет и показывает Rust ─────────────────────────
-  // Пока окно скрыто, петля стоит: ни GPU, ни разбора кадров.
+  // ── Показ: маскота прячет и показывает Rust ──────────────────────
+  // Окно при этом не скрывается и не обрезается (у прозрачного окна без рамки при этом мелькает
+  // белая рамка Windows): спрятанный маскот — пустой холст. Пока он спрятан, петля стоит.
   let running = true, loop = false;
   function run() {
     running = true;
@@ -279,22 +278,29 @@
     else if (mode === 'leave') land();
   });
   win.listen('mascot://leave', () => { if (!held && mode !== 'gone') fly('leave'); });
-  win.listen('mascot://hidden', () => { running = false; entered = false; if (flying()) vanish(); mode = 'gone'; });
+  win.listen('mascot://hidden', () => {
+    running = false; entered = false;
+    if (flying()) vanish();
+    mode = 'gone';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
 
-  // запас окна знает Rust; пока ответа нет — двукратный
+  // запас окна и виден ли маскот знает Rust; пока ответа нет — двукратный запас
+  let laidOut = false;
   function relayout() {
-    invoke('mascot_layout').then(([, b]) => { big = b || 2; resize(); }).catch(() => resize());
+    invoke('mascot_layout').then(([, b, shown]) => {
+      big = b || 2; resize();
+      if (laidOut) return;
+      laidOut = true;
+      // «enter» мог прийти раньше, чем страница загрузилась, — тогда он пролетел мимо
+      if (entered) return;
+      if (shown) fly('appear'); else running = false;
+    }).catch(() => resize());
   }
   window.addEventListener('resize', relayout);
   resize();
   relayout();
   run();
-  // окно могли показать раньше, чем страница загрузилась, — тогда «enter» уже пролетел мимо
-  // ответ мог прийти уже после «enter» — тогда он устарел и петлю не трогает
-  win.isVisible().then((visible) => {
-    if (entered) return;
-    if (!visible) running = false; else if (mode === 'gone') fly('appear');
-  }).catch(() => {});
 })();
 </script>
 </body>

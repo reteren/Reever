@@ -425,6 +425,7 @@ pub fn run() {
             commands_api::set_ui_language,
             mascot::mascot_drag,
             mascot::mascot_layout,
+            mascot::mascot_rest,
             commands_api::set_mascot,
             picker::picker_choose,
             picker::picker_close,
