@@ -249,7 +249,6 @@ I18N.register('it', {
   "settings.command_wait_ms": "Tempo di attesa del comando dopo la parola di attivazione, ms",
   "settings.partial_results": "Mostra il testo del comando in tempo reale",
   "settings.match_threshold": "Soglia di corrispondenza dell'azione 0..1",
-  "settings.open_min_similarity": "Soglia di «открой папку» 0..1",
   "settings.dictation_clipboard": "Se manca un campo di testo, copia il testo negli appunti",
   "settings.dictation_clipboard.help": "«Ривер напиши …»: il testo viene digitato dove si trova il cursore. Se il cursore non è in un campo, il testo si accumula negli appunti: incollalo con Ctrl+V.",
   "settings.dictation_live": "Scrivi mentre parli (parola per parola)",

@@ -249,7 +249,6 @@ I18N.register('ja', {
   "settings.command_wait_ms": "起動ワードの後にコマンドを待つ時間（ミリ秒）",
   "settings.partial_results": "認識中のコマンドを表示",
   "settings.match_threshold": "アクション一致のしきい値 0..1",
-  "settings.open_min_similarity": "«открой папку»のしきい値 0..1",
   "settings.dictation_clipboard": "入力欄がない場合、テキストをクリップボードに保存",
   "settings.dictation_clipboard.help": "«Ривер напиши …»：カーソル位置にテキストを入力します。入力欄にカーソルがない場合はクリップボードに保存されます。Ctrl+Vで貼り付けてください。",
   "settings.dictation_live": "話しながら1語ずつ入力",

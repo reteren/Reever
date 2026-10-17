@@ -85,9 +85,6 @@ pub struct Settings {
     /// Слова отмены команды (стоп/передумал).
     #[serde(default = "default_cancel_words")]
     pub cancel_words: Vec<String>,
-    /// Минимальная похожесть для «открой» (динамика). Ниже — «не понял».
-    #[serde(default = "default_open_min_sim")]
-    pub open_min_similarity: f64,
     /// Поднимать открытое окно на передний план (best-effort).
     #[serde(default = "default_true")]
     pub raise_result: bool,
@@ -306,9 +303,6 @@ fn default_cancel_words() -> Vec<String> {
         "забудь".into(),
     ]
 }
-fn default_open_min_sim() -> f64 {
-    0.55
-}
 fn default_activation() -> String {
     "both".into()
 }
@@ -370,7 +364,6 @@ fn parse_settings(text: &str) -> Settings {
     restore!("command_wait_ms", command_wait_ms, u32);
     restore!("partial_results", partial_results, bool);
     restore!("cancel_words", cancel_words, Vec<String>);
-    restore!("open_min_similarity", open_min_similarity, f64);
     restore!("raise_result", raise_result, bool);
     restore!("activation_mode", activation_mode, String);
     restore!("hotkey", hotkey, String);
@@ -429,7 +422,6 @@ impl Default for Settings {
             command_wait_ms: default_command_wait_ms(),
             partial_results: true,
             cancel_words: default_cancel_words(),
-            open_min_similarity: default_open_min_sim(),
             raise_result: true,
             activation_mode: default_activation(),
             hotkey: default_hotkey(),

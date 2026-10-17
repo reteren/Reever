@@ -249,7 +249,6 @@ I18N.register('ru', {
   "settings.command_wait_ms": "Сколько ждать команду после wake, мс",
   "settings.partial_results": "Показывать живой текст команды",
   "settings.match_threshold": "Порог совпадения действия 0..1",
-  "settings.open_min_similarity": "Порог «открой папку» 0..1",
   "settings.dictation_clipboard": "Если нет поля ввода — текст в буфер обмена",
   "settings.dictation_clipboard.help": "«Ривер напиши …»: текст печатается туда, где стоит курсор. Если курсора в поле нет, он копится в буфере — вставь Ctrl+V.",
   "settings.dictation_live": "Печатать по ходу речи (по словам)",

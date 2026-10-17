@@ -249,7 +249,6 @@ I18N.register('de', {
   "settings.command_wait_ms": "Wartezeit auf einen Befehl nach dem Aktivierungswort, ms",
   "settings.partial_results": "Befehlstext live anzeigen",
   "settings.match_threshold": "Schwellenwert für Aktionsübereinstimmung 0..1",
-  "settings.open_min_similarity": "Schwellenwert für «открой папку» 0..1",
   "settings.dictation_clipboard": "Kein Eingabefeld — Text kommt in die Zwischenablage",
   "settings.dictation_clipboard.help": "«Ривер напиши …»: Der Text wird an der Cursorposition eingegeben. Ist kein Eingabefeld fokussiert, landet er in der Zwischenablage — mit Ctrl+V einfügen.",
   "settings.dictation_live": "Während des Sprechens tippen (Wort für Wort)",

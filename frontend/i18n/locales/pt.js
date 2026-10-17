@@ -249,7 +249,6 @@ I18N.register('pt', {
   "settings.command_wait_ms": "Quanto tempo esperar por um comando após a palavra de ativação, ms",
   "settings.partial_results": "Mostrar o texto do comando enquanto é reconhecido",
   "settings.match_threshold": "Limite de correspondência da ação 0..1",
-  "settings.open_min_similarity": "Limite de «открой папку» 0..1",
   "settings.dictation_clipboard": "Sem campo de entrada — enviar o texto para a área de transferência",
   "settings.dictation_clipboard.help": "«Ривер напиши …»: o texto é digitado onde está o cursor. Se o cursor não estiver em um campo, o texto fica na área de transferência — cole com Ctrl+V.",
   "settings.dictation_live": "Digitar enquanto fala (palavra por palavra)",

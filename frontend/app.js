@@ -7,7 +7,7 @@ const previewSettings={
   english_only_model:'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8',models_unload_s:60,find_source:'everything',
   lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
-  partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
+  partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
   dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_entrance:'flight'
@@ -561,7 +561,7 @@ const GROUPS=[
   ['languages',[['languages','languages'],['english_only_model','model']]],
   ['recognition',[
     ['lid_model','model_optional'],['payload_language','language'],['asr_threads','number'],['models_unload_s','number'],['vad_threshold','number'],['wake_pause_ms','number'],
-    ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number'],['open_min_similarity','number']]],
+    ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number']]],
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_terms','list'],
     ['dictation_idle_ms','number'],['dictation_pause_ms','number'],['webchat_send','bool']]],
@@ -710,7 +710,7 @@ function fieldEl(key,type,opts,when='save'){
       window.addEventListener('keydown',onKey,true);
     };
   }
-  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold','open_min_similarity'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } if(key==='models_unload_s'){ inp.step='1'; inp.min='0'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
+  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } if(key==='models_unload_s'){ inp.step='1'; inp.min='0'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
   wrap.append(inp);
   if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
   if(key==='find_source'){
@@ -845,6 +845,11 @@ async function changeLanguage(preference){
   try{ await invoke('set_ui_language',{language:preference}); }catch(e){ reportError('uiLanguage',e); }
   await I18N.setLanguage(preference);
   rerender();
+  // Журнал хранится в Rust непереведённым — перерисовываем его на новом языке.
+  try{
+    const log=(await invoke('get_ui_snapshot'))?.log;
+    if(Array.isArray(log)){ const L=$('#log'); L.replaceChildren(...log.map(line=>el('div',{className:'l',textContent:String(line)}))); L.scrollTop=L.scrollHeight; }
+  }catch(e){ reportError('uiLanguage',e); }
 }
 
 // Сначала язык (из settings.json, иначе язык Windows), потом всё остальное.

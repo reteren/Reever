@@ -249,7 +249,6 @@ I18N.register('fr', {
   "settings.command_wait_ms": "Délai d’attente d’une commande après le mot de réveil, ms",
   "settings.partial_results": "Afficher le texte de la commande en direct",
   "settings.match_threshold": "Seuil de correspondance des actions 0..1",
-  "settings.open_min_similarity": "Seuil «открой папку» 0..1",
   "settings.dictation_clipboard": "Sans champ de saisie, envoyer le texte dans le presse-papiers",
   "settings.dictation_clipboard.help": "«Ривер напиши …» : le texte est saisi à l’emplacement du curseur. Si aucun champ n’est actif, il est placé dans le presse-papiers ; collez-le avec Ctrl+V.",
   "settings.dictation_live": "Saisir pendant que vous parlez (mot par mot)",

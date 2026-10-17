@@ -251,7 +251,6 @@ I18N.register('en', {
   "settings.command_wait_ms": "How long to wait for a command after the wake word, ms",
   "settings.partial_results": "Show live command text",
   "settings.match_threshold": "Action match threshold 0..1",
-  "settings.open_min_similarity": "«открой папку» threshold 0..1",
   "settings.dictation_clipboard": "No input field — text goes to the clipboard",
   "settings.dictation_clipboard.help": "«Ривер напиши …»: the text is typed where the cursor is. If no field has the cursor, it collects in the clipboard — paste with Ctrl+V.",
   "settings.dictation_live": "Type while speaking (word by word)",

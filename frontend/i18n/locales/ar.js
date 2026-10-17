@@ -249,7 +249,6 @@ I18N.register('ar', {
   "settings.command_wait_ms": "مدة انتظار الأمر بعد كلمة التنبيه، مللي ثانية",
   "settings.partial_results": "إظهار نص الأمر أثناء التعرف",
   "settings.match_threshold": "عتبة مطابقة الإجراء من 0 إلى 1",
-  "settings.open_min_similarity": "عتبة «открой папку» من 0 إلى 1",
   "settings.dictation_clipboard": "إذا لم يوجد حقل إدخال، يُنسخ النص إلى الحافظة",
   "settings.dictation_clipboard.help": "«Ривер напиши …»: يُكتب النص في موضع المؤشر. إذا لم يكن المؤشر داخل حقل، يُحفظ النص في الحافظة؛ الصقه باستخدام Ctrl+V.",
   "settings.dictation_live": "الكتابة أثناء التحدث (كلمةً كلمة)",

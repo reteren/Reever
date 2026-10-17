@@ -34,7 +34,6 @@
   "match_threshold": 0.7,
   "mute_hotkey": "",
   "offline_mode": false,
-  "open_min_similarity": 0.55,
   "partial_results": true,
   "payload_language": "auto",
   "private_log": false,

@@ -249,7 +249,6 @@ I18N.register('zh', {
   "settings.command_wait_ms": "唤醒后等待指令的时间，毫秒",
   "settings.partial_results": "显示实时指令文本",
   "settings.match_threshold": "操作匹配阈值 0..1",
-  "settings.open_min_similarity": "«открой папку» 相似度阈值 0..1",
   "settings.dictation_clipboard": "没有输入框时，将文本放入剪贴板",
   "settings.dictation_clipboard.help": "«Ривер напиши …»：文本会输入到光标所在位置。如果没有文本框获得焦点，文本会存到剪贴板；按 Ctrl+V 粘贴。",
   "settings.dictation_live": "说话时逐词输入",
