@@ -34,6 +34,7 @@
   let big = 2, WIN_W = 328, WIN_H = 408, SPR_X = 104, SPR_Y = 124;
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
+  const GRAB_SPEED = 1.5;     // ускорение подхвата и возврата относительно 24 к/с
   const EYE_INSET = 0.97;     // линза чуть меньше купола: край прячется под хромовое кольцо
   const GLOW = [70, 205, 165]; // акцент, приглушённый до матового
   const tauri = window.__TAURI__;
@@ -146,7 +147,13 @@
     acc += dt;
     last = t;
     // Возврат быстрее подхвата: осьминог «ставится» на место.
-    const step = 1 / (flying() ? FLY_FPS : mode === 'release' ? FPS * 1.6 : FPS);
+    // Подхват (ноги вытягиваются) и возврат (сворачиваются) — в 1,5 раза быстрее
+    // съёмки; покачивание в руке и покой — в родном темпе.
+    const fps = flying() ? FLY_FPS
+      : mode === 'release' ? FPS * 1.6 * GRAB_SPEED
+      : mode === 'grab' && frame < LOOP_FROM ? FPS * GRAB_SPEED
+      : FPS;
+    const step = 1 / fps;
     while (acc >= step) { acc -= step; advance(); }
 
     // уровень: быстрая атака, медленный спад — как в главном окне
