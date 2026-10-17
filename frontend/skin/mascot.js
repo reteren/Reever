@@ -2,8 +2,10 @@
 // главного окна (shell.js). Пререндер из Blender (design: octobus chrome rig.blend):
 //  grab_0001–0084        (Octo_Grab)  — подхват: 1–36 голова тянется, щупальца повисают; дальше — покачивание;
 //  idle_0001–0096        (Octo_Idle)  — покой: переминается, поворачивается, перебирает щупальцами;
-//  portal_in_/portal_out_0001–0058 (Octo_PortalIn/Out + Portal_In/Out, 48 к/с) — выход из портала
-//    и уход в него. Эти кадры шире спрайта (328×408 при 100 %), центр у них общий.
+//  portal_in_0001–0058   (Octo_PortalIn + Portal_In, 48 к/с) — выход из портала;
+//  portal_gate_0001–0058 (Portal_Out, 48 к/с) — портал ухода без осьминога: сам осьминог уходит
+//    в него как есть — idle продолжает играть, а его сжимает и закручивает в центр портала здесь.
+//  Кадры портала шире спрайта (328×408 при 100 %), центр у них общий.
 // Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями распознавания;
 // купол глаза по кадрам — mascot/anim.json (eye: центр и две полуоси эллипса, доли кадра, и насколько
 // глаз смотрит в камеру). Свечение — размытый силуэт текущего кадра. Частицы портала — здесь же
@@ -28,7 +30,7 @@
       return img;
     });
     shared = {
-      sets: { grab: load('grab', FRAMES), idle: load('idle', IDLE_FRAMES), portal_in: load('portal_in', PORTAL_FRAMES), portal_out: load('portal_out', PORTAL_FRAMES) },
+      sets: { grab: load('grab', FRAMES), idle: load('idle', IDLE_FRAMES), portal_in: load('portal_in', PORTAL_FRAMES), portal_gate: load('portal_gate', PORTAL_FRAMES) },
       anim: null,
     };
     fetch(`${BASE}mascot/anim.json`).then((r) => r.json()).then((a) => { shared.anim = a; }).catch((e) => console.error('mascot anim', e));
@@ -99,8 +101,9 @@
     function current() {
       const a = A.anim;
       if (mode === 'gone') return null;
-      if (inPortal()) return { img: A.sets[mode][frame], rect: G.fly, eye: a?.eye[mode]?.[frame] };
-      if (mode === 'rest') return { img: A.sets.idle[idleFrame], rect: G.spr, eye: a?.eye.idle[idleFrame] };
+      if (mode === 'portal_in') return { img: A.sets.portal_in[frame], rect: G.fly, eye: a?.eye.portal_in?.[frame] };
+      // уход: осьминог тот же, что и в покое, — портал позади, а сам он затягивается в него
+      if (mode === 'rest' || mode === 'portal_out') return { img: A.sets.idle[idleFrame], rect: G.spr, eye: a?.eye.idle[idleFrame] };
       return { img: A.sets.grab[frame], rect: G.spr, eye: a?.eye.grab[frame] };
     }
     // спрайт и его силуэт перерисовываются, только когда сменился кадр
@@ -125,6 +128,8 @@
       else if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
       else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) { mode = 'rest'; idleFrame = 0; } }
       else if (inPortal()) {
+        // покой продолжает играть и в портале ухода — в своём темпе (портал вдвое быстрее)
+        if (mode === 'portal_out' && frame % 2) idleFrame = (idleFrame + 1) % IDLE_FRAMES;
         if (frame + 1 < PORTAL_FRAMES) frame++;
         else if (mode === 'portal_in') { mode = 'rest'; idleFrame = 0; frame = 0; opts.onArrived?.(); }
         else { mode = 'gone'; frame = 0; opts.onGone?.(); }
@@ -208,7 +213,19 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       if (G.clip) { ctx.beginPath(); ctx.arc(G.clip.x * u, G.clip.y * u, G.clip.r * u, 0, 6.283); ctx.clip(); }
+      // уход: позади — портал, осьминога сжимает и закручивает в его центр
+      // (темп — как у Octo_PortalOut: стоит до 30 %, к 80 % исчезает, поворот 240°)
+      let pull = null;
+      if (mode === 'portal_out') {
+        const gate = A.sets.portal_gate[frame], P = portalNow();
+        if (gate?.complete && gate.naturalWidth) { const [x, y, w, h] = G.fly; ctx.drawImage(gate, x * u, y * u, w * u, h * u); }
+        const t = frame / (PORTAL_FRAMES - 1), e = Math.max(0, Math.min(1, (t - 0.3) / 0.5)) ** 3;
+        pull = { x: (P?.x ?? G.W / 2) * u, y: (P?.y ?? G.H / 2) * u, s: 1 - e, rot: -e * Math.PI * 4 / 3 };
+        if (pull.s < 0.01) cur = null;
+      }
       if (cur) {
+        ctx.save();
+        if (pull) { ctx.translate(pull.x, pull.y); ctx.rotate(pull.rot); ctx.scale(pull.s, pull.s); ctx.translate(-pull.x, -pull.y); }
         // свечение: мягко «дышит» и разгорается от голоса и принятой команды
         const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
         if (opts.glow && g > 0.01) {
@@ -231,10 +248,9 @@
           ctx.globalAlpha = facing;
           ctx.transform(e[2] * w * u, e[3] * h * u, e[4] * w * u, e[5] * h * u, (x + e[0] * w) * u, (y + e[1] * h) * u);
           ctx.drawImage(eyeCanvas, -EYE_INSET, -EYE_INSET, 2 * EYE_INSET, 2 * EYE_INSET);
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          if (G.clip) { ctx.beginPath(); ctx.arc(G.clip.x * u, G.clip.y * u, G.clip.r * u, 0, 6.283); ctx.clip(); }
           ctx.globalAlpha = 1;
         }
+        ctx.restore();
       }
       drawSparks(dt);
       ctx.restore();
