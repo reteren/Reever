@@ -8,34 +8,35 @@
   canvas { display: block; width: 100%; height: 100%; }
   canvas.head { cursor: grab; }
   canvas.held { cursor: grabbing; }
-  /* появление и уход в режиме «при командах»: из угла с пружинкой и обратно */
-  canvas { transform-origin: 50% 88%; }
-  canvas.gone { opacity: 0; transform: translateY(26%) scale(.55); }
-  canvas.enter { transition: opacity .18s ease-out, transform .42s cubic-bezier(.34, 1.56, .64, 1); }
-  canvas.leave { transition: opacity .3s ease-in, transform .3s cubic-bezier(.5, 0, .75, 0); }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <script src="skin/orb.js"></script>
 <script>
-// Маскот: пререндер из Blender (octobus chrome rig.blend, действие Octo_Grab).
-// Кадры 1–36 — подхват: голова тянется, щупальца повисают; 36–84 — бесшовный цикл покачивания.
-// idle_0001–0096 (действие Octo_Idle) — покой: переминается, поворачивается, перебирает щупальцами.
-// Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями
-// распознавания; контур купола глаза по кадрам — mascot/eye.json (центр и радиусы, доли кадра).
-// Свечение вокруг — размытый силуэт текущего кадра, его сила следует за состоянием и голосом.
-// Размер окна задаёт Rust (настройка «Размер», 100–500 %); всё рисуется в долях исходного окна.
+// Маскот: пререндер из Blender (octobus chrome rig.blend).
+//  grab_0001–0084 (Octo_Grab)  — подхват: 1–36 голова тянется, щупальца повисают; 36–84 — цикл покачивания;
+//  idle_0001–0096 (Octo_Idle)  — покой: переминается, поворачивается, перебирает щупальцами;
+//  appear_/leave_0001–0058 (Octo_Appear / Octo_Leave, 48 к/с) — прилёт издалека мёртвой петлёй
+//    и улёт зеркально. Кадры полёта — на всё окно; по экрану летит само окно (mascot/anim.json, path).
+// Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями распознавания;
+// купол глаза по кадрам — mascot/anim.json (eye: центр и две полуоси эллипса, доли кадра, и насколько
+// глаз смотрит в камеру). Свечение — размытый силуэт текущего кадра, следует за состоянием и голосом.
+// Окно вдвое больше осьминога, чтобы в полёте ничего не обрезалось; в покое лишнее отрезано
+// регионом (set_window_shape) и не ловит клики. Размер окна задаёт Rust (100–500 %).
 (function () {
-  const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 96, FPS = 24;
-  const SPRITE_W = 120, SPRITE_H = 160, PAD = 22; // окно при 100 % = спрайт + поля под свечение
+  const FRAMES = 84, LOOP_FROM = 35, IDLE_FRAMES = 96, FLY_FRAMES = 58, FPS = 24, FLY_FPS = 48;
+  const WIN_W = 328, WIN_H = 408;               // окно при 100 %
+  const SPR_X = 104, SPR_Y = 124, SPR_W = 120, SPR_H = 160; // осьминог в покое
+  const PAD = 22;                               // поля под свечение вокруг него — видимая часть окна
   const HEAD_BOTTOM = 0.58;   // доля высоты кадра: выше — голова, ниже — щупальца
   const RELEASE_FROM = 19;    // с какого кадра подхвата играть возврат задом наперёд
-  const EYE_INSET = 0.965;    // линза чуть меньше купола: край прячется под хромовое кольцо
+  const EYE_INSET = 0.97;     // линза чуть меньше купола: край прячется под хромовое кольцо
   const GLOW = [70, 205, 165]; // акцент, приглушённый до матового
   const tauri = window.__TAURI__;
   const win = tauri.window.getCurrentWindow();
   const { invoke } = tauri.core;
+  const { PhysicalPosition } = tauri.dpi;
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
   const spr = document.createElement('canvas'), sctx = spr.getContext('2d', { willReadFrequently: true });
@@ -47,9 +48,12 @@
     img.src = `mascot/${name}_${String(i + 1).padStart(4, '0')}.webp`;
     return img;
   });
-  const images = load('grab', FRAMES), idle = load('idle', IDLE_FRAMES);
-  let eyes = null;
-  fetch('mascot/eye.json').then((r) => r.json()).then((e) => { eyes = e; }).catch((e) => console.error('mascot eye', e));
+  const SETS = {
+    grab: load('grab', FRAMES), idle: load('idle', IDLE_FRAMES),
+    appear: load('appear', FLY_FRAMES), leave: load('leave', FLY_FRAMES),
+  };
+  let anim = null;
+  fetch('mascot/anim.json').then((r) => r.json()).then((a) => { anim = a; }).catch((e) => console.error('mascot anim', e));
 
   const eyeCanvas = document.createElement('canvas');
   let eye = null;
@@ -85,44 +89,60 @@
   invoke('get_ui_snapshot').then((s) => s && setState(String(s.state || 'idle'))).catch(() => {});
 
   // ── Кадры ─────────────────────────────────────────────────────────
+  // mode: rest | grab | release | appear | leave | gone (улетел, окно вот-вот спрячут)
   // k — масштаб окна относительно 100 %, u — пикселей холста на исходный CSS-пиксель
-  let frame = 0, idleFrame = 0, mode = 'rest', acc = 0, last = 0, drawn = null, dpr = 1, k = 1, u = 1;
+  let frame = 0, idleFrame = 0, mode = 'gone', acc = 0, last = 0, drawn = null, dpr = 1, k = 1, u = 1;
+  let home = null;            // позиция окна в покое (физические пиксели) — от неё летит полёт
   const t0 = performance.now();
+  const flying = () => mode === 'appear' || mode === 'leave';
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
-    k = canvas.clientWidth / (SPRITE_W + 2 * PAD) || 1;
+    k = canvas.clientWidth / WIN_W || 1;
     u = k * dpr;
     for (const c of [canvas, spr, sil]) { c.width = Math.round(canvas.clientWidth * dpr); c.height = Math.round(canvas.clientHeight * dpr); }
     eye?.resize(k);
     drawn = null;
+    if (!flying()) restShape();
+  }
+  // текущий кадр: картинка, её прямоугольник в окне и данные глаза
+  function current() {
+    if (mode === 'gone') return null;
+    if (flying()) return { img: SETS[mode][frame], rect: [0, 0, WIN_W, WIN_H], eye: anim?.eye[mode][frame] };
+    if (mode === 'rest') return { img: SETS.idle[idleFrame], rect: [SPR_X, SPR_Y, SPR_W, SPR_H], eye: anim?.eye.idle[idleFrame] };
+    return { img: SETS.grab[frame], rect: [SPR_X, SPR_Y, SPR_W, SPR_H], eye: anim?.eye.grab[frame] };
   }
   // спрайт и его силуэт перерисовываются, только когда сменился кадр
-  function prepare() {
-    const img = mode === 'rest' ? idle[idleFrame] : images[frame];
-    if (!img.complete || !img.naturalWidth) return false;
-    if (drawn === img) return true;
+  function prepare(cur) {
+    if (!cur.img.complete || !cur.img.naturalWidth) return false;
+    if (drawn === cur.img) return true;
+    const [x, y, w, h] = cur.rect;
     sctx.clearRect(0, 0, spr.width, spr.height);
-    sctx.drawImage(img, PAD * u, PAD * u, SPRITE_W * u, SPRITE_H * u);
+    sctx.drawImage(cur.img, x * u, y * u, w * u, h * u);
     gctx.globalCompositeOperation = 'copy';
     gctx.drawImage(spr, 0, 0);
     gctx.globalCompositeOperation = 'source-in';
     gctx.fillStyle = `rgb(${GLOW.join(',')})`;
     gctx.fillRect(0, 0, sil.width, sil.height);
-    drawn = img;
+    drawn = cur.img;
     return true;
   }
   function advance() {
     if (mode === 'rest') idleFrame = (idleFrame + 1) % IDLE_FRAMES;
     else if (mode === 'grab') frame = frame + 1 >= FRAMES ? LOOP_FROM : frame + 1;
     else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) { mode = 'rest'; idleFrame = 0; } }
+    else if (flying()) {
+      if (frame + 1 < FLY_FRAMES) { frame++; moveAlongPath(); }
+      else if (mode === 'appear') land();
+      else vanish();
+    }
   }
   function tick(t) {
     const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
     acc += dt;
     last = t;
     // Возврат быстрее подхвата: осьминог «ставится» на место.
-    const step = 1 / (mode === 'release' ? FPS * 1.6 : FPS);
+    const step = 1 / (flying() ? FLY_FPS : mode === 'release' ? FPS * 1.6 : FPS);
     while (acc >= step) { acc -= step; advance(); }
 
     // уровень: быстрая атака, медленный спад — как в главном окне
@@ -136,37 +156,83 @@
     for (const k in S) stepSpring(S[k], dt);
     flash = Math.max(0, flash - dt * 2.6);
 
-    if (prepare()) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // свечение: мягко «дышит» и разгорается от голоса и принятой команды
-      const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
-      if (g > 0.01) {
-        ctx.filter = `blur(${((7 + 5 * Math.min(1.5, g)) * u).toFixed(1)}px)`;
-        ctx.globalAlpha = Math.min(1, 0.75 * g);
-        ctx.drawImage(sil, 0, 0);
-        ctx.filter = `blur(${(3 * u).toFixed(1)}px)`;
-        ctx.globalAlpha = Math.min(1, 0.35 * g);
-        ctx.drawImage(sil, 0, 0);
-        ctx.filter = 'none';
-        ctx.globalAlpha = 1;
-      }
-      ctx.drawImage(spr, 0, 0);
-      const e = mode === 'rest' ? eyes?.idle[idleFrame] : eyes?.grab[frame];
-      if (eye && e) {
-        eye.render({ time, fill: Math.max(0, S.fill.v), wave: S.wave.v, energy: Math.max(0, S.energy.v), swirl: S.swirl.v, flash, dark: Math.max(0, S.dark.v), glitch: Math.max(0, S.glitch.v) });
-        const rx = e[2] * SPRITE_W * EYE_INSET, ry = e[3] * SPRITE_H * EYE_INSET;
-        const cx = PAD + e[0] * SPRITE_W, cy = PAD + e[1] * SPRITE_H;
-        ctx.drawImage(eyeCanvas, (cx - rx) * u, (cy - ry) * u, 2 * rx * u, 2 * ry * u);
-      }
-    }
+    const cur = current();
+    if (!cur) { ctx.clearRect(0, 0, canvas.width, canvas.height); drawn = null; }
+    else if (prepare(cur)) draw(cur, time);
     if (running) requestAnimationFrame(tick); else loop = false;
+  }
+  function draw(cur, time) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // издалека осьминог проявляется, улетая — растворяется
+    ctx.globalAlpha = flying() ? (anim?.path[mode][frame]?.[2] ?? 1) : 1;
+    const base = ctx.globalAlpha;
+    // свечение: мягко «дышит» и разгорается от голоса и принятой команды
+    const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
+    if (g > 0.01) {
+      ctx.filter = `blur(${((7 + 5 * Math.min(1.5, g)) * u).toFixed(1)}px)`;
+      ctx.globalAlpha = base * Math.min(1, 0.75 * g);
+      ctx.drawImage(sil, 0, 0);
+      ctx.filter = `blur(${(3 * u).toFixed(1)}px)`;
+      ctx.globalAlpha = base * Math.min(1, 0.35 * g);
+      ctx.drawImage(sil, 0, 0);
+      ctx.filter = 'none';
+    }
+    ctx.globalAlpha = base;
+    ctx.drawImage(spr, 0, 0);
+    // линза — по эллипсу купола; отвернувшийся глаз не светится
+    const e = cur.eye;
+    const facing = e ? Math.max(0, Math.min(1, (e[6] - 0.15) / 0.3)) : 0;
+    if (eye && e && facing > 0) {
+      eye.render({ time, fill: Math.max(0, S.fill.v), wave: S.wave.v, energy: Math.max(0, S.energy.v), swirl: S.swirl.v, flash, dark: Math.max(0, S.dark.v), glitch: Math.max(0, S.glitch.v) });
+      const [x, y, w, h] = cur.rect;
+      ctx.globalAlpha = base * facing;
+      ctx.setTransform(e[2] * w * u, e[3] * h * u, e[4] * w * u, e[5] * h * u, (x + e[0] * w) * u, (y + e[1] * h) * u);
+      ctx.drawImage(eyeCanvas, -EYE_INSET, -EYE_INSET, 2 * EYE_INSET, 2 * EYE_INSET);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Полёт: окно летит по траектории из Blender, от позиции покоя ──
+  function restShape() {
+    const r = [SPR_X - PAD, SPR_Y - PAD, SPR_X + SPR_W + PAD, SPR_Y + SPR_H + PAD].map((v) => v * k);
+    invoke('set_window_shape', { rects: [r] }).catch((e) => console.error('mascot shape', e));
+  }
+  function moveAlongPath() {
+    const p = anim?.path[mode][frame];
+    if (!home || !p) return;
+    win.setPosition(new PhysicalPosition(Math.round(home.x + p[0] * k * dpr), Math.round(home.y + p[1] * k * dpr))).catch(() => {});
+  }
+  function goHome() {
+    if (home) win.setPosition(new PhysicalPosition(home.x, home.y)).catch(() => {});
+  }
+  async function fly(kind) {
+    if (held) return;
+    if (!flying()) {
+      try { home = await win.outerPosition(); } catch { home = null; }
+    }
+    mode = kind; frame = 0; acc = 0; drawn = null;
+    invoke('set_window_shape', { rects: [] }).catch(() => {});
+    moveAlongPath();
+  }
+  function land() {
+    goHome();
+    mode = 'rest'; idleFrame = 0; frame = 0;
+    restShape();
+  }
+  function vanish() {
+    mode = 'gone'; frame = 0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    goHome();
+    restShape();
   }
 
   // ── Хват за голову ────────────────────────────────────────────────
   function onHead(e) {
+    if (flying() || mode === 'gone') return false;
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    if (y < PAD * k || y > (PAD + SPRITE_H * HEAD_BOTTOM) * k) return false;
+    if (y < SPR_Y * k || y > (SPR_Y + SPR_H * HEAD_BOTTOM) * k) return false;
     const px = sctx.getImageData(Math.floor(x * spr.width / r.width), Math.floor(y * spr.height / r.height), 1, 1).data;
     return px[3] > 40;
   }
@@ -191,31 +257,34 @@
   }
   win.listen('mascot://drop', drop);
 
-  // ── Показ: окно прячет и показывает Rust (режим «при командах») ─────
+  // ── Показ: окно прячет и показывает Rust ─────────────────────────
   // Пока окно скрыто, петля стоит: ни GPU, ни разбора кадров.
   let running = true, loop = false;
   function run() {
     running = true;
     if (!loop) { loop = true; last = 0; requestAnimationFrame(tick); }
   }
-  function animate(cls) {
-    canvas.classList.remove('enter', 'leave');
-    void canvas.offsetWidth;
-    canvas.classList.add(cls);
-  }
+  // payload true — окно только что показано: прилететь; false — уже на экране: если улетал, вернуть
+  let entered = false;
   win.listen('mascot://enter', (e) => {
+    entered = true;
     run();
-    if (e.payload) { canvas.classList.remove('enter', 'leave'); canvas.classList.add('gone'); void canvas.offsetWidth; }
-    animate('enter');
-    canvas.classList.remove('gone');
+    if (mode === 'appear') return;  // уже прилетает
+    if (e.payload || mode === 'gone') fly('appear');
+    else if (mode === 'leave') land();
   });
-  win.listen('mascot://leave', () => { animate('leave'); canvas.classList.add('gone'); });
-  win.listen('mascot://hidden', () => { running = false; });
+  win.listen('mascot://leave', () => { if (!held && mode !== 'gone') fly('leave'); });
+  win.listen('mascot://hidden', () => { running = false; entered = false; if (flying()) vanish(); mode = 'gone'; });
 
   window.addEventListener('resize', resize);
   resize();
   run();
-  win.isVisible().then((visible) => { if (!visible) running = false; }).catch(() => {});
+  // окно могли показать раньше, чем страница загрузилась, — тогда «enter» уже пролетел мимо
+  // ответ мог прийти уже после «enter» — тогда он устарел и петлю не трогает
+  win.isVisible().then((visible) => {
+    if (entered) return;
+    if (!visible) running = false; else if (mode === 'gone') fly('appear');
+  }).catch(() => {});
 })();
 </script>
 </body>

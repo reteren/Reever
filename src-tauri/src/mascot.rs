@@ -24,13 +24,17 @@ use crate::events::{self, ui_log};
 /// Отступ окна от краёв рабочей области, в логических пикселях. Сам осьминог стоит
 /// ещё глубже: поля окна отданы под свечение (frontend/mascot.html, PAD).
 const MARGIN: f64 = 0.0;
-/// Окно при 100 %: спрайт 120×160 и по 22 px полей под свечение.
-const BASE_W: f64 = 164.0;
-const BASE_H: f64 = 204.0;
+/// Окно при 100 %: вдвое больше осьминога, чтобы в полёте ничего не обрезалось. В покое
+/// видна только середина 164×204 (спрайт 120×160 и поля под свечение), остальное
+/// отрезано регионом окна (mascot.html). Её правый нижний угол — на 3/4 окна.
+const BASE_W: f64 = 328.0;
+const BASE_H: f64 = 408.0;
+const VISIBLE_RIGHT: f64 = 0.75;
+const VISIBLE_BOTTOM: f64 = 0.75;
 /// Сколько маскот ещё виден после команды в режиме `commands`.
 const LINGER: Duration = Duration::from_millis(1000);
-/// Длина анимации ухода в mascot.html — окно прячется после неё.
-const LEAVE: Duration = Duration::from_millis(320);
+/// Длина анимации ухода в mascot.html (58 кадров при 48 к/с) — окно прячется после неё.
+const LEAVE: Duration = Duration::from_millis(1260);
 
 static MODE: Mutex<String> = Mutex::new(String::new());
 static SCALE: AtomicU32 = AtomicU32::new(100);
@@ -166,8 +170,8 @@ fn create(app: &AppHandle) {
         if let (Ok(Some(monitor)), Ok(size)) = (window.primary_monitor(), window.outer_size()) {
             let area = monitor.work_area();
             let margin = (MARGIN * monitor.scale_factor()).round() as i32;
-            let x = area.position.x + area.size.width as i32 - size.width as i32 - margin;
-            let y = area.position.y + area.size.height as i32 - size.height as i32 - margin;
+            let x = area.position.x + area.size.width as i32 - (size.width as f64 * VISIBLE_RIGHT).round() as i32 - margin;
+            let y = area.position.y + area.size.height as i32 - (size.height as f64 * VISIBLE_BOTTOM).round() as i32 - margin;
             let _ = window.set_position(PhysicalPosition::new(x, y));
         }
         // режим, размер или состояние могли смениться, пока окно создавалось
@@ -184,7 +188,7 @@ fn create(app: &AppHandle) {
     });
 }
 
-/// Новый размер растёт вверх и влево: правый нижний угол окна остаётся на месте.
+/// Новый размер растёт вверх и влево: правый нижний угол видимой части остаётся на месте.
 fn resize_keep_corner(window: &WebviewWindow, scale: u32) {
     let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) else { return };
     let factor = scale as f64 / 100.0;
@@ -192,8 +196,8 @@ fn resize_keep_corner(window: &WebviewWindow, scale: u32) {
         return;
     }
     if let Ok(new_size) = window.outer_size() {
-        let x = position.x + size.width as i32 - new_size.width as i32;
-        let y = position.y + size.height as i32 - new_size.height as i32;
+        let x = position.x + ((size.width as f64 - new_size.width as f64) * VISIBLE_RIGHT).round() as i32;
+        let y = position.y + ((size.height as f64 - new_size.height as f64) * VISIBLE_BOTTOM).round() as i32;
         let _ = window.set_position(PhysicalPosition::new(x, y));
     }
 }
