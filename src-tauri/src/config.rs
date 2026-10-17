@@ -169,9 +169,6 @@ pub struct Settings {
     /// Размер маскота в процентах от исходного, 100..500.
     #[serde(default = "default_mascot_scale")]
     pub mascot_scale: u32,
-    /// Как маскот появляется и уходит: `flight` (мёртвая петля) или `portal`.
-    #[serde(default = "default_mascot_entrance")]
-    pub mascot_entrance: String,
 }
 
 fn default_models_unload_s() -> u32 {
@@ -182,9 +179,6 @@ fn default_mascot_mode() -> String {
 }
 fn default_mascot_scale() -> u32 {
     100
-}
-fn default_mascot_entrance() -> String {
-    "flight".into()
 }
 fn default_find_source() -> String {
     "everything".into()
@@ -391,7 +385,6 @@ fn parse_settings(text: &str) -> Settings {
     restore!("languages", languages, Vec<String>);
     restore!("mascot_mode", mascot_mode, String);
     restore!("mascot_scale", mascot_scale, u32);
-    restore!("mascot_entrance", mascot_entrance, String);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -449,7 +442,6 @@ impl Default for Settings {
             english_only_model: default_english_only_model(),
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),
-            mascot_entrance: default_mascot_entrance(),
         }
     }
 }

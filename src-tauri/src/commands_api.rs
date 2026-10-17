@@ -290,21 +290,16 @@ pub fn set_mascot(
     config: State<'_, LiveConfig>,
     mode: String,
     scale: u32,
-    entrance: String,
 ) -> Result<(), String> {
     let mode = crate::mascot::normalize_mode(&mode).to_string();
     let scale = crate::mascot::clamp_scale(scale);
-    let entrance = crate::mascot::normalize_entrance(&entrance).to_string();
     let current = config.get();
     persist_value(&current, "mascot_mode", serde_json::Value::String(mode.clone()))?;
     persist_value(&current, "mascot_scale", serde_json::Value::from(scale))?;
-    persist_value(&current, "mascot_entrance", serde_json::Value::String(entrance.clone()))?;
     let mut fresh = (*current).clone();
     fresh.settings.mascot_mode = mode.clone();
     fresh.settings.mascot_scale = scale;
-    fresh.settings.mascot_entrance = entrance.clone();
     config.set(Arc::new(fresh));
-    crate::mascot::set_entrance(&app, &entrance);
     crate::mascot::apply(&app, &mode, scale);
     Ok(())
 }

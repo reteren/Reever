@@ -125,6 +125,11 @@ pub fn set_main_visible(visible: bool) {
     MAIN_VISIBLE.store(visible, Ordering::Relaxed);
 }
 
+/// Главное окно сейчас видно (на экране, не в трее).
+pub fn main_visible() -> bool {
+    MAIN_VISIBLE.load(Ordering::Relaxed)
+}
+
 /// Маскот тоже показывает громкость — жидкостью в глазу.
 pub fn set_mascot_visible(visible: bool) {
     MASCOT_VISIBLE.store(visible, Ordering::Relaxed);

@@ -482,6 +482,30 @@
     if (booted) { powerOn(true); sweepNow(0.7, 0.9); }
   });
 
+  // ── Осьминог в сфере ────────────────────────────────────────────────
+  // Маскот живёт в линзе, пока он не на экране (режимы «во время команд» и «никогда»):
+  // сидит в жидкости и телепортируется порталом. Где он, решает Rust (mascot.rs) —
+  // событие mascot://orb: arrive / depart / present / absent.
+  function startOrbMascot() {
+    const OM = 0.95;                       // осьминог в сфере — доля его исходного размера
+    const W = SKIN.core.size / OM, DY = 4; // холст линзы в «пикселях маскота»; чуть ниже центра
+    try {
+      const view = window.SkinMascot.create($('#orbMascot'));
+      view.layout({
+        W, H: W, k: OM * scale,
+        spr: [(W - 120) / 2, (W - 160) / 2 + DY, 120, 160],
+        fly: [(W - 328) / 2, (W - 408) / 2 + DY, 328, 408],
+        clip: { x: W / 2, y: W / 2, r: SKIN.orb.r / OM },
+      });
+      if (!invoke) { view.present(); return; }
+      invoke('mascot_orb').then((inside) => (inside ? view.present() : view.absent())).catch(() => {});
+      listen('mascot://orb', (e) => {
+        const action = String(e.payload);
+        if (['arrive', 'depart', 'present', 'absent'].includes(action)) view[action]();
+      });
+    } catch (e) { console.error('orb mascot', e); }
+  }
+
   // ── Старт ─────────────────────────────────────────────────────────
   window.Skin = { channel, setState, sweep: sweepNow, shade: setShade };
   (async () => {
@@ -493,6 +517,7 @@
       core = mainView.core = window.SkinOrb.createCore($('#orbCore'), SKIN.core.size); core.resize(scale);
       fx = mainView.fx = window.SkinOrb.createFx($('#orbFx'), SKIN.fx.size, SKIN.orb.r); fx.resize(scale);
     } catch (e) { console.error('orb', e); }
+    startOrbMascot();
     eq = createEq($('#eqCanvas')); eq.resize();
     start();
     try {

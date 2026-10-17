@@ -424,6 +424,7 @@ pub fn run() {
             mascot::mascot_drag,
             mascot::mascot_layout,
             mascot::mascot_rest,
+            mascot::mascot_orb,
             commands_api::set_mascot,
             picker::picker_choose,
             picker::picker_close,

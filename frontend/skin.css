@@ -58,6 +58,8 @@ body {
 #frame, #orbFx { position: absolute; pointer-events: none; }
 #frame { left: 0; top: 0; width: 1280px; height: 880px; z-index: 2; }
 #orbCore { position: absolute; left: 204px; top: 246px; width: 212px; height: 212px; border-radius: 50%; z-index: 1; }
+/* осьминог в сфере — поверх жидкости, под хромом рамки */
+#orbMascot { position: absolute; left: 204px; top: 246px; width: 212px; height: 212px; z-index: 1; pointer-events: none; }
 #orbFx { left: 10px; top: 52px; width: 600px; height: 600px; z-index: 3; mix-blend-mode: screen; }
 #orbHit {
   position: absolute; left: 210px; top: 252px; width: 200px; height: 200px; border-radius: 50%;

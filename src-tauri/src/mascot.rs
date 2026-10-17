@@ -2,10 +2,15 @@
 //! frontend/mascot.html). За голову его можно взять и перетащить; анимации — пререндер
 //! в frontend/mascot/.
 //!
-//! Режимы (`mascot_mode` в настройках): `always` — окно видно всегда; `commands` — окно
-//! создано заранее, но показывается, только пока Reever слушает и выполняет команду;
-//! `never` — окна нет вовсе (WebView2 не держится в памяти). Размер — `mascot_scale`,
-//! 100..500 % от исходного.
+//! Режимы (`mascot_mode` в настройках):
+//! - `always` — осьминог всегда на экране;
+//! - `commands` — в покое он сидит в сфере главного окна; пока Reever слушает и выполняет
+//!   команду, телепортируется на экран: уходит в портал в сфере и выходит из портала в углу
+//!   экрана, а после команды — обратно;
+//! - `never` — окна нет вовсе (WebView2 не держится в памяти), осьминог всегда в сфере.
+//!
+//! Размер — `mascot_scale`, 100..500 % от исходного. Осьминога в сфере рисует главное окно
+//! (skin/shell.js) по событию `mascot://orb`.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Mutex;
@@ -25,20 +30,23 @@ use crate::events::{self, ui_log};
 /// ещё глубже: поля окна отданы под свечение (frontend/mascot.html, PAD).
 const MARGIN: f64 = 0.0;
 /// Видимая часть окна при 100 %: спрайт 120×160 и поля под свечение. Само окно больше
-/// в `BIG` раз (до двух), чтобы в полёте ничего не обрезалось; лишнее в покое отрезано
-/// регионом окна (mascot.html). Видимая часть — по центру окна.
+/// в `BIG` раз (до двух), чтобы портал не обрезался; клики вне осьминога окно пропускает
+/// сквозь себя. Видимая часть — по центру окна.
 const VISIBLE_W: f64 = 164.0;
 const VISIBLE_H: f64 = 204.0;
 const MAX_BIG: f64 = 2.0;
 /// Сколько маскот ещё виден после команды в режиме `commands`.
 const LINGER: Duration = Duration::from_millis(1000);
-/// Длина анимации ухода в mascot.html (58 кадров при 48 к/с, и полёт, и портал) — окно
-/// прячется после неё.
+/// Длина ухода в портал (58 кадров при 48 к/с) — окно прячется после неё.
 const LEAVE: Duration = Duration::from_millis(1260);
+/// Телепорт между сферой и экраном: второй портал открывается с этой задержкой, чтобы
+/// осьминог успел скрыться в первом. Только когда главное окно видно — иначе сферы не видно
+/// и ждать незачем.
+const TELEPORT: Duration = Duration::from_millis(450);
 
 static MODE: Mutex<String> = Mutex::new(String::new());
-/// Как маскот появляется и уходит: `flight` или `portal` (кадры и частицы — в mascot.html).
-static ENTRANCE: Mutex<String> = Mutex::new(String::new());
+/// Осьминог сидит в сфере главного окна.
+static IN_ORB: AtomicBool = AtomicBool::new(false);
 static SCALE: AtomicU32 = AtomicU32::new(100);
 /// Во сколько раз окно больше видимой части, в тысячных. Windows не даёт окну быть больше
 /// экрана, поэтому на крупных размерах запас под полёт меньше двукратного.
@@ -62,27 +70,11 @@ pub fn normalize_mode(mode: &str) -> &'static str {
     }
 }
 
-pub fn normalize_entrance(entrance: &str) -> &'static str {
-    match entrance.trim() {
-        "portal" => "portal",
-        _ => "flight",
-    }
-}
-
-pub fn set_entrance(app: &AppHandle, entrance: &str) {
-    if let Ok(mut current) = ENTRANCE.lock() {
-        *current = normalize_entrance(entrance).to_string();
-    }
-    if let Some(window) = app.get_webview_window("mascot") {
-        let _ = window.emit("mascot://layout", ());
-    }
-}
-
 pub fn clamp_scale(scale: u32) -> u32 {
     scale.clamp(100, 500)
 }
 
-/// Запас под полёт для размера `scale`: вдвое, но так, чтобы окно влезло в монитор.
+/// Запас под портал для размера `scale`: вдвое, но так, чтобы окно влезло в монитор.
 fn big_for(monitor: Option<tauri::Monitor>, scale: u32) -> f64 {
     let factor = scale as f64 / 100.0;
     let Some(monitor) = monitor else { return MAX_BIG };
@@ -96,17 +88,23 @@ fn visible_corner(big: f64) -> f64 {
     0.5 + 0.5 / big
 }
 
-/// Раскладка для mascot.html: размер в процентах, запас окна под полёт, виден ли маскот
-/// и как он появляется.
+/// Раскладка для mascot.html: размер в процентах, запас окна под портал и виден ли маскот.
 #[tauri::command]
-pub fn mascot_layout() -> (u32, f64, bool, String) {
-    let entrance = ENTRANCE.lock().map(|entrance| entrance.clone()).unwrap_or_default();
-    (
-        SCALE.load(Ordering::Relaxed),
-        BIG.load(Ordering::Relaxed) as f64 / 1000.0,
-        SHOWN.load(Ordering::Relaxed),
-        normalize_entrance(&entrance).to_string(),
-    )
+pub fn mascot_layout() -> (u32, f64, bool) {
+    (SCALE.load(Ordering::Relaxed), BIG.load(Ordering::Relaxed) as f64 / 1000.0, SHOWN.load(Ordering::Relaxed))
+}
+
+/// Сидит ли осьминог в сфере — главное окно спрашивает при создании.
+#[tauri::command]
+pub fn mascot_orb() -> bool {
+    IN_ORB.load(Ordering::Relaxed)
+}
+
+/// Осьминог в сфере главного окна: `arrive` — выйти из портала, `depart` — уйти в портал,
+/// `present` / `absent` — сразу сидеть / сразу исчезнуть.
+fn orb(app: &AppHandle, action: &str) {
+    IN_ORB.store(matches!(action, "arrive" | "present"), Ordering::Relaxed);
+    let _ = app.emit_to("main", "mascot://orb", action);
 }
 
 fn mode() -> String {
@@ -120,7 +118,6 @@ fn command_active() -> bool {
 /// Первый показ при запуске — по сохранённым настройкам.
 pub fn spawn(app: &AppHandle) {
     let settings = app.state::<LiveConfig>().get().settings.clone();
-    set_entrance(app, &settings.mascot_entrance);
     apply(app, &settings.mascot_mode, settings.mascot_scale);
 }
 
@@ -133,6 +130,12 @@ pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
     }
     let old_scale = SCALE.swap(scale, Ordering::Relaxed);
     GENERATION.fetch_add(1, Ordering::Relaxed);
+
+    // смена режима — без телепорта: осьминог сразу там, где ему положено быть
+    let in_orb = !(mode == "always" || (mode == "commands" && command_active()));
+    if in_orb != IN_ORB.load(Ordering::Relaxed) {
+        orb(app, if in_orb { "present" } else { "absent" });
+    }
 
     let window = app.get_webview_window("mascot");
     match (mode, window) {
@@ -166,23 +169,53 @@ pub fn on_state(app: &AppHandle, state: &str) {
     let Some(window) = app.get_webview_window("mascot") else { return };
     let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
     if matches!(state, "listening" | "busy") {
-        show(&window);
+        if !SHOWN.load(Ordering::Relaxed) && IN_ORB.load(Ordering::Relaxed) && events::main_visible() {
+            // телепорт: в сфере уходит в портал, на экране чуть позже выходит из портала
+            orb(app, "depart");
+            std::thread::spawn(move || {
+                std::thread::sleep(TELEPORT);
+                if GENERATION.load(Ordering::Relaxed) == generation {
+                    show(&window);
+                }
+            });
+        } else {
+            // уже на экране (возможно, посреди ухода) или сферы не видно — сразу
+            if IN_ORB.load(Ordering::Relaxed) {
+                orb(app, "absent");
+            }
+            show(&window);
+        }
     } else {
         hide_later(window, generation);
     }
 }
 
+/// Режим `commands`: через секунду после команды уйти в портал на экране и выйти в сфере.
 fn hide_later(window: WebviewWindow, generation: u64) {
     std::thread::spawn(move || {
         std::thread::sleep(LINGER);
         // пока маскота держат в руке, он никуда не уходит — уйдёт после отпускания
-        if GENERATION.load(Ordering::Relaxed) != generation || DRAGGING.load(Ordering::Relaxed) {
+        if GENERATION.load(Ordering::Relaxed) != generation || DRAGGING.load(Ordering::Relaxed) || mode() != "commands" {
             return;
         }
         let _ = window.emit("mascot://leave", ());
-        std::thread::sleep(LEAVE);
+        let app = window.app_handle().clone();
+        let to_orb = events::main_visible();
+        if to_orb {
+            std::thread::sleep(TELEPORT);
+            if GENERATION.load(Ordering::Relaxed) != generation {
+                return;
+            }
+            orb(&app, "arrive");
+            std::thread::sleep(LEAVE.saturating_sub(TELEPORT));
+        } else {
+            std::thread::sleep(LEAVE);
+        }
         if GENERATION.load(Ordering::Relaxed) == generation && !DRAGGING.load(Ordering::Relaxed) {
             hide(&window);
+            if !to_orb {
+                orb(&app, "present");
+            }
         }
     });
 }
