@@ -295,6 +295,9 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     strict_spotted_wake: bool,
     /// Сколько сэмплов прошло с последнего срабатывания детектора wake-слова.
     spot_age: Option<usize>,
+    /// Детектор сработал в начале фразы, а не посреди речи: такое «ривер» можно чинить
+    /// по `repair_wake`, как без ленивой загрузки.
+    spot_at_start: bool,
     /// Диагностика (`REEVER_TRACE=1`): в журнал идёт каждая фраза простоя и решение по
     /// «ривер» — видно, почему обращение не принято.
     trace: bool,
@@ -357,6 +360,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             spotter: None,
             strict_spotted_wake: false,
             spot_age: None,
+            spot_at_start: false,
             trace: std::env::var_os("REEVER_TRACE").is_some(),
             idle_speech_age: None,
             idle_partial_elapsed: 0,
@@ -422,6 +426,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     /// что этот буфер начался от подтверждённого триггера, даже если spotter уже сбросил endpoint.
     pub fn mark_spotted_wake(&mut self) {
         self.spot_age = Some(0);
+        // Буфер начинается за секунду до срабатывания — «ривер» в его начале.
+        self.spot_at_start = true;
     }
 
     /// Главный вход: очередной кусок 16 кГц mono из микрофона.
@@ -472,6 +478,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 let fired = spotter.feed(pcm);
                 if fired && (at_phrase_start || self.strict_spotted_wake) {
                     self.spot_age = Some(0);
+                    self.spot_at_start = at_phrase_start;
                     out.push(EngineEvent::WakeSpotted);
                 } else if fired && self.trace {
                     let ms = self.idle_speech_age.unwrap_or(0) * 1000 / SAMPLE_RATE as usize;
@@ -1186,9 +1193,27 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             .spot_age
             .is_some_and(|age| age <= audio.len() + samples(SPOT_GRACE_MS));
         let timed = if spotted && self.strict_spotted_wake {
-            match confirm_spotted_wake(&timed, &self.cfg.wake_words) {
-                Some((index, confirmed)) => {
-                    if index > 0 {
+            // Детектор слышал «ривер» в начале фразы, а GigaAM написала его неузнаваемо:
+            // те же осторожные правила, что без ленивой загрузки (обрывок в одно слово или
+            // несловарные слова в начале). Посреди речи — только подтверждение.
+            let repaired = || {
+                if !self.spot_at_start || timed.text.trim().is_empty() {
+                    return None;
+                }
+                repair_wake(&timed, &self.cfg.wake_words, audio.len(), &is_russian_word)
+            };
+            match confirm_spotted_wake(&timed, &self.cfg.wake_words)
+                .map(|(index, confirmed)| (index > 0, confirmed))
+                .or_else(|| {
+                    repaired().map(|fixed| {
+                        out.push(EngineEvent::Log(
+                            "wake: the wake word was confirmed by the background detector".into(),
+                        ));
+                        (false, fixed)
+                    })
+                }) {
+                Some((mid_phrase, confirmed)) => {
+                    if mid_phrase {
                         out.push(EngineEvent::Log(
                             "wake: the main model confirmed the wake word mid-phrase".into(),
                         ));
@@ -1196,9 +1221,13 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     confirmed
                 }
                 None => {
-                    out.push(EngineEvent::Log(
-                        "wake: the detector fired, but the main model did not confirm the wake word; phrase ignored".into(),
-                    ));
+                    // Пустой текст — модели ещё грузятся (фраза будет проиграна заново
+                    // после загрузки) или один шум: подтверждать нечего, в журнал не пишем.
+                    if !timed.text.trim().is_empty() {
+                        out.push(EngineEvent::Log(
+                            "wake: the detector fired, but the main model did not confirm the wake word; phrase ignored".into(),
+                        ));
+                    }
                     self.spot_age = None;
                     return;
                 }
@@ -1919,6 +1948,13 @@ fn repair_wake(
 /// «ревёт» и «реверс». Принимает точное wake-слово, склейку wake+хвост или односимвольную
 /// ошибку ASR, только если она не является словарным русским словом.
 fn confirm_spotted_wake(timed: &Timed, wake_words: &[String]) -> Option<(usize, Timed)> {
+    // В начале фразы — те же правила, что без ленивой загрузки: шум перед речью даёт
+    // «тривер», граница слова съезжает — «риверс потифай». Без этого первое «ривер»
+    // после долгой тишины отвергалось, хотя детектор его слышал. Строгий поиск ниже —
+    // для wake посреди фразы.
+    if strip_initial_wake(&timed.text, wake_words).is_some() {
+        return Some((0, timed.clone()));
+    }
     let words: Vec<&str> = timed.text.split_whitespace().collect();
     let canonical = normalize(wake_words.first()?);
     if canonical.is_empty() {
@@ -2893,6 +2929,60 @@ mod tests {
             ),
             "{events:?}"
         );
+    }
+
+    #[test]
+    fn lazy_spotter_confirms_a_wake_garbled_at_phrase_start() {
+        // Первое «ривер» после тишины: шум перед речью — «тривер», съехавшая граница —
+        // «риверс потифай». Без ленивой загрузки это команды, с ней — тоже.
+        for (heard, command) in [
+            ("тривер открой загрузки", "открой загрузки"),
+            ("риверс потифай", "спотифай"),
+        ] {
+            let mut cfg = test_config();
+            cfg.wake_words = vec!["ривер".into()];
+            let (mut engine, _, _, _) = engine(cfg, &[heard]);
+            engine.set_strict_spotted_wake(true);
+            engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([
+                false, true,
+            ])))));
+
+            engine.push_audio(&vec![123; samples(600)]);
+            let mut pcm = vec![123; samples(240)];
+            pcm.resize(samples(240 + 250), 0);
+            let events = engine.push_audio(&pcm);
+
+            assert!(
+                contains(
+                    &events,
+                    &EngineEvent::Command {
+                        text: command.into(),
+                        alt: None,
+                    }
+                ),
+                "«{heard}»: {events:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn lazy_spotter_repairs_a_lone_garbled_wake_at_phrase_start() {
+        // «Ривер» одно, после долгой тишины, GigaAM написала обрывком — детектор слышал его
+        // в начале фразы: ждём команду, как без ленивой загрузки.
+        let mut cfg = test_config();
+        cfg.wake_words = vec!["ривер".into()];
+        let (mut engine, _, _, _) = engine(cfg, &["рибе"]);
+        engine.set_strict_spotted_wake(true);
+        engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([
+            false, true,
+        ])))));
+
+        engine.push_audio(&vec![123; samples(300)]);
+        let mut pcm = vec![123; samples(240)];
+        pcm.resize(samples(240 + 250), 0);
+        let events = engine.push_audio(&pcm);
+
+        assert!(contains(&events, &EngineEvent::WakeHeard), "{events:?}");
     }
 
     #[test]
