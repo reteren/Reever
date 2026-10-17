@@ -19,6 +19,9 @@
 //  idle_0001–0096 (Octo_Idle)  — покой: переминается, поворачивается, перебирает щупальцами;
 //  appear_/leave_0001–0058 (Octo_Appear / Octo_Leave, 48 к/с) — прилёт издалека мёртвой петлёй
 //    и улёт зеркально. Кадры полёта — на всё окно; по экрану летит само окно (mascot/anim.json, path).
+//  portal_in_/portal_out_0001–0058 (Octo_PortalIn/Out + Portal_In/Out, 48 к/с) — другой вариант
+//    (настройка «Как появляется»): выход из портала и уход в него. Окно стоит на месте, частицы
+//    вокруг портала рисуются здесь (центр и радиус портала по кадрам — anim.json, portal).
 // Жидкость в глазу — живая линза главного окна (skin/orb.js) с теми же состояниями распознавания;
 // купол глаза по кадрам — mascot/anim.json (eye: центр и две полуоси эллипса, доли кадра, и насколько
 // глаз смотрит в камеру). Свечение — размытый силуэт текущего кадра, следует за состоянием и голосом.
@@ -55,6 +58,7 @@
   const SETS = {
     grab: load('grab', FRAMES), idle: load('idle', IDLE_FRAMES),
     appear: load('appear', FLY_FRAMES), leave: load('leave', FLY_FRAMES),
+    portal_in: load('portal_in', FLY_FRAMES), portal_out: load('portal_out', FLY_FRAMES),
   };
   let anim = null;
   fetch('mascot/anim.json').then((r) => r.json()).then((a) => { anim = a; }).catch((e) => console.error('mascot anim', e));
@@ -98,7 +102,12 @@
   let frame = 0, idleFrame = 0, mode = 'gone', acc = 0, last = 0, drawn = null, dpr = 1, k = 1, u = 1;
   let home = null;            // позиция окна в покое (физические пиксели) — от неё летит полёт
   const t0 = performance.now();
-  const flying = () => mode === 'appear' || mode === 'leave';
+  // прилёт/уход: полёт петлёй или портал (настройка «Как появляется», её сообщает Rust)
+  let entrance = 'flight';
+  const ARRIVALS = ['appear', 'portal_in'], DEPARTURES = ['leave', 'portal_out'];
+  const arrival = () => (entrance === 'portal' ? 'portal_in' : 'appear');
+  const departure = () => (entrance === 'portal' ? 'portal_out' : 'leave');
+  const flying = () => ARRIVALS.includes(mode) || DEPARTURES.includes(mode);
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -138,7 +147,7 @@
     else if (mode === 'release') { frame = Math.max(0, frame - 1); if (frame === 0) { mode = 'rest'; idleFrame = 0; } }
     else if (flying()) {
       if (frame + 1 < FLY_FRAMES) { frame++; moveAlongPath(); }
-      else if (mode === 'appear') land();
+      else if (ARRIVALS.includes(mode)) land();
       else vanish();
     }
   }
@@ -167,12 +176,13 @@
     for (const k in S) stepSpring(S[k], dt);
     flash = Math.max(0, flash - dt * 2.6);
 
+    portalSparks(dt);
     const cur = current();
     if (!cur) { ctx.clearRect(0, 0, canvas.width, canvas.height); drawn = null; }
-    else if (prepare(cur)) draw(cur, time);
+    else if (prepare(cur)) draw(cur, time, dt);
     if (running) requestAnimationFrame(tick); else loop = false;
   }
-  function draw(cur, time) {
+  function draw(cur, time, dt) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     // издалека осьминог проявляется, улетая — растворяется
     ctx.globalAlpha = flying() ? (anim?.path[mode][frame]?.[2] ?? 1) : 1;
@@ -202,6 +212,81 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
     ctx.globalAlpha = 1;
+    drawSparks(dt);
+  }
+
+  // ── Частицы портала ───────────────────────────────────────────────
+  // orbit — искры, бегущие по кольцу; burst — выброс наружу, когда осьминог выходит и когда
+  // портал схлопывается; suck — затягивание внутрь при уходе. Координаты — CSS-пиксели при 100 %.
+  const ACC = [39, 230, 170];
+  const sparks = [];
+  const spawnAcc = { orbit: 0, burst: 0, suck: 0 };
+  let popped = false;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  function portalNow() {
+    const p = anim?.portal?.[mode]?.[frame];
+    if (!p) return null;
+    return { x: (WIN_W - FLY_W) / 2 + p[0] * FLY_W, y: (WIN_H - FLY_H) / 2 + p[1] * FLY_H, r: p[2] };
+  }
+  function spawn(kind, P) {
+    const a = rnd(0, Math.PI * 2);
+    if (kind === 'orbit') sparks.push({ kind, a, rr: rnd(0.92, 1.12), w: rnd(2.2, 4.2), life: 0, max: rnd(0.35, 0.8), size: rnd(0.7, 1.8) });
+    else if (kind === 'suck') sparks.push({ kind, a, rr: rnd(1.3, 2.3), w: rnd(2.5, 4.5), vr: rnd(1.6, 2.6), life: 0, max: 1.4, size: rnd(0.7, 1.9) });
+    else {
+      const sp = rnd(70, 230), r0 = P.r * rnd(0, 0.35);
+      sparks.push({ kind, x: P.x + Math.cos(a) * r0, y: P.y + Math.sin(a) * r0, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: rnd(0.4, 0.9), size: rnd(0.8, 2.2) });
+    }
+  }
+  function portalSparks(dt) {
+    if (mode !== 'portal_in' && mode !== 'portal_out') { popped = false; return; }
+    const P = portalNow();
+    if (!P) return;
+    const t = frame / (FLY_FRAMES - 1);
+    const rate = { orbit: P.r > 6 ? 110 : 0, burst: 0, suck: 0 };
+    if (mode === 'portal_in' && t > 0.14 && t < 0.55) rate.burst = 70;
+    if (mode === 'portal_out' && t > 0.05 && t < 0.85) rate.suck = 140;
+    for (const kind in rate) {
+      spawnAcc[kind] += rate[kind] * dt;
+      while (spawnAcc[kind] >= 1) { spawnAcc[kind] -= 1; spawn(kind, P); }
+    }
+    // схлопывание — последняя вспышка искр
+    const closing = mode === 'portal_in' ? t > 0.88 : t > 0.93;
+    if (closing && !popped) { popped = true; for (let i = 0; i < 26; i++) spawn('burst', { ...P, r: 4 }); }
+    for (const sp of sparks) if (sp.kind !== 'burst') { sp.cx = P.x; sp.cy = P.y; sp.R = P.r; }
+  }
+  function drawSparks(dt) {
+    if (!sparks.length) return;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const sp = sparks[i];
+      sp.life += dt;
+      let x, y;
+      if (sp.kind === 'burst') {
+        sp.vx *= Math.pow(0.12, dt); sp.vy *= Math.pow(0.12, dt);
+        x = sp.x + sp.vx * dt; y = sp.y + sp.vy * dt;
+      } else {
+        if (sp.cx == null) { sparks.splice(i, 1); continue; }
+        sp.a += sp.w * dt * (sp.kind === 'suck' ? 1 + 1.5 / Math.max(sp.rr, 0.2) : 1);
+        if (sp.kind === 'suck') sp.rr -= sp.vr * dt;
+        x = sp.cx + Math.cos(sp.a) * sp.rr * sp.R; y = sp.cy + Math.sin(sp.a) * sp.rr * sp.R;
+      }
+      const dead = sp.life > sp.max || (sp.kind === 'suck' && sp.rr < 0.08) || (sp.kind !== 'burst' && sp.R < 2);
+      if (dead) { sparks.splice(i, 1); continue; }
+      const fade = Math.min(1, sp.life / 0.12) * Math.min(1, (sp.max - sp.life) / 0.25);
+      if (sp.px != null) {
+        ctx.strokeStyle = `rgba(${ACC.join(',')},${0.28 * fade})`;
+        ctx.lineWidth = sp.size * 4 * u;
+        ctx.beginPath(); ctx.moveTo(sp.px * u, sp.py * u); ctx.lineTo(x * u, y * u); ctx.stroke();
+        ctx.strokeStyle = `rgba(${ACC.join(',')},${fade})`;
+        ctx.lineWidth = sp.size * u;
+        ctx.stroke();
+        if (sp.size > 1.3) { ctx.fillStyle = `rgba(215,255,242,${fade})`; ctx.beginPath(); ctx.arc(x * u, y * u, sp.size * 0.7 * u, 0, 6.283); ctx.fill(); }
+      }
+      sp.px = x; sp.py = y;
+      if (sp.kind === 'burst') { sp.x = x; sp.y = y; }
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   // ── Полёт: окно летит по траектории из Blender, от позиции покоя ──
@@ -280,31 +365,33 @@
   win.listen('mascot://enter', (e) => {
     entered = true;
     run();
-    if (mode === 'appear') return;  // уже прилетает
-    if (e.payload || mode === 'gone') fly('appear');
-    else if (mode === 'leave') land();
+    if (ARRIVALS.includes(mode)) return;  // уже прилетает
+    if (e.payload || mode === 'gone') fly(arrival());
+    else if (DEPARTURES.includes(mode)) land();
   });
-  win.listen('mascot://leave', () => { if (!held && mode !== 'gone') fly('leave'); });
+  win.listen('mascot://leave', () => { if (!held && mode !== 'gone') fly(departure()); });
   win.listen('mascot://hidden', () => {
     running = false; entered = false;
     if (flying()) vanish();
     mode = 'gone';
+    sparks.length = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   });
 
   // запас окна и виден ли маскот знает Rust; пока ответа нет — двукратный запас
   let laidOut = false;
   function relayout() {
-    invoke('mascot_layout').then(([, b, shown]) => {
-      big = b || 2; resize();
+    invoke('mascot_layout').then(([, b, shown, how]) => {
+      big = b || 2; entrance = how || 'flight'; resize();
       if (laidOut) return;
       laidOut = true;
       // «enter» мог прийти раньше, чем страница загрузилась, — тогда он пролетел мимо
       if (entered) return;
-      if (shown) fly('appear'); else running = false;
+      if (shown) fly(arrival()); else running = false;
     }).catch(() => resize());
   }
   window.addEventListener('resize', relayout);
+  win.listen('mascot://layout', relayout);
   resize();
   relayout();
   run();

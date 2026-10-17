@@ -32,10 +32,13 @@ const VISIBLE_H: f64 = 204.0;
 const MAX_BIG: f64 = 2.0;
 /// Сколько маскот ещё виден после команды в режиме `commands`.
 const LINGER: Duration = Duration::from_millis(1000);
-/// Длина анимации ухода в mascot.html (58 кадров при 48 к/с) — окно прячется после неё.
+/// Длина анимации ухода в mascot.html (58 кадров при 48 к/с, и полёт, и портал) — окно
+/// прячется после неё.
 const LEAVE: Duration = Duration::from_millis(1260);
 
 static MODE: Mutex<String> = Mutex::new(String::new());
+/// Как маскот появляется и уходит: `flight` или `portal` (кадры и частицы — в mascot.html).
+static ENTRANCE: Mutex<String> = Mutex::new(String::new());
 static SCALE: AtomicU32 = AtomicU32::new(100);
 /// Во сколько раз окно больше видимой части, в тысячных. Windows не даёт окну быть больше
 /// экрана, поэтому на крупных размерах запас под полёт меньше двукратного.
@@ -59,6 +62,22 @@ pub fn normalize_mode(mode: &str) -> &'static str {
     }
 }
 
+pub fn normalize_entrance(entrance: &str) -> &'static str {
+    match entrance.trim() {
+        "portal" => "portal",
+        _ => "flight",
+    }
+}
+
+pub fn set_entrance(app: &AppHandle, entrance: &str) {
+    if let Ok(mut current) = ENTRANCE.lock() {
+        *current = normalize_entrance(entrance).to_string();
+    }
+    if let Some(window) = app.get_webview_window("mascot") {
+        let _ = window.emit("mascot://layout", ());
+    }
+}
+
 pub fn clamp_scale(scale: u32) -> u32 {
     scale.clamp(100, 500)
 }
@@ -77,10 +96,17 @@ fn visible_corner(big: f64) -> f64 {
     0.5 + 0.5 / big
 }
 
-/// Раскладка для mascot.html: размер в процентах, запас окна под полёт и виден ли маскот.
+/// Раскладка для mascot.html: размер в процентах, запас окна под полёт, виден ли маскот
+/// и как он появляется.
 #[tauri::command]
-pub fn mascot_layout() -> (u32, f64, bool) {
-    (SCALE.load(Ordering::Relaxed), BIG.load(Ordering::Relaxed) as f64 / 1000.0, SHOWN.load(Ordering::Relaxed))
+pub fn mascot_layout() -> (u32, f64, bool, String) {
+    let entrance = ENTRANCE.lock().map(|entrance| entrance.clone()).unwrap_or_default();
+    (
+        SCALE.load(Ordering::Relaxed),
+        BIG.load(Ordering::Relaxed) as f64 / 1000.0,
+        SHOWN.load(Ordering::Relaxed),
+        normalize_entrance(&entrance).to_string(),
+    )
 }
 
 fn mode() -> String {
@@ -94,6 +120,7 @@ fn command_active() -> bool {
 /// Первый показ при запуске — по сохранённым настройкам.
 pub fn spawn(app: &AppHandle) {
     let settings = app.state::<LiveConfig>().get().settings.clone();
+    set_entrance(app, &settings.mascot_entrance);
     apply(app, &settings.mascot_mode, settings.mascot_scale);
 }
 

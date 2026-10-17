@@ -10,7 +10,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],open_min_similarity:0.55,
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100
+  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_entrance:'flight'
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -555,7 +555,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
   ['interface',[['ui_language','ui_language',null,'instant']]],
-  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant']]],
+  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_entrance','mascot_mode',['flight','portal'],'instant'],['mascot_scale','mascot_scale',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages'],['english_only_model','model']]],
@@ -661,7 +661,7 @@ function fieldEl(key,type,opts,when='save'){
   else if(type==='mascot_mode'){
     // Сразу: маскот появляется, прячется или исчезает без «Сохранить».
     inp=el('select');
-    for(const o of opts){ const op=el('option',{value:o,textContent:t(`settings.mascot_mode.${o}`)}); if((settingsObj[key]||'always')===o) op.selected=true; inp.append(op); }
+    for(const o of opts){ const op=el('option',{value:o,textContent:t(`settings.${key}.${o}`)}); if((settingsObj[key]||opts[0])===o) op.selected=true; inp.append(op); }
     inp.onchange=()=>{ settingsObj[key]=inp.value; applyMascot(); };
   }
   else if(type==='mascot_scale'){
@@ -837,7 +837,7 @@ function rerender(){
   $('#settingsMsg').textContent='';
 }
 async function applyMascot(){
-  try{ await invoke('set_mascot',{mode:settingsObj.mascot_mode||'always',scale:Number(settingsObj.mascot_scale)||100}); }
+  try{ await invoke('set_mascot',{mode:settingsObj.mascot_mode||'always',scale:Number(settingsObj.mascot_scale)||100,entrance:settingsObj.mascot_entrance||'flight'}); }
   catch(e){ $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('mascot',e); }
 }
 async function changeLanguage(preference){
