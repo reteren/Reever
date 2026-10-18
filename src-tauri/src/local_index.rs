@@ -110,6 +110,19 @@ impl DiskIndex {
         }
     }
 
+    /// Для замеров и проб в examples/: снимок установленного Reever, если он есть, иначе
+    /// полный обход фиксированных дисков с исключениями по умолчанию.
+    pub fn load_or_scan(snapshot_path: &Path) -> Self {
+        load_snapshot(snapshot_path).unwrap_or_else(|_| {
+            scan_roots_with_progress(
+                &fixed_drive_roots(),
+                &ScanOptions::default(),
+                Arc::new(AtomicBool::new(false)),
+                None,
+            )
+        })
+    }
+
     pub fn entries(&self) -> usize {
         self.records.len()
     }
@@ -159,8 +172,8 @@ impl DiskIndex {
         path
     }
 
-    /// Поисковая часть разбирает тот же компактный синтаксис, который find.rs передаёт
-    /// Everything: wfn:, startwith:, AND-слова и альтернативы через |.
+    /// Компактный синтаксис запросов find.rs: wfn:, startwith:, AND-слова и альтернативы
+    /// через |.
     pub fn search_items(
         &self,
         expression: &str,
@@ -1055,7 +1068,7 @@ struct ManagerInner {
     stop_event: Mutex<Option<usize>>,
 }
 
-/// Переключатель индексатора: `everything` не оставляет ни снимка в памяти, ни рабочих потоков.
+/// Переключатель индексатора: выключенный не оставляет ни снимка в памяти, ни рабочих потоков.
 #[derive(Clone)]
 pub struct IndexManager(Arc<ManagerInner>);
 
@@ -1072,8 +1085,8 @@ impl IndexManager {
         }))
     }
 
-    pub fn apply_source(&self, source: &str) {
-        if source == "local" || source == "auto" {
+    pub fn set_enabled(&self, enabled: bool) {
+        if enabled {
             self.enable();
         } else {
             self.disable();
@@ -1456,19 +1469,14 @@ mod tests {
         let index = fixture();
         let usage = crate::find::Usage::default();
         let recent = std::collections::HashMap::new();
-        let items = crate::find::search_with_source(
-            "",
-            0,
+        let items = crate::find::search(
+            &index,
             &["memorvold".to_string()],
             crate::find::FindScope::Any,
             None,
             &usage,
             &recent,
-            "local",
-            Some(&index),
-            false,
-        )
-        .unwrap();
+        );
         assert_eq!(
             items.first().map(|item| item.name.as_str()),
             Some("Memory_Vault")
@@ -1476,9 +1484,9 @@ mod tests {
     }
 
     #[test]
-    fn everything_source_leaves_the_index_off() {
+    fn disabled_index_leaves_nothing_in_memory() {
         let manager = IndexManager::new(std::env::temp_dir().join("reever-index-disabled.bin"));
-        manager.apply_source("everything");
+        manager.set_enabled(false);
         let status = manager.status();
         assert_eq!(status.state, "off");
         assert_eq!(status.entries, 0);
@@ -1650,78 +1658,28 @@ mod tests {
                 let usage = crate::find::Usage::default();
                 let recent = std::collections::HashMap::new();
                 let started = Instant::now();
-                let substring = crate::find::search_with_source(
-                    "",
-                    0,
+                let substring = crate::find::search(
+                    &index,
                     &[query.to_string()],
                     crate::find::FindScope::Any,
                     None,
                     &usage,
                     &recent,
-                    "local",
-                    Some(&index),
-                    false,
                 )
-                .map(|items| items.len())
-                .unwrap_or(0);
+                .len();
                 let substring_ms = started.elapsed().as_millis();
                 let started = Instant::now();
-                let fuzzy = crate::find::search_with_source(
-                    "",
-                    0,
+                let fuzzy = crate::find::search(
+                    &index,
                     &[typo.to_string()],
                     crate::find::FindScope::Any,
                     None,
                     &usage,
                     &recent,
-                    "local",
-                    Some(&index),
-                    false,
                 )
-                .map(|items| items.len())
-                .unwrap_or(0);
+                .len();
                 let fuzzy_ms = started.elapsed().as_millis();
                 println!("query={query} substring_ms={substring_ms} results={substring} fuzzy_ms={fuzzy_ms} fuzzy_results={fuzzy}");
-            }
-            if options.default_exclusions {
-                for query in [
-                    "downloads",
-                    "memoryvault",
-                    "bilingual",
-                    "projectgst",
-                    "pictures",
-                    "documents",
-                    "desktop",
-                    "reever",
-                    "localindex",
-                    "worktree",
-                ] {
-                    let expression = format!("wfn:{query}");
-                    let local =
-                        index.search_items(&expression, crate::find::FindScope::Any, None, 500);
-                    match crate::everything::search_items("127.0.0.1", 8011, &expression, 500) {
-                        Ok(everything) => {
-                            let local_paths: HashSet<String> = local
-                                .iter()
-                                .map(|(path, _)| path.to_string_lossy().to_lowercase())
-                                .collect();
-                            let everything_paths: HashSet<String> = everything
-                                .iter()
-                                .map(|(path, _)| path.to_string_lossy().to_lowercase())
-                                .collect();
-                            let overlap = local_paths.intersection(&everything_paths).count();
-                            println!(
-                                "compare query={query} local={} everything={} overlap={} local_precision={:.3} everything_recall={:.3}",
-                                local_paths.len(),
-                                everything_paths.len(),
-                                overlap,
-                                overlap as f64 / local_paths.len().max(1) as f64,
-                                overlap as f64 / everything_paths.len().max(1) as f64,
-                            );
-                        }
-                        Err(error) => println!("compare query={query} unavailable={error}"),
-                    }
-                }
             }
         }
     }

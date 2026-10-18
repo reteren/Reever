@@ -1,10 +1,10 @@
 const tauri = window.__TAURI__;
 const previewSettings={
-  everything_host:'127.0.0.1',everything_port:8011,wake_words:['ривер','ревер','ривьер'],
-  launch_everything_fallback:false,match_threshold:0.7,
+  wake_words:['ривер','ревер','ривьер'],
+  match_threshold:0.7,
   asr_model:'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',asr_threads:4,
   languages:['ru','en'],second_asr_model:'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
-  english_only_model:'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8',models_unload_s:60,find_source:'everything',
+  english_only_model:'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8',models_unload_s:60,local_index:true,
   lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
@@ -18,7 +18,7 @@ const defaultGrammarPreview=()=>({
   dictation_stop:['стоп ввод','ривер остановись','stop typing'],
   intents:[
     {id:'launch',kind:'launch',label:'открыть программу или ссылку',triggers:['','открой','запусти','open','launch','run'],url:'',enabled:true,lang:'auto'},
-    {id:'folder',kind:'folder',label:'открыть папку на компьютере (Everything)',triggers:['папка','открой папку','folder','open folder'],url:'',enabled:true,lang:'auto'},
+    {id:'folder',kind:'folder',label:'открыть папку на компьютере',triggers:['папка','открой папку','folder','open folder'],url:'',enabled:true,lang:'auto'},
     {id:'web_google',kind:'search',label:'поиск в Google',triggers:['загугли','google search','search google'],url:'https://www.google.com/search?q={q}',enabled:true,lang:'auto'},
     {id:'web_youtube',kind:'search',label:'поиск на YouTube',triggers:['поиск ютуб','search youtube','youtube search'],url:'https://www.youtube.com/results?search_query={q}',enabled:true,lang:'auto'},
     {id:'close',kind:'close',label:'закрыть открытую программу',triggers:['закрой','close','quit'],url:'',enabled:true,lang:'auto'},
@@ -37,7 +37,7 @@ let previewGrammar=defaultGrammarPreview();
 // Подписи намерений по умолчанию (как в grammar.rs): если пользователь их не менял,
 // показываем перевод, а не русскую строку из grammar.json.
 const DEFAULT_INTENT_LABELS={
-  launch:'открыть программу или ссылку',folder:'открыть папку на компьютере (Everything)',
+  launch:'открыть программу или ссылку',folder:'открыть папку на компьютере',
   web_google:'поиск в Google',web_youtube:'поиск на YouTube',close:'закрыть открытую программу',
   kill:'завершить программу (как в диспетчере задач)',calc:'посчитать в калькуляторе',
   dictate:'диктовка: ввести текст в поле с курсором',find:'найти файл или папку (окно выбора)',
@@ -48,7 +48,9 @@ const DEFAULT_INTENT_LABELS={
 function isDefaultLabel(intent){
   const label=String(intent?.label||'').trim();
   const builtIn=DEFAULT_INTENT_LABELS[intent?.id];
-  return !!builtIn&&(!label||label===builtIn||(intent.id==='calc'&&label==='калькулятор'));
+  // Старые подписи по умолчанию из прежних версий grammar.json — тоже «не менял».
+  return !!builtIn&&(!label||label===builtIn||(intent.id==='calc'&&label==='калькулятор')
+    ||(intent.id==='folder'&&label==='открыть папку на компьютере (Everything)'));
 }
 function intentLabel(intent){
   if(isDefaultLabel(intent)) return t('intent.'+intent.id);
@@ -92,7 +94,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'list_sound_packs': return ['default'];
     case 'list_asr_models': return [...new Set([previewSettings.asr_model,previewSettings.second_asr_model,previewSettings.english_only_model,previewSettings.lid_model].filter(Boolean))];
     case 'get_paused': case 'get_autostart': return false;
-    case 'check_everything': return false;
+    case 'index_status': return {state:'ready',entries:0,bytes:0};
     case 'get_wallpaper': return null;
     default: return undefined;
   }
@@ -176,14 +178,6 @@ function applyStatus(payload){
   const asr=status.asr;
   $('#t-asr').replaceChildren(asr==='ready'?pill('pill.ready','ok'):asr==='error'?pill('pill.error','bad'):asr==='loading'?pill('pill.loading'):el('span',{className:'pill',textContent:'—'}));
   $('#t-model').replaceChildren(el('span',{textContent:status.model||'—'}));
-  renderEverything(status.everything);
-}
-function renderEverything(state){
-  const tile=$('#t-ev');
-  if(settingsObj?.offline_mode) tile.replaceChildren(pill('pill.offline'));
-  else if(state===true) tile.replaceChildren(pill('pill.connected','ok'));
-  else if(state===false) tile.replaceChildren(pill('pill.disconnected','bad'));
-  else tile.replaceChildren(pill('pill.unchecked'));
 }
 
 let actions=[], selId=null, filter='all', query='', editorDirty=false;
@@ -565,7 +559,7 @@ const GROUPS=[
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_terms','list'],
     ['dictation_idle_ms','number'],['dictation_pause_ms','number'],['webchat_send','bool']]],
-  ['everything',[['find_source','select',['everything','local','auto']],['everything_host','text'],['everything_port','number'],['launch_everything_fallback','bool']]],
+  ['search',[['local_index','bool']]],
   ['system',[['confirm_dangerous','bool'],['confirm_close','bool'],['raise_result','bool']]],
 ];
 // Настройки смешения языков нужны, только когда языков больше одного; англицизмы —
@@ -581,10 +575,16 @@ function settingVisible(key){
 const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} — ${t('settings.instant')}`:t('settings.'+key);
 const settingHelp=key=>I18N.has(`settings.${key}.help`)?t(`settings.${key}.help`):null;
 let cbSeq=0;
+// Индекс дисков: плитка на Главной и строка под переключателем в настройках.
 function renderIndexStatus(){
-  if(!indexStatusNode) return;
   const state=indexStatus?.state;
-  if(!['off','scanning','ready'].includes(state)){
+  const known=['off','scanning','ready'].includes(state);
+  const tile=$('#t-index');
+  if(tile) tile.replaceChildren(!known?pill('pill.unchecked'):state==='ready'?pill('pill.indexReady','ok')
+    :state==='scanning'?pill('pill.indexing'):pill('pill.off'));
+  $('#ledNet')?.classList.toggle('on', state==='ready');
+  if(!indexStatusNode) return;
+  if(!known){
     indexStatusNode.hidden=true;
     return;
   }
@@ -597,21 +597,16 @@ function renderIndexStatus(){
 async function refreshIndexStatus(){
   try{
     const status=await invoke('index_status');
-    if(!status||!['off','scanning','ready'].includes(status.state)){
-      indexStatus=null; renderIndexStatus(); return false;
-    }
-    indexStatus=status; renderIndexStatus(); return true;
+    indexStatus=status&&['off','scanning','ready'].includes(status.state)?status:null;
   }catch{
-    // index_status появляется вместе с локальным индексом; старые сборки его не знают.
-    indexStatus=null; renderIndexStatus(); return false;
+    indexStatus=null;
   }
+  renderIndexStatus();
 }
 function startIndexStatusPolling(){
   if(indexStatusTimer) clearInterval(indexStatusTimer);
-  indexStatusTimer=null;
-  refreshIndexStatus().then(supported=>{
-    if(supported) indexStatusTimer=setInterval(()=>{ refreshIndexStatus(); },5000);
-  });
+  refreshIndexStatus();
+  indexStatusTimer=setInterval(()=>{ refreshIndexStatus(); },5000);
 }
 function fieldEl(key,type,opts,when='save'){
   const lbl=settingLabel(key,when), help=settingHelp(key);
@@ -714,7 +709,7 @@ function fieldEl(key,type,opts,when='save'){
   else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } if(key==='models_unload_s'){ inp.step='1'; inp.min='0'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
   wrap.append(inp);
   if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
-  if(key==='find_source'){
+  if(key==='local_index'){
     indexStatusNode=el('div',{className:'hint setting-help setting-index-status',hidden:true});
     wrap.append(indexStatusNode); renderIndexStatus();
   }
@@ -822,7 +817,6 @@ function renderSettings(){
   const mode=settingsObj.activation_mode||'both';
   $('#t-mode').textContent=I18N.has(`mode.${mode}`)?t(`mode.${mode}`):mode;
   $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'—':(settingsObj.hotkey||'—');
-  if(settingsObj.offline_mode) renderEverything(lastStatus?.everything);
 }
 // Сохранение применяется сразу: Reever перечитывает настройки и перезапускает
 // распознавание (несколько секунд загрузки моделей), окно и всё остальное работают.
@@ -831,7 +825,7 @@ $('#saveSettingsBtn').onclick=async()=>{ try{await invoke('save_settings',{setti
 // Язык интерфейса: перевести разметку и перерисовать всё, что построено из кода.
 // Rust сохраняет выбор в settings.json и переводит меню трея.
 function rerender(){
-  setDot(micState); renderPause(); if(lastStatus) applyStatus(lastStatus); else renderEverything(undefined);
+  setDot(micState); renderPause(); if(lastStatus) applyStatus(lastStatus); renderIndexStatus();
   renderRows(); renderEditor(); renderGrammarExamples();
   if(grammarDraft) renderGrammarEditor();
   setGrammarButton(); renderCalCount(); renderSettings();
@@ -858,6 +852,6 @@ async function changeLanguage(preference){
   let preference='auto';
   try{ preference=(await invoke('get_settings'))?.ui_language||'auto'; }catch{}
   await I18N.setLanguage(preference);
-  renderEverything(undefined);
+  startIndexStatusPolling();
   loadActions().catch(e=>reportError('loadActions',e)); loadSettings(); loadGrammar(); refreshPause();
 })();

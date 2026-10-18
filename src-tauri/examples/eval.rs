@@ -423,7 +423,7 @@ fn same_command(case: &Case, got: &Candidate, want: &str, routing: &Routing) -> 
     }
     let wanted = routing.route(want, None);
     if wanted != Route::Unknown
-        && !matches!(wanted, Route::LaunchFallback(_))
+        && !matches!(wanted, Route::NoAction(_))
         && routing.route(&got.text, got.alt.as_deref()) == wanted
     {
         return true;

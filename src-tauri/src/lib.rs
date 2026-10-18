@@ -18,7 +18,6 @@ pub mod dispatch;
 pub mod engine;
 pub mod events;
 pub mod find;
-pub mod everything;
 pub mod grammar;
 pub mod input_thread;
 pub mod langid;
@@ -291,7 +290,7 @@ pub fn run() {
             app.manage(shared.clone());
             let index_dir = app.path().app_config_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
             let index = local_index::IndexManager::new(index_dir.join("index-v1.bin"));
-            index.apply_source(&cfg.settings.find_source);
+            index.set_enabled(cfg.settings.local_index);
             app.manage(index);
 
             // --- трей ---
@@ -359,23 +358,34 @@ pub fn run() {
             }
 
             // --- проверка окна выбора без микрофона: REEVER_FIND_DEMO="запрос" ---
-            // Reever не слушает эфир, а через 2 с показывает окно выбора для запроса. Нужно
+            // Reever не слушает эфир, а когда готов индекс, показывает окно выбора для запроса. Нужно
             // для живой проверки окна рядом с основной установкой Reever.
             if let Ok(query) = std::env::var("REEVER_FIND_DEMO") {
                 let handle = app.handle().clone();
-                let cfg = cfg.clone();
                 let shared = shared.clone();
+                let index = app.state::<local_index::IndexManager>().inner().clone();
                 std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_secs(2));
-                    let items = find::search(
-                        &cfg.settings.everything_host,
-                        cfg.settings.everything_port,
-                        &[query.clone()],
-                        find::FindScope::Any,
-                        &find::Usage::load(&shared.usage_path),
-                        &find::windows_recent(),
-                    )
-                    .unwrap_or_default();
+                    // Ждём первый снимок индекса: при холодном старте обход дисков идёт секунды.
+                    let mut snapshot = None;
+                    for _ in 0..120 {
+                        std::thread::sleep(std::time::Duration::from_secs(1));
+                        snapshot = index.snapshot();
+                        if snapshot.is_some() {
+                            break;
+                        }
+                    }
+                    let items = snapshot
+                        .map(|snapshot| {
+                            find::search(
+                                &snapshot,
+                                &[query.clone()],
+                                find::FindScope::Any,
+                                None,
+                                &find::Usage::load(&shared.usage_path),
+                                &find::windows_recent(),
+                            )
+                        })
+                        .unwrap_or_default();
                     let _ = picker::show(&handle, &shared, &query, &items);
                 });
                 return Ok(());
@@ -420,7 +430,6 @@ pub fn run() {
             commands_api::set_hotkey,
             commands_api::set_mute_hotkey,
             commands_api::get_wallpaper,
-            commands_api::check_everything,
             commands_api::set_ui_language,
             mascot::mascot_drag,
             mascot::mascot_layout,

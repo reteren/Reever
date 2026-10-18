@@ -1,5 +1,4 @@
 {
-  "_comment": "HTTP-сервер Everything. Включи его в Everything: Tools → Options → HTTP Server → Enable, и поставь ТОТ ЖЕ порт, что здесь. Читается при старте Reever.",
   "_comment_asr": "Папка ASR-модели в resources/model. Переключение применяется после перезапуска.",
   "_comment_bilingual": "Языки распознавания (английский всегда включён), модели, определитель языка и язык цели применяются после перезапуска.",
   "_comment_wake": "Как ASR слышит wake-слово. Добавляй свои варианты; активация — если любое слово фразы совпало с этим списком.",
@@ -22,14 +21,11 @@
   "dictation_live": true,
   "dictation_pause_ms": 800,
   "dictation_terms": [],
-  "everything_host": "127.0.0.1",
-  "everything_port": 8011,
   "hotkey": "Ctrl+Shift+G",
   "languages": [
     "ru",
     "en"
   ],
-  "launch_everything_fallback": false,
   "lid_model": "sherpa-onnx-whisper-base",
   "match_threshold": 0.7,
   "mute_hotkey": "",
@@ -54,6 +50,6 @@
   ],
   "webchat_send": true,
   "models_unload_s": 60,
-  "find_source": "everything",
+  "local_index": true,
   "english_only_model": "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8"
 }

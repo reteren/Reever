@@ -1,5 +1,6 @@
 //! End-to-end evaluation for «ривер найди …»: real Engine → dispatch::route →
-//! Everything find::search, with a fresh empty history for every synthesized utterance.
+//! find::search over the disk index, with a fresh empty history for every synthesized utterance.
+//! Uses the installed Reever's index snapshot when there is one, otherwise scans the drives.
 //!
 //! Run from src-tauri/: cargo run --release --example eval_find
 
@@ -11,10 +12,10 @@ use reever_lib::{
     bilingual::LangMode,
     dispatch::{route, Route},
     engine::{Engine, EngineConfig, EngineEvent},
-    everything,
     find::{self, FindScope, Usage},
     grammar::Grammar,
     langid::SpeechLid,
+    local_index::DiskIndex,
     speech::samples,
     vad::SileroVad,
 };
@@ -22,8 +23,6 @@ use serde::Deserialize;
 
 const CHUNK: usize = 320;
 const MATCH_THRESHOLD: f64 = 0.70;
-const HOST: &str = "127.0.0.1";
-const PORT: u16 = 8011;
 
 #[derive(Deserialize)]
 struct Case {
@@ -68,6 +67,10 @@ fn main() -> anyhow::Result<()> {
     })?;
     let lid = SpeechLid::new(&model.join("sherpa-onnx-whisper-base"), 2)?;
     let grammar = Grammar::defaults();
+    let snapshot = PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default())
+        .join("com.troid.reever")
+        .join("index-v1.bin");
+    let disk_index = DiskIndex::load_or_scan(&snapshot);
     let actions_path = root.join("resources/actions.json");
     let actions: Vec<Action> = load_actions(&actions_path);
     let wake_words = vec!["ривер".into(), "ревер".into(), "ривьер".into(), "ливер".into()];
@@ -101,18 +104,15 @@ fn main() -> anyhow::Result<()> {
         let mut candidates = Vec::new();
         let mut items = Vec::new();
         let mut matching_queries = Vec::new();
-        let mut error = String::new();
+        let error = String::new();
         for (text, alt) in &heard {
             match route(text, alt.as_deref(), &grammar, &actions, MATCH_THRESHOLD) {
                 Route::Find { scope: found_scope, candidates: found_candidates } => {
                     route_name = "find".into();
                     scope = Some(found_scope);
                     candidates = found_candidates;
-                    match find::search(HOST, PORT, &candidates, found_scope, &Usage::default(), &Default::default()) {
-                        Ok(found) => items = found,
-                        Err(e) => error = e,
-                    }
-                    matching_queries = variants_that_find(&candidates, found_scope, &case.target_path);
+                    items = find::search(&disk_index, &candidates, found_scope, None, &Usage::default(), &Default::default());
+                    matching_queries = variants_that_find(&disk_index, &candidates, found_scope, &case.target_path);
                     break;
                 }
                 other => route_name = route_label(&other).into(),
@@ -133,7 +133,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn variants_that_find(candidates: &[String], scope: FindScope, target: &str) -> Vec<String> {
+fn variants_that_find(index: &DiskIndex, candidates: &[String], scope: FindScope, target: &str) -> Vec<String> {
     let prefix = match scope {
         FindScope::Any => "",
         FindScope::Folder => "folder: ",
@@ -147,9 +147,10 @@ fn variants_that_find(candidates: &[String], scope: FindScope, target: &str) -> 
             ("startwith", format!("{prefix}startwith:{squashed}")),
             ("words", format!("{prefix}{variant}")),
         ] {
-            if everything::search_items(HOST, PORT, &query, 120)
-                .ok()
-                .is_some_and(|found| found.iter().any(|(path, _)| same_path(&path.to_string_lossy(), target)))
+            if index
+                .search_items(&query, scope, None, 120)
+                .iter()
+                .any(|(path, _)| same_path(&path.to_string_lossy(), target))
             {
                 matches.push(format!("{variant} ({label})"));
                 // Keep searching later variants: Russian vs. English/translit ambiguity is
@@ -167,7 +168,7 @@ fn route_label(route: &Route) -> &'static str {
         Route::Find { .. } => "find",
         Route::Unknown => "unknown",
         Route::Launch(_) => "launch",
-        Route::LaunchFallback(_) => "launch fallback",
+        Route::NoAction(_) => "launch fallback",
         Route::Folder(_) => "folder",
         Route::Search { .. } => "search",
         Route::System(_) => "system",
@@ -202,9 +203,9 @@ fn markdown_cell(text: &str) -> String { text.replace('|', "\\|").replace('\n', 
 
 fn render_report(rows: &[ResultRow]) -> String {
     let mut out = String::from("# Find benchmark: русские, английские и смешанные цели\n\n");
-    out.push_str("Engine: GigaAM v3 RU + Parakeet TDT v2 EN + Whisper Base LID + Silero VAD; затем `dispatch::route` и `find::search` на Everything HTTP 127.0.0.1:8011. История `Usage` и список recent пустые для каждого запроса. WAV синтезированы COM SAPI голосами Microsoft Irina и Alexandr (RHVoice), слитно и с цифровой паузой 650 мс после «найди».\n\n");
+    out.push_str("Engine: GigaAM v3 RU + Parakeet TDT v2 EN + Whisper Base LID + Silero VAD; затем `dispatch::route` и `find::search` по индексу дисков Reever. История `Usage` и список recent пустые для каждого запроса. WAV синтезированы COM SAPI голосами Microsoft Irina и Alexandr (RHVoice), слитно и с цифровой паузой 650 мс после «найди».\n\n");
     out.push_str(&aggregate_summary(rows));
-    out.push_str("\n\n`Engine` печатает выбранную команду и альтернативу; оба поля включены ниже. `variant (wfn/startwith/words)` означает первый проверенный Everything HTTP-запрос этого кандидата, вернувший точный путь.\n\n");
+    out.push_str("\n\n`Engine` печатает выбранную команду и альтернативу; оба поля включены ниже. `variant (wfn/startwith/words)` означает первый запрос к индексу дисков для этого кандидата, вернувший точный путь.\n\n");
     out.push_str("| Цель | Язык | Форма | Режим | Голос | Engine text / alt | Route/scope | Кандидаты | Rank | Кандидат → запрос, нашедший цель | Диагностика |\n|---|---|---|---|---|---|---|---|---:|---|---|\n");
     for row in rows {
         let outputs = if row.heard.is_empty() { "—".into() } else {

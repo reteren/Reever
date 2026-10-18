@@ -251,16 +251,16 @@ pub fn save_settings(
     reapply_hotkeys(&app, &s.activation_mode, &s.hotkey, &s.mute_hotkey)?;
     *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = s.hotkey.clone();
     *state.mute_hotkey.lock().map_err(|e| e.to_string())? = s.mute_hotkey.clone();
-    let find_source = s.find_source.clone();
+    let local_index = s.local_index;
     config.set(Arc::new(fresh));
     if let Some(index) = app.try_state::<crate::local_index::IndexManager>() {
-        index.apply_source(&find_source);
+        index.set_enabled(local_index);
     }
     state.reload.store(true, Ordering::Relaxed);
     Ok(())
 }
 
-/// Состояние встроенного индекса для UI настроек.
+/// Состояние встроенного индекса для плитки Главной и UI настроек.
 #[tauri::command]
 pub fn index_status(index: State<'_, crate::local_index::IndexManager>) -> crate::local_index::IndexStatus {
     index.status()
@@ -333,20 +333,6 @@ pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
 #[tauri::command]
 pub fn get_autostart(app: AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
-}
-
-/// Активная проверка доступности Everything HTTP (для плитки UI, по запросу).
-#[tauri::command]
-pub fn check_everything(config: State<'_, LiveConfig>) -> bool {
-    let config = config.get();
-    if config.settings.offline_mode {
-        return false; // офлайн-режим: вообще не трогаем сеть
-    }
-    crate::everything::ping(
-        &config.settings.everything_host,
-        config.settings.everything_port,
-    )
-    .is_ok()
 }
 
 /// Обои Frutiger Aero как data-URL (фон вебвью). Пользователь может заменить

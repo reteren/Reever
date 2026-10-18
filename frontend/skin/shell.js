@@ -413,7 +413,6 @@
   listen('reever://partial', () => fitTicker());
   listen('reever://status', e => {
     let s = e.payload; if (typeof s === 'string') { try { s = JSON.parse(s); } catch { return; } }
-    $('#ledNet')?.classList.toggle('on', s?.everything === true);
     invoke?.('cache_ui_status', { status: s }).catch(() => {});
   });
 
@@ -454,10 +453,6 @@
       : document.createElement('span'));
     const model = $('#t-model');
     if (model) model.replaceChildren(Object.assign(document.createElement('span'), { textContent: status.model || '—' }));
-    const everything = $('#t-ev');
-    if (everything) everything.replaceChildren(status.everything === true ? makePill('pill.connected', 'ok')
-      : status.everything === false ? makePill('pill.disconnected', 'bad') : makePill('pill.unchecked'));
-    $('#ledNet')?.classList.toggle('on', status.everything === true);
   }
 
   document.addEventListener('click', e => {

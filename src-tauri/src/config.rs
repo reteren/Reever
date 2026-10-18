@@ -32,16 +32,9 @@ impl Aliases {
 /// Настройки из resources/settings.json.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Settings {
-    #[serde(default = "default_host")]
-    pub everything_host: String,
-    #[serde(default = "default_port")]
-    pub everything_port: u16,
     /// Как модель «слышит» wake-word. Активация, если любое слово фразы совпало.
     #[serde(default = "default_wake_words")]
     pub wake_words: Vec<String>,
-    /// «Запусти»: если ни одно действие не совпало — искать программу в Everything.
-    #[serde(default)]
-    pub launch_everything_fallback: bool,
     /// Порог fuzzy-совпадения фразы с действием (0..1). Выше — строже.
     #[serde(default = "default_match_threshold")]
     pub match_threshold: f64,
@@ -106,7 +99,7 @@ pub struct Settings {
     /// Приватный лог: не показывать распознанный текст/запросы в UI и stdout.
     #[serde(default)]
     pub private_log: bool,
-    /// Офлайн-режим: без веб-поиска и Everything-HTTP (нулевой сетевой трафик).
+    /// Офлайн-режим: без веб-поиска и веб-чатов (нулевой сетевой трафик).
     #[serde(default)]
     pub offline_mode: bool,
     /// Хоткей мгновенного «заглушить микрофон» (panic-mute). Пусто — выкл.
@@ -155,10 +148,10 @@ pub struct Settings {
     /// остаётся только детектор «ривер»); 0 — не выгружать никогда.
     #[serde(default = "default_models_unload_s")]
     pub models_unload_s: u32,
-    /// Откуда искать файлы и папки: `everything` (Everything HTTP), `local` (свой
-    /// индекс дисков Reever), `auto` (Everything, если доступен, иначе свой индекс).
-    #[serde(default = "default_find_source")]
-    pub find_source: String,
+    /// Свой индекс дисков для «найди …» и «папка …». Выключен — ни снимка в памяти, ни
+    /// фоновых потоков, но и искать файлы голосом нечем.
+    #[serde(default = "default_true")]
+    pub local_index: bool,
     /// Модель режима «только английский» (основная, когда русский выключен).
     #[serde(default = "default_english_only_model")]
     pub english_only_model: String,
@@ -182,9 +175,6 @@ fn default_mascot_mode() -> String {
 }
 fn default_mascot_scale() -> u32 {
     100
-}
-fn default_find_source() -> String {
-    "everything".into()
 }
 fn default_english_only_model() -> String {
     "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8".into()
@@ -277,12 +267,6 @@ fn default_command_wait_ms() -> u32 {
     5000
 }
 
-fn default_host() -> String {
-    "127.0.0.1".into()
-}
-fn default_port() -> u16 {
-    8011
-}
 fn default_wake_words() -> Vec<String> {
     vec!["ривер".into(), "ревер".into(), "ривьер".into()]
 }
@@ -340,14 +324,7 @@ fn parse_settings(text: &str) -> Settings {
         };
     }
 
-    restore!("everything_host", everything_host, String);
-    restore!("everything_port", everything_port, u16);
     restore!("wake_words", wake_words, Vec<String>);
-    restore!(
-        "launch_everything_fallback",
-        launch_everything_fallback,
-        bool
-    );
     restore!("match_threshold", match_threshold, f64);
     restore!("english_enabled", english_enabled, bool);
     restore!("asr_model", asr_model, String);
@@ -374,7 +351,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("models_unload_s", models_unload_s, u32);
-    restore!("find_source", find_source, String);
+    restore!("local_index", local_index, bool);
     restore!("english_only_model", english_only_model, String);
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
@@ -402,10 +379,7 @@ fn parse_settings(text: &str) -> Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            everything_host: default_host(),
-            everything_port: default_port(),
             wake_words: default_wake_words(),
-            launch_everything_fallback: false,
             match_threshold: default_match_threshold(),
             english_enabled: true,
             asr_model: default_asr_model(),
@@ -442,7 +416,7 @@ impl Default for Settings {
             ui_language: default_ui_language(),
             languages: default_languages(),
             models_unload_s: default_models_unload_s(),
-            find_source: default_find_source(),
+            local_index: true,
             english_only_model: default_english_only_model(),
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),

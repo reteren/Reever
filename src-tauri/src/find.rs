@@ -1,5 +1,5 @@
-//! «Ривер найди …» / «найди папку …» / «найди файл …»: поиск через Everything с выбором
-//! в окне Reever. Запросы идут для каждого варианта распознавания (русский, английский,
+//! «Ривер найди …» / «найди папку …» / «найди файл …»: поиск по своему индексу дисков
+//! (`local_index`) с выбором в окне Reever. Запросы идут для каждого варианта распознавания (русский, английский,
 //! транслит), без учёта пунктуации и пробелов — «project gst» находит «-PROJECT.GST-».
 //! Наверх поднимается то, что открывают чаще: история открытий через Reever
 //! (`usage.json`) и недавние элементы Windows (`%APPDATA%\Microsoft\Windows\Recent`).
@@ -13,7 +13,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use strsim::jaro_winkler;
 
-use crate::everything;
+use crate::local_index::DiskIndex;
 
 /// Что искать.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -49,7 +49,7 @@ const ALL_WORDS_MATCHED: f64 = 0.85;
 const WEAK_SCORE: f64 = 0.45;
 /// Ранг совпадения по всем словам, кроме одного.
 const ALL_BUT_ONE_MATCHED: f64 = 0.75;
-/// Сколько всего можно потратить на запросы к Everything (локально — миллисекунды).
+/// Сколько всего можно потратить на запросы к индексу: поиск идёт в аудио-потоке.
 const SEARCH_BUDGET_MS: u64 = 2_500;
 /// Недавние Windows перечитываются не чаще раза в минуту.
 const RECENT_TTL_SECS: u64 = 60;
@@ -83,7 +83,7 @@ pub fn query_variants(candidates: &[String]) -> Vec<String> {
 
 /// Пословный запрос для смешанных имён («деловые партнеры фотошоп» → папка «Деловые
 /// партнеры Photoshop»): каждое русское слово — «само | английский транслит | транслит»,
-/// длинное — по основе («длительности» найдёт «длительностей»). В Everything `|` — «ИЛИ»
+/// длинное — по основе («длительности» найдёт «длительностей»). В запросе `|` — «ИЛИ»
 /// внутри слова, пробел — «И» между словами. `None` — в запросе нет русских слов или он из
 /// одного слова (тогда хватает обычных вариантов).
 pub fn mixed_query(candidate: &str) -> Option<String> {
@@ -156,7 +156,7 @@ fn russian_stem(word: &str) -> String {
 }
 
 /// Произнесённая пунктуация в имени («проджект точка джи эс ти», «voice pipeline точка md»)
-/// не нужна: Everything и так игнорирует пунктуацию в именах, а слово «точка» в запросе
+/// не нужна: индекс и так игнорирует пунктуацию в именах, а слово «точка» в запросе
 /// стало бы лишним условием.
 fn drop_spoken_punctuation(text: &str) -> String {
     const SPOKEN: &[&str] = &[
@@ -175,7 +175,7 @@ fn is_cyrillic(c: char) -> bool {
 
 /// Названия латинских букв по-русски → буквы, остальные слова — через `convert`. Буквы,
 /// сказанные подряд, склеиваются: «джи эс ти» и склеенное ASR «джиэсти» → «gst»
-/// (в Everything пробел — это «И», раздельные буквы не нашлись бы).
+/// (в запросе пробел — это «И», раздельные буквы не нашлись бы).
 fn latin_letters_and(text: &str, convert: fn(&str) -> String) -> String {
     let mut words: Vec<String> = Vec::new();
     let mut letters = String::new();
@@ -626,54 +626,17 @@ fn usage_boost(path: &str, usage: &Usage, recent: &HashMap<String, u64>) -> f64 
 
 // ---------------------------------------------------------------- поиск
 
-/// Найти элементы: по запросу на каждый вариант, слить, ранжировать. Ошибка — нет связи
-/// с Everything.
+/// Найти элементы в индексе: по запросу на каждый вариант, слить, ранжировать. С
+/// `extension` («… формат exe») — только файлы `ext:<ext>`; без имени — файлы этого формата,
+/// недавние наверху.
 pub fn search(
-    host: &str,
-    port: u16,
-    candidates: &[String],
-    scope: FindScope,
-    usage: &Usage,
-    recent: &HashMap<String, u64>,
-) -> Result<Vec<FindItem>, String> {
-    search_with_extension(host, port, candidates, scope, None, usage, recent)
-}
-
-/// То же с фильтром по расширению («… формат exe»): только файлы `ext:<ext>`. Без имени —
-/// недавние файлы этого формата.
-pub fn search_with_extension(
-    host: &str,
-    port: u16,
+    index: &DiskIndex,
     candidates: &[String],
     scope: FindScope,
     extension: Option<&str>,
     usage: &Usage,
     recent: &HashMap<String, u64>,
-) -> Result<Vec<FindItem>, String> {
-    search_with_source(host, port, candidates, scope, extension, usage, recent, "everything", None, false)
-}
-
-/// Поиск с выбором источника кандидатов; вычисление оценки и итоговое ранжирование общие.
-pub fn search_with_source(
-    host: &str,
-    port: u16,
-    candidates: &[String],
-    scope: FindScope,
-    extension: Option<&str>,
-    usage: &Usage,
-    recent: &HashMap<String, u64>,
-    source: &str,
-    index: Option<&crate::local_index::DiskIndex>,
-    offline: bool,
-) -> Result<Vec<FindItem>, String> {
-    let use_local = match source {
-        "local" => true,
-        "auto" => offline || everything::ping(host, port).is_err(),
-        _ => false,
-    };
-    if use_local && index.is_none() {
-        return Err("локальный индекс ещё строится".into());
-    }
+) -> Vec<FindItem> {
     let variants = query_variants(candidates);
     let prefix = match (scope, extension) {
         (_, Some(ext)) => format!("file: ext:{ext} "),
@@ -683,87 +646,72 @@ pub fn search_with_source(
     };
     let prefix = prefix.as_str();
     let mut found: HashMap<String, FindItem> = HashMap::new();
-    let mut last_error = None;
-    let mut any_ok = false;
-    // Общий срок: поиск идёт в аудио-потоке, медленный Everything не должен его держать.
     let deadline =
         std::time::Instant::now() + std::time::Duration::from_millis(SEARCH_BUDGET_MS);
-    let run = |found: &mut HashMap<String, FindItem>,
-               any_ok: &mut bool,
-               last_error: &mut Option<String>,
-               query: &str,
-               count: usize,
-               min_similarity: f64,
-               floor: f64| {
-        if std::time::Instant::now() >= deadline && *any_ok {
+    let mut first = true;
+    let mut run = |found: &mut HashMap<String, FindItem>,
+                   query: &str,
+                   count: usize,
+                   min_similarity: f64,
+                   floor: f64| {
+        if !first && std::time::Instant::now() >= deadline {
             return;
         }
-        let result = if use_local {
-            Ok(index.unwrap().search_items(query, scope, extension, count))
-        } else {
-            everything::search_items(host, port, query, count)
-        };
-        match result {
-            Ok(items) => {
-                *any_ok = true;
-                for (full, folder) in items {
-                    let full = full.to_string_lossy().into_owned();
-                    let name = Path::new(&full)
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| full.clone());
-                    let mut similarity = variants
-                        .iter()
-                        .map(|v| name_score(&name, v))
-                        .fold(0.0, f64::max);
-                    // `floor` — запрос уже гарантирует совпадение слов (пословный, без одного слова).
-                    similarity = similarity.max(floor);
-                    if similarity < min_similarity {
-                        continue;
-                    }
-                    let boost = usage_boost(&full, usage, recent);
-                    let item = FindItem {
-                        name,
-                        path: full.clone(),
-                        folder,
-                        frequent: boost >= 0.15,
-                        score: similarity + boost - noise_penalty(&full),
-                    };
-                    found
-                        .entry(full.to_lowercase())
-                        .and_modify(|existing| {
-                            if item.score > existing.score {
-                                *existing = item.clone();
-                            }
-                        })
-                        .or_insert(item);
-                }
+        first = false;
+        for (full, folder) in index.search_items(query, scope, extension, count) {
+            let full = full.to_string_lossy().into_owned();
+            let name = Path::new(&full)
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| full.clone());
+            let mut similarity = variants
+                .iter()
+                .map(|v| name_score(&name, v))
+                .fold(0.0, f64::max);
+            // `floor` — запрос уже гарантирует совпадение слов (пословный, без одного слова).
+            similarity = similarity.max(floor);
+            if similarity < min_similarity {
+                continue;
             }
-            Err(error) => *last_error = Some(error),
+            let boost = usage_boost(&full, usage, recent);
+            let item = FindItem {
+                name,
+                path: full.clone(),
+                folder,
+                frequent: boost >= 0.15,
+                score: similarity + boost - noise_penalty(&full),
+            };
+            found
+                .entry(full.to_lowercase())
+                .and_modify(|existing| {
+                    if item.score > existing.score {
+                        *existing = item.clone();
+                    }
+                })
+                .or_insert(item);
         }
     };
 
-    // Только формат, без имени: недавние файлы этого формата (Everything по умолчанию
-    // сортирует по дате изменения).
+    // Только формат, без имени: файлы этого формата, недавние поднимет `usage_boost`.
     if variants.is_empty() && extension.is_some() {
-        run(&mut found, &mut any_ok, &mut last_error, prefix.trim_end(), PER_QUERY, 0.0, ALL_WORDS_MATCHED);
+        run(&mut found, prefix.trim_end(), PER_QUERY, 0.0, ALL_WORDS_MATCHED);
     }
 
-    // Everything отдаёт первые N совпадений без учёта похожести, поэтому на каждый вариант
+    // Индекс отдаёт первые N совпадений без учёта похожести, поэтому на каждый вариант
     // три запроса: имя целиком (`wfn:`), начало имени (`startwith:`) и вхождение слов.
     for variant in variants.iter().take(4) {
         let squashed = squash(variant);
-        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}wfn:{squashed}"), PER_QUERY, 0.0, 0.0);
-        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}startwith:{squashed}"), PER_QUERY, 0.0, 0.0);
+        run(&mut found, &format!("{prefix}wfn:{squashed}"), PER_QUERY, 0.0, 0.0);
+        run(&mut found, &format!("{prefix}startwith:{squashed}"), PER_QUERY, 0.0, 0.0);
         // Слова — раздельные условия (AND), пунктуация и пробелы в имени не мешают.
-        run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}{variant}"), PER_QUERY, 0.0, 0.0);
+        run(&mut found, &format!("{prefix}{variant}"), PER_QUERY, 0.0, 0.0);
     }
 
     // Смешанные имена: пословный запрос «слово | латиница». Всё, что он нашёл, совпало по
     // всем словам — поэтому ранг не ниже 0,85.
     for candidate in candidates {
         if let Some(query) = mixed_query(candidate) {
-            run(&mut found, &mut any_ok, &mut last_error, &format!("{prefix}{query}"), PER_QUERY, 0.0, ALL_WORDS_MATCHED);
+            run(&mut found, &format!("{prefix}{query}"), PER_QUERY, 0.0, ALL_WORDS_MATCHED);
         }
     }
 
@@ -772,21 +720,13 @@ pub fn search_with_source(
     if found.values().filter(|item| item.score >= 0.7).count() < 3 {
         for variant in variants.iter().take(4) {
             for query in queries_without_one_word(variant) {
-                run(
-                    &mut found,
-                    &mut any_ok,
-                    &mut last_error,
-                    &format!("{prefix}{query}"),
-                    PER_QUERY,
-                    0.0,
-                    ALL_BUT_ONE_MATCHED,
-                );
+                run(&mut found, &format!("{prefix}{query}"), PER_QUERY, 0.0, ALL_BUT_ONE_MATCHED);
             }
         }
     }
 
     // Мало хороших совпадений — нечёткий проход: имена с теми же первыми буквами, отбор по
-    // сходству строк («меморволд» → Memory_Vault, «билингол» → bilingual). Everything ищет
+    // сходству строк («меморволд» → Memory_Vault, «билингол» → bilingual). Индекс ищет
     // только подстроки, поэтому похожесть считаем сами.
     let good = found.values().filter(|item| item.score >= 0.7).count();
     if good < 3 {
@@ -797,21 +737,10 @@ pub fn search_with_source(
                 continue;
             }
             let head: String = squashed.chars().take(if len >= 6 { 4 } else { 3 }).collect();
-            run(
-                &mut found,
-                &mut any_ok,
-                &mut last_error,
-                &format!("{prefix}startwith:{head}"),
-                FUZZY_PER_QUERY,
-                FUZZY_MIN,
-                0.0,
-            );
+            run(&mut found, &format!("{prefix}startwith:{head}"), FUZZY_PER_QUERY, FUZZY_MIN, 0.0);
         }
     }
 
-    if !any_ok {
-        return Err(last_error.unwrap_or_else(|| "нет запроса".into()));
-    }
     let mut items: Vec<FindItem> = found.into_values().collect();
     // Есть хорошие совпадения — случайные слабые («old_dirty_mattress» на «old debug») не нужны.
     let best = items.iter().map(|item| item.score).fold(f64::MIN, f64::max);
@@ -826,7 +755,7 @@ pub fn search_with_source(
             .then(a.path.len().cmp(&b.path.len()))
     });
     items.truncate(MAX_SHOWN);
-    Ok(items)
+    items
 }
 
 // ---------------------------------------------------------------- выбор голосом

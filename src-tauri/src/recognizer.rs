@@ -26,7 +26,7 @@ use crate::grammar::{Grammar, IntentKind};
 use crate::langid::SpeechLid;
 use crate::speech::{LanguageId, Timed, Transcriber};
 use crate::vad::SileroVad;
-use crate::{everything, textnorm, typing};
+use crate::{textnorm, typing};
 
 /// Очередь от realtime-колбэка микрофона. Распознавание идёт синхронно в этом
 /// потоке, поэтому запас ~5 с: длинная фраза в простое не должна терять аудио,
@@ -143,18 +143,17 @@ pub fn run_worker(app: AppHandle, shared: Arc<SharedState>) {
     }
 }
 
-/// Сводка для плиток Главной (вместо разбора текста лога во фронтенде). Общая для
-/// воркера и фоновой проверки Everything, поэтому каждый emit шлёт полный снимок.
+/// Сводка для плиток Главной (вместо разбора текста лога во фронтенде); каждый emit шлёт
+/// полный снимок.
 #[derive(Clone)]
 struct Status {
     asr: &'static str,
     model: String,
-    everything: Option<bool>,
 }
 
 fn emit_status(app: &AppHandle, status: &Mutex<Status>) {
     let Ok(st) = status.lock() else { return };
-    let payload = json!({ "asr": st.asr, "model": st.model, "everything": st.everything });
+    let payload = json!({ "asr": st.asr, "model": st.model });
     crate::events::remember_ui_status(&payload);
     let _ = app.emit("reever://status", payload);
 }
@@ -166,44 +165,12 @@ fn set_asr_status(app: &AppHandle, status: &Mutex<Status>, asr: &'static str) {
     emit_status(app, status);
 }
 
-/// Проверка Everything в фоне: без него до 4 с ретраев, и ждать их, прежде чем
-/// грузить модель и слушать микрофон, незачем.
-fn spawn_everything_probe(app: &AppHandle, cfg: &ReeverConfig, status: &Arc<Mutex<Status>>) {
-    let (app, status) = (app.clone(), status.clone());
-    let (host, port) = (
-        cfg.settings.everything_host.clone(),
-        cfg.settings.everything_port,
-    );
-    ui_log(&app, format!("everything: http://{host}:{port}"));
-    std::thread::spawn(move || {
-        let ok = (0..5).any(|i| {
-            if i > 0 {
-                std::thread::sleep(Duration::from_millis(800));
-            }
-            everything::ping(&host, port).is_ok()
-        });
-        if let Ok(mut st) = status.lock() {
-            st.everything = Some(ok);
-        }
-        emit_status(&app, &status);
-        ui_log(
-            &app,
-            if ok {
-                crate::msg!("log.everything.ok")
-            } else {
-                crate::msg!("log.everything.down")
-            },
-        );
-    });
-}
-
 fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> anyhow::Result<()> {
     let s = &cfg.settings;
     let player = Player::new()?;
     let status = Arc::new(Mutex::new(Status {
         asr: "loading",
         model: s.primary_asr_model().to_string(),
-        everything: None,
     }));
     set_state(app, "loading");
     emit_status(app, &status);
@@ -228,8 +195,6 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             app,
             crate::msg!("log.offline"),
         );
-    } else {
-        spawn_everything_probe(app, cfg, &status);
     }
 
     let lazy_loading = s.models_unload_s > 0;

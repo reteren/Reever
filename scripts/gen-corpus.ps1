@@ -20,7 +20,7 @@
     testdata/corpus/dictation/ и записать testdata/dictation-manifest.json.
 
 .PARAMETER Find
-    Синтезировать компактный find-бенчмарк из реальных целей Everything: по одному
+    Синтезировать компактный find-бенчмарк из реальных целей на диске: по одному
     слитному и одному разделённому паузой после «найди» варианту на цель.
 #>
 [CmdletBinding()]
@@ -407,21 +407,12 @@ if ($Find) {
         if (-not $tokens.ContainsKey($voiceName)) { throw "не найден требуемый голос $voiceName" }
     }
     foreach ($target in $targets) {
-        $queryPrefix = if ($target.kind -eq 'folder') { 'folder: ' } else { 'file: ' }
-        $query = [uri]::EscapeDataString($queryPrefix + [string]$target.name)
-        $webResponse = Invoke-WebRequest -Uri "http://127.0.0.1:8011/?search=$query&json=1&path_column=1&count=120" -TimeoutSec 5 -UseBasicParsing
-        $response = [Text.Encoding]::UTF8.GetString($webResponse.RawContentStream.ToArray()) | ConvertFrom-Json
-        $verified = $false
-        foreach ($item in $response.results) {
-            $fullPath = ([string]$item.path).TrimEnd('\') + '\' + [string]$item.name
-            $nameMatches = [StringComparer]::OrdinalIgnoreCase.Equals([string]$item.name, [string]$target.name)
-            $pathMatches = [StringComparer]::OrdinalIgnoreCase.Equals($fullPath.TrimEnd('\'), ([string]$target.path).TrimEnd('\'))
-            if ($nameMatches -and $pathMatches) {
-                $verified = $true
-                break
-            }
+        $pathType = if ($target.kind -eq 'folder') { 'Container' } else { 'Leaf' }
+        $leaf = Split-Path -Leaf ([string]$target.path)
+        $nameMatches = [StringComparer]::OrdinalIgnoreCase.Equals($leaf, [string]$target.name)
+        if (-not ($nameMatches -and (Test-Path -LiteralPath ([string]$target.path) -PathType $pathType))) {
+            throw "Цели нет на диске: $($target.path)"
         }
-        if (-not $verified) { throw "Everything не подтвердил цель: $($target.path)" }
     }
 
     $rows = New-Object System.Collections.Generic.List[object]

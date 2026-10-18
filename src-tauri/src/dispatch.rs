@@ -1,6 +1,6 @@
 //! Диспетчер: чистый разбор команды и исполнение выбранного маршрута.
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 
 use tauri::{AppHandle, Manager};
@@ -8,7 +8,6 @@ use tauri::{AppHandle, Manager};
 use crate::actions::{Action, SharedState};
 use crate::config::ReeverConfig;
 use crate::events::ui_log;
-use crate::everything::{self, SearchOutcome};
 use crate::grammar::{Grammar, IntentKind};
 use crate::textnorm::{normalize, strip_leading_fillers};
 use crate::{calc, calcapp, launcher, system, winutil};
@@ -104,9 +103,9 @@ pub enum Route {
     System(Action),
     /// Одно или несколько пользовательских действий (мультизапуск «X и Y»).
     Launch(Vec<Action>),
-    /// Ни одно действие не подошло — искать программу через Everything (если включено).
-    LaunchFallback(String),
-    /// Динамический поиск папки через Everything.
+    /// Ни одно действие не подошло: текст команды для журнала и замеров.
+    NoAction(String),
+    /// Поиск папки по своему индексу дисков.
     Folder(Vec<String>),
     /// Веб-поиск: готовый URL и подпись намерения.
     Search { label: String, url: String },
@@ -119,7 +118,7 @@ pub enum Route {
     /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
     /// (он сам печатает текст); сюда она доходит только из eval и тестов.
     Dictate(String),
-    /// Найти через Everything и дать выбрать: кандидаты запроса (русский, английский).
+    /// Найти в своём индексе и дать выбрать: кандидаты запроса (русский, английский).
     Find {
         scope: crate::find::FindScope,
         candidates: Vec<String>,
@@ -218,7 +217,7 @@ pub fn route(
             IntentKind::Launch => {
                 let matched = match_launch_targets(&payloads, actions, match_threshold);
                 if matched.is_empty() {
-                    Route::LaunchFallback(payloads[0].clone())
+                    Route::NoAction(payloads[0].clone())
                 } else {
                     Route::Launch(matched)
                 }
@@ -269,7 +268,7 @@ pub fn route(
             }
         }
 
-        Route::LaunchFallback(text)
+        Route::NoAction(text)
     } else {
         best_action(
             std::slice::from_ref(&text),
@@ -363,7 +362,7 @@ pub fn dispatch(
     text: &str,
     alt: Option<&str>,
 ) -> DispatchResult {
-    // Копируем снапшоты под короткими локами; Everything и запуск приложений идут
+    // Копируем снапшоты под короткими локами; поиск и запуск приложений идут
     // уже без удержания общих mutex, чтобы не задерживать обновления грамматики/UI.
     let grammar = shared.grammar.lock().unwrap().clone();
     let actions = shared.actions.lock().unwrap().clone();
@@ -401,28 +400,9 @@ pub fn dispatch(
             }
             DispatchResult::Done(any)
         }
-        Route::LaunchFallback(target) => {
-            if cfg.settings.offline_mode {
-                ui_log(app, crate::msg!("log.offline.appSearch"));
-                return DispatchResult::Done(false);
-            }
-            if !cfg.settings.launch_everything_fallback {
-                ui_log(app, crate::msg!("log.noAction"));
-                return DispatchResult::Done(false);
-            }
-
-            let query = cfg.aliases.app(&target).unwrap_or_else(|| target.clone());
-            if cfg.settings.private_log {
-                ui_log(app, crate::msg!("log.appSearch.private"));
-            } else {
-                ui_log(app, crate::msg!("log.appSearch", query = &query));
-            }
-            let outcome = everything::find_executables(
-                &cfg.settings.everything_host,
-                cfg.settings.everything_port,
-                &query,
-            );
-            DispatchResult::Done(handle_launch(app, cfg, outcome, &query))
+        Route::NoAction(_) => {
+            ui_log(app, crate::msg!("log.noAction"));
+            DispatchResult::Done(false)
         }
         // «папка X» / «открой папку X» — тот же поиск с окном выбора, что и «найди папку X»;
         // алиасы из aliases.json («загрузки» → Downloads) — дополнительные варианты запроса.
@@ -544,7 +524,7 @@ pub fn dispatch(
     }
 }
 
-/// «Найди …» и «папка …»: поиск через Everything; одно совпадение — открыть, несколько —
+/// «Найди …» и «папка …»: поиск по своему индексу; одно совпадение — открыть, несколько —
 /// окно выбора (docs/find.md).
 fn dispatch_find(
     app: &AppHandle,
@@ -553,8 +533,8 @@ fn dispatch_find(
     scope: crate::find::FindScope,
     candidates: &[String],
 ) -> DispatchResult {
-    if cfg.settings.offline_mode && cfg.settings.find_source == "everything" {
-        ui_log(app, crate::msg!("log.offline.find"));
+    if !cfg.settings.local_index {
+        ui_log(app, crate::msg!("log.find.indexOff"));
         return DispatchResult::Done(false);
     }
     let query = candidates.join(" / ");
@@ -600,30 +580,18 @@ fn dispatch_find(
     let usage = crate::find::Usage::load(&shared.usage_path);
     let recent = crate::find::windows_recent();
     let manager = app.try_state::<crate::local_index::IndexManager>();
-    let snapshot = manager.as_ref().and_then(|manager| manager.snapshot());
-    let items = match crate::find::search_with_source(
-        &cfg.settings.everything_host,
-        cfg.settings.everything_port,
+    let Some(snapshot) = manager.as_ref().and_then(|manager| manager.snapshot()) else {
+        ui_log(app, crate::msg!("log.find.indexBuilding"));
+        return DispatchResult::Done(false);
+    };
+    let items = crate::find::search(
+        &snapshot,
         &names,
         scope,
         extension.as_deref(),
         &usage,
         &recent,
-        &cfg.settings.find_source,
-        snapshot.as_deref(),
-        cfg.settings.offline_mode,
-    ) {
-        Ok(items) => items,
-        Err(error) => {
-            // Текст ошибки может содержать кусок ответа с путями — не в приватном режиме.
-            if cfg.settings.private_log {
-                ui_log(app, crate::msg!("log.everythingDown.private"));
-            } else {
-                ui_log(app, crate::msg!("log.everythingDown", error = error));
-            }
-            return DispatchResult::Done(false);
-        }
-    };
+    );
     match items.len() {
         0 => {
             ui_log(app, crate::msg!("log.find.nothing"));
@@ -771,7 +739,7 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
         "folder" => {
             ui_log(app, crate::msg!("log.openFolder", target = &target));
             launch_with_raise(cfg, &hint, || {
-                everything::open_folders(&[PathBuf::from(&target)]) > 0
+                launcher::open_folder(Path::new(&target))
             })
         }
         "uwp" => {
@@ -787,21 +755,6 @@ fn run_action(app: &AppHandle, cfg: &ReeverConfig, action: &Action) -> bool {
             launch_with_raise(cfg, &hint, || launcher::shell_open(&target))
         }
     }
-}
-
-fn handle_launch(app: &AppHandle, cfg: &ReeverConfig, outcome: SearchOutcome, hint: &str) -> bool {
-    if let Some(error) = outcome.error {
-        ui_log(app, format!("⚠ {error}"));
-        return false;
-    }
-    if outcome.paths.is_empty() {
-        ui_log(app, crate::msg!("log.appNotFound"));
-        return false;
-    }
-    let target = outcome.paths[0].clone();
-    ui_log(app, crate::msg!("log.launch", target = target.display()));
-    let hint = hint.to_string();
-    launch_with_raise(cfg, &hint, || launcher::launch(&target))
 }
 
 /// Открыть ссылку и вывести браузер на передний план — в том числе свёрнутый: вкладка
@@ -913,7 +866,7 @@ mod tests {
         );
         assert_eq!(
             route("абракадабра", &grammar, &actions, THRESHOLD),
-            Route::LaunchFallback("абракадабра".into())
+            Route::NoAction("абракадабра".into())
         );
     }
 
@@ -980,7 +933,7 @@ mod tests {
         );
         assert_eq!(
             route("открой абракадабра", &grammar, &actions, THRESHOLD),
-            Route::LaunchFallback("абракадабра".into())
+            Route::NoAction("абракадабра".into())
         );
     }
 

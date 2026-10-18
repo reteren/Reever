@@ -53,7 +53,7 @@ cargo run --release --example eval -- --noise-db -30   # то же с фонов
 | `src-tauri/src/{textnorm,commands,dispatch}.rs` | нормализация текста и wake, грамматика команд, диспетчер |
 | `src-tauri/src/config.rs` | настройки, алиасы, резолв путей dev↔release |
 | `src-tauri/src/commands_api.rs` | команды для интерфейса |
-| `src-tauri/src/everything.rs` | HTTP-клиент Everything |
+| `src-tauri/src/{find,local_index}.rs` | «найди …»: запросы и ранжирование, свой индекс дисков |
 | `src-tauri/src/{launcher,apps,system,winutil}.rs` | запуск, перечисление приложений, системные команды, окна |
 | `frontend/` | интерфейс без сборки: `index.html`, `picker.html`, `skin.css`, скин в `skin/` |
 

@@ -44,7 +44,7 @@ CTC-вариант GigaAM проигрывает RNNT без шума (95% пр�
    → Engine (автомат: Idle / Command / Confirm / Calibrating)
         └ Transcriber = Asr (GigaAM v3) — распознаёт каждую законченную фразу
    → recognizer.rs (glue с Tauri: звуки, события UI, dispatch)
-   → dispatch.rs (system → search → verbs) → launcher / everything / system
+   → dispatch.rs (system → search → verbs) → launcher / find (индекс дисков) / system
 ```
 
 Vosk уходит полностью (волна 2): wake-слово ловится тем же GigaAM — каждая фраза в простое
@@ -126,8 +126,7 @@ Vosk уходит полностью (волна 2): wake-слово ловит�
 - `reever://state` — `"idle" | "listening" | "busy" | "paused" | "error" | "loading"`.
 - `reever://partial` — string, живой текст команды (раньше не эмитился — теперь будет).
 - `reever://heard` — string, итоговый распознанный текст команды (не шлётся при `private_log`).
-- `reever://status` — JSON `{ "asr": "loading"|"ready"|"error", "model": string,
-  "everything": bool|null }` — вместо разбора лога регулярками во фронтенде.
+- `reever://status` — JSON `{ "asr": "loading"|"ready"|"error", "model": string }` — вместо разбора лога регулярками во фронтенде.
 - `reever://log`, `reever://calibrated` — как раньше.
 
 ## Правила для всех
