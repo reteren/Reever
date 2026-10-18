@@ -1,4 +1,5 @@
-//! Офлайн-ASR: GigaAM v3 (русский) через sherpa-onnx. Владелец: воркер `asr`.
+//! Офлайн-ASR через sherpa-onnx: модель по файлам в папке (NeMo transducer/CTC, SenseVoice,
+//! Whisper, Qwen3) и набор моделей под включённые языки (`AsrSet`).
 
 use std::{
     fs::{self, OpenOptions},
@@ -10,15 +11,20 @@ use std::{
 use anyhow::{bail, Context};
 use sherpa_onnx::{
     OfflineNemoEncDecCtcModelConfig, OfflineQwen3ASRModelConfig, OfflineRecognizer,
-    OfflineRecognizerConfig, OfflineTransducerModelConfig, OfflineWhisperModelConfig,
+    OfflineRecognizerConfig, OfflineSenseVoiceModelConfig, OfflineTransducerModelConfig,
+    OfflineWhisperModelConfig,
 };
 
 use crate::{
-    speech::{Timed, TimedWord, Transcriber},
+    langid::SpeechLid,
+    models::ModelPlan,
+    speech::{samples, Timed, TimedWord, Transcriber},
     textnorm,
 };
 
 const MIN_AUDIO_SAMPLES: usize = 3_200; // 0,2 секунды при 16 кГц
+const SHORT_AUDIO_SAMPLES: usize = samples(1_000);
+const SHORT_AUDIO_PAD: usize = samples(700);
 
 /// sherpa-onnx 1.13.8 принимает параметры CPU arena только через `cpu:<файл>`.
 /// Файл живёт лишь до создания сессии и удаляется RAII-объектом.
@@ -108,7 +114,26 @@ impl Asr {
         let cpu_provider = CpuProviderConfig::new()?;
         recognizer_config.model_config.provider = Some(cpu_provider.provider());
 
-        if qwen_frontend.is_file()
+        let sense_voice = model_dir
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().contains("sense-voice"));
+
+        if sense_voice {
+            // SenseVoice — тоже model*.onnx + tokens.txt, как NeMo CTC; отличить можно
+            // только по имени папки.
+            let (Some(model), true) = (ctc_model.as_ref(), tokens.is_file()) else {
+                bail!(
+                    "SenseVoice needs model*.onnx and tokens.txt in {}",
+                    model_dir.display()
+                );
+            };
+            recognizer_config.model_config.sense_voice = OfflineSenseVoiceModelConfig {
+                model: Some(path_string(model)),
+                // Язык фразы модель определяет сама; ITN пишет числа цифрами.
+                language: None,
+                use_itn: true,
+            };
+        } else if qwen_frontend.is_file()
             && qwen_tokenizer.is_dir()
             && encoder.is_some()
             && decoder.is_some()
@@ -212,6 +237,14 @@ impl Asr {
         // Короткие сегменты дополняем тишиной: фронтенду модели нужны хотя бы
         // несколько акустических кадров, а сегментер может отдать меньше 0,2 с.
         waveform.resize(waveform.len().max(MIN_AUDIO_SAMPLES), 0.0);
+        // Многоязычная Parakeet v3 на одном коротком слове (до 1 с) без тишины вокруг теряет язык:
+        // «да» → «Da», «D.». С 0,7 с тишины с обеих сторон — «Да.» (testdata/corpus, app_confirm).
+        if waveform.len() < SHORT_AUDIO_SAMPLES {
+            let mut padded = vec![0.0; SHORT_AUDIO_PAD];
+            padded.extend_from_slice(&waveform);
+            padded.resize(padded.len() + SHORT_AUDIO_PAD, 0.0);
+            waveform = padded;
+        }
 
         let stream = self.recognizer.create_stream();
         stream.accept_waveform(16_000, &waveform);
@@ -249,6 +282,112 @@ impl Transcriber for Asr {
             duration,
         );
         Ok(Timed { text, words })
+    }
+}
+
+/// Короче этого определитель языка ошибается: «ривер» один — любая модель справится.
+const LID_MIN_SAMPLES: usize = samples(700);
+/// Решение по фразе длиной от стольких сэмплов переиспользуется для её продолжения.
+const LID_REUSE_SAMPLES: usize = samples(1_500);
+
+/// Модели распознавания под включённые языки (models.rs). Модель одна — фраза идёт ей;
+/// несколько — определитель языка решает, какой модели её отдать.
+pub struct AsrSet {
+    models: Vec<(&'static [&'static str], Asr)>,
+    lid: Option<SpeechLid>,
+    /// Последнее решение: (отпечаток начала фразы, длина аудио, модель). Частичное
+    /// распознавание одной фразы идёт каждые 400 мс — язык не нужно определять заново.
+    last: Option<(u64, usize, usize)>,
+}
+
+impl AsrSet {
+    /// Загружает все модели плана. Определитель языка не загрузился — фразы идут первой
+    /// модели, а ошибка возвращается вторым значением для журнала.
+    pub fn load(plan: &ModelPlan, num_threads: i32) -> anyhow::Result<(Self, Option<String>)> {
+        let mut models = Vec::with_capacity(plan.models.len());
+        for model in &plan.models {
+            let asr = Asr::new(&AsrConfig {
+                model_dir: model.dir.clone(),
+                num_threads,
+            })?;
+            models.push((model.covers, asr));
+        }
+        let mut lid_error = None;
+        let lid = match &plan.lid {
+            Some(dir) if models.len() > 1 => match SpeechLid::new(dir, 1) {
+                Ok(lid) => Some(lid),
+                Err(error) => {
+                    lid_error = Some(format!("{error:#}"));
+                    None
+                }
+            },
+            _ => None,
+        };
+        Ok((
+            Self {
+                models,
+                lid,
+                last: None,
+            },
+            lid_error,
+        ))
+    }
+
+    fn pick(&mut self, pcm: &[i16]) -> usize {
+        if self.models.len() < 2 {
+            return 0;
+        }
+        let Some(lid) = self.lid.as_mut() else {
+            return 0;
+        };
+        let fingerprint = fingerprint(pcm);
+        if let Some((last_print, last_len, index)) = self.last {
+            if last_print == fingerprint && (last_len >= LID_REUSE_SAMPLES || pcm.len() <= last_len)
+            {
+                return index;
+            }
+        }
+        if pcm.len() < LID_MIN_SAMPLES {
+            return 0;
+        }
+        let index = match lid.detect_code(pcm) {
+            Ok(code) => self
+                .models
+                .iter()
+                .position(|(covers, _)| covers.contains(&code.as_str()))
+                .unwrap_or(0),
+            Err(_) => 0,
+        };
+        self.last = Some((fingerprint, pcm.len(), index));
+        index
+    }
+
+    fn asr(&mut self, pcm: &[i16]) -> &mut Asr {
+        let index = self.pick(pcm);
+        &mut self.models[index].1
+    }
+}
+
+/// Отпечаток первых 0,5 с: у частичных распознаваний одной фразы он одинаковый.
+fn fingerprint(pcm: &[i16]) -> u64 {
+    pcm.iter()
+        .take(samples(500))
+        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, sample| {
+            (hash ^ u64::from(*sample as u16)).wrapping_mul(0x0100_0000_01b3)
+        })
+}
+
+impl Transcriber for AsrSet {
+    fn transcribe(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        self.asr(pcm).transcribe(pcm)
+    }
+
+    fn transcribe_verbatim(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        self.asr(pcm).transcribe_verbatim(pcm)
+    }
+
+    fn transcribe_timed(&mut self, pcm: &[i16]) -> anyhow::Result<Timed> {
+        self.asr(pcm).transcribe_timed(pcm)
     }
 }
 
@@ -530,14 +669,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "нужны скачанная GigaAM-модель и путь WAV в ASR_TEST_WAV"]
+    #[ignore = "нужны скачанная Parakeet v3 и путь WAV в ASR_TEST_WAV"]
     fn recognizes_one_wav() {
         let model_dir = env::var_os("ASR_MODEL_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-                    "resources/model/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16",
-                )
+                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("resources/model")
+                    .join(crate::models::EUROPEAN.dir)
             });
         let wav_path = PathBuf::from(env::var_os("ASR_TEST_WAV").expect("задайте ASR_TEST_WAV"));
         let wave = Wave::read(&wav_path.to_string_lossy()).expect("прочитать тестовый WAV");
@@ -559,14 +698,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "нужны скачанная GigaAM-модель и путь WAV в ASR_TEST_WAV"]
+    #[ignore = "нужны скачанная Parakeet v3 и путь WAV в ASR_TEST_WAV"]
     fn transcribe_timed_returns_monotonic_words_over_the_speech() {
         let model_dir = env::var_os("ASR_MODEL_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-                    "resources/model/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16",
-                )
+                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("resources/model")
+                    .join(crate::models::EUROPEAN.dir)
             });
         let wav_path = PathBuf::from(env::var_os("ASR_TEST_WAV").expect("задайте ASR_TEST_WAV"));
         let wave = Wave::read(&wav_path.to_string_lossy()).expect("прочитать тестовый WAV");

@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 9;
+const GRAMMAR_VERSION: u32 = 10;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -24,10 +24,32 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (8, &["find", "find_folder", "find_file"]),
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
-const ADDED_CANCEL_WORDS: &[(u32, &str)] =
-    &[(7, "хватит"), (7, "остановись"), (7, "stop"), (9, "cancel")];
+/// Версия 10 — «отмена» языков из языковых пакетов (models.rs).
+const ADDED_CANCEL_WORDS: &[(u32, &str)] = &[
+    (7, "хватит"),
+    (7, "остановись"),
+    (7, "stop"),
+    (9, "cancel"),
+    (10, "abbrechen"),
+    (10, "annuler"),
+    (10, "cancelar"),
+    (10, "annulla"),
+    (10, "取消"),
+    (10, "キャンセル"),
+];
 /// Новые фразы конца диктовки: (версия, фраза).
-const ADDED_DICTATION_STOP: &[(u32, &str)] = &[(9, "stop typing")];
+const ADDED_DICTATION_STOP: &[(u32, &str)] = &[
+    (9, "stop typing"),
+    (10, "diktat beenden"),
+    (10, "arrête la dictée"),
+    (10, "termina el dictado"),
+    (10, "fine dettatura"),
+    (10, "parar ditado"),
+    (10, "停止输入"),
+    (10, "入力終了"),
+];
+/// Новые варианты wake-слова: (версия, слово). «リバー» — как японская модель пишет «river».
+const ADDED_WAKE_WORDS: &[(u32, &str)] = &[(10, "リバー")];
 /// Новые фразы у существующих намерений: (версия, id намерения, фраза). Дописываются
 /// один раз при миграции, если фраза не занята другим намерением.
 /// Версия 9 — английские фразы: английский распознаётся всегда (Настройки → Языки), а
@@ -52,7 +74,108 @@ const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[
     (9, "dictate", "dictate"),
     (9, "kill", "kill"),
     (9, "kill", "end task"),
+    // Parakeet v3 пишет русский глагол и в неопределённой форме: «завершить телеграм».
+    (10, "kill", "завершить"),
+    (10, "close", "закрыть"),
 ];
+
+/// Фразы команд на языках из языковых пакетов (версия 10): (язык, id намерения, фразы).
+/// В грамматике они обычные — их видно и можно править в редакторе, — но сравниваются,
+/// только пока их язык распознаётся (`set_active_languages`): иначе «apri» или «ferme»
+/// нечаянно совпали бы с русской речью. Японские глаголы стоят в конце фразы
+/// («メモ帳を開いて») — их `match_trigger` ищет и в конце (`TRAILING_LANGUAGES`).
+pub(crate) const LANGUAGE_TRIGGERS: &[(&str, &str, &[&str])] = &[
+    ("de", "launch", &["öffne", "öffnen", "starte", "starten"]),
+    ("de", "folder", &["ordner", "öffne ordner", "öffne den ordner"]),
+    ("de", "web_google", &["suche bei google", "google suche"]),
+    ("de", "web_youtube", &["suche auf youtube", "youtube suche"]),
+    ("de", "close", &["schließe", "schließ", "schließen"]),
+    ("de", "calc", &["rechne", "rechner", "berechne", "wie viel ist"]),
+    ("de", "dictate", &["schreibe", "schreib", "diktiere", "diktat"]),
+    ("de", "find", &["finde", "suche", "such"]),
+    ("de", "find_folder", &["finde ordner", "suche ordner"]),
+    ("de", "find_file", &["finde datei", "suche datei"]),
+    ("de", "kill", &["beende", "beenden", "task beenden"]),
+    ("fr", "launch", &["ouvre", "ouvrir", "lance", "lancer", "démarre"]),
+    ("fr", "folder", &["dossier", "ouvre le dossier", "ouvre dossier"]),
+    ("fr", "web_google", &["cherche sur google", "recherche google"]),
+    ("fr", "web_youtube", &["cherche sur youtube", "recherche youtube"]),
+    ("fr", "close", &["ferme", "fermer"]),
+    ("fr", "calc", &["calcule", "calcul", "combien font", "combien fait"]),
+    ("fr", "dictate", &["écris", "écrire", "dictée"]),
+    ("fr", "find", &["trouve", "cherche"]),
+    ("fr", "find_folder", &["trouve le dossier", "cherche le dossier"]),
+    ("fr", "find_file", &["trouve le fichier", "cherche le fichier"]),
+    ("fr", "kill", &["termine", "tue"]),
+    ("es", "launch", &["abre", "abrir", "inicia", "ejecuta", "lanza"]),
+    ("es", "folder", &["carpeta", "abre la carpeta", "abre carpeta"]),
+    ("es", "web_google", &["busca en google", "buscar en google"]),
+    ("es", "web_youtube", &["busca en youtube", "buscar en youtube"]),
+    ("es", "close", &["cierra", "cerrar"]),
+    ("es", "calc", &["calcula", "cuánto es"]),
+    ("es", "dictate", &["escribe", "escribir", "dictado"]),
+    ("es", "find", &["busca", "buscar", "encuentra"]),
+    ("es", "find_folder", &["busca la carpeta", "encuentra la carpeta"]),
+    ("es", "find_file", &["busca el archivo", "encuentra el archivo"]),
+    ("es", "kill", &["termina", "finaliza", "mata"]),
+    ("it", "launch", &["apri", "aprire", "avvia", "lancia"]),
+    ("it", "folder", &["cartella", "apri la cartella", "apri cartella"]),
+    ("it", "web_google", &["cerca su google"]),
+    ("it", "web_youtube", &["cerca su youtube"]),
+    ("it", "close", &["chiudi", "chiudere"]),
+    ("it", "calc", &["calcola", "calcolo", "quanto fa"]),
+    ("it", "dictate", &["scrivi", "scrivere", "dettatura"]),
+    ("it", "find", &["trova", "cerca"]),
+    ("it", "find_folder", &["trova la cartella", "cerca la cartella"]),
+    ("it", "find_file", &["trova il file", "cerca il file"]),
+    ("it", "kill", &["termina", "uccidi"]),
+    ("pt", "launch", &["abra", "abre", "abrir", "inicie", "execute"]),
+    ("pt", "folder", &["pasta", "abra a pasta", "abrir pasta"]),
+    ("pt", "web_google", &["pesquise no google", "pesquisar no google"]),
+    ("pt", "web_youtube", &["pesquise no youtube", "pesquisar no youtube"]),
+    ("pt", "close", &["feche", "fechar"]),
+    ("pt", "calc", &["calcule", "quanto é"]),
+    ("pt", "dictate", &["escreva", "escrever", "ditado"]),
+    ("pt", "find", &["encontre", "procure", "busque"]),
+    ("pt", "find_folder", &["encontre a pasta", "procure a pasta"]),
+    ("pt", "find_file", &["encontre o arquivo", "procure o arquivo"]),
+    ("pt", "kill", &["encerre", "finalize", "mate"]),
+    ("zh", "launch", &["打开", "启动", "运行"]),
+    ("zh", "folder", &["文件夹", "打开文件夹"]),
+    ("zh", "web_google", &["谷歌搜索", "用谷歌搜索"]),
+    ("zh", "web_youtube", &["油管搜索", "在油管上搜索"]),
+    ("zh", "close", &["关闭", "关掉"]),
+    ("zh", "calc", &["计算", "算一下"]),
+    ("zh", "dictate", &["听写", "输入", "写下"]),
+    ("zh", "find", &["查找", "找"]),
+    ("zh", "find_folder", &["查找文件夹", "找文件夹"]),
+    ("zh", "find_file", &["查找文件", "找文件"]),
+    ("zh", "kill", &["结束", "结束任务", "强制关闭"]),
+    ("ja", "launch", &["開いて", "開く", "起動して", "起動"]),
+    ("ja", "folder", &["フォルダ", "フォルダを開いて"]),
+    ("ja", "web_google", &["グーグルで検索", "グーグル検索"]),
+    ("ja", "web_youtube", &["ユーチューブで検索", "ユーチューブ検索"]),
+    ("ja", "close", &["閉じて", "閉じる"]),
+    ("ja", "calc", &["計算して", "計算"]),
+    ("ja", "dictate", &["入力して", "書いて", "ディクテーション"]),
+    ("ja", "find", &["探して", "検索して"]),
+    ("ja", "find_folder", &["フォルダを探して"]),
+    ("ja", "find_file", &["ファイルを探して"]),
+    ("ja", "kill", &["終了して", "強制終了"]),
+];
+/// Артикль немецкого, французского, испанского, итальянского или португальского.
+fn is_article(word: &str) -> bool {
+    matches!(
+        word,
+        "der" | "die" | "das" | "den" | "dem" | "le" | "la" | "les" | "l" | "el" | "los"
+            | "las" | "il" | "lo" | "gli" | "o" | "a" | "os" | "as"
+    )
+}
+
+/// Языки, где глагол команды идёт после цели.
+const TRAILING_LANGUAGES: &[&str] = &["ja"];
+/// Падежные частицы перед японским глаголом: «メモ帳を開いて» — цель «メモ帳».
+const TRAILING_PARTICLES: &[&str] = &["を", "で", "に", "は"];
 /// Английские фразы встроенных системных действий (actions.json), версия 9.
 pub(crate) const ENGLISH_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
     ("sys_shutdown", &["shut down computer", "turn off computer"]),
@@ -62,6 +185,103 @@ pub(crate) const ENGLISH_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
     ("sys_next", &["next track"]),
     ("sys_prev", &["previous track"]),
 ];
+/// Фразы системных действий на языках из языковых пакетов, версия 10.
+pub const LANGUAGE_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
+    (
+        "sys_shutdown",
+        &[
+            "computer herunterfahren",
+            "éteins l'ordinateur",
+            "apaga el ordenador",
+            "spegni il computer",
+            "desligue o computador",
+            "关机",
+            "シャットダウン",
+        ],
+    ),
+    (
+        "sys_restart",
+        &[
+            "computer neu starten",
+            "redémarre l'ordinateur",
+            "reinicia el ordenador",
+            "riavvia il computer",
+            "reinicie o computador",
+            "重启电脑",
+            "再起動",
+        ],
+    ),
+    (
+        "sys_mute",
+        &["ton aus", "coupe le son", "silencia el sonido", "disattiva l'audio", "silenciar som", "静音", "ミュート"],
+    ),
+    (
+        "sys_play",
+        &[
+            "musik pausieren",
+            "musik abspielen",
+            "pause musique",
+            "pausa la música",
+            "metti in pausa la musica",
+            "pausar música",
+            "暂停音乐",
+            "播放音乐",
+            "音楽を一時停止",
+            "音楽を再生",
+        ],
+    ),
+    (
+        "sys_next",
+        &["nächster titel", "piste suivante", "siguiente canción", "traccia successiva", "próxima faixa", "下一首", "次の曲"],
+    ),
+    (
+        "sys_prev",
+        &["vorheriger titel", "piste précédente", "canción anterior", "traccia precedente", "faixa anterior", "上一首", "前の曲"],
+    ),
+];
+
+static ACTIVE_LANGUAGES: std::sync::RwLock<Option<Vec<String>>> = std::sync::RwLock::new(None);
+
+/// Языки, которые сейчас распознаются (models.rs): фразы `LANGUAGE_TRIGGERS` других
+/// языков `match_trigger` пропускает. Не задано — сравниваются все (тесты, examples).
+pub fn set_active_languages(languages: &[&str]) {
+    if let Ok(mut active) = ACTIVE_LANGUAGES.write() {
+        *active = Some(languages.iter().map(|code| code.to_string()).collect());
+    }
+}
+
+/// Языки встроенной фразы (одна и та же фраза бывает у двух языков: «abre», «termina»).
+fn trigger_languages(normalized: &str) -> &'static [&'static str] {
+    static BY_PHRASE: std::sync::OnceLock<
+        std::collections::HashMap<String, Vec<&'static str>>,
+    > = std::sync::OnceLock::new();
+    BY_PHRASE
+        .get_or_init(|| {
+            let mut map: std::collections::HashMap<String, Vec<&'static str>> =
+                std::collections::HashMap::new();
+            for (language, _, phrases) in LANGUAGE_TRIGGERS {
+                for phrase in *phrases {
+                    let languages = map.entry(normalize(phrase)).or_default();
+                    if !languages.contains(language) {
+                        languages.push(language);
+                    }
+                }
+            }
+            map
+        })
+        .get(normalized)
+        .map_or(&[], Vec::as_slice)
+}
+
+/// Сравнивается ли фраза: своя фраза пользователя — всегда, встроенная — пока её язык
+/// распознаётся (`active`; `None` — все языки).
+fn trigger_active(normalized: &str, active: Option<&[String]>) -> bool {
+    let Some(active) = active else {
+        return true;
+    };
+    let languages = trigger_languages(normalized);
+    languages.is_empty() || languages.iter().any(|language| active.iter().any(|a| a == language))
+}
 
 fn legacy_version() -> u32 {
     1
@@ -184,6 +404,34 @@ impl Grammar {
     /// папка; «ривер загугли X» — Google; «ривер поиск ютуб X» — YouTube.
     /// Глаголы «открой»/«запусти» для программ приняты дополнительно, но не обязательны.
     pub fn defaults() -> Self {
+        let mut grammar = Self::base_defaults();
+        for (_, id, phrases) in LANGUAGE_TRIGGERS {
+            for phrase in *phrases {
+                add_trigger_if_free(&mut grammar, id, phrase);
+            }
+        }
+        grammar.cancel_words.extend(
+            ADDED_CANCEL_WORDS
+                .iter()
+                .filter(|(version, _)| *version >= 10)
+                .map(|(_, word)| word.to_string()),
+        );
+        grammar.dictation_stop.extend(
+            ADDED_DICTATION_STOP
+                .iter()
+                .filter(|(version, _)| *version >= 10)
+                .map(|(_, phrase)| phrase.to_string()),
+        );
+        grammar
+            .wake_words
+            .extend(ADDED_WAKE_WORDS.iter().map(|(_, word)| word.to_string()));
+        for (_, id, phrase) in ADDED_DEFAULT_TRIGGERS.iter().filter(|(version, _, _)| *version >= 10) {
+            add_trigger_if_free(&mut grammar, id, phrase);
+        }
+        grammar
+    }
+
+    fn base_defaults() -> Self {
         Self {
             version: GRAMMAR_VERSION,
             wake_words: vec![
@@ -332,6 +580,9 @@ impl Grammar {
                     if old_version < 9 {
                         actions_changed = append_english_system_phrases(actions);
                     }
+                    if old_version < 10 {
+                        actions_changed |= append_language_system_phrases(actions);
+                    }
                     append_versioned_defaults(&mut grammar);
                     grammar.version = GRAMMAR_VERSION;
                     if let Err(error) = grammar.save(path) {
@@ -377,8 +628,10 @@ impl Grammar {
             grammar.cancel_words = configured_cancel_words;
         }
 
-        // Первый запуск: системные действия из resources/actions.json — с английскими фразами.
+        // Первый запуск: системные действия из resources/actions.json — с фразами на
+        // английском и языках из языковых пакетов.
         let mut migrated = append_english_system_phrases(actions);
+        migrated |= append_language_system_phrases(actions);
         let mut keep = Vec::with_capacity(actions.len());
         for action in actions.drain(..) {
             if action.kind != "search" {
@@ -520,6 +773,12 @@ impl Grammar {
     /// Только непустые фразы включённых намерений; сравнение нечёткое, как у поисковых
     /// триггеров раньше («за гугле» = «загугли»), и целыми словами.
     pub fn match_trigger(&self, text: &str) -> Option<TriggerMatch<'_>> {
+        let active = ACTIVE_LANGUAGES.read().ok().and_then(|active| active.clone());
+        self.match_trigger_for(text, active.as_deref())
+    }
+
+    /// `match_trigger` для заданных языков (`None` — все): тесты не трогают общее состояние.
+    fn match_trigger_for(&self, text: &str, active: Option<&[String]>) -> Option<TriggerMatch<'_>> {
         let normalized = strip_leading_fillers(&normalize(text));
         let words: Vec<&str> = normalized.split_whitespace().collect();
         if words.is_empty() {
@@ -531,13 +790,23 @@ impl Grammar {
             for trigger in &intent.triggers {
                 let trigger_words = normalize(trigger);
                 let trigger_count = trigger_words.split_whitespace().count();
-                if trigger_count == 0 {
+                if trigger_count == 0 || !trigger_active(&trigger_words, active) {
                     continue;
                 }
-                let min_take = trigger_count.saturating_sub(1).max(1);
-                let max_take = (trigger_count + 1).min(words.len());
-                for take in min_take..=max_take {
-                    let score = trigger_score(&words[..take].join(" "), &trigger_words);
+                // Иероглифы — слова из одного знака: нечёткость «на слово больше или меньше»
+                // превратила бы «查找文件» в «查找文件夹». Только точное совпадение знаков.
+                let cjk = trigger_words.chars().any(crate::textnorm::is_cjk);
+                let (min_take, max_take) = if cjk {
+                    (trigger_count, trigger_count)
+                } else {
+                    (trigger_count.saturating_sub(1).max(1), trigger_count + 1)
+                };
+                for take in min_take..=max_take.min(words.len()) {
+                    let score = if cjk {
+                        if words[..take].join(" ") == trigger_words { 1.0 } else { 0.0 }
+                    } else {
+                        trigger_score(&words[..take].join(" "), &trigger_words)
+                    };
                     if score < TRIGGER_THRESHOLD {
                         continue;
                     }
@@ -557,18 +826,65 @@ impl Grammar {
             }
         }
 
+        if best.is_none() {
+            return self.match_trailing_trigger(&words, active);
+        }
         best.map(|(intent, trigger, _, consumed, _)| {
             // Частица после глагола — не часть цели: «открой-ка калькулятор» модель
             // пишет «открой ка калькулятор», и «ка калькулятор» не находил действие.
+            // Артикль перед целью тоже не её часть: «abra o telegram», «ouvre le
+            // dossier», «apri la cartella» — действие называется «telegram».
             let start = consumed
                 + words[consumed..]
                     .iter()
-                    .take_while(|word| matches!(**word, "ка" | "-ка"))
+                    .take_while(|word| matches!(**word, "ка" | "-ка") || is_article(word))
                     .count();
             TriggerMatch {
                 intent,
                 trigger: trigger.to_string(),
                 payload: words[start..].join(" "),
+            }
+        })
+    }
+
+    /// Японский порядок слов: глагол в конце («メモ帳 を 開 い て»). Только точное
+    /// совпадение знаков — нечёткое сравнение отдельных иероглифов бессмысленно.
+    fn match_trailing_trigger(
+        &self,
+        words: &[&str],
+        active: Option<&[String]>,
+    ) -> Option<TriggerMatch<'_>> {
+        let mut best: Option<(&Intent, &str, usize)> = None;
+        for intent in self.intents.iter().filter(|intent| intent.enabled) {
+            for trigger in &intent.triggers {
+                let trigger_words = normalize(trigger);
+                let trigger_words: Vec<&str> = trigger_words.split_whitespace().collect();
+                let count = trigger_words.len();
+                let trailing = trigger_languages(&trigger_words.join(" "))
+                    .iter()
+                    .any(|language| TRAILING_LANGUAGES.contains(language));
+                if count == 0
+                    || !trailing
+                    || count > words.len()
+                    || !trigger_active(&trigger_words.join(" "), active)
+                    || words[words.len() - count..] != trigger_words[..]
+                {
+                    continue;
+                }
+                if best.is_none_or(|(_, _, best_count)| count > best_count) {
+                    best = Some((intent, trigger, count));
+                }
+            }
+        }
+        best.map(|(intent, trigger, count)| {
+            let mut end = words.len() - count;
+            if end > 0 && TRAILING_PARTICLES.contains(&words[end - 1]) {
+                end -= 1;
+            }
+            TriggerMatch {
+                intent,
+                trigger: trigger.to_string(),
+                payload: words[..end].join(" "),
             }
         })
     }
@@ -619,20 +935,26 @@ fn append_versioned_defaults(grammar: &mut Grammar) {
             grammar.cancel_words.push((*word).to_string());
         }
     }
+    for (introduced_version, word) in ADDED_WAKE_WORDS {
+        if grammar.version < *introduced_version
+            && !grammar
+                .wake_words
+                .iter()
+                .any(|existing| normalize(existing) == normalize(word))
+        {
+            grammar.wake_words.push((*word).to_string());
+        }
+    }
     for (introduced_version, id, phrase) in ADDED_DEFAULT_TRIGGERS {
-        if grammar.version >= *introduced_version {
-            continue;
+        if grammar.version < *introduced_version {
+            add_trigger_if_free(grammar, id, phrase);
         }
-        let wanted = normalize(phrase);
-        let taken = grammar
-            .intents
-            .iter()
-            .any(|intent| intent.triggers.iter().any(|trigger| normalize(trigger) == wanted));
-        if taken {
-            continue;
-        }
-        if let Some(intent) = grammar.intents.iter_mut().find(|intent| intent.id == *id) {
-            intent.triggers.push((*phrase).to_string());
+    }
+    if grammar.version < 10 {
+        for (_, id, phrases) in LANGUAGE_TRIGGERS {
+            for phrase in *phrases {
+                add_trigger_if_free(grammar, id, phrase);
+            }
         }
     }
     let defaults = Grammar::defaults();
@@ -683,11 +1005,35 @@ fn append_versioned_defaults(grammar: &mut Grammar) {
     }
 }
 
+/// Фраза достаётся намерению `id`, если её ещё нет ни у одного намерения.
+fn add_trigger_if_free(grammar: &mut Grammar, id: &str, phrase: &str) {
+    let wanted = normalize(phrase);
+    let taken = grammar
+        .intents
+        .iter()
+        .any(|intent| intent.triggers.iter().any(|trigger| normalize(trigger) == wanted));
+    if taken {
+        return;
+    }
+    if let Some(intent) = grammar.intents.iter_mut().find(|intent| intent.id == id) {
+        intent.triggers.push(phrase.to_string());
+    }
+}
+
 /// Дописать английские фразы встроенным системным действиям (один раз, при переходе
 /// грамматики на версию 9). Фраза, которая уже есть у любого действия, не дублируется.
 fn append_english_system_phrases(actions: &mut [Action]) -> bool {
+    append_system_phrases(actions, ENGLISH_SYSTEM_PHRASES)
+}
+
+/// То же для языков из языковых пакетов (версия 10).
+fn append_language_system_phrases(actions: &mut [Action]) -> bool {
+    append_system_phrases(actions, LANGUAGE_SYSTEM_PHRASES)
+}
+
+fn append_system_phrases(actions: &mut [Action], table: &[(&str, &[&str])]) -> bool {
     let mut changed = false;
-    for (id, phrases) in ENGLISH_SYSTEM_PHRASES {
+    for (id, phrases) in table {
         for phrase in *phrases {
             let wanted = normalize(phrase);
             if actions
@@ -840,7 +1186,7 @@ mod tests {
         triggers
             .iter()
             .map(String::as_str)
-            .filter(|trigger| !trigger.is_ascii())
+            .filter(|trigger| trigger.chars().any(|c| matches!(c, 'а'..='я' | 'ё')))
             .collect()
     }
 
@@ -876,7 +1222,9 @@ mod tests {
         }];
         let (migrated, actions_changed) = Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
         assert!(actions_changed);
-        assert_eq!(actions[0].phrases, ["следующий трек", "next track"]);
+        assert_eq!(actions[0].phrases[..2], ["следующий трек", "next track"]);
+        assert!(actions[0].phrases.iter().any(|phrase| phrase == "nächster titel"));
+        let phrase_count = actions[0].phrases.len();
         let launch = migrated.intents.iter().find(|i| i.id == "launch").unwrap();
         assert!(launch.triggers.iter().any(|t| t == "open"));
         // «quit» уже был у «закрой» — не дублируется.
@@ -888,7 +1236,41 @@ mod tests {
         let (reloaded, changed_again) = Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
         assert_eq!(reloaded, migrated);
         assert!(!changed_again);
-        assert_eq!(actions[0].phrases.len(), 2);
+        assert_eq!(actions[0].phrases.len(), phrase_count);
+    }
+
+    #[test]
+    fn language_pack_commands_match_only_while_their_language_is_on() {
+        let grammar = Grammar::defaults();
+        let all = |text: &str| {
+            grammar
+                .match_trigger_for(text, None)
+                .map(|found| (found.intent.id.clone(), found.payload))
+        };
+        assert_eq!(all("Öffne Notepad"), Some(("launch".into(), "notepad".into())));
+        assert_eq!(all("ouvre le dossier documents"), Some(("folder".into(), "documents".into())));
+        assert_eq!(all("Abra o Telegram"), Some(("launch".into(), "telegram".into())));
+        assert_eq!(all("busca en google gatos"), Some(("web_google".into(), "gatos".into())));
+        assert_eq!(all("chiudi telegram"), Some(("close".into(), "telegram".into())));
+        // Китайский без пробелов и японский глагол в конце.
+        assert_eq!(all("打开记事本"), Some(("launch".into(), "记 事 本".into())));
+        assert_eq!(all("查找文件报告"), Some(("find_file".into(), "报 告".into())));
+        assert_eq!(all("メモ帳を開いて"), Some(("launch".into(), "メ モ 帳".into())));
+        assert_eq!(all("ダウンロードフォルダを開いて"), Some(("folder".into(), "ダ ウ ン ロ ー ド".into())));
+
+        // Без итальянского «apri» — не команда; русские и английские фразы на месте.
+        let ru_en = ["en".to_string(), "ru".to_string()];
+        assert!(grammar.match_trigger_for("apri telegram", Some(&ru_en)).is_none());
+        assert!(grammar.match_trigger_for("打开记事本", Some(&ru_en)).is_none());
+        assert_eq!(
+            grammar.match_trigger_for("закрой телеграм", Some(&ru_en)).map(|found| found.intent.id.clone()),
+            Some("close".into())
+        );
+        let it = ["en".to_string(), "it".to_string()];
+        assert_eq!(
+            grammar.match_trigger_for("apri telegram", Some(&it)).map(|found| found.payload),
+            Some("telegram".into())
+        );
     }
 
     #[test]
@@ -1095,12 +1477,12 @@ mod tests {
         );
         assert!(migrated.intents.iter().any(|intent| {
             intent.id == "close"
-                && russian(&intent.triggers) == ["закрой"]
+                && russian(&intent.triggers) == ["закрой", "закрыть"]
                 && intent.enabled
         }));
         assert!(migrated.intents.iter().any(|intent| {
             intent.id == "kill"
-                && russian(&intent.triggers) == ["заверши"]
+                && russian(&intent.triggers) == ["заверши", "завершить"]
                 && intent.enabled
         }));
         assert!(migrated.intents.iter().any(|intent| {
@@ -1161,7 +1543,7 @@ mod tests {
             .find(|intent| intent.id == "close")
             .unwrap();
         assert!(!close.enabled);
-        assert!(russian(&close.triggers).is_empty());
+        assert!(!close.triggers.iter().any(|trigger| trigger == "закрой"));
         assert!(migrated
             .intents
             .iter()
@@ -1242,7 +1624,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 9);
+        assert_eq!(Grammar::defaults().version, 10);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

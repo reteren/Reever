@@ -24,6 +24,7 @@ pub mod langid;
 pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
+pub mod models;
 pub mod bubble;
 pub mod mascot;
 pub mod picker;
@@ -404,7 +405,7 @@ pub fn run() {
             commands_api::list_actions,
             commands_api::list_apps,
             commands_api::list_sound_packs,
-            commands_api::list_asr_models,
+            commands_api::language_models,
             commands_api::get_grammar,
             commands_api::save_grammar,
             commands_api::reset_grammar,

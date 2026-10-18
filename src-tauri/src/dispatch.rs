@@ -9,7 +9,7 @@ use crate::actions::{Action, SharedState};
 use crate::config::ReeverConfig;
 use crate::events::ui_log;
 use crate::grammar::{Grammar, IntentKind};
-use crate::textnorm::{normalize, strip_leading_fillers};
+use crate::textnorm::{join_cjk, normalize, strip_leading_fillers};
 use crate::{calc, calcapp, launcher, system, winutil};
 
 pub enum DispatchResult {
@@ -192,27 +192,29 @@ pub fn route(
         }
 
         return match trigger.intent.kind {
-            IntentKind::Folder => Route::Folder(payloads),
+            // Имена папок и файлов, запросы и текст — обратно без пробелов между
+            // иероглифами (normalize разбил «报告» на «报 告»).
+            IntentKind::Folder => Route::Folder(payloads.iter().map(|p| join_cjk(p)).collect()),
             IntentKind::Close => Route::Close(payloads),
             IntentKind::Kill => Route::Kill(payloads),
             IntentKind::Calc => Route::Calc(payloads),
-            IntentKind::Dictate => Route::Dictate(payloads[0].clone()),
+            IntentKind::Dictate => Route::Dictate(join_cjk(&payloads[0])),
             IntentKind::Find | IntentKind::FindFolder | IntentKind::FindFile => Route::Find {
                 scope: match trigger.intent.kind {
                     IntentKind::FindFolder => crate::find::FindScope::Folder,
                     IntentKind::FindFile => crate::find::FindScope::File,
                     _ => crate::find::FindScope::Any,
                 },
-                candidates: payloads.clone(),
+                candidates: payloads.iter().map(|p| join_cjk(p)).collect(),
             },
             IntentKind::WebChat => Route::WebChat {
                 label: trigger.intent.label.clone(),
                 url: trigger.intent.url.trim().to_string(),
-                text: capitalize_first(&payloads[0]),
+                text: capitalize_first(&join_cjk(&payloads[0])),
             },
             IntentKind::Search => Route::Search {
                 label: trigger.intent.label.clone(),
-                url: trigger.intent.url.replace("{q}", &urlencode(&payloads[0])),
+                url: trigger.intent.url.replace("{q}", &urlencode(&join_cjk(&payloads[0]))),
             },
             IntentKind::Launch => {
                 let matched = match_launch_targets(&payloads, actions, match_threshold);

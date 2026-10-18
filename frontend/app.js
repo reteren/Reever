@@ -2,10 +2,7 @@ const tauri = window.__TAURI__;
 const previewSettings={
   wake_words:['ривер','ревер','ривьер'],
   match_threshold:0.7,
-  asr_model:'sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16',asr_threads:4,
-  languages:['ru','en'],second_asr_model:'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8',
-  english_only_model:'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8',models_unload_s:60,local_index:true,
-  lid_model:'sherpa-onnx-whisper-tiny',payload_language:'auto',
+  asr_threads:4,languages:['en','ru'],models_unload_s:60,local_index:true,
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
@@ -92,7 +89,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'list_actions': return [];
     case 'list_apps': return [];
     case 'list_sound_packs': return ['default'];
-    case 'list_asr_models': return [...new Set([previewSettings.asr_model,previewSettings.second_asr_model,previewSettings.english_only_model,previewSettings.lid_model].filter(Boolean))];
+    case 'language_models': return {languages:{ru:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',zh:'asian',ja:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
     case 'index_status': return {state:'ready',entries:0,bytes:0};
     case 'get_wallpaper': return null;
@@ -281,11 +278,12 @@ window.addEventListener('keydown',(e)=>{
 let grammar=defaultGrammarPreview(), grammarDraft=null;
 const grammarEditor=$('#grammarEditor');
 // Языки распознавания — как RECOGNITION_LANGUAGES в config.rs: английский включён
-// всегда, у каждого языка своя модель. Новый язык — строка здесь и там.
-const RECOGNITION_LANGS=[{code:'en',model:'second_asr_model',locked:true},{code:'ru',model:'asr_model'}];
+// всегда, остальным нужен скачанный языковой пакет (models.rs). Новый язык — строка
+// здесь и там.
+const RECOGNITION_LANGS=['en','ru','de','fr','es','it','pt','zh','ja'];
 function recognitionLanguages(settings=settingsObj){
-  const chosen=(Array.isArray(settings?.languages)?settings.languages:['ru','en']).map(value=>String(value).trim().toLowerCase());
-  return RECOGNITION_LANGS.filter(lang=>lang.locked||chosen.includes(lang.code)).map(lang=>lang.code);
+  const chosen=(Array.isArray(settings?.languages)?settings.languages:['en']).map(value=>String(value).trim().toLowerCase());
+  return RECOGNITION_LANGS.filter(code=>code==='en'||chosen.includes(code));
 }
 // Фразы на главной — на языке интерфейса: русские, если интерфейс русский и русский
 // распознаётся; иначе английские (английский включён всегда).
@@ -436,18 +434,6 @@ function renderGrammarEditor(){
       const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
       intent.triggers=hasBare?['',...values]:values;
     },'phrase',minimumTriggers);
-    const langWrap=el('div',{className:'grammar-lang-field'});
-    langWrap.append(el('span',{className:'fld',textContent:t('grammar.targetLanguage')}));
-    const langSelect=el('select');
-    for(const value of ['auto','ru','en']){
-      const option=el('option',{value,textContent:t('language.'+value)});
-      if((intent.lang||'auto')===value) option.selected=true;
-      langSelect.append(option);
-    }
-    langSelect.onchange=()=>intent.lang=langSelect.value;
-    langWrap.append(langSelect,el('div',{className:'hint grammar-language-help',textContent:t('grammar.languageHelp')}));
-    // Язык цели выбирать не из чего, если распознаётся один язык.
-    if(recognitionLanguages().length>1) group.append(langWrap);
     if(intent.kind==='launch'){
       const bareRow=el('label',{className:'cbrow grammar-bare-launch'});
       const bare=el('input',{type:'checkbox'}); bare.checked=getTriggers().some(value=>!String(value).trim());
@@ -552,9 +538,9 @@ const GROUPS=[
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
-  ['languages',[['languages','languages'],['english_only_model','model']]],
+  ['languages',[['languages','languages']]],
   ['recognition',[
-    ['lid_model','model_optional'],['payload_language','language'],['asr_threads','number'],['models_unload_s','number'],['vad_threshold','number'],['wake_pause_ms','number'],
+    ['asr_threads','number'],['models_unload_s','number'],['vad_threshold','number'],['wake_pause_ms','number'],
     ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number']]],
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_english_level','strength'],
@@ -562,13 +548,11 @@ const GROUPS=[
   ['search',[['local_index','bool']]],
   ['system',[['confirm_dangerous','bool'],['confirm_close','bool'],['raise_result','bool']]],
 ];
-// Настройки смешения языков нужны, только когда языков больше одного; англицизмы —
-// только для русской диктовки.
-const SETTING_NEEDS={lid_model:'multi',payload_language:'multi',dictation_english:'ru',dictation_english_level:'ru',english_only_model:'en-only'};
+// Англицизмы — только для русской диктовки.
+const SETTING_NEEDS={dictation_english:'ru',dictation_english_level:'ru'};
 function settingVisible(key){
-  const need=SETTING_NEEDS[key], langs=recognitionLanguages();
-  if(need==='en-only') return !langs.includes('ru');
-  return !need||(need==='multi'?langs.length>1:langs.includes(need));
+  const need=SETTING_NEEDS[key];
+  return !need||recognitionLanguages().includes(need);
 }
 // Всё применяется по «Сохранить»; пометка «— сразу» — у того, что действует уже при
 // изменении поля (язык интерфейса, хоткеи), без «Сохранить».
@@ -626,21 +610,9 @@ function fieldEl(key,type,opts,when='save'){
   const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
   let inp;
   if(type==='list'){ inp=el('input',{value:(settingsObj[key]||[]).join(', ')}); inp.oninput=()=>settingsObj[key]=inp.value.split(',').map(s=>s.trim()).filter(Boolean); }
-  else if(type==='model'||type==='model_optional') inp=modelSelect(key,opts,type==='model_optional');
   else if(type==='languages'){
-    wrap.append(languagesEditor(asrModels));
+    wrap.append(languagesEditor(languageModels));
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
-    return wrap;
-  }
-  else if(type==='language'){
-    inp=el('select');
-    for(const value of ['auto','ru','en']){
-      const option=el('option',{value,textContent:t('language.'+value)});
-      if((settingsObj[key]||'auto')===value) option.selected=true;
-      inp.append(option);
-    }
-    inp.onchange=()=>settingsObj[key]=inp.value;
-    wrap.append(inp,el('div',{className:'hint grammar-language-help',textContent:help}));
     return wrap;
   }
   else if(type==='ui_language'){
@@ -730,62 +702,49 @@ function fieldEl(key,type,opts,when='save'){
   }
   return wrap;
 }
-function modelSelect(key,opts,optional){
-  const inp=el('select');
-  const models=Array.isArray(opts)?opts.slice():[];
-  const selected=settingsObj[key]||'';
-  if(optional){
-    const noModel=el('option',{value:'',textContent:t('settings.noModel')});
-    if(!selected) noModel.selected=true;
-    inp.append(noModel);
-  }
-  if(selected&&!models.includes(selected)) models.unshift(selected);
-  for(const model of models){
-    const missing=model===selected&&!(opts||[]).includes(model);
-    const op=el('option',{value:model,textContent:missing?t('settings.modelMissing',{model}):model});
-    if(model===selected) op.selected=true;
-    inp.append(op);
-  }
-  inp.onchange=()=>settingsObj[key]=inp.value;
-  return inp;
-}
-// Языки распознавания: строка на язык с его моделью; английский не убрать,
-// остальные — × и «+ Добавить язык».
+// Языки распознавания: строка на язык с его пакетом; английский не убрать, остальные —
+// × и «+ Добавить язык». Язык без скачанного пакета добавить нельзя: пакет ставит
+// установщик (src-tauri/windows/models.nsh).
+const PACK_NAMES={european:'Parakeet v3',asian:'SenseVoice'};
 function languagesEditor(models){
   const box=el('div',{className:'lang-editor'});
   const enabled=recognitionLanguages();
   const name=code=>I18N.NAMES[code]||code;
+  const packOf=code=>models?.languages?.[code];
+  const installed=pack=>(models?.installed||[]).includes(pack);
   const setLanguages=codes=>{
     settingsObj.languages=codes; renderSettings(); renderGrammarExamples();
     if(grammarDraft) renderGrammarEditor();
     $('#settingsMsg').textContent=t('settings.languages.changed');
   };
-  for(const lang of RECOGNITION_LANGS.filter(item=>enabled.includes(item.code))){
+  for(const code of enabled){
     const row=el('div',{className:'lang-row'});
-    row.append(el('span',{className:'lang-name',textContent:name(lang.code)}));
-    if(lang.code!=='en'||enabled.includes('ru')){
-      const model=modelSelect(lang.model,models,false);
-      model.setAttribute('aria-label',t('settings.languages.model',{language:name(lang.code)}));
-      row.append(model);
-    }
-    if(lang.locked){
+    row.append(el('span',{className:'lang-name',textContent:name(code)}));
+    if(code==='en'){
       row.append(el('span',{className:'lang-lock',textContent:t('settings.languages.always'),title:t('settings.languages.alwaysTitle')}));
     }else{
-      const label=t('settings.languages.remove',{language:name(lang.code)});
+      const pack=packOf(code);
+      row.append(installed(pack)
+        ?el('span',{className:'lang-pack',textContent:PACK_NAMES[pack]||pack})
+        :el('span',{className:'lang-pack lang-missing',textContent:t('settings.languages.notDownloaded')}));
+      const label=t('settings.languages.remove',{language:name(code)});
       const remove=el('button',{type:'button',className:'sm lang-remove',title:label,ariaLabel:label},[icon('x')]);
-      remove.onclick=()=>setLanguages(enabled.filter(code=>code!==lang.code));
+      remove.onclick=()=>setLanguages(enabled.filter(item=>item!==code));
       row.append(remove);
     }
     box.append(row);
   }
-  const addable=RECOGNITION_LANGS.filter(item=>!enabled.includes(item.code));
+  const addable=RECOGNITION_LANGS.filter(code=>!enabled.includes(code));
   const addRow=el('div',{className:'lang-add'});
   const add=el('button',{type:'button',className:'sm',textContent:'+ '+t('settings.languages.add')});
   add.setAttribute('aria-haspopup','menu');
   const menu=el('div',{className:'lang-menu',hidden:true,role:'menu'});
-  for(const lang of addable){
-    const item=el('button',{type:'button',className:'sm',role:'menuitem',textContent:name(lang.code)});
-    item.onclick=()=>setLanguages([...enabled,lang.code]);
+  for(const code of addable){
+    const ready=installed(packOf(code));
+    const item=el('button',{type:'button',className:'sm',role:'menuitem',
+      textContent:ready?name(code):`${name(code)} — ${t('settings.languages.notDownloaded')}`});
+    item.disabled=!ready;
+    item.onclick=()=>setLanguages([...enabled,code]);
     menu.append(item);
   }
   if(addable.length) add.onclick=()=>{ menu.hidden=!menu.hidden; };
@@ -793,20 +752,23 @@ function languagesEditor(models){
   addRow.append(add,menu);
   if(!addable.length) addRow.append(el('span',{className:'hint',textContent:t('settings.languages.noMore')}));
   box.append(addRow);
+  // Языки из двух пакетов сразу — без определителя языка работает только первый.
+  const packs=new Set(enabled.map(packOf).filter(pack=>pack&&installed(pack)));
+  if(packs.size>1&&!installed('lid')) box.append(el('div',{className:'hint lang-missing',textContent:t('settings.languages.needLid')}));
+  if(addable.some(code=>!installed(packOf(code)))) box.append(el('div',{className:'hint',textContent:t('settings.languages.installer')}));
   return box;
 }
-let asrModels=[], soundPacks=['default'], autostart=false;
+let languageModels=null, soundPacks=['default'], autostart=false;
 async function loadSettings(){
   try{ settingsObj=await invoke('get_settings'); }
   catch(e){ reportError('loadSettings',e); settingsObj={...previewSettings}; }
-  try{ asrModels=await invoke('list_asr_models'); }
+  try{ languageModels=await invoke('language_models'); }
   catch(e){ reportError('loadModels',e); }
   try{ autostart=await invoke('get_autostart'); }catch(e){ reportError('readAutostart',e); }
   try{ soundPacks=await invoke('list_sound_packs'); }catch(e){ reportError('loadSoundPacks',e); }
   renderSettings(); renderGrammarExamples(); startIndexStatusPolling();
 }
 function renderSettings(){
-  const models=asrModels;
   const F=$('#settingsForm'); F.innerHTML='';
   // Каждая группа — настоящий группбокс с легендой, как в панели
   // управления семёрки.
@@ -815,7 +777,7 @@ function renderSettings(){
     for(const f of fields){
       const [key,type,opts,when]=f;
       if(!settingVisible(key)) continue;
-      g.append(fieldEl(key,type,['asr_model','second_asr_model','english_only_model','lid_model'].includes(key)?models:opts,when));
+      g.append(fieldEl(key,type,opts,when));
     }
     F.append(g);
   }

@@ -5,16 +5,49 @@ use strsim::jaro_winkler;
 const WAKE_FUZZY_THRESHOLD: f64 = 0.86;
 
 /// Общая форма распознанного текста: нижний регистр, `ё`→`е`, пунктуация → пробел,
-/// числа словами → числа цифрами, одиночные пробелы и `trim`.
+/// числа словами → числа цифрами, одиночные пробелы и `trim`. Иероглифы и кана — каждый
+/// знак отдельным словом: китайский и японский пишут без пробелов, а фразы команд и
+/// действий сравниваются по словам («打开 记事本» = «打 开 记 事 本»).
 pub fn normalize(text: &str) -> String {
-    let cleaned: String = text
-        .to_lowercase()
-        .replace('ё', "е")
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
-        .collect();
+    let mut cleaned = String::with_capacity(text.len());
+    for c in text.to_lowercase().replace('ё', "е").chars() {
+        if is_cjk(c) {
+            cleaned.push(' ');
+            cleaned.push(c);
+            cleaned.push(' ');
+        } else if c.is_alphanumeric() {
+            cleaned.push(c);
+        } else {
+            cleaned.push(' ');
+        }
+    }
     let words: Vec<&str> = cleaned.split_whitespace().collect();
     normalize_number_words(&words)
+}
+
+/// Иероглиф или кана (корейский хангыль пишется с пробелами между словами — не сюда).
+pub fn is_cjk(c: char) -> bool {
+    matches!(
+        c as u32,
+        0x3040..=0x30FF | 0x31F0..=0x31FF | 0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xF900..=0xFAFF
+    )
+}
+
+/// Обратно к письму без пробелов: «记 事 本» → «记事本», «打开 notepad» остаётся
+/// с пробелом перед латиницей. Для запроса в поиск, показа цели и поиска в тексте слов
+/// вроде «はい» или «不是», которые `normalize` разбил на знаки.
+pub fn join_cjk(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    chars
+        .iter()
+        .enumerate()
+        .filter(|(index, c)| {
+            !(c.is_whitespace()
+                && chars[..*index].iter().rev().find(|p| !p.is_whitespace()).is_some_and(|p| is_cjk(*p))
+                && chars[index + 1..].iter().find(|n| !n.is_whitespace()).is_some_and(|n| is_cjk(*n)))
+        })
+        .map(|(_, c)| *c)
+        .collect()
 }
 
 /// Ищет wake-слово только среди первых двух слов и возвращает нормализованный хвост.
@@ -32,6 +65,15 @@ pub fn starts_with_wake(text: &str, wake_words: &[String]) -> bool {
 
 fn strip_wake_within(text: &str, wake_words: &[String], positions: usize) -> Option<String> {
     let normalized = normalize(text);
+    // «リバー» normalize разбил на знаки — сравниваем начало фразы целиком.
+    for wake in wake_words.iter().filter(|wake| wake.chars().any(is_cjk)) {
+        let wake = normalize(wake);
+        if let Some(rest) = normalized.strip_prefix(&wake) {
+            if rest.is_empty() || rest.starts_with(' ') {
+                return Some(rest.trim().to_string());
+            }
+        }
+    }
     let words: Vec<&str> = normalized.split_whitespace().collect();
     for (i, word) in words.iter().take(positions).enumerate() {
         let exact = wake_words.iter().any(|wake| wake_exact(word, wake));
@@ -92,11 +134,18 @@ fn glued_wake_tail(word: &str, wake: &str) -> Option<String> {
 
 /// Есть ли в фразе слово отмены, с учётом частых русских словоформ.
 pub fn is_cancel(text: &str, cancel_words: &[String]) -> bool {
-    let words: Vec<String> = normalize(text)
+    let normalized = normalize(text);
+    let words: Vec<String> = normalized
         .split_whitespace()
         .map(stem_russian_word)
         .collect();
+    let compact = join_cjk(&normalized);
     cancel_words.iter().any(|cancel| {
+        // «取消», «キャンセル»: normalize разбил их на знаки, а отдельный «消» в «打开消息»
+        // отменой не считается — нужно всё слово целиком.
+        if cancel.chars().any(is_cjk) {
+            return compact.contains(&join_cjk(&normalize(cancel)));
+        }
         normalize(cancel)
             .split_whitespace()
             .map(stem_russian_word)
@@ -106,30 +155,48 @@ pub fn is_cancel(text: &str, cancel_words: &[String]) -> bool {
 
 /// Согласие на подтверждение опасной команды («да», «ага», …), включая словоформы.
 pub fn is_yes(text: &str) -> bool {
-    normalize(text).split_whitespace().any(|word| {
-        matches!(
-            word,
-            "да" | "ага" | "угу" | "точно" | "давай" | "давайте" | "подтверждаю" | "подтверди"
-                // английский ответ: как его пишет вторая модель и как — русская GigaAM
-                | "yes" | "yeah" | "yep" | "yup" | "sure" | "ok" | "okay"
-                | "йес" | "ес" | "есс" | "еес" | "яс" | "йеа" | "окей" | "ок"
-        ) || word.starts_with("дава")
-            || word.starts_with("подтвержд")
-            || word.starts_with("подтверд")
-            || word.starts_with("соглас")
-            || word.starts_with("конеч")
-    })
+    let normalized = normalize(text);
+    let compact = join_cjk(&normalized);
+    // «不是», «不好» — отказ, хотя в них есть «是» и «好».
+    if compact.contains('不') || compact.contains('没') {
+        return false;
+    }
+    const CJK_YES: [&str; 6] = ["是", "好", "对", "はい", "ええ", "うん"];
+    CJK_YES.iter().any(|yes| compact.split_whitespace().any(|word| word.contains(yes)))
+        || normalized.split_whitespace().any(|word| {
+            matches!(
+                word,
+                "да" | "ага" | "угу" | "точно" | "давай" | "давайте" | "подтверждаю" | "подтверди"
+                    | "yes" | "yeah" | "yep" | "yup" | "sure" | "ok" | "okay"
+                    | "йес" | "ес" | "есс" | "еес" | "яс" | "йеа" | "окей" | "ок"
+                    // Многоязычная модель на коротком «да» путает язык: «da»; остальное —
+                    // «да» языков из языковых пакетов (models.rs).
+                    | "da" | "ja" | "jawohl" | "oui" | "si" | "sí" | "sì" | "sim" | "claro"
+                    | "certo" | "d'accord"
+            ) || word.starts_with("дава")
+                || word.starts_with("подтвержд")
+                || word.starts_with("подтверд")
+                || word.starts_with("соглас")
+                || word.starts_with("конеч")
+        })
 }
 
 /// Явный отказ на подтверждение («нет», «отмена», «no»).
 pub fn is_no(text: &str) -> bool {
-    normalize(text).split_whitespace().any(|word| {
-        matches!(
-            word,
-            "нет" | "не" | "неа" | "отмена" | "отмени" | "отменить" | "стоп" | "не надо" | "no"
-                | "nope" | "cancel" | "stop" | "ноу" | "ноуп"
-        ) || word.starts_with("отмен")
-    })
+    let normalized = normalize(text);
+    let compact = join_cjk(&normalized);
+    const CJK_NO: [&str; 5] = ["不", "没", "取消", "いいえ", "いや"];
+    CJK_NO.iter().any(|no| compact.split_whitespace().any(|word| word.contains(no)))
+        || normalized.split_whitespace().any(|word| {
+            matches!(
+                word,
+                "нет" | "не" | "неа" | "отмена" | "отмени" | "отменить" | "стоп" | "не надо" | "no"
+                    | "nope" | "cancel" | "stop" | "ноу" | "ноуп"
+                    // «нет» других языков; «não» многоязычная модель пишет и на русское «no».
+                    | "net" | "nein" | "non" | "não" | "nao" | "annuler" | "abbrechen"
+                    | "cancelar" | "annulla"
+            ) || word.starts_with("отмен")
+        })
 }
 
 /// Удаляет вводные слова только в начале фразы. Используется для сравнения и разбора
@@ -810,6 +877,8 @@ mod tests {
         assert!(is_cancel("стопни музыку", &cancels));
         assert!(is_cancel("забудьте", &cancels));
         assert!(!is_cancel("стопка", &cancels));
+        assert!(is_cancel("取消", &["取消".into()]));
+        assert!(!is_cancel("打开消息", &["取消".into()]));
 
         assert!(is_yes("да"));
         assert!(is_yes("давайте"));
@@ -817,6 +886,31 @@ mod tests {
         assert!(is_yes("согласна"));
         assert!(is_yes("угу"));
         assert!(!is_yes("далеко"));
+
+        // Ответы на других языках и то, как их путает многоязычная модель.
+        assert!(is_yes("Da"));
+        assert!(is_yes("Ja."));
+        assert!(is_yes("Sí"));
+        assert!(is_yes("是的"));
+        assert!(is_yes("はい"));
+        assert!(!is_yes("不是"));
+        assert!(super::is_no("não"));
+        assert!(super::is_no("Nein"));
+        assert!(super::is_no("不要"));
+        assert!(super::is_no("いいえ"));
+    }
+
+    #[test]
+    fn chinese_and_japanese_split_into_characters_and_join_back() {
+        assert_eq!(normalize("打开记事本。"), "打 开 记 事 本");
+        assert_eq!(normalize("打开Notepad"), "打 开 notepad");
+        assert_eq!(normalize("メモ帳を開いて"), "メ モ 帳 を 開 い て");
+        assert_eq!(super::join_cjk("打 开 记 事 本"), "打开记事本");
+        assert_eq!(super::join_cjk("搜索 猫 的 视 频 youtube"), "搜索猫的视频 youtube");
+        assert_eq!(super::join_cjk("open notepad"), "open notepad");
+        let wake = ["ривер".to_string(), "リバー".to_string()];
+        assert_eq!(strip_wake("リバー、メモ帳を開いて", &wake), Some("メ モ 帳 を 開 い て".into()));
+        assert_eq!(strip_wake("リンゴを買って", &wake), None);
     }
 
     #[test]

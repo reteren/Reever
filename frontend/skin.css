@@ -346,7 +346,8 @@ fieldset.grp legend {
 .grammar-add-search { margin: 0 8px 12px 0; }
 .lang-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 .lang-name { width: 90px; flex: none; }
-.lang-lock { color: var(--acc-3); font-size: 11px; white-space: nowrap; }
+.lang-lock, .lang-pack { color: var(--acc-3); font-size: 11px; white-space: nowrap; }
+.lang-missing { color: var(--acc-hot); }
 .lang-menu { display: flex; gap: 6px; margin-top: 6px; }
 
 /* Журнал — данные, поэтому моноширинный */

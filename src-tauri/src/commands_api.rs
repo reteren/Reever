@@ -1,6 +1,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use serde_json::json;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
@@ -91,20 +92,24 @@ pub fn list_sound_packs(config: State<'_, LiveConfig>) -> Vec<String> {
     packs
 }
 
-/// Доступные папки моделей распознавания в resources/model/.
+/// Языковые пакеты для экрана «Языки распознавания»: какой пакет нужен каждому языку и
+/// какие скачаны (models.rs). Скачивает их установщик.
 #[tauri::command]
-pub fn list_asr_models(app: AppHandle) -> Vec<String> {
-    let model_root = crate::config::resource(&app, "model");
-    let mut models: Vec<String> = std::fs::read_dir(model_root)
-        .map(|rd| {
-            rd.flatten()
-                .filter(|entry| entry.path().is_dir())
-                .filter_map(|entry| entry.file_name().into_string().ok())
-                .collect()
+pub fn language_models(app: AppHandle) -> serde_json::Value {
+    use crate::models::{ModelDirs, PACKS};
+    let dirs = ModelDirs::new(crate::config::resource(&app, "model"));
+    let languages: serde_json::Map<String, serde_json::Value> = crate::config::RECOGNITION_LANGUAGES
+        .iter()
+        .filter_map(|code| {
+            crate::models::pack_for(code).map(|pack| (code.to_string(), json!(pack.id)))
         })
-        .unwrap_or_default();
-    models.sort();
-    models
+        .collect();
+    let installed: Vec<&str> = PACKS
+        .iter()
+        .filter(|pack| dirs.installed(pack))
+        .map(|pack| pack.id)
+        .collect();
+    json!({ "languages": languages, "installed": installed })
 }
 
 /// Универсализация пути: C:\Users\me\… -> %USERPROFILE%\… (переносимость).

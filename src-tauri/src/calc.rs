@@ -67,7 +67,7 @@ struct Operand {
 /// Фразы о корне возвращают `None`; степень целого неотрицательного числа раскрывается
 /// повторным умножением, поскольку `^` и клавиша квадратного корня вне разрешённых keys.
 pub fn parse_expression(text: &str) -> Option<CalcExpr> {
-    let mut words = tokenize(text);
+    let mut words = spoken_numbers(tokenize(text));
     strip_polite_wrappers(&mut words);
     if words.is_empty() || words.len() > 128 {
         return None;
@@ -155,6 +155,176 @@ fn tokenize(text: &str) -> Vec<String> {
     }
     flush_word(&mut words, &mut current);
     words
+}
+
+/// Числа словами на языках из языковых пакетов и иероглифами → цифры. Только здесь, в
+/// калькуляторе: в обычной команде «otto», «elf» или «sei» бывают названием, а «un» и
+/// «um» — артиклем. Ещё «12x12» → «12 * 12».
+fn spoken_numbers(words: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::with_capacity(words.len());
+    let mut index = 0;
+    while index < words.len() {
+        let word = words[index].as_str();
+        if let Some((left, right)) = word.split_once('x') {
+            if !left.is_empty()
+                && !right.is_empty()
+                && left.chars().all(|c| c.is_ascii_digit())
+                && right.chars().all(|c| c.is_ascii_digit())
+            {
+                out.extend([left.to_string(), "*".to_string(), right.to_string()]);
+                index += 1;
+                continue;
+            }
+        }
+        if word == "x" && out.last().is_some_and(|last| last.parse::<f64>().is_ok()) {
+            out.push("*".into());
+            index += 1;
+            continue;
+        }
+        // Иероглифы normalize разбил по одному: «十 二» — одно число.
+        if word.chars().all(is_cjk_numeral) {
+            let mut run = String::new();
+            while let Some(next) = words.get(index).filter(|next| next.chars().all(is_cjk_numeral)) {
+                run.push_str(next);
+                index += 1;
+            }
+            match cjk_number(&run) {
+                Some(value) => out.push(value.to_string()),
+                None => out.push(run),
+            }
+            continue;
+        }
+        if foreign_number(word).is_some() {
+            let mut parts = Vec::new();
+            let mut end = index;
+            while end < words.len() {
+                if let Some(value) = foreign_number(&words[end]) {
+                    parts.push(value);
+                    end += 1;
+                } else if matches!(words[end].as_str(), "und" | "y" | "e" | "et")
+                    && words.get(end + 1).and_then(|next| foreign_number(next)).is_some()
+                    && !parts.is_empty()
+                {
+                    end += 1;
+                } else {
+                    break;
+                }
+            }
+            out.push(combine_number(&parts).to_string());
+            index = end;
+            continue;
+        }
+        out.push(words[index].clone());
+        index += 1;
+    }
+    out
+}
+
+fn is_cjk_numeral(c: char) -> bool {
+    "零〇一二两三四五六七八九十百千万".contains(c)
+}
+
+/// «十二» → 12, «一百零五» → 105, «两千» → 2000.
+fn cjk_number(text: &str) -> Option<u64> {
+    let (mut total, mut section, mut number) = (0u64, 0u64, None::<u64>);
+    for c in text.chars() {
+        let digit = match c {
+            '零' | '〇' => Some(0),
+            '一' => Some(1),
+            '二' | '两' => Some(2),
+            '三' => Some(3),
+            '四' => Some(4),
+            '五' => Some(5),
+            '六' => Some(6),
+            '七' => Some(7),
+            '八' => Some(8),
+            '九' => Some(9),
+            _ => None,
+        };
+        if let Some(digit) = digit {
+            number = Some(digit);
+            continue;
+        }
+        let unit = match c {
+            '十' => 10,
+            '百' => 100,
+            '千' => 1000,
+            '万' => {
+                total = (total + section + number.take().unwrap_or(0)) * 10_000;
+                section = 0;
+                continue;
+            }
+            _ => return None,
+        };
+        section += number.take().unwrap_or(1) * unit;
+    }
+    Some(total + section + number.unwrap_or(0))
+}
+
+/// Значение числительного немецкого, французского, испанского, итальянского и
+/// португальского; разряды (100, 1000) — со знаком минус, чтобы отличить от слагаемых.
+fn foreign_number(word: &str) -> Option<i64> {
+    // Немецкое «zweiundzwanzig» — одно слово.
+    if let Some((unit, ten)) = word.split_once("und") {
+        if let (Some(unit), Some(ten)) = (foreign_number(unit), foreign_number(ten)) {
+            if (1..10).contains(&unit) && ten >= 20 && ten % 10 == 0 {
+                return Some(unit + ten);
+            }
+        }
+    }
+    let value = match word {
+        "eins" | "un" | "uno" | "um" => 1,
+        "zwei" | "deux" | "dos" | "due" | "dois" => 2,
+        "drei" | "trois" | "tres" | "tre" | "três" => 3,
+        "vier" | "quatre" | "cuatro" | "quattro" | "quatro" => 4,
+        "fünf" | "cinq" | "cinco" | "cinque" => 5,
+        "sechs" | "seis" | "sei" => 6,
+        "sieben" | "sept" | "siete" | "sette" | "sete" => 7,
+        "acht" | "huit" | "ocho" | "otto" | "oito" => 8,
+        "neun" | "neuf" | "nueve" | "nove" => 9,
+        "zehn" | "dix" | "diez" | "dieci" | "dez" => 10,
+        "elf" | "onze" | "once" | "undici" => 11,
+        "zwölf" | "douze" | "doce" | "dodici" | "doze" => 12,
+        "dreizehn" | "treize" | "trece" | "tredici" | "treze" => 13,
+        "vierzehn" | "quatorze" | "catorce" | "quattordici" | "catorze" => 14,
+        "fünfzehn" | "quinze" | "quince" | "quindici" => 15,
+        "sechzehn" | "seize" | "dieciséis" | "sedici" | "dezesseis" => 16,
+        "siebzehn" | "diecisiete" | "diciassette" | "dezessete" => 17,
+        "achtzehn" | "dieciocho" | "diciotto" | "dezoito" => 18,
+        "neunzehn" | "diecinueve" | "diciannove" | "dezenove" => 19,
+        "zwanzig" | "vingt" | "veinte" | "venti" | "vinte" => 20,
+        "dreißig" | "trente" | "treinta" | "trenta" | "trinta" => 30,
+        "vierzig" | "quarante" | "cuarenta" | "quaranta" | "quarenta" => 40,
+        "fünfzig" | "cinquante" | "cincuenta" | "cinquanta" | "cinquenta" => 50,
+        "sechzig" | "soixante" | "sesenta" | "sessanta" | "sessenta" => 60,
+        "siebzig" | "setenta" | "settanta" => 70,
+        "achtzig" | "ochenta" | "ottanta" | "oitenta" => 80,
+        "neunzig" | "noventa" | "novanta" => 90,
+        "hundert" | "cent" | "cien" | "ciento" | "cento" | "cem" => -100,
+        "tausend" | "mille" | "mil" => -1000,
+        _ => return None,
+    };
+    Some(value)
+}
+
+/// «vingt deux» → 22, «zwei hundert» → 200, «quatre vingt» → 80, «mil doscientos» нет.
+fn combine_number(parts: &[i64]) -> i64 {
+    let (mut total, mut current) = (0i64, 0i64);
+    for (index, &part) in parts.iter().enumerate() {
+        match part {
+            -100 => current = current.max(1) * 100,
+            -1000 => {
+                total += current.max(1) * 1000;
+                current = 0;
+            }
+            // Французское «quatre vingt» = 80: единица перед «vingt» — множитель.
+            20 if index > 0 && (2..10).contains(&parts[index - 1]) && current < 10 => {
+                current = current * 20;
+            }
+            value => current += value,
+        }
+    }
+    total + current
 }
 
 fn flush_word(words: &mut Vec<String>, current: &mut String) {
@@ -314,7 +484,14 @@ fn parse_operand(words: &[String], start: usize) -> Option<(Operand, usize)> {
         pretty = format!("-{pretty}");
     }
 
-    let percent = words.get(cursor).is_some_and(|word| is_percent_word(word));
+    // «per cent» — двумя словами; одно «per» — итальянское «умножить» («12 per 12»).
+    let percent_words = match (words.get(cursor).map(String::as_str), words.get(cursor + 1).map(String::as_str)) {
+        (Some("per"), Some("cent")) => 2,
+        (Some("per"), _) => 0,
+        (Some(word), _) if is_percent_word(word) => 1,
+        _ => 0,
+    };
+    let percent = percent_words > 0;
     if percent {
         if power_expression {
             // `3 в квадрате процентов` не является ни однозначной фразой, ни
@@ -323,7 +500,7 @@ fn parse_operand(words: &[String], start: usize) -> Option<(Operand, usize)> {
         }
         keys.push('%');
         pretty.push('%');
-        cursor += 1;
+        cursor += percent_words;
     }
 
     Some((
@@ -479,6 +656,40 @@ fn parse_operator(words: &[String], start: usize) -> Option<(Operator, usize)> {
         (&["минус"], Operator::Subtract),
         (&["без"], Operator::Subtract),
         (&["на"], Operator::Multiply),
+        // Языки из языковых пакетов (models.rs). Иероглифы normalize разбивает на знаки:
+        // «乘以» — это «乘», «以».
+        (&["geteilt", "durch"], Operator::Divide),
+        (&["durch"], Operator::Divide),
+        (&["mal"], Operator::Multiply),
+        (&["divisé", "par"], Operator::Divide),
+        (&["multiplié", "par"], Operator::Multiply),
+        (&["fois"], Operator::Multiply),
+        (&["moins"], Operator::Subtract),
+        (&["dividido", "entre"], Operator::Divide),
+        (&["dividido", "por"], Operator::Divide),
+        (&["multiplicado", "por"], Operator::Multiply),
+        (&["por"], Operator::Multiply),
+        (&["más"], Operator::Add),
+        (&["menos"], Operator::Subtract),
+        (&["diviso", "per"], Operator::Divide),
+        (&["diviso"], Operator::Divide),
+        (&["moltiplicato", "per"], Operator::Multiply),
+        (&["per"], Operator::Multiply),
+        (&["più"], Operator::Add),
+        (&["meno"], Operator::Subtract),
+        (&["vezes"], Operator::Multiply),
+        (&["mais"], Operator::Add),
+        (&["乘", "以"], Operator::Multiply),
+        (&["除", "以"], Operator::Divide),
+        (&["乘"], Operator::Multiply),
+        (&["加"], Operator::Add),
+        (&["减"], Operator::Subtract),
+        (&["掛", "け", "る"], Operator::Multiply),
+        (&["か", "け", "る"], Operator::Multiply),
+        (&["割", "る"], Operator::Divide),
+        (&["わ", "る"], Operator::Divide),
+        (&["足", "す"], Operator::Add),
+        (&["引", "く"], Operator::Subtract),
         (&["+"], Operator::Add),
         (&["-"], Operator::Subtract),
         (&["*"], Operator::Multiply),
@@ -819,5 +1030,32 @@ mod tests {
         let decimal = parse_expression("2.5 plus 1.25").unwrap();
         assert_eq!(decimal.keys, "2.5+1.25=");
         assert_eq!(decimal.value, Some(3.75));
+    }
+
+    #[test]
+    fn language_pack_operators() {
+        for (text, value) in [
+            ("33 mal 78", 2574.0),
+            ("125 geteilt durch 5", 25.0),
+            ("12 fois 12", 144.0),
+            ("10 menos 4", 6.0),
+            ("7 più 3", 10.0),
+            ("6 vezes 7", 42.0),
+            ("2乘以3", 6.0),
+            ("10减4", 6.0),
+            ("8割る2", 4.0),
+            ("zwölf mal zwölf", 144.0),
+            ("douze fois douze", 144.0),
+            ("zweiundzwanzig plus eins", 23.0),
+            ("quatre vingt plus deux", 82.0),
+            ("12 per 12", 144.0),
+            ("12x12", 144.0),
+            ("十二乘以十二", 144.0),
+            ("一百零五减五", 100.0),
+            ("veinte y dos menos dos", 20.0),
+        ] {
+            let expr = parse(text).unwrap_or_else(|| panic!("{text}"));
+            assert_eq!(expr.value, Some(value), "{text}");
+        }
     }
 }

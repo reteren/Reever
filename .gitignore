@@ -20,3 +20,5 @@
 # Промежуточные рендеры рамки (пересобираются из design/reever-frame.blend)
 /design/renders/
 /design/*.blend1
+# Синтез lang_eval (голоса piper), кэш.
+/testdata/lang-corpus/

@@ -46,8 +46,9 @@ impl SpeechLid {
     }
 }
 
-impl LanguageId for SpeechLid {
-    fn detect(&mut self, pcm: &[i16]) -> anyhow::Result<(Lang, f32)> {
+impl SpeechLid {
+    /// Код языка Whisper («ru», «zh», «de»…) — по нему `AsrSet` выбирает модель.
+    pub fn detect_code(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
         if pcm.is_empty() {
             bail!("невозможно определить язык пустого аудио");
         }
@@ -62,7 +63,13 @@ impl LanguageId for SpeechLid {
             .model
             .compute(&stream)
             .context("sherpa-onnx не вернул язык фрагмента")?;
-        Ok(map_language(&result.lang))
+        Ok(result.lang.trim().to_ascii_lowercase())
+    }
+}
+
+impl LanguageId for SpeechLid {
+    fn detect(&mut self, pcm: &[i16]) -> anyhow::Result<(Lang, f32)> {
+        Ok(map_language(&self.detect_code(pcm)?))
     }
 }
 

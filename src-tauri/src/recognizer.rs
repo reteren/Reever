@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::actions::SharedState;
 use crate::anglicism::Anglicisms;
-use crate::asr::{Asr, AsrConfig};
+use crate::asr::AsrSet;
 use crate::audio::{audio_channel, start_capture, Player};
 use crate::bilingual::LangMode;
 use crate::config::ReeverConfig;
@@ -21,10 +21,7 @@ use crate::dictation::Formatter;
 use crate::dispatch::{dispatch, execute_pending, DispatchResult, PendingAction};
 use crate::engine::{DictationEndReason, Engine, EngineConfig, EngineEvent};
 use crate::events::{set_state, ui_log};
-use crate::uilang::Msg;
-use crate::grammar::{Grammar, IntentKind};
-use crate::langid::SpeechLid;
-use crate::speech::{LanguageId, Timed, Transcriber};
+use crate::speech::{Timed, Transcriber};
 use crate::vad::SileroVad;
 use crate::{textnorm, typing};
 
@@ -39,17 +36,17 @@ const LOADING_AUDIO_LIMIT_SAMPLES: usize = 60 * 16_000;
 /// worker может установить или забрать его, не пересоздавая VAD и wake-spotter.
 #[derive(Clone, Default)]
 struct LazyAsr {
-    inner: Arc<Mutex<Option<Asr>>>,
+    inner: Arc<Mutex<Option<AsrSet>>>,
 }
 
 impl LazyAsr {
-    fn loaded(asr: Asr) -> Self {
+    fn loaded(asr: AsrSet) -> Self {
         Self {
             inner: Arc::new(Mutex::new(Some(asr))),
         }
     }
 
-    fn install(&self, asr: Asr) {
+    fn install(&self, asr: AsrSet) {
         if let Ok(mut slot) = self.inner.lock() {
             *slot = Some(asr);
         }
@@ -106,14 +103,8 @@ impl Transcriber for LazyAsr {
     }
 }
 
-enum ModelLoadEvent {
-    Primary(anyhow::Result<Asr>),
-    Secondary {
-        second: Option<Asr>,
-        lid: Option<SpeechLid>,
-        warnings: Vec<Msg>,
-    },
-}
+/// Загруженные модели и ошибка определителя языка, если он не загрузился.
+type LoadedModels = anyhow::Result<(AsrSet, Option<String>)>;
 
 #[derive(Clone, Copy)]
 enum LoadReason {
@@ -170,7 +161,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let player = Player::new()?;
     let status = Arc::new(Mutex::new(Status {
         asr: "loading",
-        model: s.primary_asr_model().to_string(),
+        model: model_names(cfg),
     }));
     set_state(app, "loading");
     emit_status(app, &status);
@@ -205,16 +196,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         );
         LazyAsr::default()
     } else {
-        ui_log(
-            app,
-            crate::msg!("log.models.loading", path = cfg.asr_model_dir.display()),
-        );
-        let primary = Asr::new(&AsrConfig {
-            model_dir: cfg.asr_model_dir.clone(),
-            num_threads: s.asr_threads.max(1) as i32,
-        })
-        .inspect_err(|_| set_asr_status(app, &status, "error"))?;
-        LazyAsr::loaded(primary)
+        ui_log(app, crate::msg!("log.models.loading", path = model_names(cfg)));
+        let (models, lid_error) = AsrSet::load(&cfg.models, s.asr_threads.max(1) as i32)
+            .inspect_err(|_| set_asr_status(app, &status, "error"))?;
+        if let Some(error) = lid_error {
+            ui_log(app, crate::msg!("log.lid.unavailable", error = error));
+        }
+        LazyAsr::loaded(models)
     };
     let vad = SileroVad::new(&cfg.vad_model_path, s.vad_threshold)
         .inspect_err(|_| set_asr_status(app, &status, "error"))?;
@@ -237,26 +225,15 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         vad,
     );
     engine.set_strict_spotted_wake(lazy_loading);
-    if s.russian_enabled() {
-        engine.set_bilingual(None, None, language_mode(s));
-        if !lazy_loading {
-            let (second, lid, warnings) = load_secondary_models(cfg);
-            for warning in warnings {
-                ui_log(app, warning);
-            }
-            engine.set_bilingual(
-                second.map(|model| Box::new(model) as Box<dyn Transcriber + Send>),
-                lid.map(|model| Box::new(model) as Box<dyn LanguageId + Send>),
-                language_mode(s),
-            );
-        }
+    // Каждая модель сама пишет и родной язык, и английские вставки латиницей: второй
+    // модели для цели команды нет. Ru = «как услышала модель». «Ривер» модель может
+    // записать английским словом — это и разрешает english_primary.
+    engine.set_bilingual(None, None, LangMode::Ru);
+    engine.set_english_primary(true);
+    log_languages(app, cfg);
+    crate::grammar::set_active_languages(&cfg.models.languages());
+    if cfg.russian_enabled() {
         enable_anglicisms(app, cfg, &mut engine);
-    } else {
-        // Только английский: основная модель уже английская, второй язык и словарь
-        // англицизмов (русская диктовка) не нужны. Ru = «как услышала основная модель».
-        ui_log(app, crate::msg!("log.englishOnly"));
-        engine.set_bilingual(None, None, LangMode::Ru);
-        engine.set_english_primary(true);
     }
     enable_wake_spotter(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
@@ -298,25 +275,15 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut last_activity = std::time::Instant::now();
     let mut last_warm = std::time::Instant::now();
     let mut last_audio_trace = std::time::Instant::now();
-    let mut load_rx: Option<Receiver<ModelLoadEvent>> = None;
+    let mut load_rx: Option<Receiver<LoadedModels>> = None;
     let mut loading_audio: Vec<i16> = Vec::new();
     let mut loading_audio_truncated = false;
     let mut load_reason: Option<LoadReason> = None;
-    let mut pending_command_audio: Option<Vec<i16>> = None;
-    let mut pending_command_reason: Option<LoadReason> = None;
-    let mut staged_audio: Option<Vec<i16>> = None;
-    let mut staged_reason: Option<LoadReason> = None;
     let mut recent_chunks: VecDeque<Vec<i16>> = VecDeque::new();
     let mut recent_samples = 0usize;
     loop {
         if shared.reload.load(Ordering::Relaxed) {
             loading_audio.fill(0);
-            if let Some(audio) = pending_command_audio.as_mut() {
-                audio.fill(0);
-            }
-            if let Some(audio) = staged_audio.as_mut() {
-                audio.fill(0);
-            }
             clear_recent_audio(&mut recent_chunks, &mut recent_samples);
             return Ok(());
         }
@@ -369,16 +336,6 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 loading_audio.fill(0);
                 loading_audio.clear();
                 loading_audio_truncated = false;
-                if let Some(audio) = pending_command_audio.as_mut() {
-                    audio.fill(0);
-                }
-                pending_command_audio = None;
-                pending_command_reason = None;
-                if let Some(audio) = staged_audio.as_mut() {
-                    audio.fill(0);
-                }
-                staged_audio = None;
-                staged_reason = None;
                 clear_recent_audio(&mut recent_chunks, &mut recent_samples);
                 worker.confirm_op = None;
                 worker.calibrating = None;
@@ -481,7 +438,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
 
             if let Some(result) = take_loader_event(&mut load_rx) {
                 match result {
-                    Err(error) | Ok(ModelLoadEvent::Primary(Err(error))) => {
+                    Err(error) | Ok(Err(error)) => {
                         load_rx.take();
                         load_reason = None;
                         loading_audio.fill(0);
@@ -493,9 +450,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         clear_recent_audio(&mut recent_chunks, &mut recent_samples);
                         loading_audio_truncated = false;
                     }
-                    Ok(ModelLoadEvent::Primary(Ok(primary))) => {
+                    Ok(Ok((models, lid_error))) => {
+                        load_rx.take();
                         let reason = load_reason.take().unwrap_or(LoadReason::Wake);
-                        asr.install(primary);
+                        asr.install(models);
+                        if let Some(error) = lid_error {
+                            ui_log(app, crate::msg!("log.lid.unavailable", error = error));
+                        }
                         set_asr_status(app, &status, "ready");
                         worker.sync_grammar(&mut engine);
                         worker.sync_targets(&mut engine);
@@ -504,67 +465,14 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                             engine.mark_spotted_wake();
                             set_state(app, "idle");
                         }
-
-                        let mut secondary_ready = !s.russian_enabled();
-                        if !s.russian_enabled() {
-                            load_rx.take();
-                        } else if let Some(secondary) = take_loader_event(&mut load_rx) {
-                            match secondary {
-                                Ok(ModelLoadEvent::Secondary {
-                                    second,
-                                    lid,
-                                    warnings,
-                                }) => {
-                                    install_secondary_models(
-                                        app,
-                                        &mut engine,
-                                        s,
-                                        second,
-                                        lid,
-                                        warnings,
-                                    );
-                                    load_rx.take();
-                                    secondary_ready = true;
-                                }
-                                Err(error) => {
-                                    ui_log(
-                                        app,
-                                        crate::msg!("log.models.secondFailed", error = format!("{error:#}")),
-                                    );
-                                    engine.set_bilingual(None, None, language_mode(s));
-                                    secondary_ready = true;
-                                }
-                                Ok(ModelLoadEvent::Primary(_)) => {}
-                            }
-                        }
-
-                        if !secondary_ready {
-                            staged_audio = Some(loading_audio.clone());
-                            staged_reason = Some(reason);
-                        }
                         let mut replay = std::mem::take(&mut loading_audio);
-                        let events = engine.push_audio(&replay);
-                        let deferred =
-                            worker.handle_engine_events(&mut engine, events, !secondary_ready);
-                        if deferred {
-                            pending_command_audio =
-                                Some(staged_audio.take().unwrap_or_else(|| replay.clone()));
-                            pending_command_reason = staged_reason.take().or(Some(reason));
-                            set_state(app, "loading");
-                            ui_log(app, crate::msg!("log.models.waitSecond"));
+                        for event in engine.push_audio(&replay) {
+                            worker.handle(&mut engine, event);
                         }
                         replay.fill(0);
                         clear_recent_audio(&mut recent_chunks, &mut recent_samples);
                         loading_audio_truncated = false;
                         last_activity = std::time::Instant::now();
-                    }
-                    Ok(ModelLoadEvent::Secondary {
-                        second,
-                        lid,
-                        warnings,
-                    }) => {
-                        install_secondary_models(app, &mut engine, s, second, lid, warnings);
-                        load_rx.take();
                     }
                 }
             }
@@ -572,177 +480,13 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             continue;
         }
 
-        if lazy_loading && asr.is_loaded() && load_rx.is_some() {
-            if pending_command_audio.is_some() {
-                if append_loading_audio(&mut loading_audio, &chunk) && !loading_audio_truncated {
-                    ui_log(
-                        app,
-                        crate::msg!("log.models.bufferFull"),
-                    );
-                }
-                loading_audio_truncated |= loading_audio.len() >= LOADING_AUDIO_LIMIT_SAMPLES;
-            } else {
-                remember_recent_audio(&mut recent_chunks, &mut recent_samples, &chunk);
-                if let Some(audio) = staged_audio.as_mut() {
-                    if append_loading_audio(audio, &chunk) && !loading_audio_truncated {
-                        ui_log(
-                            app,
-                            crate::msg!("log.models.bufferFull"),
-                        );
-                    }
-                    loading_audio_truncated |= audio.len() >= LOADING_AUDIO_LIMIT_SAMPLES;
-                }
-            }
-
-            let mut replayed_pending = false;
-            if let Some(result) = take_loader_event(&mut load_rx) {
-                match result {
-                    Ok(ModelLoadEvent::Secondary {
-                        second,
-                        lid,
-                        warnings,
-                    }) => {
-                        install_secondary_models(app, &mut engine, s, second, lid, warnings);
-                        load_rx.take();
-                        if let Some(mut replay) = pending_command_audio.take() {
-                            let reason = pending_command_reason.take().unwrap_or(LoadReason::Wake);
-                            let truncated = append_loading_audio(&mut replay, &loading_audio);
-                            if truncated {
-                                ui_log(app, crate::msg!("log.models.commandTooLong"));
-                            }
-                            loading_audio.fill(0);
-                            loading_audio.clear();
-                            engine.reset();
-                            match reason {
-                                LoadReason::Wake => engine.mark_spotted_wake(),
-                                LoadReason::Hotkey => engine.listen_command(),
-                            }
-                            let events = engine.push_audio(&replay);
-                            for event in events {
-                                if matches!(
-                                    event,
-                                    EngineEvent::WakeHeard | EngineEvent::WakeSpotted
-                                ) {
-                                    continue;
-                                }
-                                worker.handle(&mut engine, event);
-                            }
-                            replay.fill(0);
-                            replayed_pending = true;
-                            loading_audio_truncated = false;
-                            clear_recent_audio(&mut recent_chunks, &mut recent_samples);
-                            last_activity = std::time::Instant::now();
-                        } else {
-                            if let Some(audio) = staged_audio.as_mut() {
-                                audio.fill(0);
-                            }
-                            staged_audio = None;
-                            staged_reason = None;
-                            clear_recent_audio(&mut recent_chunks, &mut recent_samples);
-                        }
-                    }
-                    Err(error) => {
-                        ui_log(app, crate::msg!("log.models.secondFailed", error = format!("{error:#}")));
-                        engine.set_bilingual(None, None, language_mode(s));
-                        load_rx.take();
-                        if let Some(mut replay) = pending_command_audio.take() {
-                            let reason = pending_command_reason.take().unwrap_or(LoadReason::Wake);
-                            let truncated = append_loading_audio(&mut replay, &loading_audio);
-                            if truncated {
-                                ui_log(app, crate::msg!("log.models.commandTooLong"));
-                            }
-                            loading_audio.fill(0);
-                            loading_audio.clear();
-                            engine.reset();
-                            match reason {
-                                LoadReason::Wake => engine.mark_spotted_wake(),
-                                LoadReason::Hotkey => engine.listen_command(),
-                            }
-                            let events = engine.push_audio(&replay);
-                            for event in events {
-                                if matches!(
-                                    event,
-                                    EngineEvent::WakeHeard | EngineEvent::WakeSpotted
-                                ) {
-                                    continue;
-                                }
-                                worker.handle(&mut engine, event);
-                            }
-                            replay.fill(0);
-                            replayed_pending = true;
-                            loading_audio_truncated = false;
-                            clear_recent_audio(&mut recent_chunks, &mut recent_samples);
-                        } else {
-                            if let Some(audio) = staged_audio.as_mut() {
-                                audio.fill(0);
-                            }
-                            staged_audio = None;
-                            staged_reason = None;
-                            loading_audio.fill(0);
-                            loading_audio.clear();
-                            loading_audio_truncated = false;
-                            clear_recent_audio(&mut recent_chunks, &mut recent_samples);
-                        }
-                    }
-                    Ok(ModelLoadEvent::Primary(_)) => {
-                        ui_log(app, "⚠ model loader returned stages out of order");
-                    }
-                }
-            }
-
-            if pending_command_audio.is_some() && load_rx.is_some() {
-                chunk.fill(0);
-                continue;
-            }
-            if replayed_pending {
-                chunk.fill(0);
-                continue;
-            }
-        }
-
-        let hotkey_started = worker.poll_triggers(&mut engine);
-        if hotkey_started && lazy_loading && load_rx.is_some() {
-            if let Some(audio) = staged_audio.as_mut() {
-                audio.fill(0);
-            }
-            staged_audio = Some(chunk.to_vec());
-            staged_reason = Some(LoadReason::Hotkey);
-            loading_audio_truncated = false;
-        }
+        worker.poll_triggers(&mut engine);
         let started = std::time::Instant::now();
         let events = engine.push_audio(&chunk);
         let spent = started.elapsed();
         let activity = events.iter().any(is_activity_event);
-        if lazy_loading && load_rx.is_some() {
-            if events
-                .iter()
-                .any(|event| matches!(event, EngineEvent::WakeSpotted))
-            {
-                if let Some(audio) = staged_audio.as_mut() {
-                    audio.fill(0);
-                }
-                staged_audio = Some(flatten_chunks(&recent_chunks));
-                staged_reason = Some(LoadReason::Wake);
-                loading_audio_truncated = false;
-            }
-        }
-        let has_command = events
-            .iter()
-            .any(|event| matches!(event, EngineEvent::Command { .. }));
-        let deferred =
-            worker.handle_engine_events(&mut engine, events, lazy_loading && load_rx.is_some());
-        if deferred {
-            pending_command_audio = Some(staged_audio.take().unwrap_or_else(|| chunk.to_vec()));
-            pending_command_reason = staged_reason.take().or(Some(LoadReason::Wake));
-            set_state(app, "loading");
-            ui_log(app, crate::msg!("log.models.waitSecond"));
-        } else if has_command {
-            if let Some(audio) = staged_audio.as_mut() {
-                audio.fill(0);
-            }
-            staged_audio = None;
-            staged_reason = None;
-            loading_audio_truncated = false;
+        for event in events {
+            worker.handle(&mut engine, event);
         }
         if activity {
             last_activity = std::time::Instant::now();
@@ -784,7 +528,6 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             && worker.dictation.is_none()
             && worker.choice_session.is_none()
         {
-            engine.set_bilingual(None, None, language_mode(s));
             if asr.unload() {
                 ui_log(app, crate::msg!("log.models.unloaded"));
                 set_asr_status(app, &status, "ready");
@@ -837,115 +580,58 @@ where
     }
 }
 
-/// Загружает вторую модель и LID после основной. Отсутствие этих моделей не
-/// блокирует команды на основном языке: bilingual.rs использует текстовые эвристики.
-fn load_secondary_models(cfg: &ReeverConfig) -> (Option<Asr>, Option<SpeechLid>, Vec<Msg>) {
-    let s = &cfg.settings;
-    let mut warnings = Vec::new();
-    let second = match Asr::new(&AsrConfig {
-        model_dir: cfg.second_model_dir.clone(),
-        num_threads: s.asr_threads.max(1) as i32,
-    }) {
-        Ok(asr) => Some(asr),
-        Err(error) => {
-            warnings.push(crate::msg!("log.second.unavailable", error = format!("{error:#}")));
-            None
-        }
-    };
-    let lid = if second.is_some() {
-        match &cfg.lid_model_dir {
-            Some(dir) => match SpeechLid::new(dir, 1) {
-                Ok(lid) => Some(lid),
-                Err(error) => {
-                    warnings.push(crate::msg!("log.lid.unavailable", error = format!("{error:#}")));
-                    None
-                }
-            },
-            None => None,
-        }
-    } else {
-        None
-    };
-    if second.is_some() {
-        warnings.push(match &lid {
-            Some(_) => crate::msg!(
-                "log.second.ok",
-                model = &s.second_asr_model,
-                lid = &s.lid_model,
-                target = &s.payload_language
-            ),
-            None => crate::msg!(
-                "log.second.okHeuristic",
-                model = &s.second_asr_model,
-                target = &s.payload_language
-            ),
-        });
-    }
-    (second, lid, warnings)
-}
-
-fn language_mode(settings: &crate::config::Settings) -> LangMode {
-    match settings.payload_language.as_str() {
-        "ru" => LangMode::Ru,
-        "en" => LangMode::En,
-        _ => LangMode::Auto,
-    }
-}
-
-fn install_secondary_models<T, V>(
-    app: &AppHandle,
-    engine: &mut Engine<T, V>,
-    settings: &crate::config::Settings,
-    second: Option<Asr>,
-    lid: Option<SpeechLid>,
-    warnings: Vec<Msg>,
-) where
-    T: crate::speech::Transcriber,
-    V: crate::speech::VoiceDetector,
-{
-    for warning in warnings {
-        ui_log(app, warning);
-    }
-    engine.set_bilingual(
-        second.map(|model| Box::new(model) as Box<dyn Transcriber + Send>),
-        lid.map(|model| Box::new(model) as Box<dyn LanguageId + Send>),
-        language_mode(settings),
-    );
-}
-
-fn spawn_model_loader(cfg: &ReeverConfig) -> Receiver<ModelLoadEvent> {
+fn spawn_model_loader(cfg: &ReeverConfig) -> Receiver<LoadedModels> {
     let cfg = cfg.clone();
     let (tx, rx) = channel();
     std::thread::spawn(move || {
-        let primary = Asr::new(&AsrConfig {
-            model_dir: cfg.asr_model_dir.clone(),
-            num_threads: cfg.settings.asr_threads.max(1) as i32,
-        });
-        let primary = match primary {
-            Ok(primary) => primary,
-            Err(error) => {
-                let _ = tx.send(ModelLoadEvent::Primary(Err(error)));
-                return;
-            }
-        };
-        if tx.send(ModelLoadEvent::Primary(Ok(primary))).is_err() {
-            return;
-        }
-        if cfg.settings.russian_enabled() {
-            let (second, lid, warnings) = load_secondary_models(&cfg);
-            let _ = tx.send(ModelLoadEvent::Secondary {
-                second,
-                lid,
-                warnings,
-            });
-        }
+        let _ = tx.send(AsrSet::load(
+            &cfg.models,
+            cfg.settings.asr_threads.max(1) as i32,
+        ));
     });
     rx
 }
 
+/// Папки моделей для плитки Главной и журнала.
+fn model_names(cfg: &ReeverConfig) -> String {
+    cfg.models
+        .models
+        .iter()
+        .map(|model| model.name.as_str())
+        .collect::<Vec<_>>()
+        .join(" + ")
+}
+
+/// Какие языки распознаются и почему остальные — нет (models.rs).
+fn log_languages(app: &AppHandle, cfg: &ReeverConfig) {
+    let names = |codes: &[&str]| {
+        codes
+            .iter()
+            .map(|code| crate::models::language_name(code))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    ui_log(
+        app,
+        crate::msg!("log.languages", languages = names(&cfg.models.languages())),
+    );
+    if !cfg.models.missing.is_empty() {
+        ui_log(
+            app,
+            crate::msg!("log.languages.missing", languages = names(&cfg.models.missing)),
+        );
+    }
+    if !cfg.models.need_lid.is_empty() {
+        ui_log(
+            app,
+            crate::msg!("log.languages.needLid", languages = names(&cfg.models.need_lid)),
+        );
+    }
+}
+
 fn take_loader_event(
-    receiver: &mut Option<Receiver<ModelLoadEvent>>,
-) -> Option<anyhow::Result<ModelLoadEvent>> {
+    receiver: &mut Option<Receiver<LoadedModels>>,
+) -> Option<anyhow::Result<LoadedModels>> {
     let rx = receiver.as_ref()?;
     match rx.try_recv() {
         Ok(event) => Some(Ok(event)),
@@ -1208,85 +894,6 @@ impl Worker<'_> {
         hotkey_started
     }
 
-    fn command_needs_secondary(&self, text: &str) -> bool {
-        if !self.cfg.settings.russian_enabled() {
-            return false;
-        }
-        let grammar = self
-            .shared
-            .grammar
-            .lock()
-            .ok()
-            .map(|grammar| grammar.clone())
-            .unwrap_or_else(Grammar::defaults);
-        let command = textnorm::normalize(text);
-        let (payload, intent_lang) = if let Some(found) = grammar.match_trigger(&command) {
-            (found.payload, found.intent.lang)
-        } else if grammar.allows_bare_launch() {
-            let lang = grammar
-                .intents
-                .iter()
-                .find(|intent| intent.enabled && intent.kind == IntentKind::Launch)
-                .map(|intent| intent.lang)
-                .unwrap_or(LangMode::Auto);
-            (command, lang)
-        } else {
-            return false;
-        };
-        if payload.is_empty() {
-            return false;
-        }
-        let normalized_payload = textnorm::normalize(&payload);
-        let known_target = self.shared.actions.lock().ok().is_some_and(|actions| {
-            actions.iter().any(|action| {
-                textnorm::normalize(&action.label) == normalized_payload
-                    || action
-                        .phrases
-                        .iter()
-                        .any(|phrase| textnorm::normalize(phrase) == normalized_payload)
-            })
-        });
-        if known_target {
-            return false;
-        }
-        match intent_lang {
-            LangMode::Ru => false,
-            LangMode::En => true,
-            LangMode::Auto => match self.cfg.settings.payload_language.as_str() {
-                "ru" => false,
-                "en" => true,
-                _ => true,
-            },
-        }
-    }
-
-    fn handle_engine_events<T, V>(
-        &mut self,
-        engine: &mut Engine<T, V>,
-        events: Vec<EngineEvent>,
-        secondary_pending: bool,
-    ) -> bool
-    where
-        T: crate::speech::Transcriber,
-        V: crate::speech::VoiceDetector,
-    {
-        let defer_command = secondary_pending
-            && events.iter().any(|event| match event {
-                EngineEvent::Command { text, .. } => self.command_needs_secondary(text),
-                _ => false,
-            });
-        for event in events {
-            if defer_command
-                && (matches!(&event, EngineEvent::State("busy"))
-                    || matches!(&event, EngineEvent::Command { text, .. } if self.command_needs_secondary(text)))
-            {
-                continue;
-            }
-            self.handle(engine, event);
-        }
-        defer_command
-    }
-
     fn handle<T, V>(&mut self, engine: &mut Engine<T, V>, ev: EngineEvent)
     where
         T: crate::speech::Transcriber,
@@ -1339,7 +946,7 @@ impl Worker<'_> {
                 "log.dictation.start",
                 seconds = idle_s,
                 wake = self.cfg.settings.wake_words.first().map(String::as_str).unwrap_or("ривер"),
-                stop = if self.cfg.settings.russian_enabled() { "стоп" } else { "stop" },
+                stop = if self.cfg.russian_enabled() { "стоп" } else { "stop" },
                 cancel = self.cancel_words.first().map(String::as_str).unwrap_or("отмена")
             ),
         );

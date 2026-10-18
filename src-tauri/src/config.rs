@@ -42,21 +42,9 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub english_enabled: bool,
     /// Языки распознавания (`RECOGNITION_LANGUAGES`). Английский включён всегда, даже если
-    /// его нет в списке; без русского основной моделью становится английская.
+    /// его нет в списке; язык без скачанного пакета модели пропускается (models.rs).
     #[serde(default = "default_languages")]
     pub languages: Vec<String>,
-    /// Папка sherpa-onnx модели относительно resources/model/.
-    #[serde(default = "default_asr_model")]
-    pub asr_model: String,
-    /// Папка второй модели для распознавания цели команды (английская/мультиязычная).
-    #[serde(default = "default_second_asr_model")]
-    pub second_asr_model: String,
-    /// Папка модели LID; пустая строка отключает модель и оставляет текстовые эвристики.
-    #[serde(default = "default_lid_model")]
-    pub lid_model: String,
-    /// Язык цели команды по умолчанию: `auto`, `ru` или `en`.
-    #[serde(default = "default_payload_language")]
-    pub payload_language: String,
     /// Число потоков ONNX Runtime для распознавания.
     #[serde(default = "default_asr_threads")]
     pub asr_threads: u32,
@@ -152,9 +140,6 @@ pub struct Settings {
     /// фоновых потоков, но и искать файлы голосом нечем.
     #[serde(default = "default_true")]
     pub local_index: bool,
-    /// Модель режима «только английский» (основная, когда русский выключен).
-    #[serde(default = "default_english_only_model")]
-    pub english_only_model: String,
     /// Когда показывать маскота: `always`, `commands` (пока слушает и выполняет
     /// команду) или `never`.
     #[serde(default = "default_mascot_mode")]
@@ -179,16 +164,21 @@ fn default_mascot_mode() -> String {
 fn default_mascot_scale() -> u32 {
     100
 }
-fn default_english_only_model() -> String {
-    "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8".into()
-}
 
 /// Языки, которые Reever умеет распознавать, по порядку показа. Английский — первый
-/// и обязательный; новый язык — новая строка здесь и модель для него.
-pub const RECOGNITION_LANGUAGES: &[&str] = &["en", "ru"];
+/// и обязательный; новый язык — строка здесь, пакет в `models::PACKS` и фразы команд
+/// в грамматике (`grammar::LANGUAGE_TRIGGERS`).
+pub const RECOGNITION_LANGUAGES: &[&str] = &["en", "ru", "de", "fr", "es", "it", "pt", "zh", "ja"];
 
+/// Английский и язык Windows, если Reever его распознаёт: пакет для него обычно и
+/// скачивают при установке.
 fn default_languages() -> Vec<String> {
-    vec!["ru".into(), "en".into()]
+    let mut languages = vec!["en".to_string()];
+    let system = crate::uilang::resolve("auto");
+    if system != "en" && RECOGNITION_LANGUAGES.contains(&system) {
+        languages.push(system.to_string());
+    }
+    languages
 }
 
 impl Settings {
@@ -208,19 +198,6 @@ impl Settings {
             .collect()
     }
 
-    /// Русский включён: основная модель — русская, английская распознаёт цели команд.
-    pub fn russian_enabled(&self) -> bool {
-        self.recognition_languages().contains(&"ru")
-    }
-
-    /// Папка основной модели: русская, а без русского — отдельная модель английского режима.
-    pub fn primary_asr_model(&self) -> &str {
-        if self.russian_enabled() {
-            &self.asr_model
-        } else {
-            &self.english_only_model
-        }
-    }
 }
 
 fn default_ui_language() -> String {
@@ -242,18 +219,6 @@ fn default_endpoint_ms() -> u64 {
     250
 }
 
-fn default_asr_model() -> String {
-    "sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16".into()
-}
-fn default_second_asr_model() -> String {
-    "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8".into()
-}
-fn default_lid_model() -> String {
-    "sherpa-onnx-whisper-base".into()
-}
-fn default_payload_language() -> String {
-    "auto".into()
-}
 fn default_asr_threads() -> u32 {
     4
 }
@@ -330,10 +295,6 @@ fn parse_settings(text: &str) -> Settings {
     restore!("wake_words", wake_words, Vec<String>);
     restore!("match_threshold", match_threshold, f64);
     restore!("english_enabled", english_enabled, bool);
-    restore!("asr_model", asr_model, String);
-    restore!("second_asr_model", second_asr_model, String);
-    restore!("lid_model", lid_model, String);
-    restore!("payload_language", payload_language, String);
     restore!("asr_threads", asr_threads, u32);
     restore!("vad_threshold", vad_threshold, f32);
     restore!("wake_pause_ms", wake_pause_ms, u32);
@@ -355,7 +316,6 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("models_unload_s", models_unload_s, u32);
     restore!("local_index", local_index, bool);
-    restore!("english_only_model", english_only_model, String);
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
     restore!("dictation_english", dictation_english, bool);
@@ -385,10 +345,6 @@ impl Default for Settings {
             wake_words: default_wake_words(),
             match_threshold: default_match_threshold(),
             english_enabled: true,
-            asr_model: default_asr_model(),
-            second_asr_model: default_second_asr_model(),
-            lid_model: default_lid_model(),
-            payload_language: default_payload_language(),
             asr_threads: default_asr_threads(),
             vad_threshold: default_vad_threshold(),
             wake_pause_ms: default_wake_pause_ms(),
@@ -420,7 +376,6 @@ impl Default for Settings {
             languages: default_languages(),
             models_unload_s: default_models_unload_s(),
             local_index: true,
-            english_only_model: default_english_only_model(),
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),
             mascot_bubble: true,
@@ -431,10 +386,9 @@ impl Default for Settings {
 /// Пути ко всем внешним ресурсам + загруженные настройки/алиасы.
 #[derive(Clone)]
 pub struct ReeverConfig {
-    pub asr_model_dir: PathBuf,
-    pub second_model_dir: PathBuf,
-    /// `None` означает режим LID только по текстовым эвристикам.
-    pub lid_model_dir: Option<PathBuf>,
+    /// Модели распознавания под включённые языки (models.rs).
+    pub models: crate::models::ModelPlan,
+    pub model_dirs: crate::models::ModelDirs,
     pub vad_model_path: PathBuf,
     /// Словарь англицизмов для диктовки (resources/anglicisms.tsv).
     pub anglicisms_path: PathBuf,
@@ -475,16 +429,12 @@ impl ReeverConfig {
             .map(|s| parse_settings(&s))
             .unwrap_or_default();
 
-        let lid_model_dir = if settings.lid_model.trim().is_empty() {
-            None
-        } else {
-            Some(resource(app, &format!("model/{}", settings.lid_model)))
-        };
+        let model_dirs = crate::models::ModelDirs::new(resource(app, "model"));
+        let models = crate::models::plan(&settings.recognition_languages(), &model_dirs);
 
         Ok(Self {
-            asr_model_dir: resource(app, &format!("model/{}", settings.primary_asr_model())),
-            second_model_dir: resource(app, &format!("model/{}", settings.second_asr_model)),
-            lid_model_dir,
+            models,
+            model_dirs,
             vad_model_path: resource(app, "model/silero_vad.onnx"),
             anglicisms_path: resource(app, "anglicisms.tsv"),
             sounds_dir: user_config_dir(app, "sounds"),
@@ -492,6 +442,11 @@ impl ReeverConfig {
             aliases,
             settings,
         })
+    }
+
+    /// Русский распознаётся: включён в настройках и его пакет скачан.
+    pub fn russian_enabled(&self) -> bool {
+        self.models.has("ru")
     }
 
     /// Путь к звуку активного пака; если в паке файла нет — берём из default.
@@ -623,22 +578,13 @@ mod tests {
 
     #[test]
     fn english_is_always_a_recognition_language() {
-        let both = parse_settings(r#"{"english_enabled": false}"#);
-        assert_eq!(both.recognition_languages(), ["en", "ru"]);
-        assert_eq!(both.primary_asr_model(), both.asr_model);
-
         let english = parse_settings(r#"{"languages": ["en"]}"#);
         assert_eq!(english.recognition_languages(), ["en"]);
-        assert!(!english.russian_enabled());
-        assert_eq!(english.primary_asr_model(), english.english_only_model);
-        assert_eq!(
-            english.primary_asr_model(),
-            "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8"
-        );
 
-        // Пустой список и неизвестные коды — всё равно английский.
-        let odd = parse_settings(r#"{"languages": ["xx", " RU "]}"#);
-        assert_eq!(odd.recognition_languages(), ["en", "ru"]);
+        // Порядок — как в RECOGNITION_LANGUAGES; пустой список и неизвестные коды — всё
+        // равно английский.
+        let odd = parse_settings(r#"{"languages": ["zh", "xx", " RU "]}"#);
+        assert_eq!(odd.recognition_languages(), ["en", "ru", "zh"]);
         assert_eq!(
             parse_settings(r#"{"languages": []}"#).recognition_languages(),
             ["en"]
@@ -646,17 +592,10 @@ mod tests {
     }
 
     #[test]
-    fn ru_en_uses_secondary_english_model_and_english_only_uses_its_own_model() {
-        let both = parse_settings(
-            r#"{"languages":["ru","en"],"second_asr_model":"parakeet-600m","english_only_model":"parakeet-110m"}"#,
+    fn old_model_fields_are_ignored() {
+        let old = parse_settings(
+            r#"{"languages":["ru","en"],"asr_model":"giga-am","second_asr_model":"parakeet-600m","payload_language":"en"}"#,
         );
-        assert_eq!(both.primary_asr_model(), both.asr_model);
-        assert_eq!(both.second_asr_model, "parakeet-600m");
-
-        let english = parse_settings(
-            r#"{"languages":["en"],"second_asr_model":"parakeet-600m","english_only_model":"parakeet-110m"}"#,
-        );
-        assert_eq!(english.primary_asr_model(), "parakeet-110m");
-        assert_eq!(english.second_asr_model, "parakeet-600m");
+        assert_eq!(old.recognition_languages(), ["en", "ru"]);
     }
 }
