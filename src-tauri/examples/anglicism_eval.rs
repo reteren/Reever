@@ -1,7 +1,7 @@
 //! Замер `anglicism::Anglicisms` на кейсах из testdata/lexicon (build_lexicon.py):
 //! транскрипции GigaAM смешанных фраз, примеры пользователя и все слова журнала диктовки.
 //!
-//!   cargo run --release --example anglicism_eval [-- --terms opacity,eraser] [--probe хайд,хедер]
+//!   cargo run --release --example anglicism_eval [-- --level 1..5] [--probe хайд,хедер]
 //!
 //! Пишет testdata/anglicism-report.md. Все подмены на словах журнала перечисляются:
 //! там есть и настоящие английские слова пользователя, поэтому их проверяет человек.
@@ -36,17 +36,17 @@ struct Negatives {
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let terms: Vec<String> = args
+    let level: u8 = args
         .iter()
-        .position(|a| a == "--terms")
+        .position(|a| a == "--level")
         .and_then(|i| args.get(i + 1))
-        .map(|list| list.split(',').map(str::to_string).collect())
-        .unwrap_or_default();
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(reever_lib::anglicism::DEFAULT_STRENGTH);
 
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let lexicon_dir = root.join("testdata/lexicon");
     let started = Instant::now();
-    let words = Anglicisms::load(&root.join("src-tauri/resources/anglicisms.tsv"), &terms)?;
+    let words = Anglicisms::load(&root.join("src-tauri/resources/anglicisms.tsv"), level)?;
     let load_ms = started.elapsed().as_millis();
 
     let mut cache: BTreeMap<String, Option<bool>> = BTreeMap::new();
@@ -145,8 +145,7 @@ fn main() -> Result<()> {
     let _ = writeln!(report, "# Словарь англицизмов в диктовке — замер\n");
     let _ = writeln!(
         report,
-        "Словарь: resources/anglicisms.tsv, загрузка {load_ms} мс. Слова пользователя: {}.\n",
-        if terms.is_empty() { "нет".to_string() } else { terms.join(", ") }
+        "Словарь: resources/anglicisms.tsv, загрузка {load_ms} мс. Сила замены: {level}.\n"
     );
     let _ = writeln!(report, "## Восстановлено английских слов\n\n| Набор | Найдено |\n|---|---:|");
     let (mut hit_total, mut all_total) = (0, 0);

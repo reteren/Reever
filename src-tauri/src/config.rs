@@ -125,10 +125,10 @@ pub struct Settings {
     /// («харднес» → hardness, см. anglicism.rs).
     #[serde(default = "default_true")]
     pub dictation_english: bool,
-    /// Свои английские слова для диктовки: `opacity` — предпочитать это слово,
-    /// `апасити=opacity` — всегда менять именно так.
-    #[serde(default)]
-    pub dictation_terms: Vec<String>,
+    /// Сила замены англицизмов, 1–5: 1 — только очевидные английские слова, 5 — всё,
+    /// что похоже на английское и не нашлось в русском словаре (anglicism.rs).
+    #[serde(default = "default_dictation_english_level")]
+    pub dictation_english_level: u8,
     /// «ривер гемини …»: сразу отправлять вопрос (Enter), а не только вводить.
     #[serde(default = "default_true")]
     pub webchat_send: bool,
@@ -167,6 +167,9 @@ pub struct Settings {
     pub mascot_bubble: bool,
 }
 
+fn default_dictation_english_level() -> u8 {
+    crate::anglicism::DEFAULT_STRENGTH
+}
 fn default_models_unload_s() -> u32 {
     60
 }
@@ -356,7 +359,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
     restore!("dictation_english", dictation_english, bool);
-    restore!("dictation_terms", dictation_terms, Vec<String>);
+    restore!("dictation_english_level", dictation_english_level, u8);
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_spotter", wake_spotter, bool);
     restore!("wake_spotter_model", wake_spotter_model, String);
@@ -408,7 +411,7 @@ impl Default for Settings {
             dictation_clipboard: true,
             dictation_live: true,
             dictation_english: true,
-            dictation_terms: Vec::new(),
+            dictation_english_level: default_dictation_english_level(),
             webchat_send: true,
             wake_spotter: true,
             wake_spotter_model: default_wake_spotter_model(),

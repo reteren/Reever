@@ -10,7 +10,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_terms:[],dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
+  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -557,14 +557,14 @@ const GROUPS=[
     ['lid_model','model_optional'],['payload_language','language'],['asr_threads','number'],['models_unload_s','number'],['vad_threshold','number'],['wake_pause_ms','number'],
     ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number']]],
   ['dictation',[
-    ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_terms','list'],
+    ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_english_level','strength'],
     ['dictation_idle_ms','number'],['dictation_pause_ms','number'],['webchat_send','bool']]],
   ['search',[['local_index','bool']]],
   ['system',[['confirm_dangerous','bool'],['confirm_close','bool'],['raise_result','bool']]],
 ];
 // Настройки смешения языков нужны, только когда языков больше одного; англицизмы —
 // только для русской диктовки.
-const SETTING_NEEDS={lid_model:'multi',payload_language:'multi',dictation_english:'ru',dictation_terms:'ru',english_only_model:'en-only'};
+const SETTING_NEEDS={lid_model:'multi',payload_language:'multi',dictation_english:'ru',dictation_english_level:'ru',english_only_model:'en-only'};
 function settingVisible(key){
   const need=SETTING_NEEDS[key], langs=recognitionLanguages();
   if(need==='en-only') return !langs.includes('ru');
@@ -670,6 +670,21 @@ function fieldEl(key,type,opts,when='save'){
     inp.onchange=()=>{ settingsObj[key]=Number(inp.value); applyMascot(); };
     row.append(inp,out); wrap.append(row);
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+    return wrap;
+  }
+  else if(type==='strength'){
+    // Ступени 1–5: под ползунком — что делает выбранная ступень, меняется на ходу.
+    const row=el('div',{className:'mascot-scale'});
+    const value=Math.min(5,Math.max(1,Math.round(Number(settingsObj[key])||3)));
+    inp=el('input',{type:'range',min:'1',max:'5',step:'1',value:String(value)});
+    const out=el('span',{className:'mascot-scale-value',textContent:`${value} / 5`});
+    const about=el('div',{className:'hint setting-help',textContent:t(`settings.${key}.${value}`)});
+    inp.oninput=()=>{
+      settingsObj[key]=Number(inp.value);
+      out.textContent=`${inp.value} / 5`;
+      about.textContent=t(`settings.${key}.${inp.value}`);
+    };
+    row.append(inp,out); wrap.append(row,about);
     return wrap;
   }
   else if(type==='select'){ inp=el('select'); for(const o of opts){const optionKey=`settings.${key}.${o}`;const label=I18N.has(optionKey)?t(optionKey):I18N.has(`mode.${o}`)?t(`mode.${o}`):o;const op=el('option',{value:o,textContent:label});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }

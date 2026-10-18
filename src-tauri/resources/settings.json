@@ -20,7 +20,7 @@
   "dictation_idle_ms": 3000,
   "dictation_live": true,
   "dictation_pause_ms": 800,
-  "dictation_terms": [],
+  "dictation_english_level": 3,
   "hotkey": "Ctrl+Shift+G",
   "languages": [
     "ru",

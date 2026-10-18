@@ -15,22 +15,42 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use strsim::normalized_levenshtein;
 
-/// Нижняя граница фонетического сходства для слова из общего словаря. Ниже начинается
-/// случайная омонимия: «бинды» / bandy 0,93 уже ошибка, «редит» / radiate 0,90.
-const MIN_SIMILARITY: f64 = 0.925;
-/// Короткое общее слово («лайф», «плей») — только точная запись частого слова: среди
-/// четырёх букв созвучий слишком много («стро» / straw, «эрас» / heiress); из трёх букв
-/// общие слова не берутся совсем («зом» / them). Термины («тул», «пнг») — можно.
-const SHORT_TOKEN_CHARS: usize = 4;
-const SHORT_MIN_WEIGHT: f64 = 0.001;
-/// Для доменных терминов и слов пользователя порог мягче: ошибка там дешевле, промах дороже.
-const MIN_SIMILARITY_PRIORITY: f64 = 0.78;
-/// Лучший кандидат должен оторваться от второго, иначе слово остаётся как было
-/// («сайс»: size или sighs — решает приоритет термина, а не случай).
-const MIN_MARGIN: f64 = 0.05;
+/// Сила замены из настроек: 1 — только очевидные английские слова, 5 — всё, что похоже
+/// на английское и не нашлось в русском словаре.
+pub const MIN_STRENGTH: u8 = 1;
+pub const MAX_STRENGTH: u8 = 5;
+pub const DEFAULT_STRENGTH: u8 = 3;
+
+/// Пороги одной ступени силы.
+#[derive(Clone, Copy, Debug)]
+struct Strength {
+    /// Нижняя граница фонетического сходства для слова из общего словаря. На ступени 3
+    /// это 0,925: ниже начинается случайная омонимия («бинды» / bandy 0,93 уже ошибка).
+    general: f64,
+    /// Для доменных терминов порог мягче: ошибка там дешевле, промах дороже.
+    domain: f64,
+    /// Лучший кандидат должен оторваться от второго, иначе слово остаётся как было
+    /// («сайс»: size или sighs — решает приоритет термина, а не случай).
+    margin: f64,
+    /// Общее слово короче — не меняется; ровно такой длины — только точная запись слова
+    /// с частотой не ниже `short_weight`. Среди коротких созвучий слишком много («стро» /
+    /// straw, «зом» / them). Термины («тул», «пнг») — можно на любой ступени.
+    short_chars: usize,
+    short_weight: f64,
+}
+
+fn strength(level: u8) -> Strength {
+    match level.clamp(MIN_STRENGTH, MAX_STRENGTH) {
+        1 => Strength { general: 0.99, domain: 0.95, margin: 0.05, short_chars: 6, short_weight: 0.001 },
+        2 => Strength { general: 0.96, domain: 0.86, margin: 0.05, short_chars: 5, short_weight: 0.001 },
+        3 => Strength { general: 0.925, domain: 0.78, margin: 0.05, short_chars: 4, short_weight: 0.001 },
+        4 => Strength { general: 0.88, domain: 0.74, margin: 0.03, short_chars: 4, short_weight: 0.0 },
+        _ => Strength { general: 0.80, domain: 0.70, margin: 0.01, short_chars: 4, short_weight: 0.0 },
+    }
+}
+
 const FREQUENCY_BONUS: f64 = 0.015;
 const DOMAIN_BONUS: f64 = 0.06;
-const USER_BONUS: f64 = 0.12;
 
 /// Короче — слишком много совпадений с обрывками русских слов.
 const MIN_TOKEN_CHARS: usize = 3;
@@ -41,7 +61,12 @@ const MAX_TOKEN_CHARS: usize = 24;
 const SLANG_GUARD: &[&str] = &[
     "блин", "капец", "кек", "кринж", "имба", "вайб", "зашквар", "жесть", "пиздец", "пипец",
     "хрень", "треш", "трэш", "чилл", "чилить", "хайп", "лол", "рофл", "угар", "фигня",
-    "фигово", "офигеть", "задолбал", "норм", "спс", "пж", "ок", "окей", "кста",
+    "фигово", "офигеть", "задолбал", "норм", "спс", "пж", "ок", "окей", "кста", "нихера",
+    "нифига", "немно",
+    // Названия, которые пишут кириллицей, а словарь Windows знает только с заглавной
+    // или не знает вовсе: ближайшее английское слово неверно («ютуб» / tube). Проверять
+    // всё подряд с заглавной нельзя — там же имена «Джейсон», «Эдит» (JSON, edit).
+    "ютуб", "ютуба", "ютубе", "ютубу", "ютубом", "христос",
 ];
 
 /// Записи, которые словарь Windows считает русскими словами, но в речи о программах это
@@ -59,6 +84,8 @@ const OVER_RUSSIAN: &[(&str, &str)] = &[
 const RUSSIAN_ENDINGS: &[&str] = &[
     "ться", "тся", "ть", "ешь", "ишь", "ете", "ите", "ый", "ий", "ая", "яя", "ое", "ее", "ые",
     "ие", "ого", "его", "ому", "ему", "ыми", "ими", "ую", "юю",
+    // Глагол настоящего времени («лагает», «юзают»).
+    "ает", "яет", "ует", "ают", "яют", "уют",
     // Английское слово на «ы» не кончается: это русское множественное («бинды»).
     "ы",
 ];
@@ -75,7 +102,6 @@ const INFLECTIONS: &[&str] = &[
 enum Priority {
     General,
     Domain,
-    User,
 }
 
 struct Entry {
@@ -91,8 +117,9 @@ pub struct Anglicisms {
     variants: Vec<(String, String, usize)>,
     by_skeleton: HashMap<String, Vec<usize>>,
     by_gram: HashMap<String, Vec<usize>>,
-    /// Явные пары пользователя «апасити=opacity» — точное совпадение, мимо скоринга.
+    /// Точные подмены мимо скоринга (`OVER_RUSSIAN`).
     exact: HashMap<String, String>,
+    strength: Strength,
 }
 
 #[derive(Clone, Debug)]
@@ -103,21 +130,22 @@ struct Candidate {
 }
 
 impl Anglicisms {
-    /// Загружает resources/anglicisms.tsv и добавляет слова пользователя.
-    pub fn load(path: &Path, user_terms: &[String]) -> Result<Self> {
+    /// Загружает resources/anglicisms.tsv; `level` — сила замены 1–5.
+    pub fn load(path: &Path, level: u8) -> Result<Self> {
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("словарь англицизмов {}", path.display()))?;
-        Ok(Self::parse(&text, user_terms))
+        Ok(Self::parse(&text, level))
     }
 
     /// Формат строки: `display<TAB>weight<TAB>domain<TAB>вариант,вариант`.
-    pub fn parse(text: &str, user_terms: &[String]) -> Self {
+    pub fn parse(text: &str, level: u8) -> Self {
         let mut lexicon = Self {
             entries: Vec::new(),
             variants: Vec::new(),
             by_skeleton: HashMap::new(),
             by_gram: HashMap::new(),
             exact: HashMap::new(),
+            strength: strength(level),
         };
         for line in text.lines() {
             if line.starts_with('#') || line.trim().is_empty() {
@@ -152,7 +180,6 @@ impl Anglicisms {
         for (heard, english) in OVER_RUSSIAN {
             lexicon.exact.insert((*heard).to_string(), (*english).to_string());
         }
-        lexicon.add_user_terms(user_terms);
         lexicon
     }
 
@@ -181,38 +208,6 @@ impl Anglicisms {
             }
             self.by_skeleton.entry(skeleton.clone()).or_default().push(index);
             self.variants.push((variant, skeleton, entry));
-        }
-    }
-
-    /// Слова пользователя из настроек: `opacity` — поднять приоритет (или добавить с
-    /// записью по буквам), `апасити=opacity` — точная подмена.
-    fn add_user_terms(&mut self, user_terms: &[String]) {
-        for term in user_terms {
-            let term = term.trim();
-            if term.is_empty() {
-                continue;
-            }
-            if let Some((heard, english)) = term.split_once('=') {
-                let (heard, english) = (normalize(heard), english.trim());
-                if !heard.is_empty() && !english.is_empty() {
-                    self.exact.insert(heard, english.to_string());
-                }
-                continue;
-            }
-            let key = term.to_lowercase();
-            let mut found = false;
-            for entry in &mut self.entries {
-                if entry.display.to_lowercase() == key {
-                    entry.priority = Priority::User;
-                    found = true;
-                }
-            }
-            if !found {
-                let spelled = spell_in_cyrillic(&key);
-                if !spelled.is_empty() {
-                    self.push(term, 0.0, Priority::User, std::iter::once(spelled.as_str()));
-                }
-            }
         }
     }
 
@@ -261,7 +256,6 @@ impl Anglicisms {
                 let bonus = match item.priority {
                     Priority::General => 0.0,
                     Priority::Domain => DOMAIN_BONUS,
-                    Priority::User => USER_BONUS,
                 };
                 Candidate {
                     entry,
@@ -294,18 +288,19 @@ impl Anglicisms {
         let (best, runner_up) = self.best(token);
         let best = best?;
         let entry = &self.entries[best.entry];
+        let strength = self.strength;
         let threshold = if entry.priority == Priority::General {
-            MIN_SIMILARITY
+            strength.general
         } else {
-            MIN_SIMILARITY_PRIORITY
+            strength.domain
         };
         let margin = best.score - runner_up.map_or(0.0, |r| r.score);
         let length = token.chars().count();
         let short_general = entry.priority == Priority::General
-            && (length < SHORT_TOKEN_CHARS
-                || (length == SHORT_TOKEN_CHARS
-                    && (best.similarity < 1.0 || entry.weight < SHORT_MIN_WEIGHT)));
-        (best.similarity >= threshold && margin >= MIN_MARGIN && !short_general)
+            && (length < strength.short_chars
+                || (length == strength.short_chars
+                    && (best.similarity < 1.0 || entry.weight < strength.short_weight)));
+        (best.similarity >= threshold && margin >= strength.margin && !short_general)
             .then(|| entry.display.clone())
     }
 
@@ -448,62 +443,6 @@ fn grams(skeleton: &str) -> Vec<String> {
     chars.windows(size).map(|window| window.iter().collect()).collect()
 }
 
-/// Запись английского слова «по буквам» для слов пользователя, которых нет в словаре.
-fn spell_in_cyrillic(word: &str) -> String {
-    let mut output = String::new();
-    let chars: Vec<char> = word.chars().collect();
-    let mut index = 0;
-    while index < chars.len() {
-        let pair: String = chars[index..(index + 2).min(chars.len())].iter().collect();
-        let mapped = match pair.as_str() {
-            "sh" => Some("ш"),
-            "ch" => Some("ч"),
-            "th" => Some("с"),
-            "ph" => Some("ф"),
-            "ck" => Some("к"),
-            "ee" => Some("и"),
-            "oo" => Some("у"),
-            _ => None,
-        };
-        if let Some(mapped) = mapped {
-            output.push_str(mapped);
-            index += 2;
-            continue;
-        }
-        output.push_str(match chars[index] {
-            'a' => "а",
-            'b' => "б",
-            'c' => "к",
-            'd' => "д",
-            'e' => "е",
-            'f' => "ф",
-            'g' => "г",
-            'h' => "х",
-            'i' => "и",
-            'j' => "дж",
-            'k' => "к",
-            'l' => "л",
-            'm' => "м",
-            'n' => "н",
-            'o' => "о",
-            'p' => "п",
-            'q' => "к",
-            'r' => "р",
-            's' => "с",
-            't' => "т",
-            'u' => "а",
-            'v' => "в",
-            'w' => "в",
-            'x' => "кс",
-            'y' => "и",
-            'z' => "з",
-            _ => "",
-        });
-        index += 1;
-    }
-    output
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -524,9 +463,8 @@ milestone\t0.00002\t0\tмайлстоун,майлстон
 PNG\t0.08\t1\tпнг,пиэнджи
 ";
 
-    fn lexicon(user: &[&str]) -> Anglicisms {
-        let user: Vec<String> = user.iter().map(|s| s.to_string()).collect();
-        Anglicisms::parse(LEXICON, &user)
+    fn lexicon() -> Anglicisms {
+        Anglicisms::parse(LEXICON, DEFAULT_STRENGTH)
     }
 
     /// Словарь Windows в тестах: всё, чего нет в списке, — не русское слово.
@@ -541,7 +479,7 @@ PNG\t0.08\t1\tпнг,пиэнджи
 
     #[test]
     fn restores_terms_from_the_user_log() {
-        let words = lexicon(&[]);
+        let words = lexicon();
         assert_eq!(
             words.restore("можно крутить харднес но апасити ластику нельзя", &russian),
             "можно крутить hardness но opacity ластику нельзя"
@@ -553,7 +491,7 @@ PNG\t0.08\t1\tпнг,пиэнджи
 
     #[test]
     fn keeps_russian_words_slang_and_russian_forms() {
-        let words = lexicon(&[]);
+        let words = lexicon();
         for text in ["можно лагать", "вот кринж", "это зашквар", "можно раз"] {
             assert_eq!(words.restore(text, &russian), text);
         }
@@ -564,27 +502,47 @@ PNG\t0.08\t1\tпнг,пиэнджи
 
     #[test]
     fn general_words_need_a_close_match() {
-        let words = lexicon(&[]);
+        let words = lexicon();
         assert_eq!(words.restore("это лайф", &russian), "это life");
         assert_eq!(words.restore("это майлстоун", &russian), "это milestone");
     }
 
     #[test]
     fn without_a_dictionary_nothing_changes() {
-        let words = lexicon(&[]);
+        let words = lexicon();
         assert_eq!(words.restore("харднес", &|_| None), "харднес");
     }
 
     #[test]
     fn keeps_case_and_punctuation() {
-        let words = lexicon(&[]);
+        let words = lexicon();
         assert_eq!(words.restore("Харднес, а потом пнг!", &russian), "Hardness, а потом PNG!");
     }
 
     #[test]
-    fn user_terms_win_and_exact_pairs_apply() {
-        let words = lexicon(&["тулирас=eraser tool", "Krita"]);
-        assert_eq!(words.restore("открой тулирас", &russian), "открой eraser tool");
-        assert_eq!(words.restore("запусти крита", &russian), "запусти Krita");
+    fn strength_one_keeps_only_obvious_words() {
+        let words = Anglicisms::parse(LEXICON, 1);
+        // Термин с точной записью — меняется и на самой слабой ступени.
+        assert_eq!(words.restore("уменьши сайз кисти", &russian), "уменьши size кисти");
+        // Общие слова короче шести букв — нет, хотя на ступени 3 они меняются.
+        assert_eq!(words.restore("это лайф", &russian), "это лайф");
+        assert_eq!(words.restore("это легат", &russian), "это легат");
+        assert_eq!(lexicon().restore("это легат", &russian), "это legate");
+    }
+
+    #[test]
+    fn strength_five_takes_loose_matches_but_not_russian_words() {
+        let words = Anglicisms::parse(LEXICON, 5);
+        assert_eq!(words.restore("это лайф", &russian), "это life");
+        // Русские слова, сленг и русские формы не трогает ни одна ступень.
+        for text in ["можно лагать", "вот кринж", "нет майлстоунов", "открой картинку"] {
+            assert_eq!(words.restore(text, &russian), text);
+        }
+    }
+
+    #[test]
+    fn out_of_range_strength_is_clamped() {
+        assert_eq!(strength(0).general, strength(1).general);
+        assert_eq!(strength(9).general, strength(5).general);
     }
 }

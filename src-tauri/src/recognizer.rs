@@ -807,7 +807,7 @@ where
     if !s.dictation_english {
         return;
     }
-    match Anglicisms::load(&cfg.anglicisms_path, &s.dictation_terms) {
+    match Anglicisms::load(&cfg.anglicisms_path, s.dictation_english_level) {
         Ok(anglicisms) => engine.set_anglicisms(Some(anglicisms)),
         Err(error) => ui_log(app, crate::msg!("log.anglicismsFailed", error = format!("{error:#}"))),
     }
