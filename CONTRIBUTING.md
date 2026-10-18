@@ -9,7 +9,7 @@ powershell -ExecutionPolicy Bypass -File scripts/fetch-deps.ps1
 npm run dev
 ```
 
-Второй шаг обязателен. Модель распознавания GigaAM v3 (~220 МБ) и Silero VAD **не хранятся в git** — скрипт скачивает их из релизов sherpa-onnx. Идемпотентен: повторный запуск ничего не перекачивает, `-Force` переустанавливает, `-AsrModel <имя>` ставит другую модель (например CTC-вариант GigaAM). Сама библиотека sherpa-onnx линкуется статически: её prebuilt скачивает `cargo` при первой сборке.
+Второй шаг обязателен. Модели распознавания **не хранятся в git** — скрипт скачивает из релизов sherpa-onnx то, что вшито в установщик (английская Parakeet 110m, детектор «ривер», Silero VAD). Языковые пакеты (`src-tauri/src/models.rs`) у пользователя качает установщик; для разработки — `-Packs european,asian,lid`. Идемпотентен: повторный запуск ничего не перекачивает, `-Force` переустанавливает. Сама библиотека sherpa-onnx линкуется статически: её prebuilt скачивает `cargo` при первой сборке.
 
 Что нужно на машине: [Rust](https://rustup.rs/), [Node.js](https://nodejs.org/), Windows 10/11. Проект собирается только под Windows — вся оболочка построена на WinAPI.
 
@@ -49,7 +49,8 @@ cargo run --release --example eval -- --noise-db -30   # то же с фонов
 |---|---|
 | `src-tauri/src/recognizer.rs` | аудио-воркер: склейка Engine с Tauri — микрофон, звуки, события UI |
 | `src-tauri/src/engine.rs` | автомат прослушивания (wake → команда / подтверждение / калибровка), без Tauri |
-| `src-tauri/src/{asr,vad,segmenter,speech}.rs` | GigaAM через sherpa-onnx, Silero VAD, нарезка на фразы, общие трейты |
+| `src-tauri/src/{asr,vad,segmenter,speech}.rs` | модели sherpa-onnx и набор моделей под языки (`AsrSet`), Silero VAD, нарезка на фразы, общие трейты |
+| `src-tauri/src/models.rs`, `src-tauri/windows/` | каталог языковых пакетов; страница установщика, которая их скачивает |
 | `src-tauri/src/{textnorm,commands,dispatch}.rs` | нормализация текста и wake, грамматика команд, диспетчер |
 | `src-tauri/src/config.rs` | настройки, алиасы, резолв путей dev↔release |
 | `src-tauri/src/commands_api.rs` | команды для интерфейса |

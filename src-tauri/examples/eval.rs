@@ -4,6 +4,8 @@
 //! Корпус: scripts/gen-corpus.ps1. Запуск из src-tauri/:
 //!   cargo run --release --example eval [-- --noise-db -25] [--model <папка>]
 //!     [--second-model <папка>] [--lid-model <папка>]
+//! По умолчанию — как в приложении: одна Parakeet v3 без второй модели (models.rs);
+//! `--second-model` включает прежнюю схему «основная + вторая для цели».
 //! Отчёт: testdata/eval-report*.md. EVAL_TRACE=1 печатает события по каждому файлу.
 
 use std::collections::BTreeMap;
@@ -28,7 +30,7 @@ use strsim::jaro_winkler;
 const CHUNK: usize = 320; // 20 мс
 const LEAD_MS: u32 = 1_000;
 const TAIL_MS: u32 = 2_000;
-const DEFAULT_SECOND_MODEL: &str = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8";
+const DEFAULT_SECOND_MODEL: &str = "";
 const DEFAULT_LID_MODEL: &str = "sherpa-onnx-whisper-base";
 
 #[derive(Deserialize)]
@@ -114,7 +116,7 @@ fn main() -> anyhow::Result<()> {
     let models = root.join("resources/model");
     let testdata = root.join("../testdata");
     let model = arg("--model")
-        .unwrap_or_else(|| "sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16".into());
+        .unwrap_or_else(|| reever_lib::models::EUROPEAN.dir.into());
     let model_dir = model_path(&models, &model);
     let second_model = arg("--second-model").unwrap_or_else(|| DEFAULT_SECOND_MODEL.into());
     let lid_model = arg("--lid-model").unwrap_or_else(|| DEFAULT_LID_MODEL.into());
@@ -142,7 +144,9 @@ fn main() -> anyhow::Result<()> {
         SileroVad::new(&models.join("silero_vad.onnx"), 0.5)?,
     );
 
-    let second: Option<Box<dyn Transcriber + Send>> = if second_dir.is_dir() {
+    let second: Option<Box<dyn Transcriber + Send>> = if second_model.trim().is_empty() {
+        None
+    } else if second_dir.is_dir() {
         match Asr::new(&AsrConfig {
             model_dir: second_dir.clone(),
             num_threads: 4,
@@ -191,6 +195,8 @@ fn main() -> anyhow::Result<()> {
     let has_second = second.is_some();
     let has_lid = lid.is_some();
     engine.set_bilingual(second, lid, LangMode::Auto);
+    // Без второй модели основная сама пишет английские слова — как в приложении.
+    engine.set_english_primary(!has_second);
     eprintln!(
         "модели загружены за {:.1} с (вторая ASR: {}, LID: {})",
         asr_started.elapsed().as_secs_f64(),

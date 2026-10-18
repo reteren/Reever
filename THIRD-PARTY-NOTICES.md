@@ -1,6 +1,6 @@
 # Сторонние компоненты
 
-Reever распространяется вместе со сторонними компонентами, перечисленными ниже. Файлы загружаются скриптом `scripts/fetch-deps.ps1` и попадают в инсталлятор, поэтому их лицензии распространяются на дистрибутив.
+Reever распространяется вместе со сторонними компонентами, перечисленными ниже. Файлы загружаются скриптом `scripts/fetch-deps.ps1`; часть моделей попадает в инсталлятор, языковые пакеты инсталлятор скачивает сам по выбору пользователя.
 
 ## sherpa-onnx
 
@@ -8,26 +8,50 @@ Reever распространяется вместе со сторонними �
 - **Лицензия**: Apache License 2.0
 - **Источник**: https://github.com/k2-fsa/sherpa-onnx/blob/master/LICENSE
 
-## GigaAM v3
+## Модели в установщике
 
-- **Компонент**: sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16
-- **Лицензия**: MIT (файл LICENSE в архиве модели)
-- **Авторское право**: Copyright (c) 2024 GigaChat Team; архив LICENSE входит в папку модели.
-- **Источник**: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+### NVIDIA Parakeet TDT 110M (английский)
 
-## Silero VAD
+- **Компонент**: `sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8`
+- **Лицензия**: Creative Commons Attribution 4.0 International (CC BY 4.0), согласно карточке модели NVIDIA.
+- **ONNX-пакет**: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+
+### Streaming Zipformer small-ru (детектор «ривер»)
+
+- **Компонент**: `sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16`
+- **Лицензия**: Apache License 2.0 (модели Vosk / alphacep).
+- **ONNX-пакет**: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+
+### Silero VAD
 
 - **Компонент**: silero_vad.onnx
 - **Лицензия**: MIT
 - **Авторское право**: Copyright (c) 2020-present Silero Team.
 - **Источник**: https://github.com/snakers4/silero-vad/blob/master/LICENSE
 
-## NVIDIA Parakeet TDT 0.6B v2
+## Модели, которые скачивает установщик
 
-- **Компонент**: `sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8` (ONNX-конверсия NVIDIA `parakeet-tdt-0.6b-v2`)
+Эти модели в установщик не входят: установщик скачивает их по галочке с релиза
+sherpa-onnx (`src-tauri/windows/models.nsh`) в `%LOCALAPPDATA%\com.troid.reever\models`.
+
+### NVIDIA Parakeet TDT 0.6B v3 (европейские языки)
+
+- **Компонент**: `sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8` (ONNX-конверсия NVIDIA `parakeet-tdt-0.6b-v3`)
 - **Лицензия**: Creative Commons Attribution 4.0 International (CC BY 4.0), согласно карточке модели NVIDIA.
-- **Источник**: https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2
-- **ONNX-пакет**: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+- **Источник**: https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+
+### SenseVoice Small (китайский, японский, корейский)
+
+- **Компонент**: `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09`
+- **Лицензия**: код SenseVoice — MIT (Copyright (c) 2025 FunASR); веса модели — по лицензии модели
+  FunAudioLLM («model-license» в карточке модели).
+- **Источник**: https://huggingface.co/FunAudioLLM/SenseVoiceSmall, https://github.com/FunAudioLLM/SenseVoice
+
+### Whisper base (определитель языка)
+
+- **Компонент**: `sherpa-onnx-whisper-base` (int8-файлы)
+- **Лицензия**: MIT, Copyright (c) 2022 OpenAI.
+- **Источник**: https://github.com/openai/whisper/blob/main/LICENSE
 
 ## Словарь англицизмов (`resources/anglicisms.tsv`)
 
