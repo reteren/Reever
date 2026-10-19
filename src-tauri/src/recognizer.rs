@@ -232,9 +232,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     engine.set_english_primary(true);
     log_languages(app, cfg);
     crate::grammar::set_active_languages(&cfg.models.languages());
-    if cfg.russian_enabled() {
-        enable_anglicisms(app, cfg, &mut engine);
-    }
+    enable_anglicisms(app, cfg, &mut engine);
     enable_wake_spotter(app, cfg, &mut engine);
     set_asr_status(app, &status, "ready");
 
@@ -539,19 +537,21 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     Ok(())
 }
 
-/// Словарь англицизмов для диктовки (anglicism.rs). Нет файла — не фатально: диктовка
-/// пишет английские слова так, как их услышала русская модель.
+/// Словарь англицизмов для диктовки (anglicism.rs): только по галочке и только когда
+/// распознаётся кириллический язык, иначе словарь даже не загружается. Нет файла —
+/// не фатально: диктовка пишет английские слова так, как их услышала модель.
 fn enable_anglicisms<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
 where
     T: crate::speech::Transcriber,
     V: crate::speech::VoiceDetector,
 {
     let s = &cfg.settings;
-    if !s.dictation_english {
+    let spellcheck = cfg.cyrillic_spellcheck();
+    if !s.dictation_english || spellcheck.is_empty() {
         return;
     }
     match Anglicisms::load(&cfg.anglicisms_path, s.dictation_english_level) {
-        Ok(anglicisms) => engine.set_anglicisms(Some(anglicisms)),
+        Ok(anglicisms) => engine.set_anglicisms(Some(anglicisms), spellcheck),
         Err(error) => ui_log(app, crate::msg!("log.anglicismsFailed", error = format!("{error:#}"))),
     }
 }

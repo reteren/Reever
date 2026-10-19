@@ -304,8 +304,11 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     /// Диагностика (`REEVER_TRACE=1`): в журнал идёт каждая фраза простоя и решение по
     /// «ривер» — видно, почему обращение не принято.
     trace: bool,
-    /// Словарь англицизмов: «харднес» в русской диктовке → hardness.
+    /// Словарь англицизмов: «харднес» в кириллической диктовке → hardness.
     anglicisms: Option<Anglicisms>,
+    /// Словари Windows включённых кириллических языков (`ru-RU`, `uk-UA`, `bg-BG`):
+    /// слово, которое знает хоть один, — не англицизм.
+    anglicism_spellcheck: Vec<&'static str>,
     /// Сэмплов с начала речи текущей фразы простоя (`None` — речи сейчас нет).
     idle_speech_age: Option<usize>,
     /// Сэмплов с последней проверки «ривер напиши …» посреди фразы простоя.
@@ -369,6 +372,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             idle_speech_age: None,
             idle_partial_elapsed: 0,
             anglicisms: None,
+            anglicism_spellcheck: Vec::new(),
             known_targets: std::collections::HashMap::new(),
             fast_checked: false,
             fast_timed: None,
@@ -408,9 +412,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.lang_mode = mode;
     }
 
-    /// Словарь англицизмов для русской диктовки; `None` — текст как услышала модель.
-    pub fn set_anglicisms(&mut self, anglicisms: Option<Anglicisms>) {
+    /// Словарь англицизмов для кириллической диктовки и словари Windows её языков;
+    /// `None` — текст как услышала модель.
+    pub fn set_anglicisms(&mut self, anglicisms: Option<Anglicisms>, spellcheck: Vec<&'static str>) {
         self.anglicisms = anglicisms;
+        self.anglicism_spellcheck = spellcheck;
     }
 
     /// Фоновый детектор wake-слова (маленькая потоковая модель); `None` — только GigaAM.
@@ -1687,7 +1693,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
     }
 
-    /// Транслит английских слов в русском куске — латиницей по словарю англицизмов
+    /// Транслит английских слов в кириллическом куске — латиницей по словарю англицизмов
     /// (второй модели не нужно: на русской фразе она термин почти не слышит).
     fn english_words(&self, text: String) -> String {
         let Some(anglicisms) = &self.anglicisms else {
@@ -1700,8 +1706,18 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             {
                 return Some(true);
             }
-            crate::spellcheck::misspelled_ratio("ru-RU", word)
-                .map(|(ratio, count)| count == 1 && ratio == 0.0)
+            // Знает хоть один словарь — слово родное. Словаря языка может не быть в Windows
+            // (украинский и болгарский ставятся вместе с языком в «Параметрах»): такой
+            // пропускаем, иначе замена выключилась бы и для русского. Нет ни одного — `None`.
+            let mut verdict = None;
+            for &language in &self.anglicism_spellcheck {
+                match crate::spellcheck::misspelled_ratio(language, word) {
+                    Some((ratio, count)) if count == 1 && ratio == 0.0 => return Some(true),
+                    Some(_) => verdict = Some(false),
+                    None => {}
+                }
+            }
+            verdict
         };
         anglicisms.restore(&text, &is_russian)
     }

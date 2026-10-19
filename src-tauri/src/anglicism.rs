@@ -1,12 +1,15 @@
-//! Английские слова в русской диктовке по словарю их русских фонетических записей.
+//! Английские слова в кириллической диктовке (русский, украинский, болгарский) по словарю
+//! их русских фонетических записей.
 //!
-//! GigaAM — русская модель и пишет английский термин так, как его слышит: «апасити»,
-//! «харднес», «эскейп». Вторая (английская) модель на русской фразе термин почти не слышит
+//! Модель иногда пишет английский термин кириллицей так, как его слышит: «апасити»,
+//! «харднес», «эскейп». Включается галочкой в настройках и только если среди языков
+//! распознавания есть кириллический (`CYRILLIC_LANGUAGES`); латиницу и другие
+//! алфавиты не трогает. Вторая (английская) модель на русской фразе термин почти не слышит
 //! (замеры в testdata/*-mix-report.md: 4–15 из 98), а словарю вторая модель не нужна:
 //! транслит сравнивается с вариантами записи английских слов (CMUdict → кириллица,
 //! testdata/lexicon/build_lexicon.py → resources/anglicisms.tsv).
 //!
-//! Меняется только слово, которого нет в русском словаре Windows; формы с русским
+//! Меняется только слово, которого нет в словарях Windows включённых кириллических языков; формы с русским
 //! окончанием («скейлится», «майлстоунов») остаются кириллицей — гибрид «scaleится» хуже.
 
 use std::collections::{HashMap, HashSet};
@@ -20,6 +23,10 @@ use strsim::normalized_levenshtein;
 pub const MIN_STRENGTH: u8 = 1;
 pub const MAX_STRENGTH: u8 = 5;
 pub const DEFAULT_STRENGTH: u8 = 3;
+
+/// Кириллические языки распознавания и их словари Windows: только с ними замена работает.
+/// Записи в словаре русские; украинские и болгарские слова сводятся к ним в `normalize`.
+pub const CYRILLIC_LANGUAGES: &[(&str, &str)] = &[("ru", "ru-RU"), ("uk", "uk-UA"), ("bg", "bg-BG")];
 
 /// Пороги одной ступени силы.
 #[derive(Clone, Copy, Debug)]
@@ -330,8 +337,9 @@ impl Anglicisms {
 
     /// Подменяет в тексте диктовки транслит английских слов латиницей.
     ///
-    /// `is_russian(word)` — есть ли слово в русском словаре (`None` — проверка недоступна,
-    /// тогда текст не меняется: без словаря нельзя отличить «харднес» от «хорошо»).
+    /// `is_russian(word)` — есть ли слово (в нижнем регистре, как написано) в словаре языка
+    /// (`None` — проверка недоступна, тогда текст не меняется: без словаря нельзя отличить
+    /// «харднес» от «хорошо»).
     pub fn restore(&self, text: &str, is_russian: &dyn Fn(&str) -> Option<bool>) -> String {
         let mut result = String::with_capacity(text.len());
         let mut cursor = 0;
@@ -362,7 +370,7 @@ impl Anglicisms {
         }
         if SLANG_GUARD.contains(&key.as_str())
             || RUSSIAN_ENDINGS.iter().any(|ending| key.ends_with(ending))
-            || is_russian(&key) != Some(false)
+            || is_russian(&token.to_lowercase()) != Some(false)
             || self.is_inflected(&key)
         {
             return None;
@@ -405,13 +413,24 @@ fn match_case(original: &str, english: &str) -> String {
     english.to_string()
 }
 
+/// Нижний регистр и русские буквы вместо украинских: «апасіті» ищется как «апасити».
 fn normalize(text: &str) -> String {
-    text.trim()
+    let mut normalized = String::with_capacity(text.len());
+    for character in text
+        .trim()
         .chars()
         .filter(|character| character.is_alphanumeric())
         .flat_map(char::to_lowercase)
-        .map(|character| if character == 'ё' { 'е' } else { character })
-        .collect()
+    {
+        match character {
+            'ё' | 'є' => normalized.push('е'),
+            'і' => normalized.push('и'),
+            'ї' => normalized.push_str("йи"),
+            'ґ' => normalized.push('г'),
+            other => normalized.push(other),
+        }
+    }
+    normalized
 }
 
 fn is_cyrillic(character: char) -> bool {
@@ -517,6 +536,20 @@ PNG\t0.08\t1\tпнг,пиэнджи
     fn keeps_case_and_punctuation() {
         let words = lexicon();
         assert_eq!(words.restore("Харднес, а потом пнг!", &russian), "Hardness, а потом PNG!");
+    }
+
+    #[test]
+    fn ukrainian_letters_map_to_the_russian_spelling() {
+        let words = lexicon();
+        let ukrainian = |word: &str| Some(["зменш", "пензля"].contains(&word));
+        assert_eq!(words.restore("зменш апасіті пензля", &ukrainian), "зменш opacity пензля");
+        // Словарю языка уходит слово как написано, а не сведённое к русскому.
+        let seen = std::cell::RefCell::new(Vec::new());
+        words.restore("апасіті", &|word| {
+            seen.borrow_mut().push(word.to_string());
+            Some(false)
+        });
+        assert_eq!(seen.borrow().as_slice(), ["апасіті"]);
     }
 
     #[test]

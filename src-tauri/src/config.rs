@@ -109,9 +109,10 @@ pub struct Settings {
     /// Печатать диктовку по ходу речи (по словам), а не после паузы.
     #[serde(default = "default_true")]
     pub dictation_live: bool,
-    /// Английские слова в русской диктовке латиницей по словарю англицизмов
-    /// («харднес» → hardness, см. anglicism.rs).
-    #[serde(default = "default_true")]
+    /// Английские слова в кириллической диктовке латиницей по словарю англицизмов
+    /// («харднес» → hardness, см. anglicism.rs). Выключено, пока не включит пользователь;
+    /// без кириллического языка распознавания не действует.
+    #[serde(default)]
     pub dictation_english: bool,
     /// Сила замены англицизмов, 1–5: 1 — только очевидные английские слова, 5 — всё,
     /// что похоже на английское и не нашлось в русском словаре (anglicism.rs).
@@ -438,7 +439,7 @@ impl Default for Settings {
             dictation_idle_ms: default_dictation_idle_ms(),
             dictation_clipboard: true,
             dictation_live: true,
-            dictation_english: true,
+            dictation_english: false,
             dictation_english_level: default_dictation_english_level(),
             webchat_send: true,
             wake_spotter: true,
@@ -521,6 +522,16 @@ impl ReeverConfig {
     /// Русский распознаётся: включён в настройках и его пакет скачан.
     pub fn russian_enabled(&self) -> bool {
         self.models.has("ru")
+    }
+
+    /// Словари Windows кириллических языков, которые сейчас распознаются: замене
+    /// англицизмов нужен хотя бы один (anglicism.rs).
+    pub fn cyrillic_spellcheck(&self) -> Vec<&'static str> {
+        crate::anglicism::CYRILLIC_LANGUAGES
+            .iter()
+            .filter(|(code, _)| self.models.has(code))
+            .map(|&(_, tag)| tag)
+            .collect()
     }
 
     /// Путь к звуку активного пака; если в паке файла нет — берём из default.

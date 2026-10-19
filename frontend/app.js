@@ -7,7 +7,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
+  dictation_clipboard:true,dictation_live:true,dictation_english:false,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -548,12 +548,9 @@ const GROUPS=[
   ['search',[['local_index','bool']]],
   ['system',[['confirm_dangerous','bool'],['confirm_close','bool'],['raise_result','bool']]],
 ];
-// Англицизмы — только для русской диктовки.
-const SETTING_NEEDS={dictation_english:'ru',dictation_english_level:'ru'};
-function settingVisible(key){
-  const need=SETTING_NEEDS[key];
-  return !need||recognitionLanguages().includes(need);
-}
+// Замена англицизмов действует только при кириллическом языке распознавания
+// (anglicism::CYRILLIC_LANGUAGES).
+const CYRILLIC_LANGS=['ru','uk','bg'];
 // Всё применяется по «Сохранить»; пометка «— сразу» — у того, что действует уже при
 // изменении поля (язык интерфейса, хоткеи), без «Сохранить».
 const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} — ${t('settings.instant')}`:t('settings.'+key);
@@ -605,6 +602,8 @@ function fieldEl(key,type,opts,when='save'){
     const lab=el('label',{htmlFor:id,textContent:lbl});
     row.append(inp,lab); wrap.append(row);
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+    if(key==='dictation_english'&&!recognitionLanguages().some(code=>CYRILLIC_LANGS.includes(code)))
+      wrap.append(el('div',{className:'hint setting-help lang-missing',textContent:t('settings.dictation_english.inactive')}));
     return wrap;
   }
   const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
@@ -833,7 +832,6 @@ function renderSettings(){
     const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:t('settings.group.'+title)}));
     for(const f of fields){
       const [key,type,opts,when]=f;
-      if(!settingVisible(key)) continue;
       g.append(fieldEl(key,type,opts,when));
     }
     F.append(g);
