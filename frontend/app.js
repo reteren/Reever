@@ -89,7 +89,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'list_actions': return [];
     case 'list_apps': return [];
     case 'list_sound_packs': return ['default'];
-    case 'language_models': return {languages:{ru:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',zh:'asian',ja:'asian'},installed:['european']};
+    case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
     case 'index_status': return {state:'ready',entries:0,bytes:0};
     case 'get_wallpaper': return null;
@@ -280,7 +280,7 @@ const grammarEditor=$('#grammarEditor');
 // Языки распознавания — как RECOGNITION_LANGUAGES в config.rs: английский включён
 // всегда, остальным нужен скачанный языковой пакет (models.rs). Новый язык — строка
 // здесь и там.
-const RECOGNITION_LANGS=['en','ru','de','fr','es','it','pt','zh','ja'];
+const RECOGNITION_LANGS=['en','ru','uk','de','fr','es','it','pt','pl','cs','sk','bg','hr','sl','nl','da','sv','fi','et','lv','lt','el','hu','ro','mt','zh','yue','ja','ko'];
 function recognitionLanguages(settings=settingsObj){
   const chosen=(Array.isArray(settings?.languages)?settings.languages:['en']).map(value=>String(value).trim().toLowerCase());
   return RECOGNITION_LANGS.filter(code=>code==='en'||chosen.includes(code));
@@ -792,7 +792,16 @@ function languagesEditor(models){
     const item=el('button',{type:'button',className:'sm',role:'menuitem',
       textContent:ready?name(code):`${name(code)} — ${t('settings.languages.notDownloaded')}`});
     item.disabled=!ready;
-    item.onclick=()=>setLanguages([...enabled,code]);
+    // Сначала язык интерфейса, потом язык распознавания: французу французская модель
+    // нужна вместе с французским интерфейсом.
+    item.onclick=()=>{
+      if(code!=='en'&&I18N.SUPPORTED.includes(code)&&!I18N.enabled.includes(code)
+        &&confirm(t('settings.languages.offerUi',{language:name(code)}))){
+        const ui=[...I18N.enabled,code];
+        settingsObj.ui_languages=ui; I18N.setEnabled(ui);
+      }
+      setLanguages([...enabled,code]);
+    };
     menu.append(item);
   }
   if(addable.length) add.onclick=()=>{ menu.hidden=!menu.hidden; };

@@ -232,6 +232,7 @@ I18N.register('ro', {
   "settings.languages.alwaysTitle": "Engleza nu poate fi dezactivată: comenzile și numele în engleză sunt înțelese mereu",
   "settings.languages.remove": "Elimină {language}",
   "settings.languages.add": "Adaugă o limbă",
+  "settings.languages.offerUi": "Adaugi {language} și ca limbă a interfeței? Atunci interfața Reever poate fi comutată pe ea din Setări → Interfață.",
   "settings.languages.noMore": "Deocamdată nu mai sunt alte limbi",
   "settings.languages.notDownloaded": "pachet nedescărcat",
   "settings.languages.needLid": "Limbile din două pachete funcționează împreună doar cu detectorul de limbă. Rulează din nou programul de instalare Reever și bifează-l; până atunci se folosește doar pachetul primei limbi.",

@@ -232,6 +232,7 @@ I18N.register('cs', {
   "settings.languages.alwaysTitle": "Angličtinu nelze vypnout: anglickým příkazům a názvům se rozumí vždy",
   "settings.languages.remove": "Odebrat: {language}",
   "settings.languages.add": "Přidat jazyk",
+  "settings.languages.offerUi": "Přidat {language} i jako jazyk rozhraní? Rozhraní Reeveru pak půjde přepnout v Nastavení → Rozhraní.",
   "settings.languages.noMore": "Další jazyky zatím nejsou",
   "settings.languages.notDownloaded": "balíček nestažen",
   "settings.languages.needLid": "Jazyky ze dvou balíčků fungují společně jen s detektorem jazyka. Spusťte znovu instalátor Reeveru a zaškrtněte ho; do té doby se používá jen balíček prvního jazyka.",

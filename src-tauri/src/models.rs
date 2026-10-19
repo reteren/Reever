@@ -32,7 +32,9 @@ pub struct Pack {
 pub const EUROPEAN: Pack = Pack {
     id: "european",
     dir: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
-    languages: &["ru", "de", "fr", "es", "it", "pt"],
+    languages: &[
+        "ru", "uk", "de", "fr", "es", "it", "pt", "pl", "cs", "sk", "bg", "hr", "sl", "nl", "da", "sv", "fi", "et", "lv", "lt", "el", "hu", "ro", "mt",
+    ],
     covers: &[
         "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv", "lt",
         "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
@@ -46,7 +48,7 @@ pub const EUROPEAN: Pack = Pack {
 pub const ASIAN: Pack = Pack {
     id: "asian",
     dir: "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09",
-    languages: &["zh", "ja"],
+    languages: &["zh", "yue", "ja", "ko"],
     covers: &["zh", "yue", "ja", "ko", "en"],
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09.tar.bz2",
     sha256: "7305f7905bfcf77fa0b39388a313f3da35c68d971661a65475b56fb2162c8e63",
@@ -87,6 +89,26 @@ pub fn language_name(code: &str) -> &str {
         "pt" => "Português",
         "zh" => "中文",
         "ja" => "日本語",
+        "uk" => "Українська",
+        "pl" => "Polski",
+        "cs" => "Čeština",
+        "sk" => "Slovenčina",
+        "bg" => "Български",
+        "hr" => "Hrvatski",
+        "sl" => "Slovenščina",
+        "nl" => "Nederlands",
+        "da" => "Dansk",
+        "sv" => "Svenska",
+        "fi" => "Suomi",
+        "et" => "Eesti",
+        "lv" => "Latviešu",
+        "lt" => "Lietuvių",
+        "el" => "Ελληνικά",
+        "hu" => "Magyar",
+        "ro" => "Română",
+        "mt" => "Malti",
+        "ko" => "한국어",
+        "yue" => "粵語",
         other => other,
     }
 }

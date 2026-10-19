@@ -232,6 +232,7 @@ I18N.register('hu', {
   "settings.languages.alwaysTitle": "Az angol nem kapcsolható ki: az angol parancsokat és neveket mindig érti",
   "settings.languages.remove": "{language} eltávolítása",
   "settings.languages.add": "Nyelv hozzáadása",
+  "settings.languages.offerUi": "Hozzáadod a(z) {language} nyelvet a felület nyelvei közé is? Ekkor a Reever felülete átváltható rá a Beállítások → Felület részben.",
   "settings.languages.noMore": "Egyelőre nincs több nyelv",
   "settings.languages.notDownloaded": "a csomag nincs letöltve",
   "settings.languages.needLid": "Két csomag nyelvei csak a nyelvfelismerővel működnek együtt. Futtasd újra a Reever telepítőjét, és jelöld be; addig csak az első nyelv csomagja működik.",

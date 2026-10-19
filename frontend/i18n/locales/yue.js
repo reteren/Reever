@@ -232,6 +232,7 @@ I18N.register('yue', {
   "settings.languages.alwaysTitle": "英文熄唔到：英文指令同名稱一定聽得明",
   "settings.languages.remove": "移除 {language}",
   "settings.languages.add": "加語言",
+  "settings.languages.offerUi": "要唔要將{language}都加入介面語言？咁就可以喺 設定 → 介面 將 Reever 介面轉做呢個語言。",
   "settings.languages.noMore": "暫時冇其他語言",
   "settings.languages.notDownloaded": "語言包未下載",
   "settings.languages.needLid": "兩個語言包嘅語言要有語言偵測器先可以一齊用。再開 Reever 安裝程式剔返佢；之前淨係會用第一個語言嘅語言包。",

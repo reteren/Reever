@@ -232,6 +232,7 @@ I18N.register('sv', {
   "settings.languages.alwaysTitle": "Engelska kan inte stängas av: engelska kommandon och namn förstås alltid",
   "settings.languages.remove": "Ta bort {language}",
   "settings.languages.add": "Lägg till språk",
+  "settings.languages.offerUi": "Vill du även lägga till {language} som gränssnittsspråk? Då kan Reevers gränssnitt växlas till det under Inställningar → Gränssnitt.",
   "settings.languages.noMore": "Inga fler språk än",
   "settings.languages.notDownloaded": "paketet är inte nedladdat",
   "settings.languages.needLid": "Språk från två paket fungerar tillsammans bara med språkdetektorn. Kör Reevers installationsprogram igen och markera den; tills dess används bara det första språkets paket.",

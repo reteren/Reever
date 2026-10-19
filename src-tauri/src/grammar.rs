@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 10;
+const GRAMMAR_VERSION: u32 = 11;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -36,6 +36,24 @@ const ADDED_CANCEL_WORDS: &[(u32, &str)] = &[
     (10, "annulla"),
     (10, "取消"),
     (10, "キャンセル"),
+    (11, "скасуй"),
+    (11, "anuluj"),
+    (11, "zruš"),
+    (11, "отказ"),
+    (11, "odustani"),
+    (11, "prekliči"),
+    (11, "annuleer"),
+    (11, "annuller"),
+    (11, "avbryt"),
+    (11, "peruuta"),
+    (11, "tühista"),
+    (11, "atcelt"),
+    (11, "atšauk"),
+    (11, "ακύρωση"),
+    (11, "mégse"),
+    (11, "anulează"),
+    (11, "ikkanċella"),
+    (11, "취소"),
 ];
 /// Новые фразы конца диктовки: (версия, фраза).
 const ADDED_DICTATION_STOP: &[(u32, &str)] = &[
@@ -162,6 +180,227 @@ pub(crate) const LANGUAGE_TRIGGERS: &[(&str, &str, &[&str])] = &[
     ("ja", "find_folder", &["フォルダを探して"]),
     ("ja", "find_file", &["ファイルを探して"]),
     ("ja", "kill", &["終了して", "強制終了"]),
+    // Версия 11 — остальные языки Parakeet v3 и SenseVoice.
+    ("uk", "launch", &["відкрий", "відкрити", "запусти"]),
+    ("uk", "folder", &["відкрий папку"]),
+    ("uk", "web_google", &["пошукай у гуглі", "гугл пошук"]),
+    ("uk", "web_youtube", &["пошукай на ютубі", "пошук ютуб"]),
+    ("uk", "close", &["закрий"]),
+    ("uk", "calc", &["порахуй", "скільки буде"]),
+    ("uk", "dictate", &["диктування"]),
+    ("uk", "find", &["знайди", "пошукай"]),
+    ("uk", "find_folder", &["знайди папку"]),
+    ("uk", "find_file", &["знайди файл"]),
+    ("uk", "kill", &["вбий процес"]),
+    ("pl", "launch", &["otwórz", "uruchom", "włącz"]),
+    ("pl", "folder", &["otwórz folder"]),
+    ("pl", "web_google", &["szukaj w google", "wyszukaj w google"]),
+    ("pl", "web_youtube", &["szukaj na youtube", "wyszukaj na youtube"]),
+    ("pl", "close", &["zamknij"]),
+    ("pl", "calc", &["policz", "oblicz", "ile to jest"]),
+    ("pl", "dictate", &["napisz", "pisz", "dyktuj"]),
+    ("pl", "find", &["znajdź", "wyszukaj"]),
+    ("pl", "find_folder", &["znajdź folder"]),
+    ("pl", "find_file", &["znajdź plik"]),
+    ("pl", "kill", &["zakończ", "zabij proces"]),
+    ("cs", "launch", &["otevři", "spusť"]),
+    ("cs", "folder", &["složka", "otevři složku"]),
+    ("cs", "web_google", &["hledej na googlu", "vyhledej na googlu"]),
+    ("cs", "web_youtube", &["hledej na youtube", "vyhledej na youtube"]),
+    ("cs", "close", &["zavři"]),
+    ("cs", "calc", &["spočítej", "vypočítej", "kolik je"]),
+    ("cs", "dictate", &["napiš", "piš", "diktuj"]),
+    ("cs", "find", &["najdi", "hledej"]),
+    ("cs", "find_folder", &["najdi složku"]),
+    ("cs", "find_file", &["najdi soubor"]),
+    ("cs", "kill", &["ukonči"]),
+    ("sk", "launch", &["otvor", "spusti"]),
+    ("sk", "folder", &["priečinok", "otvor priečinok"]),
+    ("sk", "web_google", &["hľadaj na googli", "vyhľadaj na googli"]),
+    ("sk", "web_youtube", &["hľadaj na youtube", "vyhľadaj na youtube"]),
+    ("sk", "close", &["zatvor"]),
+    ("sk", "calc", &["vypočítaj", "koľko je"]),
+    ("sk", "dictate", &["napíš", "píš", "diktuj"]),
+    ("sk", "find", &["nájdi", "hľadaj"]),
+    ("sk", "find_folder", &["nájdi priečinok"]),
+    ("sk", "find_file", &["nájdi súbor"]),
+    ("sk", "kill", &["ukonči"]),
+    ("bg", "launch", &["отвори", "стартирай", "пусни"]),
+    ("bg", "folder", &["отвори папка"]),
+    ("bg", "web_google", &["търси в гугъл", "потърси в гугъл"]),
+    ("bg", "web_youtube", &["търси в ютюб", "потърси в ютюб"]),
+    ("bg", "close", &["затвори"]),
+    ("bg", "calc", &["пресметни", "изчисли", "колко е"]),
+    ("bg", "dictate", &["диктувай"]),
+    ("bg", "find", &["намери", "потърси"]),
+    ("bg", "find_folder", &["намери папка"]),
+    ("bg", "find_file", &["намери файл"]),
+    ("bg", "kill", &["прекрати"]),
+    ("hr", "launch", &["otvori", "pokreni"]),
+    ("hr", "folder", &["mapa", "otvori mapu"]),
+    ("hr", "web_google", &["traži na googleu", "pretraži google"]),
+    ("hr", "web_youtube", &["traži na youtubeu", "pretraži youtube"]),
+    ("hr", "close", &["zatvori"]),
+    ("hr", "calc", &["izračunaj", "koliko je"]),
+    ("hr", "dictate", &["napiši", "piši", "diktiraj"]),
+    ("hr", "find", &["pronađi", "nađi"]),
+    ("hr", "find_folder", &["pronađi mapu"]),
+    ("hr", "find_file", &["pronađi datoteku"]),
+    ("hr", "kill", &["prekini"]),
+    ("sl", "launch", &["odpri", "zaženi"]),
+    ("sl", "folder", &["odpri mapo"]),
+    ("sl", "web_google", &["išči na googlu", "poišči na googlu"]),
+    ("sl", "web_youtube", &["išči na youtubu", "poišči na youtubu"]),
+    ("sl", "close", &["zapri"]),
+    ("sl", "calc", &["izračunaj", "koliko je"]),
+    ("sl", "dictate", &["napiši", "piši", "nareki"]),
+    ("sl", "find", &["najdi", "poišči"]),
+    ("sl", "find_folder", &["najdi mapo"]),
+    ("sl", "find_file", &["najdi datoteko"]),
+    ("sl", "kill", &["končaj"]),
+    ("nl", "launch", &["start", "openen", "opstarten"]),
+    ("nl", "folder", &["map", "open map"]),
+    ("nl", "web_google", &["zoek op google"]),
+    ("nl", "web_youtube", &["zoek op youtube"]),
+    ("nl", "close", &["sluit", "afsluiten"]),
+    ("nl", "calc", &["bereken", "reken uit", "hoeveel is"]),
+    ("nl", "dictate", &["typ", "dicteer", "schrijf"]),
+    ("nl", "find", &["zoek", "vind"]),
+    ("nl", "find_folder", &["zoek map", "vind map"]),
+    ("nl", "find_file", &["zoek bestand", "vind bestand"]),
+    ("nl", "kill", &["beëindig"]),
+    ("da", "launch", &["åbn", "start"]),
+    ("da", "folder", &["mappe", "åbn mappe"]),
+    ("da", "web_google", &["søg på google"]),
+    ("da", "web_youtube", &["søg på youtube"]),
+    ("da", "close", &["luk"]),
+    ("da", "calc", &["beregn", "regn ud", "hvad er"]),
+    ("da", "dictate", &["skriv", "diktér"]),
+    ("da", "find", &["søg"]),
+    ("da", "find_folder", &["find mappe"]),
+    ("da", "find_file", &["find fil"]),
+    ("da", "kill", &["afslut"]),
+    ("sv", "launch", &["öppna", "starta"]),
+    ("sv", "folder", &["mapp", "öppna mapp"]),
+    ("sv", "web_google", &["sök på google"]),
+    ("sv", "web_youtube", &["sök på youtube"]),
+    ("sv", "close", &["stäng"]),
+    ("sv", "calc", &["räkna ut", "beräkna", "hur mycket är"]),
+    ("sv", "dictate", &["skriv", "diktera"]),
+    ("sv", "find", &["hitta", "sök"]),
+    ("sv", "find_folder", &["hitta mapp"]),
+    ("sv", "find_file", &["hitta fil"]),
+    ("sv", "kill", &["avsluta"]),
+    ("fi", "launch", &["avaa", "käynnistä"]),
+    ("fi", "folder", &["kansio", "avaa kansio"]),
+    ("fi", "web_google", &["hae googlesta"]),
+    ("fi", "web_youtube", &["hae youtubesta"]),
+    ("fi", "close", &["sulje"]),
+    ("fi", "calc", &["laske", "paljonko on"]),
+    ("fi", "dictate", &["kirjoita", "sanele"]),
+    ("fi", "find", &["etsi", "hae"]),
+    ("fi", "find_folder", &["etsi kansio"]),
+    ("fi", "find_file", &["etsi tiedosto"]),
+    ("fi", "kill", &["lopeta"]),
+    ("et", "launch", &["ava", "käivita"]),
+    ("et", "folder", &["kaust", "ava kaust"]),
+    ("et", "web_google", &["otsi googlest"]),
+    ("et", "web_youtube", &["otsi youtubest"]),
+    ("et", "close", &["sulge"]),
+    ("et", "calc", &["arvuta", "kui palju on"]),
+    ("et", "dictate", &["kirjuta", "dikteeri"]),
+    ("et", "find", &["leia", "otsi"]),
+    ("et", "find_folder", &["leia kaust"]),
+    ("et", "find_file", &["leia fail"]),
+    ("et", "kill", &["lõpeta"]),
+    ("lv", "launch", &["atver", "palaid"]),
+    ("lv", "folder", &["mape", "atver mapi"]),
+    ("lv", "web_google", &["meklē google"]),
+    ("lv", "web_youtube", &["meklē youtube"]),
+    ("lv", "close", &["aizver"]),
+    ("lv", "calc", &["aprēķini", "cik ir"]),
+    ("lv", "dictate", &["raksti", "diktē"]),
+    ("lv", "find", &["atrodi", "meklē"]),
+    ("lv", "find_folder", &["atrodi mapi"]),
+    ("lv", "find_file", &["atrodi failu"]),
+    ("lv", "kill", &["pārtrauc"]),
+    ("lt", "launch", &["atidaryk", "paleisk"]),
+    ("lt", "folder", &["aplankas", "atidaryk aplanką"]),
+    ("lt", "web_google", &["ieškok google"]),
+    ("lt", "web_youtube", &["ieškok youtube"]),
+    ("lt", "close", &["uždaryk"]),
+    ("lt", "calc", &["apskaičiuok", "kiek bus"]),
+    ("lt", "dictate", &["rašyk", "diktuok"]),
+    ("lt", "find", &["rask", "ieškok"]),
+    ("lt", "find_folder", &["rask aplanką"]),
+    ("lt", "find_file", &["rask failą"]),
+    ("lt", "kill", &["nutrauk"]),
+    ("el", "launch", &["άνοιξε", "εκκίνησε"]),
+    ("el", "folder", &["φάκελος", "άνοιξε φάκελο"]),
+    ("el", "web_google", &["ψάξε στο google"]),
+    ("el", "web_youtube", &["ψάξε στο youtube"]),
+    ("el", "close", &["κλείσε"]),
+    ("el", "calc", &["υπολόγισε", "πόσο κάνει"]),
+    ("el", "dictate", &["γράψε", "υπαγόρευση"]),
+    ("el", "find", &["βρες", "ψάξε"]),
+    ("el", "find_folder", &["βρες φάκελο"]),
+    ("el", "find_file", &["βρες αρχείο"]),
+    ("el", "kill", &["τερμάτισε"]),
+    ("hu", "launch", &["nyisd meg", "indítsd el", "nyisd"]),
+    ("hu", "folder", &["mappa", "nyisd meg a mappát"]),
+    ("hu", "web_google", &["keress a google on"]),
+    ("hu", "web_youtube", &["keress a youtube on"]),
+    ("hu", "close", &["zárd be"]),
+    ("hu", "calc", &["számold ki", "mennyi"]),
+    ("hu", "dictate", &["írd", "gépeld", "diktálás"]),
+    ("hu", "find", &["keresd", "keress", "találd meg"]),
+    ("hu", "find_folder", &["keresd a mappát"]),
+    ("hu", "find_file", &["keresd a fájlt"]),
+    ("hu", "kill", &["állítsd le"]),
+    ("ro", "launch", &["deschide", "pornește", "lansează"]),
+    ("ro", "folder", &["deschide folderul"]),
+    ("ro", "web_google", &["caută pe google"]),
+    ("ro", "web_youtube", &["caută pe youtube"]),
+    ("ro", "close", &["închide"]),
+    ("ro", "calc", &["calculează", "cât face"]),
+    ("ro", "dictate", &["scrie", "dictează"]),
+    ("ro", "find", &["găsește", "caută"]),
+    ("ro", "find_folder", &["găsește folderul"]),
+    ("ro", "find_file", &["găsește fișierul"]),
+    ("ro", "kill", &["oprește"]),
+    ("mt", "launch", &["iftaħ", "ħaddem"]),
+    ("mt", "folder", &["iftaħ il folder"]),
+    ("mt", "web_google", &["fittex fuq google"]),
+    ("mt", "web_youtube", &["fittex fuq youtube"]),
+    ("mt", "close", &["agħlaq"]),
+    ("mt", "calc", &["ikkalkula", "kemm jagħmel"]),
+    ("mt", "dictate", &["ikteb", "iddetta"]),
+    ("mt", "find", &["sib", "fittex"]),
+    ("mt", "find_folder", &["sib folder"]),
+    ("mt", "find_file", &["sib fajl"]),
+    ("mt", "kill", &["waqqaf"]),
+    ("ko", "launch", &["열어", "열어 줘", "열어줘", "실행해"]),
+    ("ko", "folder", &["폴더", "폴더 열어"]),
+    ("ko", "web_google", &["구글 검색", "구글에서 검색해"]),
+    ("ko", "web_youtube", &["유튜브 검색", "유튜브에서 검색해"]),
+    ("ko", "close", &["닫아", "닫아 줘", "닫아줘"]),
+    ("ko", "calc", &["계산해", "계산"]),
+    ("ko", "dictate", &["받아써", "입력해"]),
+    ("ko", "find", &["찾아", "찾아 줘", "찾아줘"]),
+    ("ko", "find_folder", &["폴더 찾아"]),
+    ("ko", "find_file", &["파일 찾아"]),
+    ("ko", "kill", &["종료해", "강제 종료"]),
+    ("yue", "launch", &["打開", "開啟"]),
+    ("yue", "folder", &["資料夾", "打開資料夾"]),
+    ("yue", "web_google", &["谷歌搜尋", "google搜尋"]),
+    ("yue", "web_youtube", &["油管搜尋", "youtube搜尋"]),
+    ("yue", "close", &["閂", "關閉", "閂咗"]),
+    ("yue", "calc", &["計", "計吓"]),
+    ("yue", "dictate", &["打字"]),
+    ("yue", "find", &["搵", "搵吓"]),
+    ("yue", "find_folder", &["搵資料夾"]),
+    ("yue", "find_file", &["搵檔案"]),
+    ("yue", "kill", &["強制結束"]),
 ];
 /// Артикль немецкого, французского, испанского, итальянского или португальского.
 fn is_article(word: &str) -> bool {
@@ -173,9 +412,11 @@ fn is_article(word: &str) -> bool {
 }
 
 /// Языки, где глагол команды идёт после цели.
-const TRAILING_LANGUAGES: &[&str] = &["ja"];
+const TRAILING_LANGUAGES: &[&str] = &["ja", "ko"];
 /// Падежные частицы перед японским глаголом: «メモ帳を開いて» — цель «メモ帳».
 const TRAILING_PARTICLES: &[&str] = &["を", "で", "に", "は"];
+/// Корейские частицы объекта и места, приклеенные к цели перед глаголом.
+const KOREAN_OBJECT_PARTICLES: &[&str] = &["을", "를", "에서"];
 /// Английские фразы встроенных системных действий (actions.json), версия 9.
 pub(crate) const ENGLISH_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
     ("sys_shutdown", &["shut down computer", "turn off computer"]),
@@ -197,6 +438,25 @@ pub const LANGUAGE_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
             "desligue o computador",
             "关机",
             "シャットダウン",
+            "вимкни комп'ютер",
+            "wyłącz komputer",
+            "vypni počítač",
+            "изключи компютъра",
+            "isključi računalo",
+            "izklopi računalnik",
+            "zet de computer uit",
+            "sluk computeren",
+            "stäng av datorn",
+            "sammuta tietokone",
+            "lülita arvuti välja",
+            "izslēdz datoru",
+            "išjunk kompiuterį",
+            "σβήσε τον υπολογιστή",
+            "kapcsold ki a számítógépet",
+            "oprește calculatorul",
+            "itfi l-kompjuter",
+            "컴퓨터 꺼",
+            "閂機",
         ],
     ),
     (
@@ -209,11 +469,52 @@ pub const LANGUAGE_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
             "reinicie o computador",
             "重启电脑",
             "再起動",
+            "перезавантаж комп'ютер",
+            "uruchom ponownie komputer",
+            "restartuj počítač",
+            "reštartuj počítač",
+            "рестартирай компютъра",
+            "ponovno pokreni računalo",
+            "znova zaženi računalnik",
+            "herstart de computer",
+            "genstart computeren",
+            "starta om datorn",
+            "käynnistä tietokone uudelleen",
+            "taaskäivita arvuti",
+            "restartē datoru",
+            "perkrauk kompiuterį",
+            "επανεκκίνηση υπολογιστή",
+            "indítsd újra a számítógépet",
+            "repornește calculatorul",
+            "erġa' ibda l-kompjuter",
+            "컴퓨터 재시작",
+            "重新開機",
         ],
     ),
     (
         "sys_mute",
-        &["ton aus", "coupe le son", "silencia el sonido", "disattiva l'audio", "silenciar som", "静音", "ミュート"],
+        &["ton aus", "coupe le son", "silencia el sonido", "disattiva l'audio", "silenciar som", "静音", "ミュート",
+            "вимкни звук",
+            "wycisz dźwięk",
+            "ztlum zvuk",
+            "stlm zvuk",
+            "спри звука",
+            "isključi zvuk",
+            "izklopi zvok",
+            "geluid uit",
+            "slå lyden fra",
+            "stäng av ljudet",
+            "mykistä ääni",
+            "vaigista heli",
+            "izslēdz skaņu",
+            "išjunk garsą",
+            "σίγαση",
+            "némítás",
+            "oprește sunetul",
+            "itfi l-ħoss",
+            "음소거",
+            "靜音",
+        ],
     ),
     (
         "sys_play",
@@ -228,15 +529,76 @@ pub const LANGUAGE_SYSTEM_PHRASES: &[(&str, &[&str])] = &[
             "播放音乐",
             "音楽を一時停止",
             "音楽を再生",
+            "пауза музики",
+            "pauza muzyki",
+            "pozastav hudbu",
+            "пауза на музиката",
+            "pauziraj glazbu",
+            "ustavi glasbo",
+            "pauzeer muziek",
+            "sæt musikken på pause",
+            "pausa musiken",
+            "keskeytä musiikki",
+            "peata muusika",
+            "pauzē mūziku",
+            "pristabdyk muziką",
+            "παύση μουσικής",
+            "zene szüneteltetése",
+            "pune muzica pe pauză",
+            "waqqaf il-mużika",
+            "음악 일시 정지",
+            "暫停音樂",
         ],
     ),
     (
         "sys_next",
-        &["nächster titel", "piste suivante", "siguiente canción", "traccia successiva", "próxima faixa", "下一首", "次の曲"],
+        &["nächster titel", "piste suivante", "siguiente canción", "traccia successiva", "próxima faixa", "下一首", "次の曲",
+            "наступний трек",
+            "następny utwór",
+            "další skladba",
+            "ďalšia skladba",
+            "следваща песен",
+            "sljedeća pjesma",
+            "naslednja skladba",
+            "volgend nummer",
+            "næste nummer",
+            "nästa låt",
+            "seuraava kappale",
+            "järgmine lugu",
+            "nākamā dziesma",
+            "kitas takelis",
+            "επόμενο τραγούδι",
+            "következő szám",
+            "melodia următoare",
+            "il-kanzunetta li jmiss",
+            "다음 곡",
+            "下一首歌",
+        ],
     ),
     (
         "sys_prev",
-        &["vorheriger titel", "piste précédente", "canción anterior", "traccia precedente", "faixa anterior", "上一首", "前の曲"],
+        &["vorheriger titel", "piste précédente", "canción anterior", "traccia precedente", "faixa anterior", "上一首", "前の曲",
+            "попередній трек",
+            "poprzedni utwór",
+            "předchozí skladba",
+            "predchádzajúca skladba",
+            "предишна песен",
+            "prethodna pjesma",
+            "prejšnja skladba",
+            "vorig nummer",
+            "forrige nummer",
+            "föregående låt",
+            "edellinen kappale",
+            "eelmine lugu",
+            "iepriekšējā dziesma",
+            "ankstesnis takelis",
+            "προηγούμενο τραγούδι",
+            "előző szám",
+            "melodia anterioară",
+            "il-kanzunetta ta' qabel",
+            "이전 곡",
+            "上一首歌",
+        ],
     ),
 ];
 
@@ -580,7 +942,7 @@ impl Grammar {
                     if old_version < 9 {
                         actions_changed = append_english_system_phrases(actions);
                     }
-                    if old_version < 10 {
+                    if old_version < 11 {
                         actions_changed |= append_language_system_phrases(actions);
                     }
                     append_versioned_defaults(&mut grammar);
@@ -881,10 +1243,20 @@ impl Grammar {
             if end > 0 && TRAILING_PARTICLES.contains(&words[end - 1]) {
                 end -= 1;
             }
+            // Корейская частица приклеена к слову: «메모장을 열어» — цель «메모장».
+            let mut payload: Vec<String> = words[..end].iter().map(|w| w.to_string()).collect();
+            if let Some(last) = payload.last_mut() {
+                for particle in KOREAN_OBJECT_PARTICLES {
+                    if let Some(stem) = last.strip_suffix(particle).filter(|stem| !stem.is_empty()) {
+                        *last = stem.to_string();
+                        break;
+                    }
+                }
+            }
             TriggerMatch {
                 intent,
                 trigger: trigger.to_string(),
-                payload: words[..end].join(" "),
+                payload: payload.join(" "),
             }
         })
     }
@@ -950,7 +1322,7 @@ fn append_versioned_defaults(grammar: &mut Grammar) {
             add_trigger_if_free(grammar, id, phrase);
         }
     }
-    if grammar.version < 10 {
+    if grammar.version < 11 {
         for (_, id, phrases) in LANGUAGE_TRIGGERS {
             for phrase in *phrases {
                 add_trigger_if_free(grammar, id, phrase);
@@ -1186,7 +1558,11 @@ mod tests {
         triggers
             .iter()
             .map(String::as_str)
-            .filter(|trigger| trigger.chars().any(|c| matches!(c, 'а'..='я' | 'ё')))
+            // Русские — кириллица, но не украинские и болгарские фразы из LANGUAGE_TRIGGERS.
+            .filter(|trigger| {
+                trigger.chars().any(|c| matches!(c, 'а'..='я' | 'ё'))
+                    && super::trigger_languages(&super::normalize(trigger)).is_empty()
+            })
             .collect()
     }
 
@@ -1257,6 +1633,10 @@ mod tests {
         assert_eq!(all("查找文件报告"), Some(("find_file".into(), "报 告".into())));
         assert_eq!(all("メモ帳を開いて"), Some(("launch".into(), "メ モ 帳".into())));
         assert_eq!(all("ダウンロードフォルダを開いて"), Some(("folder".into(), "ダ ウ ン ロ ー ド".into())));
+        assert_eq!(all("메모장을 열어"), Some(("launch".into(), "메모장".into())));
+        assert_eq!(all("Otwórz Telegram"), Some(("launch".into(), "telegram".into())));
+        assert_eq!(all("Zavři Chrome"), Some(("close".into(), "chrome".into())));
+        assert_eq!(all("Öppna mapp Dokument"), Some(("folder".into(), "dokument".into())));
 
         // Без итальянского «apri» — не команда; русские и английские фразы на месте.
         let ru_en = ["en".to_string(), "ru".to_string()];
@@ -1624,7 +2004,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 10);
+        assert_eq!(Grammar::defaults().version, 11);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

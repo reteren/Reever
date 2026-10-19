@@ -231,6 +231,7 @@ I18N.register('de', {
   "settings.languages.alwaysTitle": "Englisch lässt sich nicht abschalten: englische Befehle und Namen werden immer verstanden",
   "settings.languages.remove": "{language} entfernen",
   "settings.languages.add": "Sprache hinzufügen",
+  "settings.languages.offerUi": "{language} auch als Oberflächensprache hinzufügen? Dann lässt sich die Reever-Oberfläche unter Einstellungen → Oberfläche darauf umstellen.",
   "settings.languages.noMore": "Noch keine weiteren Sprachen",
   "settings.languages.notDownloaded": "Paket nicht heruntergeladen",
   "settings.languages.needLid": "Sprachen aus zwei Paketen funktionieren nur mit der Spracherkennung zusammen. Starten Sie das Reever-Installationsprogramm erneut und wählen Sie sie; bis dahin wird nur das Paket der ersten Sprache verwendet.",

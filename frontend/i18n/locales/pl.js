@@ -232,6 +232,7 @@ I18N.register('pl', {
   "settings.languages.alwaysTitle": "Angielskiego nie można wyłączyć: angielskie polecenia i nazwy są zawsze rozumiane",
   "settings.languages.remove": "Usuń: {language}",
   "settings.languages.add": "Dodaj język",
+  "settings.languages.offerUi": "Dodać {language} także jako język interfejsu? Wtedy interfejs Reever można przełączyć na ten język w Ustawienia → Interfejs.",
   "settings.languages.noMore": "Na razie brak innych języków",
   "settings.languages.notDownloaded": "pakiet nie pobrany",
   "settings.languages.needLid": "Języki z dwóch pakietów działają razem tylko z detektorem języka. Uruchom ponownie instalator Reever i zaznacz go; do tego czasu używany jest tylko pakiet pierwszego języka.",

@@ -231,6 +231,7 @@ I18N.register('ru', {
   "settings.languages.alwaysTitle": "Английский не отключается: английские команды и названия понимаются всегда",
   "settings.languages.remove": "Убрать: {language}",
   "settings.languages.add": "Добавить язык",
+  "settings.languages.offerUi": "Добавить {language} и в языки интерфейса? Тогда интерфейс Reever можно будет переключить на него в Настройках → Интерфейс.",
   "settings.languages.noMore": "Других языков пока нет",
   "settings.languages.notDownloaded": "пакет не скачан",
   "settings.languages.needLid": "Языки из двух пакетов работают вместе только с определителем языка. Запустите установщик Reever ещё раз и отметьте его; пока работает только пакет первого языка.",

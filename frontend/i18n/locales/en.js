@@ -233,6 +233,7 @@ I18N.register('en', {
   "settings.languages.alwaysTitle": "English cannot be turned off: English commands and names are always understood",
   "settings.languages.remove": "Remove {language}",
   "settings.languages.add": "Add language",
+  "settings.languages.offerUi": "Also add {language} as an interface language? Reever's interface can then be switched to it in Settings → Interface.",
   "settings.languages.noMore": "No more languages yet",
   "settings.languages.notDownloaded": "pack not downloaded",
   "settings.languages.needLid": "Languages from two packs work together only with the language detector. Run the Reever installer again and tick it; until then only the first language's pack is used.",

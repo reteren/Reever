@@ -157,11 +157,11 @@ pub fn is_cancel(text: &str, cancel_words: &[String]) -> bool {
 pub fn is_yes(text: &str) -> bool {
     let normalized = normalize(text);
     let compact = join_cjk(&normalized);
-    // «不是», «不好» — отказ, хотя в них есть «是» и «好».
-    if compact.contains('不') || compact.contains('没') {
+    // «不是», «不好», «唔係» — отказ, хотя в них есть «是», «好», «係».
+    if compact.contains('不') || compact.contains('没') || compact.contains('唔') {
         return false;
     }
-    const CJK_YES: [&str; 6] = ["是", "好", "对", "はい", "ええ", "うん"];
+    const CJK_YES: [&str; 9] = ["是", "好", "对", "係", "啱", "對", "はい", "ええ", "うん"];
     CJK_YES.iter().any(|yes| compact.split_whitespace().any(|word| word.contains(yes)))
         || normalized.split_whitespace().any(|word| {
             matches!(
@@ -173,6 +173,8 @@ pub fn is_yes(text: &str) -> bool {
                     // «да» языков из языковых пакетов (models.rs).
                     | "da" | "ja" | "jawohl" | "oui" | "si" | "sí" | "sì" | "sim" | "claro"
                     | "certo" | "d'accord"
+                    | "так" | "tak" | "ano" | "áno" | "jo" | "joo" | "kyllä" | "jah" | "jaa" | "jā"
+                    | "taip" | "ναι" | "igen" | "iva" | "네" | "예" | "응" | "그래"
             ) || word.starts_with("дава")
                 || word.starts_with("подтвержд")
                 || word.starts_with("подтверд")
@@ -185,7 +187,7 @@ pub fn is_yes(text: &str) -> bool {
 pub fn is_no(text: &str) -> bool {
     let normalized = normalize(text);
     let compact = join_cjk(&normalized);
-    const CJK_NO: [&str; 5] = ["不", "没", "取消", "いいえ", "いや"];
+    const CJK_NO: [&str; 6] = ["不", "没", "唔", "取消", "いいえ", "いや"];
     CJK_NO.iter().any(|no| compact.split_whitespace().any(|word| word.contains(no)))
         || normalized.split_whitespace().any(|word| {
             matches!(
@@ -195,6 +197,8 @@ pub fn is_no(text: &str) -> bool {
                     // «нет» других языков; «não» многоязычная модель пишет и на русское «no».
                     | "net" | "nein" | "non" | "não" | "nao" | "annuler" | "abbrechen"
                     | "cancelar" | "annulla"
+                    | "ні" | "nie" | "ne" | "nee" | "nej" | "ei" | "nē" | "όχι" | "nem" | "nu" | "le"
+                    | "아니" | "아니요" | "아니오"
             ) || word.starts_with("отмен")
         })
 }
@@ -898,6 +902,12 @@ mod tests {
         assert!(super::is_no("Nein"));
         assert!(super::is_no("不要"));
         assert!(super::is_no("いいえ"));
+        assert!(is_yes("Tak"));
+        assert!(is_yes("Ναι"));
+        assert!(is_yes("네"));
+        assert!(!is_yes("唔係"));
+        assert!(super::is_no("Nie"));
+        assert!(super::is_no("아니요"));
     }
 
     #[test]

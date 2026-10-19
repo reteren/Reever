@@ -232,6 +232,7 @@ I18N.register('bg', {
   "settings.languages.alwaysTitle": "Английският не може да се изключи: английските команди и имена се разбират винаги",
   "settings.languages.remove": "Премахване: {language}",
   "settings.languages.add": "Добавяне на език",
+  "settings.languages.offerUi": "Да се добави ли {language} и като език на интерфейса? Тогава интерфейсът на Reever може да се превключи на него в Настройки → Интерфейс.",
   "settings.languages.noMore": "Засега няма други езици",
   "settings.languages.notDownloaded": "пакетът не е изтеглен",
   "settings.languages.needLid": "Езиците от два пакета работят заедно само с детектора на език. Стартирайте инсталатора на Reever отново и го отметнете; дотогава се използва само пакетът на първия език.",

@@ -172,7 +172,9 @@ fn default_mascot_scale() -> u32 {
 /// Языки, которые Reever умеет распознавать, по порядку показа. Английский — первый
 /// и обязательный; новый язык — строка здесь, пакет в `models::PACKS` и фразы команд
 /// в грамматике (`grammar::LANGUAGE_TRIGGERS`).
-pub const RECOGNITION_LANGUAGES: &[&str] = &["en", "ru", "de", "fr", "es", "it", "pt", "zh", "ja"];
+pub const RECOGNITION_LANGUAGES: &[&str] = &[
+    "en", "ru", "uk", "de", "fr", "es", "it", "pt", "pl", "cs", "sk", "bg", "hr", "sl", "nl", "da", "sv", "fi", "et", "lv", "lt", "el", "hu", "ro", "mt", "zh", "yue", "ja", "ko",
+];
 
 /// Английский и язык Windows, если Reever его распознаёт: пакет для него обычно и
 /// скачивают при установке.

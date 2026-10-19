@@ -232,6 +232,7 @@ I18N.register('lv', {
   "settings.languages.alwaysTitle": "Angļu valodu nevar izslēgt: angļu komandas un nosaukumi tiek saprasti vienmēr",
   "settings.languages.remove": "Noņemt: {language}",
   "settings.languages.add": "Pievienot valodu",
+  "settings.languages.offerUi": "Pievienot {language} arī kā saskarnes valodu? Tad Reever saskarni varēs pārslēgt uz to sadaļā Iestatījumi → Saskarne.",
   "settings.languages.noMore": "Citu valodu pagaidām nav",
   "settings.languages.notDownloaded": "pakotne nav lejupielādēta",
   "settings.languages.needLid": "Divu pakotņu valodas darbojas kopā tikai ar valodas detektoru. Palaidiet Reever instalētāju vēlreiz un atzīmējiet to; līdz tam tiek izmantota tikai pirmās valodas pakotne.",

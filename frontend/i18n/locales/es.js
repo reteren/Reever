@@ -231,6 +231,7 @@ I18N.register('es', {
   "settings.languages.alwaysTitle": "El inglés no se puede desactivar: los comandos y nombres en inglés se entienden siempre",
   "settings.languages.remove": "Quitar {language}",
   "settings.languages.add": "Añadir idioma",
+  "settings.languages.offerUi": "¿Añadir también {language} como idioma de la interfaz? Así podrá cambiar la interfaz de Reever a ese idioma en Configuración → Interfaz.",
   "settings.languages.noMore": "Todavía no hay más idiomas",
   "settings.languages.notDownloaded": "paquete no descargado",
   "settings.languages.needLid": "Los idiomas de dos paquetes funcionan juntos solo con el detector de idioma. Ejecute de nuevo el instalador de Reever y márquelo; mientras tanto solo se usa el paquete del primer idioma.",

@@ -232,6 +232,7 @@ I18N.register('ko', {
   "settings.languages.alwaysTitle": "영어는 끌 수 없습니다: 영어 명령과 이름은 항상 인식됩니다",
   "settings.languages.remove": "{language} 제거",
   "settings.languages.add": "언어 추가",
+  "settings.languages.offerUi": "{language}을(를) 인터페이스 언어에도 추가할까요? 그러면 설정 → 인터페이스에서 Reever 인터페이스를 이 언어로 바꿀 수 있습니다.",
   "settings.languages.noMore": "아직 다른 언어가 없습니다",
   "settings.languages.notDownloaded": "팩을 내려받지 않음",
   "settings.languages.needLid": "두 팩의 언어는 언어 감지기가 있어야 함께 작동합니다. Reever 설치 프로그램을 다시 실행해 선택하세요. 그 전까지는 첫 번째 언어의 팩만 사용합니다.",

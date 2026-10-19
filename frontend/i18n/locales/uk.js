@@ -232,6 +232,7 @@ I18N.register('uk', {
   "settings.languages.alwaysTitle": "Англійську не вимкнути: англійські команди й назви розуміються завжди",
   "settings.languages.remove": "Прибрати: {language}",
   "settings.languages.add": "Додати мову",
+  "settings.languages.offerUi": "Додати {language} і до мов інтерфейсу? Тоді інтерфейс Reever можна буде перемкнути на неї в Налаштуваннях → Інтерфейс.",
   "settings.languages.noMore": "Інших мов поки немає",
   "settings.languages.notDownloaded": "пакет не завантажено",
   "settings.languages.needLid": "Мови з двох пакетів працюють разом лише з визначником мови. Запустіть інсталятор Reever ще раз і позначте його; доти працює лише пакет першої мови.",

@@ -231,6 +231,7 @@ I18N.register('zh', {
   "settings.languages.alwaysTitle": "英语无法关闭：英语指令和名称始终能被识别",
   "settings.languages.remove": "移除：{language}",
   "settings.languages.add": "添加语言",
+  "settings.languages.offerUi": "也把{language}添加为界面语言吗？之后可以在 设置 → 界面 中把 Reever 界面切换为该语言。",
   "settings.languages.noMore": "暂无其他语言",
   "settings.languages.notDownloaded": "语言包未下载",
   "settings.languages.needLid": "两个语言包的语言只有在安装了语言识别后才能一起使用。请再次运行 Reever 安装程序并勾选它；在此之前只使用第一个语言的语言包。",

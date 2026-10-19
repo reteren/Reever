@@ -231,6 +231,7 @@ I18N.register('ja', {
   "settings.languages.alwaysTitle": "英語はオフにできません。英語のコマンドと名前は常に認識されます",
   "settings.languages.remove": "削除：{language}",
   "settings.languages.add": "言語を追加",
+  "settings.languages.offerUi": "{language}をインターフェイスの言語にも追加しますか？ 設定 → インターフェイス で Reever の表示をその言語に切り替えられるようになります。",
   "settings.languages.noMore": "ほかの言語はまだありません",
   "settings.languages.notDownloaded": "パック未ダウンロード",
   "settings.languages.needLid": "2 つのパックの言語を一緒に使うには言語判定が必要です。Reever のインストーラーをもう一度実行して選んでください。それまでは最初の言語のパックだけを使います。",
