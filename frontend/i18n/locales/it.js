@@ -206,6 +206,8 @@ I18N.register('it', {
   "settings.ui_language": "Lingua dell'interfaccia",
   "settings.ui_language.auto": "Come in Windows",
   "settings.ui_language.help": "I comandi nella Home seguono questa lingua: in russo con l’interfaccia russa, altrimenti in inglese. Le lingue che Reever ascolta si scelgono in Lingue di riconoscimento.",
+  "settings.ui_languages": "Lingue dell'interfaccia",
+  "settings.ui_languages.help": "Lingue in cui si può passare l'interfaccia. L'inglese è sempre disponibile; le traduzioni sono incluse in Reever, quindi aggiungerne una non scarica nulla.",
   "settings.group.mascot": "Mascotte",
   "settings.mascot_mode": "Quando mostrarla",
   "settings.mascot_mode.always": "Sempre",

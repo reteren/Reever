@@ -198,7 +198,11 @@
       // Язык — из settings.json при каждом показе: его могли сменить в главном окне.
       async function applyLanguage() {
         let preference = 'auto';
-        try { preference = (await invoke('get_settings'))?.ui_language || 'auto'; } catch {}
+        try {
+          const saved = await invoke('get_settings');
+          preference = saved?.ui_language || 'auto';
+          I18N.setEnabled(saved?.ui_languages);
+        } catch {}
         await I18N.setLanguage(preference);
       }
       applyLanguage();

@@ -7,17 +7,27 @@
 //   data-i18n-html="key"        → innerHTML (только для своих строк с <br>, <strong>, <kbd>)
 //   data-i18n-title / -placeholder / -aria-label="key" → соответствующий атрибут
 (function () {
-  const SUPPORTED = ['en', 'ru', 'de', 'es', 'pt', 'it', 'fr', 'zh', 'ja', 'ar'];
+  // Языки интерфейса: все языки языковых пакетов Parakeet v3 и SenseVoice
+  // (src-tauri/src/models.rs) и арабский. Порядок — как в uilang::SUPPORTED.
+  const SUPPORTED = ['en', 'ru', 'de', 'es', 'pt', 'it', 'fr', 'zh', 'ja', 'ar',
+    'bg', 'hr', 'cs', 'da', 'nl', 'et', 'fi', 'el', 'hu', 'lv', 'lt', 'mt', 'pl', 'ro',
+    'sk', 'sl', 'sv', 'uk', 'ko', 'yue'];
   // Название языка — на нём самом: так его находит тот, кто не читает текущий.
   const NAMES = {
     en: 'English', ru: 'Русский', de: 'Deutsch', es: 'Español', pt: 'Português',
     it: 'Italiano', fr: 'Français', zh: '中文', ja: '日本語', ar: 'العربية',
+    bg: 'Български', hr: 'Hrvatski', cs: 'Čeština', da: 'Dansk', nl: 'Nederlands',
+    et: 'Eesti', fi: 'Suomi', el: 'Ελληνικά', hu: 'Magyar', lv: 'Latviešu',
+    lt: 'Lietuvių', mt: 'Malti', pl: 'Polski', ro: 'Română', sk: 'Slovenčina',
+    sl: 'Slovenščina', sv: 'Svenska', uk: 'Українська', ko: '한국어', yue: '粵語',
   };
   const RTL = new Set(['ar']);
   const dictionaries = {};
   let locale = 'en';
   let dictionary = {};
   let request = 0;
+  // Включённые языки интерфейса (settings.ui_languages); null — все.
+  let enabled = null;
 
   function normalize(value) {
     const language = String(value || '').trim().toLowerCase().split(/[-_]/)[0];
@@ -39,10 +49,18 @@
     });
   }
 
-  /** `auto` или пусто — язык Windows (его отдаёт WebView2), иначе код языка. */
+  /** `auto` или пусто — язык Windows (его отдаёт WebView2), иначе код языка.
+   *  Выключенный в Настройках язык — английский. */
   function resolve(preference) {
     const value = String(preference || '').trim();
-    return normalize(!value || value === 'auto' ? navigator.language : value);
+    const code = normalize(!value || value === 'auto' ? navigator.language : value);
+    return !enabled || enabled.includes(code) ? code : 'en';
+  }
+
+  /** Языки интерфейса, между которыми можно переключаться; английский — всегда. */
+  function setEnabled(codes) {
+    const chosen = Array.isArray(codes) ? codes.map(code => String(code).trim()) : null;
+    enabled = chosen ? SUPPORTED.filter(code => code === 'en' || chosen.includes(code)) : null;
   }
 
   async function setLanguage(preference) {
@@ -92,8 +110,9 @@
   }
 
   window.I18N = {
-    SUPPORTED, NAMES, register, setLanguage, resolve, normalize, t, has, apply,
+    SUPPORTED, NAMES, register, setLanguage, setEnabled, resolve, normalize, t, has, apply,
     get locale() { return locale; },
+    get enabled() { return enabled || SUPPORTED; },
   };
   window.t = t;
 })();

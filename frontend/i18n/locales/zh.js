@@ -206,6 +206,8 @@ I18N.register('zh', {
   "settings.ui_language": "界面语言",
   "settings.ui_language.auto": "与 Windows 相同",
   "settings.ui_language.help": "主页上的指令随界面语言显示：俄语界面显示俄语指令，其他语言显示英语指令。Reever 能听懂哪些语言，请在“识别语言”中设置。",
+  "settings.ui_languages": "界面语言",
+  "settings.ui_languages.help": "界面可以切换到的语言。英语始终可用；翻译已内置在 Reever 中，添加语言无需下载任何内容。",
   "settings.group.mascot": "吉祥物",
   "settings.mascot_mode": "何时显示",
   "settings.mascot_mode.always": "始终",

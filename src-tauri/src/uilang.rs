@@ -1,5 +1,5 @@
 //! Язык интерфейса для того, что рисует сам Rust: меню трея и строки журнала.
-//! Интерфейс окна переводится в frontend/i18n; здесь — те же десять языков и тот же
+//! Интерфейс окна переводится в frontend/i18n; здесь — те же тридцать языков и тот же
 //! выбор: `ui_language` в settings.json, `auto` — язык Windows.
 //!
 //! Словари — `src-tauri/locales/<код>.json`, плоские `ключ → строка` с подстановками
@@ -12,9 +12,40 @@ use std::sync::OnceLock;
 use tauri::menu::MenuItem;
 use tauri::Wry;
 
-pub const SUPPORTED: [&str; 10] = ["en", "ru", "de", "es", "pt", "it", "fr", "zh", "ja", "ar"];
+pub const SUPPORTED: [&str; 30] = [
+    "en",
+    "ru",
+    "de",
+    "es",
+    "pt",
+    "it",
+    "fr",
+    "zh",
+    "ja",
+    "ar",
+    "bg",
+    "hr",
+    "cs",
+    "da",
+    "nl",
+    "et",
+    "fi",
+    "el",
+    "hu",
+    "lv",
+    "lt",
+    "mt",
+    "pl",
+    "ro",
+    "sk",
+    "sl",
+    "sv",
+    "uk",
+    "ko",
+    "yue",
+];
 
-const SOURCES: [(&str, &str); 10] = [
+const SOURCES: [(&str, &str); 30] = [
     ("en", include_str!("../locales/en.json")),
     ("ru", include_str!("../locales/ru.json")),
     ("de", include_str!("../locales/de.json")),
@@ -25,6 +56,26 @@ const SOURCES: [(&str, &str); 10] = [
     ("zh", include_str!("../locales/zh.json")),
     ("ja", include_str!("../locales/ja.json")),
     ("ar", include_str!("../locales/ar.json")),
+    ("bg", include_str!("../locales/bg.json")),
+    ("hr", include_str!("../locales/hr.json")),
+    ("cs", include_str!("../locales/cs.json")),
+    ("da", include_str!("../locales/da.json")),
+    ("nl", include_str!("../locales/nl.json")),
+    ("et", include_str!("../locales/et.json")),
+    ("fi", include_str!("../locales/fi.json")),
+    ("el", include_str!("../locales/el.json")),
+    ("hu", include_str!("../locales/hu.json")),
+    ("lv", include_str!("../locales/lv.json")),
+    ("lt", include_str!("../locales/lt.json")),
+    ("mt", include_str!("../locales/mt.json")),
+    ("pl", include_str!("../locales/pl.json")),
+    ("ro", include_str!("../locales/ro.json")),
+    ("sk", include_str!("../locales/sk.json")),
+    ("sl", include_str!("../locales/sl.json")),
+    ("sv", include_str!("../locales/sv.json")),
+    ("uk", include_str!("../locales/uk.json")),
+    ("ko", include_str!("../locales/ko.json")),
+    ("yue", include_str!("../locales/yue.json")),
 ];
 
 /// Текущий язык интерфейса (для строк, которые Rust шлёт в журнал).
@@ -35,6 +86,17 @@ pub struct TrayItems {
     pub show: MenuItem<Wry>,
     pub pause: MenuItem<Wry>,
     pub quit: MenuItem<Wry>,
+}
+
+/// Как `resolve`, но среди включённых языков интерфейса (`Settings::ui_languages`):
+/// выключенный — английский.
+pub fn resolve_enabled(preference: &str, enabled: &[&str]) -> &'static str {
+    let code = resolve(preference);
+    if enabled.contains(&code) {
+        code
+    } else {
+        "en"
+    }
 }
 
 /// Код языка из настройки или из языка Windows; незнакомый — английский.
@@ -190,7 +252,8 @@ mod tests {
         assert_eq!(resolve("de"), "de");
         assert_eq!(resolve("pt-BR"), "pt");
         assert_eq!(resolve("zh_CN"), "zh");
-        assert_eq!(resolve("ko"), "en");
+        assert_eq!(resolve("ko"), "ko");
+        assert_eq!(resolve("tr"), "en");
         assert!(SUPPORTED.contains(&resolve("auto")));
     }
 

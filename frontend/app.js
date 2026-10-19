@@ -2,7 +2,7 @@ const tauri = window.__TAURI__;
 const previewSettings={
   wake_words:['ривер','ревер','ривьер'],
   match_threshold:0.7,
-  asr_threads:4,languages:['en','ru'],models_unload_s:60,local_index:true,
+  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_s:60,local_index:true,
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
@@ -534,7 +534,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // [ключ настройки, тип, варианты, когда применяется]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
-  ['interface',[['ui_language','ui_language',null,'instant']]],
+  ['interface',[['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
@@ -620,11 +620,16 @@ function fieldEl(key,type,opts,when='save'){
     inp=el('select');
     const current=settingsObj[key]||'auto';
     inp.append(el('option',{value:'auto',textContent:`${t('settings.ui_language.auto')} (${I18N.NAMES[I18N.resolve('auto')]})`}));
-    for(const code of I18N.SUPPORTED){
+    for(const code of I18N.enabled){
       inp.append(el('option',{value:code,textContent:I18N.NAMES[code]}));
     }
-    inp.value=I18N.SUPPORTED.includes(current)?current:'auto';
+    inp.value=I18N.enabled.includes(current)?current:'auto';
     inp.onchange=()=>changeLanguage(inp.value);
+  }
+  else if(type==='ui_languages'){
+    wrap.append(uiLanguagesEditor());
+    if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+    return wrap;
   }
   else if(type==='mascot_mode'){
     // Сразу: маскот появляется, прячется или исчезает без «Сохранить».
@@ -701,6 +706,49 @@ function fieldEl(key,type,opts,when='save'){
     wrap.append(indexStatusNode); renderIndexStatus();
   }
   return wrap;
+}
+// Языки интерфейса: переводы встроены в Reever, поэтому добавить можно любой из
+// I18N.SUPPORTED; английский не убрать. Убран язык, на котором сейчас интерфейс, —
+// сразу переключаемся на «как в Windows».
+function uiLanguagesEditor(){
+  const box=el('div',{className:'lang-editor'});
+  const enabled=I18N.enabled;
+  const setLanguages=async codes=>{
+    settingsObj.ui_languages=codes; I18N.setEnabled(codes);
+    const current=settingsObj.ui_language||'auto';
+    if(current!=='auto'&&!codes.includes(current)) await changeLanguage('auto');
+    else if(I18N.resolve(current)!==I18N.locale) await changeLanguage(current);
+    else renderSettings();
+    $('#settingsMsg').textContent=t('settings.languages.changed');
+  };
+  for(const code of enabled){
+    const row=el('div',{className:'lang-row'});
+    row.append(el('span',{className:'lang-name',textContent:I18N.NAMES[code]}));
+    if(code==='en'){
+      row.append(el('span',{className:'lang-lock',textContent:t('settings.languages.always')}));
+    }else{
+      const label=t('settings.languages.remove',{language:I18N.NAMES[code]});
+      const remove=el('button',{type:'button',className:'sm lang-remove',title:label,ariaLabel:label},[icon('x')]);
+      remove.onclick=()=>setLanguages(enabled.filter(item=>item!==code));
+      row.append(remove);
+    }
+    box.append(row);
+  }
+  const addable=I18N.SUPPORTED.filter(code=>!enabled.includes(code));
+  const addRow=el('div',{className:'lang-add'});
+  const add=el('button',{type:'button',className:'sm',textContent:'+ '+t('settings.languages.add')});
+  add.setAttribute('aria-haspopup','menu');
+  const menu=el('div',{className:'lang-menu',hidden:true,role:'menu'});
+  for(const code of addable){
+    const item=el('button',{type:'button',className:'sm',role:'menuitem',textContent:I18N.NAMES[code]});
+    item.onclick=()=>setLanguages([...enabled,code]);
+    menu.append(item);
+  }
+  if(addable.length) add.onclick=()=>{ menu.hidden=!menu.hidden; };
+  else add.disabled=true;
+  addRow.append(add,menu);
+  box.append(addRow);
+  return box;
 }
 // Языки распознавания: строка на язык с его пакетом; английский не убрать, остальные —
 // × и «+ Добавить язык». Язык без скачанного пакета добавить нельзя: пакет ставит
@@ -827,7 +875,11 @@ async function changeLanguage(preference){
 // Сначала язык (из settings.json, иначе язык Windows), потом всё остальное.
 (async()=>{
   let preference='auto';
-  try{ preference=(await invoke('get_settings'))?.ui_language||'auto'; }catch{}
+  try{
+    const saved=await invoke('get_settings');
+    preference=saved?.ui_language||'auto';
+    I18N.setEnabled(saved?.ui_languages);
+  }catch{}
   await I18N.setLanguage(preference);
   startIndexStatusPolling();
   loadActions().catch(e=>reportError('loadActions',e)); loadSettings(); loadGrammar(); refreshPause();

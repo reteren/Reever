@@ -206,6 +206,8 @@ I18N.register('de', {
   "settings.ui_language": "Sprache der Oberfläche",
   "settings.ui_language.auto": "Wie in Windows",
   "settings.ui_language.help": "Befehle auf der Startseite erscheinen passend zu dieser Sprache: in der russischen Oberfläche russisch, sonst englisch. Welche Sprachen Reever hört, legen die Erkennungssprachen fest.",
+  "settings.ui_languages": "Oberflächensprachen",
+  "settings.ui_languages.help": "Sprachen, auf die die Oberfläche umgestellt werden kann. Englisch ist immer verfügbar; die Übersetzungen sind in Reever enthalten, beim Hinzufügen wird nichts heruntergeladen.",
   "settings.group.mascot": "Maskottchen",
   "settings.mascot_mode": "Wann anzeigen",
   "settings.mascot_mode.always": "Immer",

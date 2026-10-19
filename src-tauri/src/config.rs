@@ -132,6 +132,10 @@ pub struct Settings {
     /// Язык интерфейса: `auto` (язык Windows) или код из `uilang::SUPPORTED`.
     #[serde(default = "default_ui_language")]
     pub ui_language: String,
+    /// Языки интерфейса, между которыми можно переключаться; английский — всегда.
+    /// Отмечаются в установщике (`take_installer_ui_languages`) и в Настройках.
+    #[serde(default = "default_ui_languages")]
+    pub ui_languages: Vec<String>,
     /// Через сколько секунд простоя выгружать тяжёлые модели распознавания (в покое
     /// остаётся только детектор «ривер»); 0 — не выгружать никогда.
     #[serde(default = "default_models_unload_s")]
@@ -202,6 +206,71 @@ impl Settings {
 
 fn default_ui_language() -> String {
     "auto".into()
+}
+
+/// Английский и язык Windows, если Reever на нём переведён.
+fn default_ui_languages() -> Vec<String> {
+    let mut languages = vec!["en".to_string()];
+    let system = crate::uilang::resolve("auto");
+    if system != "en" {
+        languages.push(system.to_string());
+    }
+    languages
+}
+
+impl Settings {
+    /// Включённые языки интерфейса по порядку `uilang::SUPPORTED`: английский всегда,
+    /// незнакомые коды отброшены.
+    pub fn interface_languages(&self) -> Vec<&'static str> {
+        crate::uilang::SUPPORTED
+            .iter()
+            .copied()
+            .filter(|code| *code == "en" || self.ui_languages.iter().any(|l| l.trim() == *code))
+            .collect()
+    }
+}
+
+/// Папка, через которую установщик передаёт выбор языков интерфейса
+/// (`src-tauri/windows/models.nsh`): `ui-languages-pending.txt` — новый выбор,
+/// `ui-languages.txt` — текущие языки, чтобы установщик отметил их при повторном запуске.
+fn installer_dir() -> Option<PathBuf> {
+    std::env::var_os("LOCALAPPDATA").map(|dir| PathBuf::from(dir).join("com.troid.reever"))
+}
+
+/// Языки интерфейса, отмеченные в установщике после прошлого запуска; файл удаляется.
+fn take_installer_ui_languages() -> Option<Vec<String>> {
+    let path = installer_dir()?.join("ui-languages-pending.txt");
+    let text = std::fs::read_to_string(&path).ok()?;
+    let _ = std::fs::remove_file(&path);
+    let languages: Vec<String> = text
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .map(str::trim)
+        .filter(|code| crate::uilang::SUPPORTED.contains(code))
+        .map(str::to_string)
+        .collect();
+    (!languages.is_empty()).then_some(languages)
+}
+
+/// Выбор из установщика — в settings.json, текущие языки — для следующего запуска установщика.
+fn sync_installer_ui_languages(settings: &mut Settings, settings_path: &std::path::Path) {
+    if let Some(languages) = take_installer_ui_languages() {
+        settings.ui_languages = languages;
+        let mut value = std::fs::read_to_string(settings_path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .filter(serde_json::Value::is_object)
+            .unwrap_or_else(|| serde_json::json!({}));
+        if let Some(object) = value.as_object_mut() {
+            object.insert("ui_languages".into(), serde_json::json!(settings.ui_languages));
+            if let Ok(text) = serde_json::to_string_pretty(&value) {
+                let _ = std::fs::write(settings_path, text);
+            }
+        }
+    }
+    if let Some(dir) = installer_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(dir.join("ui-languages.txt"), settings.interface_languages().join(","));
+    }
 }
 
 fn default_wake_spotter_model() -> String {
@@ -325,6 +394,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("wake_spotter_model", wake_spotter_model, String);
     restore!("wake_sound", wake_sound, bool);
     restore!("ui_language", ui_language, String);
+    restore!("ui_languages", ui_languages, Vec<String>);
     restore!("languages", languages, Vec<String>);
     restore!("mascot_mode", mascot_mode, String);
     restore!("mascot_scale", mascot_scale, u32);
@@ -373,6 +443,7 @@ impl Default for Settings {
             wake_spotter_model: default_wake_spotter_model(),
             wake_sound: true,
             ui_language: default_ui_language(),
+            ui_languages: default_ui_languages(),
             languages: default_languages(),
             models_unload_s: default_models_unload_s(),
             local_index: true,
@@ -424,10 +495,11 @@ impl ReeverConfig {
             .unwrap_or_default();
 
         let settings_path = user_config_path(app, "settings.json");
-        let settings = std::fs::read_to_string(&settings_path)
+        let mut settings = std::fs::read_to_string(&settings_path)
             .ok()
             .map(|s| parse_settings(&s))
             .unwrap_or_default();
+        sync_installer_ui_languages(&mut settings, &settings_path);
 
         let model_dirs = crate::models::ModelDirs::new(resource(app, "model"));
         let models = crate::models::plan(&settings.recognition_languages(), &model_dirs);

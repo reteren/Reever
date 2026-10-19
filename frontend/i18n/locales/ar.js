@@ -206,6 +206,8 @@ I18N.register('ar', {
   "settings.ui_language": "لغة الواجهة",
   "settings.ui_language.auto": "كما في Windows",
   "settings.ui_language.help": "تظهر الأوامر في الصفحة الرئيسية حسب هذه اللغة: بالروسية في الواجهة الروسية، وبالإنجليزية في غيرها. اختر اللغات التي يسمعها Reever في «لغات التعرّف».",
+  "settings.ui_languages": "لغات الواجهة",
+  "settings.ui_languages.help": "اللغات التي يمكن تبديل الواجهة إليها. الإنجليزية متاحة دائمًا؛ الترجمات مضمّنة في Reever، لذا لا تنزّل إضافة لغة أي شيء.",
   "settings.group.mascot": "التميمة",
   "settings.mascot_mode": "متى تظهر",
   "settings.mascot_mode.always": "دائمًا",

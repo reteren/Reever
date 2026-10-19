@@ -206,6 +206,8 @@ I18N.register('ja', {
   "settings.ui_language": "インターフェイスの言語",
   "settings.ui_language.auto": "Windowsと同じ",
   "settings.ui_language.help": "ホームのコマンドはこの言語に合わせて表示されます。ロシア語の画面ではロシア語、それ以外では英語です。Reever が聞き取る言語は「認識する言語」で設定します。",
+  "settings.ui_languages": "インターフェイスの言語",
+  "settings.ui_languages.help": "インターフェイスを切り替えられる言語です。英語は常に使えます。翻訳は Reever に組み込まれているため、追加しても何もダウンロードしません。",
   "settings.group.mascot": "マスコット",
   "settings.mascot_mode": "表示するタイミング",
   "settings.mascot_mode.always": "常に表示",

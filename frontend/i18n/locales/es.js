@@ -206,6 +206,8 @@ I18N.register('es', {
   "settings.ui_language": "Idioma de la interfaz",
   "settings.ui_language.auto": "Igual que en Windows",
   "settings.ui_language.help": "Los comandos de Inicio se muestran según este idioma: en la interfaz rusa, en ruso; en las demás, en inglés. Los idiomas que oye Reever se eligen en Idiomas de reconocimiento.",
+  "settings.ui_languages": "Idiomas de la interfaz",
+  "settings.ui_languages.help": "Idiomas a los que se puede cambiar la interfaz. El inglés está siempre disponible; las traducciones vienen incluidas en Reever, así que añadir uno no descarga nada.",
   "settings.group.mascot": "Mascota",
   "settings.mascot_mode": "Cuándo mostrarla",
   "settings.mascot_mode.always": "Siempre",

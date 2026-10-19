@@ -3,6 +3,7 @@
 ; Подключается как installerHooks (tauri.conf.json) — до страниц и языков, поэтому
 ; страница и строки объявлены макросами, а вставляет их свой шаблон installer.nsi:
 ; REEVER_MODELS_PAGE — после выбора папки, REEVER_MODELS_STRINGS — после языков.
+; REEVER_MODELS_PAGE объявляет две страницы: языки интерфейса и языковые модели.
 ;
 ; Базовые модели (английский 110m, детектор «ривер», VAD) вшиты в установщик. Здесь —
 ; только то, что ставится по галочке. Адреса, суммы и файлы совпадают с
@@ -40,6 +41,15 @@ Var ReeverWantEuropean
 Var ReeverWantAsian
 Var ReeverWantLid
 Var ReeverFailed
+Var ReeverUiBoxes
+Var ReeverUiChosen
+
+; Языки интерфейса — как uilang::SUPPORTED и I18N.SUPPORTED; названия на самих языках.
+; Английский отмечен всегда. Выбор передаётся программе файлом
+; %LOCALAPPDATA%\com.troid.reever\ui-languages-pending.txt (config.rs), а текущие языки
+; программа пишет в ui-languages.txt — их установщик отмечает при повторном запуске.
+!define REEVER_UI_CODES "en ru de es pt it fr zh ja ar bg hr cs da nl et fi el hu lv lt mt pl ro sk sl sv uk ko yue"
+!define REEVER_UI_NAMES "English|Русский|Deutsch|Español|Português|Italiano|Français|中文|日本語|العربية|Български|Hrvatski|Čeština|Dansk|Nederlands|Eesti|Suomi|Ελληνικά|Magyar|Latviešu|Lietuvių|Malti|Polski|Română|Slovenčina|Slovenščina|Svenska|Українська|한국어|粵語"
 
 ; Пакет скачан, если на месте все его файлы. $0 — папка, $1 — файлы через пробел;
 ; результат в $2: 1 — скачан.
@@ -83,7 +93,81 @@ FunctionEnd
 !macroend
 
 !macro REEVER_MODELS_PAGE
+  Page custom ReeverUiShow ReeverUiLeave
   Page custom ReeverModelsShow ReeverModelsLeave
+
+  ; Три колонки по десять галочек; HWND галочек — через пробел в $ReeverUiBoxes в
+  ; порядке REEVER_UI_CODES (массивов в NSIS нет).
+  Function ReeverUiShow
+    ${If} $PassiveMode = 1
+    ${OrIf} $UpdateMode = 1
+      Abort
+    ${EndIf}
+    ${If} $ReeverUiChosen == ""
+      ReadEnvStr $0 LOCALAPPDATA
+      ClearErrors
+      FileOpen $1 "$0\com.troid.reever\ui-languages.txt" r
+      ${IfNot} ${Errors}
+        FileRead $1 $ReeverUiChosen
+        FileClose $1
+      ${EndIf}
+      StrCpy $ReeverUiChosen ",$ReeverUiChosen,"
+    ${EndIf}
+    !insertmacro MUI_HEADER_TEXT "$(reeverUiTitle)" "$(reeverUiSubtitle)"
+    nsDialogs::Create 1018
+    Pop $0
+    ${If} $0 == error
+      Abort
+    ${EndIf}
+    ${NSD_CreateLabel} 0 0 100% 20u "$(reeverUiNote)"
+    Pop $0
+
+    StrCpy $ReeverUiBoxes ""
+    StrCpy $2 0
+    ${Do}
+      IntOp $3 $2 + 1
+      ${WordFind} "${REEVER_UI_CODES}" " " "+$3" $4
+      ${WordFind} "${REEVER_UI_NAMES}" "|" "+$3" $5
+      IntOp $6 $2 / 10
+      IntOp $7 $2 % 10
+      IntOp $6 $6 * 33
+      IntOp $7 $7 * 11
+      IntOp $7 $7 + 24
+      ${NSD_CreateCheckbox} $6% $7u 32% 11u "$5"
+      Pop $8
+      ${If} $ReeverUiBoxes == ""
+        StrCpy $ReeverUiBoxes $8
+      ${Else}
+        StrCpy $ReeverUiBoxes "$ReeverUiBoxes $8"
+      ${EndIf}
+      ${If} $4 == "en"
+        ${NSD_Check} $8
+        EnableWindow $8 0
+      ${Else}
+        ${WordFind} "$ReeverUiChosen" ",$4," "E+1{" $9
+        ${IfNot} ${Errors}
+          ${NSD_Check} $8
+        ${EndIf}
+      ${EndIf}
+      IntOp $2 $2 + 1
+    ${LoopUntil} $2 >= 30
+    nsDialogs::Show
+  FunctionEnd
+
+  Function ReeverUiLeave
+    StrCpy $ReeverUiChosen ","
+    StrCpy $2 0
+    ${Do}
+      IntOp $3 $2 + 1
+      ${WordFind} "${REEVER_UI_CODES}" " " "+$3" $4
+      ${WordFind} "$ReeverUiBoxes" " " "+$3" $8
+      ${NSD_GetState} $8 $9
+      ${If} $9 == ${BST_CHECKED}
+        StrCpy $ReeverUiChosen "$ReeverUiChosen$4,"
+      ${EndIf}
+      IntOp $2 $2 + 1
+    ${LoopUntil} $2 >= 30
+  FunctionEnd
 
   Function ReeverModelsShow
     ${If} $PassiveMode = 1
@@ -146,10 +230,17 @@ FunctionEnd
     ${EndIf}
   FunctionEnd
 
+  ; Без языкового пакета дальше нельзя: Reever ставится ради распознавания речи.
+  ; Уже скачанный пакет отмечен и тоже считается.
   Function ReeverModelsLeave
     ${NSD_GetState} $ReeverEuropeanBox $ReeverWantEuropean
     ${NSD_GetState} $ReeverAsianBox $ReeverWantAsian
     ${NSD_GetState} $ReeverLidBox $ReeverWantLid
+    ${If} $ReeverWantEuropean != ${BST_CHECKED}
+    ${AndIf} $ReeverWantAsian != ${BST_CHECKED}
+      MessageBox MB_ICONEXCLAMATION|MB_OK "$(reeverNeedPack)"
+      Abort
+    ${EndIf}
   FunctionEnd
 !macroend
 
@@ -303,6 +394,14 @@ FunctionEnd
 
 !macro NSIS_HOOK_POSTINSTALL
   Call ReeverResolveRoot
+  ; Языки интерфейса — программе при следующем запуске (страница пропущена — ничего).
+  ${If} $ReeverUiChosen != ""
+    ReadEnvStr $0 LOCALAPPDATA
+    CreateDirectory "$0\com.troid.reever"
+    FileOpen $1 "$0\com.troid.reever\ui-languages-pending.txt" w
+    FileWrite $1 $ReeverUiChosen
+    FileClose $1
+  ${EndIf}
   StrCpy $ReeverFailed ""
   ${If} $ReeverWantEuropean = ${BST_CHECKED}
     !insertmacro REEVER_FETCH "Parakeet v3" "${REEVER_EUROPEAN_DIR}" "${REEVER_EUROPEAN_URL}" "${REEVER_EUROPEAN_SHA}" "${REEVER_EUROPEAN_MB}" "${REEVER_EUROPEAN_FILES}"

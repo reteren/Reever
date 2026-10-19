@@ -280,7 +280,8 @@ pub fn set_ui_language(
     language: String,
 ) -> Result<String, String> {
     let config = config.get();
-    let locale = crate::uilang::resolve(&language);
+    let locale =
+        crate::uilang::resolve_enabled(&language, &config.settings.interface_languages());
     crate::uilang::apply_tray(&tray, locale);
     *crate::uilang::CURRENT.lock().map_err(|e| e.to_string())? = locale;
     persist_hotkey(&config, "ui_language", &language)?;

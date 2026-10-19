@@ -295,7 +295,10 @@ pub fn run() {
             app.manage(index);
 
             // --- трей ---
-            let locale = uilang::resolve(&cfg.settings.ui_language);
+            let locale = uilang::resolve_enabled(
+                &cfg.settings.ui_language,
+                &cfg.settings.interface_languages(),
+            );
             *uilang::CURRENT.lock().unwrap() = locale;
             let show = MenuItemBuilder::with_id("show", uilang::text(locale, "tray.show")).build(app)?;
             let pause = MenuItemBuilder::with_id("pause", uilang::text(locale, "tray.pause")).build(app)?;

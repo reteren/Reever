@@ -10,7 +10,9 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'i18n');
-const SUPPORTED = ['en', 'ru', 'de', 'es', 'pt', 'it', 'fr', 'zh', 'ja', 'ar'];
+const SUPPORTED = ['en', 'ru', 'de', 'es', 'pt', 'it', 'fr', 'zh', 'ja', 'ar',
+  'bg', 'hr', 'cs', 'da', 'nl', 'et', 'fi', 'el', 'hu', 'lv', 'lt', 'mt', 'pl', 'ro',
+  'sk', 'sl', 'sv', 'uk', 'ko', 'yue'];
 
 function load(code) {
   const registered = {};
