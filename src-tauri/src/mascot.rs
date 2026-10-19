@@ -19,9 +19,13 @@ use std::time::Duration;
 use tauri::{
     webview::WebviewWindowBuilder, AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
 };
-use windows::Win32::Foundation::POINT;
+use windows::Win32::Foundation::{HWND, POINT};
+use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
-use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetCursorPos, GetWindow, GetWindowLongW, IsWindowVisible, SetWindowPos, GWL_EXSTYLE, GW_HWNDPREV, HWND_TOPMOST,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, WS_EX_TOPMOST,
+};
 
 use crate::bubble;
 use crate::config::LiveConfig;
@@ -64,6 +68,9 @@ static SHOWN: AtomicBool = AtomicBool::new(false);
 static RESTING: AtomicBool = AtomicBool::new(false);
 /// Маскот уже уходит в портал (пузырь над ним гаснет сразу, не дожидаясь конца ухода).
 static LEAVING: AtomicBool = AtomicBool::new(false);
+/// Как часто проверять, что окно маскота не задвинуто под обычные окна (`keep_on_top`),
+/// в тиках `watch_cursor` по 40 мс.
+const TOPMOST_CHECK_TICKS: u32 = 25;
 
 pub fn normalize_mode(mode: &str) -> &'static str {
     match mode.trim() {
@@ -269,8 +276,16 @@ pub fn mascot_rest(rest: bool) {
 fn watch_cursor(window: WebviewWindow) {
     std::thread::spawn(move || {
         let mut catching: Option<bool> = None;
+        let mut tick = 0u32;
         loop {
             std::thread::sleep(Duration::from_millis(40));
+            tick = tick.wrapping_add(1);
+            if tick % TOPMOST_CHECK_TICKS == 0 && SHOWN.load(Ordering::Relaxed) && keep_on_top(&window) {
+                // пузырь стоит над маскотом и должен остаться над ним
+                if let Some(bubble) = window.app_handle().get_webview_window("bubble") {
+                    raise_topmost(&bubble);
+                }
+            }
             let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) else { return };
             let over = DRAGGING.load(Ordering::Relaxed)
                 || (SHOWN.load(Ordering::Relaxed)
@@ -289,6 +304,45 @@ fn watch_cursor(window: WebviewWindow) {
             }
         }
     });
+}
+
+/// Windows иногда задвигает окно «поверх всех» под обычные окна: флаг WS_EX_TOPMOST
+/// остаётся, а места наверху z-порядка нет, и маскот пропадает за ними, пока окно не
+/// пересоздать (замечено 2026-10-19: маскот под Telegram и редактором). Если над окном
+/// есть видимое обычное окно — вернуть его наверх. Возвращает, поднимали ли окно.
+fn keep_on_top(window: &WebviewWindow) -> bool {
+    let Ok(raw) = window.hwnd() else { return false };
+    let hwnd = HWND(raw.0 as _);
+    let mut above = unsafe { GetWindow(hwnd, GW_HWNDPREV) };
+    while let Ok(other) = above {
+        if other.0.is_null() {
+            break;
+        }
+        let topmost = unsafe { GetWindowLongW(other, GWL_EXSTYLE) } as u32 & WS_EX_TOPMOST.0 != 0;
+        if !topmost && unsafe { IsWindowVisible(other) }.as_bool() && !cloaked(other) {
+            raise_topmost(window);
+            return true;
+        }
+        above = unsafe { GetWindow(other, GW_HWNDPREV) };
+    }
+    false
+}
+
+fn raise_topmost(window: &WebviewWindow) {
+    if let Ok(raw) = window.hwnd() {
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+        let _ = unsafe { SetWindowPos(HWND(raw.0 as _), HWND_TOPMOST, 0, 0, 0, 0, flags) };
+    }
+}
+
+/// Скрытое системой окно (UWP в фоне): «видимо», но на экране его нет.
+fn cloaked(hwnd: HWND) -> bool {
+    let mut cloaked = 0u32;
+    unsafe {
+        DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &mut cloaked as *mut u32 as *mut _, std::mem::size_of::<u32>() as u32)
+    }
+    .is_ok()
+        && cloaked != 0
 }
 
 fn create(app: &AppHandle) {
