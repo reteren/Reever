@@ -42,7 +42,7 @@ impl PendingAction {
     }
 }
 
-fn app_title(app: &crate::procs::RunningApp) -> String {
+pub(crate) fn app_title(app: &crate::procs::RunningApp) -> String {
     if app.description.trim().is_empty() {
         app.exe_name.clone()
     } else {

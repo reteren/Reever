@@ -321,5 +321,16 @@ I18N.register('de', {
   "picker.openButton": "Öffnen",
   "picker.count": { "one": "{count} Option", "other": "{count} Optionen" },
   "picker.frequent": "Häufig geöffnet",
-  "picker.all": "Alle Treffer"
+  "picker.all": "Alle Treffer",
+  "confirm.title": "Bestätigung",
+  "confirm.shutdown": "Computer herunterfahren?",
+  "confirm.restart": "Computer neu starten?",
+  "confirm.close": "{app} schließen?",
+  "confirm.kill": "{app} beenden erzwingen?",
+  "confirm.generic": "«{action}» ausführen?",
+  "confirm.voice": "<strong>Per Stimme:</strong> sagen Sie «ja» oder «nein».",
+  "confirm.yes": "Ja",
+  "confirm.no": "Nein",
+  "confirm.noTitle": "Nein (Esc)",
+  "confirm.left": "Abbruch in {seconds} s"
 });

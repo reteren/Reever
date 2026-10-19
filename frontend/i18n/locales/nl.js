@@ -322,5 +322,16 @@ I18N.register('nl', {
   "picker.openButton": "Openen",
   "picker.count": { "one": "{count} optie", "other": "{count} opties" },
   "picker.frequent": "Vaak geopend",
-  "picker.all": "Alle overeenkomsten"
+  "picker.all": "Alle overeenkomsten",
+  "confirm.title": "Bevestiging",
+  "confirm.shutdown": "Computer afsluiten?",
+  "confirm.restart": "Computer opnieuw opstarten?",
+  "confirm.close": "{app} sluiten?",
+  "confirm.kill": "{app} geforceerd afsluiten?",
+  "confirm.generic": "«{action}» uitvoeren?",
+  "confirm.voice": "<strong>Met je stem:</strong> zeg «ja» of «nee».",
+  "confirm.yes": "Ja",
+  "confirm.no": "Nee",
+  "confirm.noTitle": "Nee (Esc)",
+  "confirm.left": "Annulering over {seconds} s"
 });

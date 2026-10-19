@@ -322,5 +322,16 @@ I18N.register('ro', {
   "picker.openButton": "Deschide",
   "picker.count": { "one": "{count} opțiune", "few": "{count} opțiuni", "other": "{count} de opțiuni" },
   "picker.frequent": "Deschise frecvent",
-  "picker.all": "Toate potrivirile"
+  "picker.all": "Toate potrivirile",
+  "confirm.title": "Confirmare",
+  "confirm.shutdown": "Opresc computerul?",
+  "confirm.restart": "Repornesc computerul?",
+  "confirm.close": "Închid {app}?",
+  "confirm.kill": "Forțez închiderea {app}?",
+  "confirm.generic": "Execut «{action}»?",
+  "confirm.voice": "<strong>Cu vocea:</strong> spuneți «da» sau «nu».",
+  "confirm.yes": "Da",
+  "confirm.no": "Nu",
+  "confirm.noTitle": "Nu (Esc)",
+  "confirm.left": "Anulare în {seconds} s"
 });

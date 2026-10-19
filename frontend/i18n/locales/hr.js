@@ -322,5 +322,16 @@ I18N.register('hr', {
   "picker.openButton": "Otvori",
   "picker.count": { "one": "{count} mogućnost", "few": "{count} mogućnosti", "other": "{count} mogućnosti" },
   "picker.frequent": "Često otvarano",
-  "picker.all": "Sva podudaranja"
+  "picker.all": "Sva podudaranja",
+  "confirm.title": "Potvrda",
+  "confirm.shutdown": "Isključiti računalo?",
+  "confirm.restart": "Ponovno pokrenuti računalo?",
+  "confirm.close": "Zatvoriti {app}?",
+  "confirm.kill": "Prisilno zatvoriti {app}?",
+  "confirm.generic": "Izvršiti «{action}»?",
+  "confirm.voice": "<strong>Glasom:</strong> recite «da» ili «ne».",
+  "confirm.yes": "Da",
+  "confirm.no": "Ne",
+  "confirm.noTitle": "Ne (Esc)",
+  "confirm.left": "Otkazivanje za {seconds} s"
 });

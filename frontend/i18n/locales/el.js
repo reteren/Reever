@@ -322,5 +322,16 @@ I18N.register('el', {
   "picker.openButton": "Άνοιγμα",
   "picker.count": { "one": "{count} επιλογή", "other": "{count} επιλογές" },
   "picker.frequent": "Ανοίγονται συχνά",
-  "picker.all": "Όλες οι αντιστοιχίες"
+  "picker.all": "Όλες οι αντιστοιχίες",
+  "confirm.title": "Επιβεβαίωση",
+  "confirm.shutdown": "Τερματισμός του υπολογιστή;",
+  "confirm.restart": "Επανεκκίνηση του υπολογιστή;",
+  "confirm.close": "Κλείσιμο του {app};",
+  "confirm.kill": "Αναγκαστικός τερματισμός του {app};",
+  "confirm.generic": "Εκτέλεση «{action}»;",
+  "confirm.voice": "<strong>Με φωνή:</strong> πείτε «ναι» ή «όχι».",
+  "confirm.yes": "Ναι",
+  "confirm.no": "Όχι",
+  "confirm.noTitle": "Όχι (Esc)",
+  "confirm.left": "Ακύρωση σε {seconds} δ"
 });

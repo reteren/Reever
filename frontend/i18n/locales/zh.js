@@ -321,5 +321,16 @@ I18N.register('zh', {
   "picker.openButton": "打开",
   "picker.count": { "other": "{count} 个选项" },
   "picker.frequent": "常用",
-  "picker.all": "所有匹配项"
+  "picker.all": "所有匹配项",
+  "confirm.title": "确认",
+  "confirm.shutdown": "关闭电脑？",
+  "confirm.restart": "重启电脑？",
+  "confirm.close": "关闭 {app}？",
+  "confirm.kill": "强制结束 {app}？",
+  "confirm.generic": "执行「{action}」？",
+  "confirm.voice": "<strong>语音：</strong>说“是”或“不”。",
+  "confirm.yes": "是",
+  "confirm.no": "否",
+  "confirm.noTitle": "否（Esc）",
+  "confirm.left": "{seconds} 秒后取消"
 });

@@ -634,6 +634,14 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.pending_events.push(EngineEvent::State("listening"));
     }
 
+    /// Ответ пришёл кликом по плашке подтверждения — голос больше не ждём.
+    pub fn stop_confirm(&mut self) {
+        if matches!(&self.mode, Mode::Listening(state) if state.kind == ListenKind::Confirm) {
+            self.enter_idle();
+            self.pending_events.push(EngineEvent::State("idle"));
+        }
+    }
+
     /// Режим калибровки: каждая фраза → `Calibration`, пока не `stop_calibration`.
     pub fn start_calibration(&mut self) {
         self.prepare_segmenter(self.cfg.command_pause_ms);

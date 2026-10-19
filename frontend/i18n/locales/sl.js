@@ -322,5 +322,16 @@ I18N.register('sl', {
   "picker.openButton": "Odpri",
   "picker.count": { "one": "{count} možnost", "two": "{count} možnosti", "few": "{count} možnosti", "other": "{count} možnosti" },
   "picker.frequent": "Pogosto odprto",
-  "picker.all": "Vsa ujemanja"
+  "picker.all": "Vsa ujemanja",
+  "confirm.title": "Potrditev",
+  "confirm.shutdown": "Izklopim računalnik?",
+  "confirm.restart": "Znova zaženem računalnik?",
+  "confirm.close": "Zaprem {app}?",
+  "confirm.kill": "Prisilno končam {app}?",
+  "confirm.generic": "Izvedem «{action}»?",
+  "confirm.voice": "<strong>Z glasom:</strong> recite «da» ali «ne».",
+  "confirm.yes": "Da",
+  "confirm.no": "Ne",
+  "confirm.noTitle": "Ne (Esc)",
+  "confirm.left": "Preklic čez {seconds} s"
 });

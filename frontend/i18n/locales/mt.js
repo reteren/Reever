@@ -322,5 +322,16 @@ I18N.register('mt', {
   "picker.openButton": "Iftaħ",
   "picker.count": { "one": "{count} għażla", "two": "{count} għażliet", "few": "{count} għażliet", "many": "{count} għażla", "other": "{count} għażla" },
   "picker.frequent": "Miftuħa spiss",
-  "picker.all": "It-taqbil kollu"
+  "picker.all": "It-taqbil kollu",
+  "confirm.title": "Konferma",
+  "confirm.shutdown": "Nitfi l-kompjuter?",
+  "confirm.restart": "Nerġa' nixgħel il-kompjuter?",
+  "confirm.close": "Nagħlaq {app}?",
+  "confirm.kill": "Nagħlaq {app} bil-forza?",
+  "confirm.generic": "Nesegwixxi «{action}»?",
+  "confirm.voice": "<strong>Bil-vuċi:</strong> għid «iva» jew «le».",
+  "confirm.yes": "Iva",
+  "confirm.no": "Le",
+  "confirm.noTitle": "Le (Esc)",
+  "confirm.left": "Jitħassar f'{seconds} s"
 });

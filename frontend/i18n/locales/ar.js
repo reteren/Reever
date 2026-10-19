@@ -321,5 +321,16 @@ I18N.register('ar', {
   "picker.openButton": "فتح",
   "picker.count": { "zero": "{count} خيار", "one": "{count} خيار", "two": "{count} خياران", "few": "{count} خيارات", "many": "{count} خيارًا", "other": "{count} خيار" },
   "picker.frequent": "الأكثر فتحًا",
-  "picker.all": "جميع النتائج المطابقة"
+  "picker.all": "جميع النتائج المطابقة",
+  "confirm.title": "تأكيد",
+  "confirm.shutdown": "إيقاف تشغيل الكمبيوتر؟",
+  "confirm.restart": "إعادة تشغيل الكمبيوتر؟",
+  "confirm.close": "إغلاق {app}؟",
+  "confirm.kill": "إنهاء {app} قسرًا؟",
+  "confirm.generic": "تنفيذ «{action}»؟",
+  "confirm.voice": "<strong>بالصوت:</strong> قل «نعم» أو «لا».",
+  "confirm.yes": "نعم",
+  "confirm.no": "لا",
+  "confirm.noTitle": "لا (Esc)",
+  "confirm.left": "إلغاء خلال {seconds} ث"
 });

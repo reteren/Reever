@@ -322,5 +322,16 @@ I18N.register('sv', {
   "picker.openButton": "Öppna",
   "picker.count": { "one": "{count} alternativ", "other": "{count} alternativ" },
   "picker.frequent": "Ofta öppnade",
-  "picker.all": "Alla träffar"
+  "picker.all": "Alla träffar",
+  "confirm.title": "Bekräftelse",
+  "confirm.shutdown": "Stänga av datorn?",
+  "confirm.restart": "Starta om datorn?",
+  "confirm.close": "Stänga {app}?",
+  "confirm.kill": "Tvinga {app} att avslutas?",
+  "confirm.generic": "Utföra «{action}»?",
+  "confirm.voice": "<strong>Med rösten:</strong> säg «ja» eller «nej».",
+  "confirm.yes": "Ja",
+  "confirm.no": "Nej",
+  "confirm.noTitle": "Nej (Esc)",
+  "confirm.left": "Avbryts om {seconds} s"
 });

@@ -322,5 +322,16 @@ I18N.register('bg', {
   "picker.openButton": "Отваряне",
   "picker.count": { "one": "{count} вариант", "other": "{count} варианта" },
   "picker.frequent": "Често отваряни",
-  "picker.all": "Всички съвпадения"
+  "picker.all": "Всички съвпадения",
+  "confirm.title": "Потвърждение",
+  "confirm.shutdown": "Да се изключи ли компютърът?",
+  "confirm.restart": "Да се рестартира ли компютърът?",
+  "confirm.close": "Да се затвори ли {app}?",
+  "confirm.kill": "Да се прекрати ли {app}?",
+  "confirm.generic": "Да се изпълни ли «{action}»?",
+  "confirm.voice": "<strong>С глас:</strong> кажете «да» или «не».",
+  "confirm.yes": "Да",
+  "confirm.no": "Не",
+  "confirm.noTitle": "Не (Esc)",
+  "confirm.left": "Отказ след {seconds} с"
 });

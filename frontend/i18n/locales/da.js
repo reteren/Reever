@@ -322,5 +322,16 @@ I18N.register('da', {
   "picker.openButton": "Åbn",
   "picker.count": { "one": "{count} mulighed", "other": "{count} muligheder" },
   "picker.frequent": "Ofte åbnede",
-  "picker.all": "Alle match"
+  "picker.all": "Alle match",
+  "confirm.title": "Bekræftelse",
+  "confirm.shutdown": "Luk computeren ned?",
+  "confirm.restart": "Genstart computeren?",
+  "confirm.close": "Luk {app}?",
+  "confirm.kill": "Tving {app} til at lukke?",
+  "confirm.generic": "Udfør «{action}»?",
+  "confirm.voice": "<strong>Med stemmen:</strong> sig «ja» eller «nej».",
+  "confirm.yes": "Ja",
+  "confirm.no": "Nej",
+  "confirm.noTitle": "Nej (Esc)",
+  "confirm.left": "Annulleres om {seconds} s"
 });

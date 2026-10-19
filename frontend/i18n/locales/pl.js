@@ -322,5 +322,16 @@ I18N.register('pl', {
   "picker.openButton": "Otwórz",
   "picker.count": { "one": "{count} opcja", "few": "{count} opcje", "many": "{count} opcji", "other": "{count} opcji" },
   "picker.frequent": "Często otwierane",
-  "picker.all": "Wszystkie dopasowania"
+  "picker.all": "Wszystkie dopasowania",
+  "confirm.title": "Potwierdzenie",
+  "confirm.shutdown": "Wyłączyć komputer?",
+  "confirm.restart": "Uruchomić ponownie komputer?",
+  "confirm.close": "Zamknąć {app}?",
+  "confirm.kill": "Wymusić zamknięcie {app}?",
+  "confirm.generic": "Wykonać «{action}»?",
+  "confirm.voice": "<strong>Głosem:</strong> powiedz «tak» lub «nie».",
+  "confirm.yes": "Tak",
+  "confirm.no": "Nie",
+  "confirm.noTitle": "Nie (Esc)",
+  "confirm.left": "Anulowanie za {seconds} s"
 });

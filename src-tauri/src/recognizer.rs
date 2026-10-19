@@ -215,7 +215,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             command_wait_ms: s.command_wait_ms,
             signal_mute_ms: 0,
             partial_interval_ms: if s.partial_results { 400 } else { 0 },
-            confirm_wait_ms: 8_000,
+            confirm_wait_ms: CONFIRM_WAIT_MS,
             choice_wait_ms: 15_000,
             dictation_pause_ms: s.dictation_pause_ms.clamp(300, 5_000),
             dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
@@ -246,6 +246,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         shared,
         player: &player,
         confirm_op: None,
+        confirm_session: 0,
         calibrating: None,
         cancel_words: cfg.settings.cancel_words.clone(),
         grammar_version: None,
@@ -335,7 +336,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                 loading_audio.clear();
                 loading_audio_truncated = false;
                 clear_recent_audio(&mut recent_chunks, &mut recent_samples);
-                worker.confirm_op = None;
+                if worker.confirm_op.take().is_some() {
+                    crate::confirm::hide(app);
+                }
                 worker.calibrating = None;
                 worker.dictation = None;
                 // Накопившееся в очереди — тоже голос; выбрасываем, не распознавая.
@@ -696,6 +699,9 @@ fn is_activity_event(event: &EngineEvent) -> bool {
     )
 }
 
+/// Сколько ждать ответа на подтверждение опасной команды (голосом или на плашке).
+const CONFIRM_WAIT_MS: u32 = 8_000;
+
 /// Побочные эффекты событий Engine. Отдельная структура, чтобы не таскать пять
 /// параметров через каждую функцию.
 struct Worker<'a> {
@@ -703,8 +709,10 @@ struct Worker<'a> {
     cfg: &'a ReeverConfig,
     shared: &'a Arc<SharedState>,
     player: &'a Player,
-    /// Опасная системная операция, ждущая голосового «да».
+    /// Опасная системная операция, ждущая «да» голосом или кликом по плашке.
     confirm_op: Option<PendingAction>,
+    /// Номер вопроса на плашке подтверждения (confirm.rs).
+    confirm_session: u64,
     /// id действия, которое сейчас калибруется.
     calibrating: Option<String>,
     /// Слова отмены из грамматики (редактор меняет их на лету).
@@ -881,6 +889,13 @@ impl Worker<'_> {
                 engine.stop_choice();
             }
         }
+        // Ответ кликом по плашке подтверждения — голос больше не ждём.
+        if self.confirm_op.is_some() {
+            if let Some(yes) = crate::confirm::take_answer(self.confirm_session) {
+                engine.stop_confirm();
+                self.confirm(yes);
+            }
+        }
         // Хоткей в калибровке/подтверждении не перебивает текущий режим.
         let hotkey_started = self.shared.force_listen.swap(false, Ordering::Relaxed)
             && self.calibrating.is_none()
@@ -921,6 +936,7 @@ impl Worker<'_> {
             EngineEvent::Calibration { text, alt } => self.calibration(&text, alt.as_deref()),
             EngineEvent::Timeout => {
                 if self.confirm_op.take().is_some() {
+                    crate::confirm::hide(self.app);
                     ui_log(self.app, crate::msg!("log.confirm.timeout"));
                     self.sound("error.wav");
                 } else {
@@ -1243,6 +1259,7 @@ impl Worker<'_> {
                     ),
                 );
                 self.confirm_sound();
+                self.confirm_session = crate::confirm::show(self.app, &pending, CONFIRM_WAIT_MS / 1000);
                 self.confirm_op = Some(pending);
                 engine.listen_confirm();
             }
@@ -1310,6 +1327,7 @@ impl Worker<'_> {
         let Some(pending) = self.confirm_op.take() else {
             return;
         };
+        crate::confirm::hide(self.app);
         if yes {
             ui_log(
                 self.app,

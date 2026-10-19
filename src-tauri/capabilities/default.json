@@ -5,6 +5,7 @@
   "windows": [
     "main",
     "picker",
+    "confirm",
     "mascot",
     "bubble"
   ],

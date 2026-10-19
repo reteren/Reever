@@ -13,6 +13,7 @@ pub mod calcapp;
 pub mod commands;
 pub mod commands_api;
 pub mod config;
+pub mod confirm;
 pub mod dictation;
 pub mod dispatch;
 pub mod engine;
@@ -444,6 +445,8 @@ pub fn run() {
             picker::picker_choose,
             picker::picker_close,
             picker::picker_ready,
+            confirm::confirm_ready,
+            confirm::confirm_answer,
             skin::set_window_shape,
         ])
         .build(tauri::generate_context!())

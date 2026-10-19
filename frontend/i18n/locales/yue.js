@@ -322,5 +322,16 @@ I18N.register('yue', {
   "picker.openButton": "開",
   "picker.count": { "other": "{count} 個選項" },
   "picker.frequent": "成日開嘅",
-  "picker.all": "全部配對"
+  "picker.all": "全部配對",
+  "confirm.title": "確認",
+  "confirm.shutdown": "關機？",
+  "confirm.restart": "重新開機？",
+  "confirm.close": "關閉 {app}？",
+  "confirm.kill": "強制結束 {app}？",
+  "confirm.generic": "執行「{action}」？",
+  "confirm.voice": "<strong>講嘢：</strong>講「係」或者「唔係」。",
+  "confirm.yes": "係",
+  "confirm.no": "唔係",
+  "confirm.noTitle": "唔係（Esc）",
+  "confirm.left": "{seconds} 秒後取消"
 });

@@ -322,5 +322,16 @@ I18N.register('sk', {
   "picker.openButton": "Otvoriť",
   "picker.count": { "one": "{count} možnosť", "few": "{count} možnosti", "many": "{count} možnosti", "other": "{count} možností" },
   "picker.frequent": "Často otvárané",
-  "picker.all": "Všetky zhody"
+  "picker.all": "Všetky zhody",
+  "confirm.title": "Potvrdenie",
+  "confirm.shutdown": "Vypnúť počítač?",
+  "confirm.restart": "Reštartovať počítač?",
+  "confirm.close": "Zavrieť {app}?",
+  "confirm.kill": "Vynútiť ukončenie {app}?",
+  "confirm.generic": "Vykonať «{action}»?",
+  "confirm.voice": "<strong>Hlasom:</strong> povedzte «áno» alebo «nie».",
+  "confirm.yes": "Áno",
+  "confirm.no": "Nie",
+  "confirm.noTitle": "Nie (Esc)",
+  "confirm.left": "Zrušenie o {seconds} s"
 });

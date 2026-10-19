@@ -321,5 +321,16 @@ I18N.register('ja', {
   "picker.openButton": "開く",
   "picker.count": { "other": "{count} 件の候補" },
   "picker.frequent": "よく開く項目",
-  "picker.all": "すべての一致項目"
+  "picker.all": "すべての一致項目",
+  "confirm.title": "確認",
+  "confirm.shutdown": "コンピューターをシャットダウンしますか？",
+  "confirm.restart": "コンピューターを再起動しますか？",
+  "confirm.close": "{app} を閉じますか？",
+  "confirm.kill": "{app} を強制終了しますか？",
+  "confirm.generic": "「{action}」を実行しますか？",
+  "confirm.voice": "<strong>音声で：</strong>「はい」または「いいえ」と言ってください。",
+  "confirm.yes": "はい",
+  "confirm.no": "いいえ",
+  "confirm.noTitle": "いいえ（Esc）",
+  "confirm.left": "{seconds} 秒後にキャンセル"
 });

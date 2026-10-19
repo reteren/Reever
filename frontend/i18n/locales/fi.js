@@ -322,5 +322,16 @@ I18N.register('fi', {
   "picker.openButton": "Avaa",
   "picker.count": { "one": "{count} vaihtoehto", "other": "{count} vaihtoehtoa" },
   "picker.frequent": "Usein avatut",
-  "picker.all": "Kaikki osumat"
+  "picker.all": "Kaikki osumat",
+  "confirm.title": "Vahvistus",
+  "confirm.shutdown": "Sammutetaanko tietokone?",
+  "confirm.restart": "Käynnistetäänkö tietokone uudelleen?",
+  "confirm.close": "Suljetaanko {app}?",
+  "confirm.kill": "Pakotetaanko {app} sulkeutumaan?",
+  "confirm.generic": "Suoritetaanko «{action}»?",
+  "confirm.voice": "<strong>Äänellä:</strong> sano «kyllä» tai «ei».",
+  "confirm.yes": "Kyllä",
+  "confirm.no": "Ei",
+  "confirm.noTitle": "Ei (Esc)",
+  "confirm.left": "Peruutus {seconds} s kuluttua"
 });

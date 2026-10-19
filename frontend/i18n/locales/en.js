@@ -323,5 +323,16 @@ I18N.register('en', {
   "picker.openButton": "Open",
   "picker.count": { "one": "{count} option", "other": "{count} options" },
   "picker.frequent": "Frequently opened",
-  "picker.all": "All matches"
+  "picker.all": "All matches",
+  "confirm.title": "Confirmation",
+  "confirm.shutdown": "Shut down the computer?",
+  "confirm.restart": "Restart the computer?",
+  "confirm.close": "Close {app}?",
+  "confirm.kill": "Force-quit {app}?",
+  "confirm.generic": "Run «{action}»?",
+  "confirm.voice": "<strong>By voice:</strong> say «yes» or «no».",
+  "confirm.yes": "Yes",
+  "confirm.no": "No",
+  "confirm.noTitle": "No (Esc)",
+  "confirm.left": "Cancels in {seconds} s"
 });

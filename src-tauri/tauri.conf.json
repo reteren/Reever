@@ -41,6 +41,23 @@
         "focus": true
       },
       {
+        "label": "confirm",
+        "create": false,
+        "title": "Reever",
+        "url": "confirm.html",
+        "width": 620,
+        "height": 520,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "center": true,
+        "focus": true
+      },
+      {
         "label": "bubble",
         "create": false,
         "title": "Reever",

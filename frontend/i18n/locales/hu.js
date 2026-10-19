@@ -322,5 +322,16 @@ I18N.register('hu', {
   "picker.openButton": "Megnyitás",
   "picker.count": { "one": "{count} lehetőség", "other": "{count} lehetőség" },
   "picker.frequent": "Gyakran megnyitott",
-  "picker.all": "Minden egyezés"
+  "picker.all": "Minden egyezés",
+  "confirm.title": "Megerősítés",
+  "confirm.shutdown": "Leállítod a számítógépet?",
+  "confirm.restart": "Újraindítod a számítógépet?",
+  "confirm.close": "Bezárod: {app}?",
+  "confirm.kill": "Kényszerítve leállítod: {app}?",
+  "confirm.generic": "Végrehajtod: «{action}»?",
+  "confirm.voice": "<strong>Hanggal:</strong> mondd, hogy «igen» vagy «nem».",
+  "confirm.yes": "Igen",
+  "confirm.no": "Nem",
+  "confirm.noTitle": "Nem (Esc)",
+  "confirm.left": "Megszakítás {seconds} mp múlva"
 });

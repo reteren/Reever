@@ -321,5 +321,16 @@ I18N.register('ru', {
   "picker.openButton": "Открыть",
   "picker.count": { "one": "{count} вариант", "few": "{count} варианта", "many": "{count} вариантов", "other": "{count} варианта" },
   "picker.frequent": "Часто открываемые",
-  "picker.all": "Все совпадения"
+  "picker.all": "Все совпадения",
+  "confirm.title": "Подтверждение",
+  "confirm.shutdown": "Выключить компьютер?",
+  "confirm.restart": "Перезагрузить компьютер?",
+  "confirm.close": "Закрыть {app}?",
+  "confirm.kill": "Завершить {app}?",
+  "confirm.generic": "Выполнить «{action}»?",
+  "confirm.voice": "<strong>Голосом:</strong> скажите «да» или «нет».",
+  "confirm.yes": "Да",
+  "confirm.no": "Нет",
+  "confirm.noTitle": "Нет (Esc)",
+  "confirm.left": "Отмена через {seconds} с"
 });

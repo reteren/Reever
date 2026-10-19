@@ -322,5 +322,16 @@ I18N.register('cs', {
   "picker.openButton": "Otevřít",
   "picker.count": { "one": "{count} možnost", "few": "{count} možnosti", "many": "{count} možnosti", "other": "{count} možností" },
   "picker.frequent": "Často otevírané",
-  "picker.all": "Všechny shody"
+  "picker.all": "Všechny shody",
+  "confirm.title": "Potvrzení",
+  "confirm.shutdown": "Vypnout počítač?",
+  "confirm.restart": "Restartovat počítač?",
+  "confirm.close": "Zavřít {app}?",
+  "confirm.kill": "Vynutit ukončení {app}?",
+  "confirm.generic": "Provést «{action}»?",
+  "confirm.voice": "<strong>Hlasem:</strong> řekněte «ano» nebo «ne».",
+  "confirm.yes": "Ano",
+  "confirm.no": "Ne",
+  "confirm.noTitle": "Ne (Esc)",
+  "confirm.left": "Zrušení za {seconds} s"
 });

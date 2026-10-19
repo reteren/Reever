@@ -322,5 +322,16 @@ I18N.register('lt', {
   "picker.openButton": "Atidaryti",
   "picker.count": { "one": "{count} variantas", "few": "{count} variantai", "many": "{count} varianto", "other": "{count} variantų" },
   "picker.frequent": "Dažnai atidaromi",
-  "picker.all": "Visi atitikmenys"
+  "picker.all": "Visi atitikmenys",
+  "confirm.title": "Patvirtinimas",
+  "confirm.shutdown": "Išjungti kompiuterį?",
+  "confirm.restart": "Paleisti kompiuterį iš naujo?",
+  "confirm.close": "Uždaryti {app}?",
+  "confirm.kill": "Priverstinai uždaryti {app}?",
+  "confirm.generic": "Vykdyti «{action}»?",
+  "confirm.voice": "<strong>Balsu:</strong> sakykite «taip» arba «ne».",
+  "confirm.yes": "Taip",
+  "confirm.no": "Ne",
+  "confirm.noTitle": "Ne (Esc)",
+  "confirm.left": "Atšaukiama po {seconds} s"
 });

@@ -322,5 +322,16 @@ I18N.register('et', {
   "picker.openButton": "Ava",
   "picker.count": { "one": "{count} valik", "other": "{count} valikut" },
   "picker.frequent": "Sageli avatud",
-  "picker.all": "Kõik vasted"
+  "picker.all": "Kõik vasted",
+  "confirm.title": "Kinnitus",
+  "confirm.shutdown": "Kas lülitada arvuti välja?",
+  "confirm.restart": "Kas taaskäivitada arvuti?",
+  "confirm.close": "Kas sulgeda {app}?",
+  "confirm.kill": "Kas sundsulgeda {app}?",
+  "confirm.generic": "Kas täita «{action}»?",
+  "confirm.voice": "<strong>Häälega:</strong> öelge «jah» või «ei».",
+  "confirm.yes": "Jah",
+  "confirm.no": "Ei",
+  "confirm.noTitle": "Ei (Esc)",
+  "confirm.left": "Tühistub {seconds} s pärast"
 });

@@ -322,5 +322,16 @@ I18N.register('uk', {
   "picker.openButton": "Відкрити",
   "picker.count": { "one": "{count} варіант", "few": "{count} варіанти", "many": "{count} варіантів", "other": "{count} варіанта" },
   "picker.frequent": "Часто відкривані",
-  "picker.all": "Усі збіги"
+  "picker.all": "Усі збіги",
+  "confirm.title": "Підтвердження",
+  "confirm.shutdown": "Вимкнути комп'ютер?",
+  "confirm.restart": "Перезавантажити комп'ютер?",
+  "confirm.close": "Закрити {app}?",
+  "confirm.kill": "Завершити {app}?",
+  "confirm.generic": "Виконати «{action}»?",
+  "confirm.voice": "<strong>Голосом:</strong> скажіть «так» або «ні».",
+  "confirm.yes": "Так",
+  "confirm.no": "Ні",
+  "confirm.noTitle": "Ні (Esc)",
+  "confirm.left": "Скасування через {seconds} с"
 });

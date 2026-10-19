@@ -322,5 +322,16 @@ I18N.register('lv', {
   "picker.openButton": "Atvērt",
   "picker.count": { "zero": "{count} variantu", "one": "{count} variants", "other": "{count} varianti" },
   "picker.frequent": "Bieži atvērtie",
-  "picker.all": "Visas atbilstības"
+  "picker.all": "Visas atbilstības",
+  "confirm.title": "Apstiprinājums",
+  "confirm.shutdown": "Izslēgt datoru?",
+  "confirm.restart": "Restartēt datoru?",
+  "confirm.close": "Aizvērt {app}?",
+  "confirm.kill": "Piespiedu kārtā aizvērt {app}?",
+  "confirm.generic": "Izpildīt «{action}»?",
+  "confirm.voice": "<strong>Ar balsi:</strong> sakiet «jā» vai «nē».",
+  "confirm.yes": "Jā",
+  "confirm.no": "Nē",
+  "confirm.noTitle": "Nē (Esc)",
+  "confirm.left": "Atcelšana pēc {seconds} s"
 });

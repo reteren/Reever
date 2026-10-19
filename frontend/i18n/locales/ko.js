@@ -322,5 +322,16 @@ I18N.register('ko', {
   "picker.openButton": "열기",
   "picker.count": { "other": "옵션 {count}개" },
   "picker.frequent": "자주 연 항목",
-  "picker.all": "모든 일치 항목"
+  "picker.all": "모든 일치 항목",
+  "confirm.title": "확인",
+  "confirm.shutdown": "컴퓨터를 끌까요?",
+  "confirm.restart": "컴퓨터를 다시 시작할까요?",
+  "confirm.close": "{app}을(를) 닫을까요?",
+  "confirm.kill": "{app}을(를) 강제 종료할까요?",
+  "confirm.generic": "「{action}」을(를) 실행할까요?",
+  "confirm.voice": "<strong>음성으로:</strong> «네» 또는 «아니요»라고 말하세요.",
+  "confirm.yes": "네",
+  "confirm.no": "아니요",
+  "confirm.noTitle": "아니요 (Esc)",
+  "confirm.left": "{seconds}초 후 취소"
 });
