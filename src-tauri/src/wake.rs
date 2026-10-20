@@ -22,6 +22,8 @@ pub struct StreamingWakeSpotter {
     /// Уже сработали на текущей фразе: повторное «ривер» в ней же не считается.
     fired: bool,
     buffer: Vec<f32>,
+    /// Последний непустой промежуточный текст — для замеров (examples/wake_lang_eval.rs).
+    heard: String,
 }
 
 impl StreamingWakeSpotter {
@@ -79,6 +81,7 @@ impl StreamingWakeSpotter {
             wake_words: wake_words.to_vec(),
             fired: false,
             buffer: Vec::new(),
+            heard: String::new(),
         })
     }
 }
@@ -101,6 +104,13 @@ pub fn contains_wake(text: &str, wake_words: &[String]) -> bool {
     })
 }
 
+impl StreamingWakeSpotter {
+    /// Что детектор расслышал последним (текст его русской модели).
+    pub fn heard(&self) -> &str {
+        &self.heard
+    }
+}
+
 impl WakeSpotter for StreamingWakeSpotter {
     fn feed(&mut self, pcm: &[i16]) -> bool {
         if pcm.is_empty() {
@@ -115,15 +125,16 @@ impl WakeSpotter for StreamingWakeSpotter {
             self.recognizer.decode(&self.stream);
         }
         let mut hit = false;
-        if !self.fired {
-            if let Some(result) = self.recognizer.get_result(&self.stream) {
-                if std::env::var_os("REEVER_WAKE_DEBUG").is_some() && !result.text.is_empty() {
+        if let Some(result) = self.recognizer.get_result(&self.stream) {
+            if !result.text.is_empty() {
+                if std::env::var_os("REEVER_WAKE_DEBUG").is_some() {
                     eprintln!("[wake] {}", result.text);
                 }
-                if contains_wake(&result.text, &self.wake_words) {
-                    self.fired = true;
-                    hit = true;
-                }
+                self.heard.clone_from(&result.text);
+            }
+            if !self.fired && contains_wake(&result.text, &self.wake_words) {
+                self.fired = true;
+                hit = true;
             }
         }
         if self.recognizer.is_endpoint(&self.stream) {
@@ -135,6 +146,7 @@ impl WakeSpotter for StreamingWakeSpotter {
     fn reset(&mut self) {
         self.recognizer.reset(&self.stream);
         self.fired = false;
+        self.heard.clear();
     }
 
     fn set_wake_words(&mut self, wake_words: &[String]) {
