@@ -1,7 +1,8 @@
-//! Нативный tiny DS-CNN для wake-слова «ривер».
+//! Нативные детекторы wake-слова «ривер».
 //!
-//! Архитектура и формат весов совпадают с tools/kws/train.py. Модуль пока не
-//! подключён к production-коду: его использует только offline probe.
+//! - RKW1 — tiny DS-CNN по окну в 60 кадров (tools/kws/train.py), только для offline probe;
+//! - RKW2 — причинная DS-TCN многоязычного детектора (tools/kws/train_multilang.py):
+//!   каждый кадр log-mel считается один раз, прошлое хранится в кольцах блоков.
 
 use std::collections::VecDeque;
 use std::path::Path;
@@ -382,6 +383,255 @@ impl StreamingKws {
     }
 }
 
+// ── RKW2: причинная DS-TCN многоязычного детектора (tools/kws/train_multilang.py) ──
+
+const TCN_MAGIC: &[u8; 4] = b"RKW2";
+/// Повторное срабатывание — после стольких кадров ниже 0,6 порога (как `events` в обучении).
+const TCN_RELEASE_FRAMES: usize = 30;
+
+struct TcnBlock {
+    dilation: usize,
+    depth_weight: Vec<f32>,
+    depth_bias: Vec<f32>,
+    point_weight: Vec<f32>,
+    point_bias: Vec<f32>,
+}
+
+/// Сеть смотрит только в прошлое: на каждый кадр log-mel — одна оценка, и прошлые кадры
+/// не пересчитываются. BatchNorm вшита в свёртки при экспорте.
+pub struct TcnModel {
+    channels: usize,
+    kernel: usize,
+    pre_weight: Vec<f32>,
+    pre_bias: Vec<f32>,
+    blocks: Vec<TcnBlock>,
+    head_weight: Vec<f32>,
+    head_bias: f32,
+}
+
+impl TcnModel {
+    pub fn load(path: &Path) -> anyhow::Result<Self> {
+        let bytes =
+            std::fs::read(path).with_context(|| format!("reading weights {}", path.display()))?;
+        Self::from_bytes(&bytes)
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> anyhow::Result<Self> {
+        if bytes.get(..4) != Some(TCN_MAGIC.as_slice()) {
+            bail!("not an RKW2 model");
+        }
+        let mut offset = 4;
+        let mut word = || -> anyhow::Result<usize> {
+            let raw: [u8; 4] = bytes
+                .get(offset..offset + 4)
+                .context("RKW2 is truncated")?
+                .try_into()?;
+            offset += 4;
+            Ok(u32::from_le_bytes(raw) as usize)
+        };
+        let (mels, channels, kernel, count) = (word()?, word()?, word()?, word()?);
+        if mels != MEL_BINS
+            || !(1..=512).contains(&channels)
+            || !(1..=16).contains(&kernel)
+            || !(1..=32).contains(&count)
+        {
+            bail!("unsupported RKW2 shape: mels {mels}, channels {channels}, kernel {kernel}, blocks {count}");
+        }
+        let dilations = (0..count).map(|_| word()).collect::<anyhow::Result<Vec<_>>>()?;
+        if dilations.iter().any(|d| !(1..=64).contains(d)) {
+            bail!("unsupported RKW2 dilation");
+        }
+        let floats = &bytes[offset..];
+        let expected = channels * MEL_BINS
+            + channels
+            + count * (channels * kernel + channels + channels * channels + channels)
+            + channels
+            + 1;
+        if floats.len() != expected * 4 {
+            bail!("RKW2 weight size {} (expected {})", floats.len(), expected * 4);
+        }
+        let all: Vec<f32> = floats
+            .chunks_exact(4)
+            .map(|raw| f32::from_le_bytes(raw.try_into().unwrap()))
+            .collect();
+        if all.iter().any(|value| !value.is_finite()) {
+            bail!("KWS weights contain NaN or infinity");
+        }
+        let mut rest = all.as_slice();
+        let mut take = |n: usize| -> Vec<f32> {
+            let (head, tail) = rest.split_at(n);
+            rest = tail;
+            head.to_vec()
+        };
+        let pre_weight = take(channels * MEL_BINS);
+        let pre_bias = take(channels);
+        let blocks = dilations
+            .iter()
+            .map(|&dilation| TcnBlock {
+                dilation,
+                depth_weight: take(channels * kernel),
+                depth_bias: take(channels),
+                point_weight: take(channels * channels),
+                point_bias: take(channels),
+            })
+            .collect();
+        let head_weight = take(channels);
+        let head_bias = take(1)[0];
+        Ok(Self { channels, kernel, pre_weight, pre_bias, blocks, head_weight, head_bias })
+    }
+
+    /// Кадров прошлого, которые видит сеть.
+    pub fn receptive_field(&self) -> usize {
+        1 + (self.kernel - 1) * self.blocks.iter().map(|block| block.dilation).sum::<usize>()
+    }
+}
+
+/// Состояние сети в потоке: на каждый блок — кольцо его входов за (ядро − 1)·дилатация кадров.
+struct TcnState {
+    history: Vec<Vec<f32>>,
+    lengths: Vec<usize>,
+    cursor: usize,
+    x: Vec<f32>,
+    y: Vec<f32>,
+}
+
+impl TcnState {
+    fn new(model: &TcnModel) -> Self {
+        let lengths: Vec<usize> = model
+            .blocks
+            .iter()
+            .map(|block| (model.kernel - 1) * block.dilation + 1)
+            .collect();
+        Self {
+            history: lengths.iter().map(|&len| vec![0.0; len * model.channels]).collect(),
+            lengths,
+            cursor: 0,
+            x: vec![0.0; model.channels],
+            y: vec![0.0; model.channels],
+        }
+    }
+
+    /// Оценка 0..1 для нового кадра.
+    fn step(&mut self, model: &TcnModel, mel: &[f32; MEL_BINS]) -> f32 {
+        let c = model.channels;
+        for out in 0..c {
+            let row = &model.pre_weight[out * MEL_BINS..(out + 1) * MEL_BINS];
+            let value = model.pre_bias[out] + row.iter().zip(mel).map(|(w, v)| w * v).sum::<f32>();
+            self.x[out] = value.max(0.0);
+        }
+        for (index, block) in model.blocks.iter().enumerate() {
+            let len = self.lengths[index];
+            let history = &mut self.history[index];
+            let slot = self.cursor % len;
+            history[slot * c..(slot + 1) * c].copy_from_slice(&self.x);
+            // Свёртка с паддингом слева: выход в t = Σ_k w[k]·x[t − (K − 1 − k)·d].
+            for channel in 0..c {
+                let mut value = block.depth_bias[channel];
+                for k in 0..model.kernel {
+                    let back = (model.kernel - 1 - k) * block.dilation;
+                    let source = (slot + len - back) % len;
+                    value += block.depth_weight[channel * model.kernel + k] * history[source * c + channel];
+                }
+                self.y[channel] = value.max(0.0);
+            }
+            for out in 0..c {
+                let row = &block.point_weight[out * c..(out + 1) * c];
+                let value = block.point_bias[out] + row.iter().zip(&self.y).map(|(w, v)| w * v).sum::<f32>();
+                self.x[out] = (self.x[out] + value).max(0.0);
+            }
+        }
+        self.cursor = self.cursor.wrapping_add(1);
+        let logit = model.head_bias + model.head_weight.iter().zip(&self.x).map(|(w, v)| w * v).sum::<f32>();
+        1.0 / (1.0 + (-logit.clamp(-80.0, 80.0)).exp())
+    }
+}
+
+/// Многоязычный детектор в потоке: сэмплы 16 кГц → кадры log-mel → оценка на каждые 10 мс.
+/// Срабатывание — два кадра подряд выше порога; повторное — после тишины в оценках.
+pub struct StreamingTcn {
+    model: TcnModel,
+    state: TcnState,
+    frontend: MelFrontend,
+    samples: VecDeque<f32>,
+    threshold: f32,
+    run: usize,
+    fired: bool,
+    quiet: usize,
+}
+
+impl StreamingTcn {
+    pub fn new(model: TcnModel, threshold: f32) -> Self {
+        Self {
+            state: TcnState::new(&model),
+            model,
+            frontend: MelFrontend::new(),
+            samples: VecDeque::with_capacity(WINDOW_SAMPLES + HOP_SAMPLES),
+            threshold: threshold.clamp(0.01, 0.99),
+            run: 0,
+            fired: false,
+            quiet: 0,
+        }
+    }
+
+    pub fn from_path(path: &Path, threshold: f32) -> anyhow::Result<Self> {
+        Ok(Self::new(TcnModel::load(path)?, threshold))
+    }
+
+    /// `Some(score)` — услышано wake-слово.
+    pub fn feed(&mut self, samples: &[f32]) -> Option<f32> {
+        self.process(samples, None)
+    }
+
+    /// Для замеров: оценка каждого нового кадра.
+    pub fn feed_scores(&mut self, samples: &[f32], scores: &mut Vec<f32>) -> Option<f32> {
+        self.process(samples, Some(scores))
+    }
+
+    /// Забыть прошлое (новая запись в замерах).
+    pub fn reset(&mut self) {
+        self.state = TcnState::new(&self.model);
+        self.samples.clear();
+        self.run = 0;
+        self.fired = false;
+        self.quiet = 0;
+    }
+
+    fn process(&mut self, samples: &[f32], mut scores: Option<&mut Vec<f32>>) -> Option<f32> {
+        let mut event = None;
+        for &sample in samples {
+            self.samples.push_back(sample.clamp(-1.0, 1.0));
+            // Первый кадр — как только набралось окно, дальше — каждые HOP сэмплов.
+            if self.samples.len() < WINDOW_SAMPLES {
+                continue;
+            }
+            let frame: [f32; WINDOW_SAMPLES] = std::array::from_fn(|i| self.samples[i]);
+            let mel = self.frontend.compute(&frame);
+            for _ in 0..HOP_SAMPLES {
+                self.samples.pop_front();
+            }
+            let score = self.state.step(&self.model, &mel);
+            if let Some(scores) = scores.as_deref_mut() {
+                scores.push(score);
+            }
+            if self.fired {
+                self.quiet = if score < self.threshold * RELEASE_RATIO { self.quiet + 1 } else { 0 };
+                if self.quiet >= TCN_RELEASE_FRAMES {
+                    self.fired = false;
+                    self.quiet = 0;
+                }
+                continue;
+            }
+            self.run = if score >= self.threshold { self.run + 1 } else { 0 };
+            if self.run >= 2 {
+                self.fired = true;
+                self.run = 0;
+                event = Some(score);
+            }
+        }
+        event
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -476,5 +726,39 @@ mod tests {
         for (a, b) in whole_scores.iter().zip(chunked_scores) {
             assert!((a - b).abs() < 1e-6);
         }
+    }
+
+    /// RKW2 из одних нулей: все оценки 0,5, кадры идут каждые 160 сэмплов независимо от
+    /// нарезки на чанки, неверный размер весов не загружается.
+    #[test]
+    fn rkw2_streams_frames_independently_of_chunking() {
+        let (channels, kernel, dilations) = (4usize, 3usize, [1u32, 2]);
+        let mut bytes = b"RKW2".to_vec();
+        for value in [MEL_BINS as u32, channels as u32, kernel as u32, dilations.len() as u32] {
+            bytes.extend(value.to_le_bytes());
+        }
+        for d in dilations {
+            bytes.extend(d.to_le_bytes());
+        }
+        let floats = channels * MEL_BINS + channels
+            + dilations.len() * (channels * kernel + channels + channels * channels + channels)
+            + channels + 1;
+        bytes.extend(vec![0u8; floats * 4]);
+        let model = TcnModel::from_bytes(&bytes).unwrap();
+        assert_eq!(model.receptive_field(), 1 + 2 * 3);
+        assert!(TcnModel::from_bytes(&bytes[..bytes.len() - 4]).is_err());
+
+        let audio = vec![0.0f32; 4000];
+        let mut whole = StreamingTcn::new(TcnModel::from_bytes(&bytes).unwrap(), 0.9);
+        let mut whole_scores = Vec::new();
+        whole.feed_scores(&audio, &mut whole_scores);
+        let mut chunked = StreamingTcn::new(model, 0.9);
+        let mut chunked_scores = Vec::new();
+        for chunk in audio.chunks(137) {
+            chunked.feed_scores(chunk, &mut chunked_scores);
+        }
+        assert_eq!(whole_scores.len(), (4000 - WINDOW_SAMPLES) / HOP_SAMPLES + 1);
+        assert_eq!(whole_scores, chunked_scores);
+        assert!(whole_scores.iter().all(|score| (score - 0.5).abs() < 1e-6));
     }
 }

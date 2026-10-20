@@ -7,13 +7,15 @@
 //! кантонский) в src-tauri/resources/model/tts/<голос>, архивы релиза `tts-models`;
 //! кэш — testdata/wake-lang-corpus/ (не в git). Для японского, болгарского, эстонского,
 //! литовского и мальтийского офлайн-голосов нет.
-//!   cargo run --release --example wake_lang_eval [-- --lang zh]
+//!   cargo run --release --example wake_lang_eval [-- --lang zh] [--kws ../tools/kws/data/kws-ml.bin --threshold 0.85]
+//! С `--kws` рядом считается многоязычный детектор RKW2 (kws.rs) на тех же файлах.
 //! Отчёт: testdata/wake-lang-report.md
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
+use reever_lib::kws::StreamingTcn;
 use reever_lib::speech::WakeSpotter;
 use reever_lib::wake::StreamingWakeSpotter;
 use sherpa_onnx::{
@@ -94,6 +96,9 @@ struct Tally {
     by_wake: BTreeMap<String, (usize, usize)>,
     misses: Vec<String>,
     alarms: Vec<String>,
+    /// Многоязычный детектор (`--kws`): пойман wake, ложные.
+    kws_caught: usize,
+    kws_false: usize,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -105,6 +110,9 @@ fn main() -> anyhow::Result<()> {
     let spotter_dir = root.join("resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16");
     let wake_words: Vec<String> = vec!["ривер".into(), "ревер".into(), "ривьер".into()];
     let mut spotter = StreamingWakeSpotter::new(&spotter_dir, &wake_words)?;
+    let value = |flag: &str| args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned();
+    let threshold: f32 = value("--threshold").and_then(|t| t.parse().ok()).unwrap_or(0.85);
+    let mut kws = value("--kws").map(|path| StreamingTcn::from_path(Path::new(&path), threshold)).transpose()?;
 
     let mut tallies: Vec<(&str, Tally)> = Vec::new();
     for language in LANGUAGES.iter().filter(|l| only.as_deref().map_or(true, |o| l.code.trim_end_matches('*') == o)) {
@@ -116,6 +124,9 @@ fn main() -> anyhow::Result<()> {
                     for speed in SPEEDS {
                         let audio = synthesize(&tts, &cache.join(voice), &text, speed)?;
                         let (fired, heard) = run(&mut spotter, &audio);
+                        if let Some(kws) = kws.as_mut() {
+                            tally.kws_caught += run_kws(kws, &audio) as usize;
+                        }
                         tally.total += 1;
                         let slot = tally.by_wake.entry(wake.to_string()).or_default();
                         slot.1 += 1;
@@ -131,6 +142,9 @@ fn main() -> anyhow::Result<()> {
             for text in language.negatives {
                 let audio = synthesize(&tts, &cache.join(voice), text, 1.0)?;
                 let (fired, heard) = run(&mut spotter, &audio);
+                if let Some(kws) = kws.as_mut() {
+                    tally.kws_false += run_kws(kws, &audio) as usize;
+                }
                 tally.negatives += 1;
                 if fired {
                     tally.false_fires += 1;
@@ -139,16 +153,35 @@ fn main() -> anyhow::Result<()> {
             }
         }
         println!(
-            "{:>4}: wake {}/{}  ложных {}/{}",
-            language.code, tally.caught, tally.total, tally.false_fires, tally.negatives
+            "{:>4}: wake {}/{}  ложных {}/{}{}",
+            language.code,
+            tally.caught,
+            tally.total,
+            tally.false_fires,
+            tally.negatives,
+            if kws.is_some() {
+                format!("   | новый: wake {}/{}  ложных {}/{}", tally.kws_caught, tally.total, tally.kws_false, tally.negatives)
+            } else {
+                String::new()
+            }
         );
         tallies.push((language.code, tally));
     }
     if only.is_none() {
-        std::fs::write(root.join("../testdata/wake-lang-report.md"), report(&tallies))?;
+        std::fs::write(root.join("../testdata/wake-lang-report.md"), report(&tallies, kws.is_some().then_some(threshold)))?;
         println!("отчёт: testdata/wake-lang-report.md");
     }
     Ok(())
+}
+
+/// То же для многоязычного детектора.
+fn run_kws(kws: &mut StreamingTcn, audio: &[i16]) -> bool {
+    let mut stream = vec![0.0f32; 16 * 300];
+    stream.extend(audio.iter().map(|&s| s as f32 / 32_768.0));
+    stream.extend(std::iter::repeat(0.0).take(16 * 1_800));
+    let fired = stream.chunks(CHUNK).fold(false, |fired, chunk| kws.feed(chunk).is_some() || fired);
+    kws.reset();
+    fired
 }
 
 /// Тишина, речь, тишина — как фраза в эфире; срабатывание засчитывается на любом чанке.
@@ -169,7 +202,7 @@ fn run(spotter: &mut StreamingWakeSpotter, audio: &[i16]) -> (bool, String) {
     (fired, heard)
 }
 
-fn report(tallies: &[(&str, Tally)]) -> String {
+fn report(tallies: &[(&str, Tally)], kws: Option<f32>) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "# Детектор «ривер» на голосах разных языков\n");
     let _ = writeln!(
@@ -179,8 +212,19 @@ fn report(tallies: &[(&str, Tally)]) -> String {
          sherpa-onnx TTS, скорость 0,9 и 1,15; «River» и запись по правилам языка, одно и с \
          командой. `hr*` — сербский голос. Синтез — не живые люди: это оценка, а не приговор.\n"
     );
-    let _ = writeln!(out, "| язык | wake пойман | по вариантам | ложные на обычной речи |");
-    let _ = writeln!(out, "|---|---:|---|---:|");
+    if let Some(threshold) = kws {
+        let _ = writeln!(
+            out,
+            "Столбцы «новый» — многоязычный детектор RKW2 (kws.rs, tools/kws/train_multilang.py), \
+             порог {threshold}. Нидерландский, венгерский и корейский в его обучение не входили; \
+             голоса остальных языков — те же, что в обучении (но другие фразы и склейка).\n"
+        );
+        let _ = writeln!(out, "| язык | wake: Vosk | wake: новый | по вариантам (Vosk) | ложные: Vosk | ложные: новый |");
+        let _ = writeln!(out, "|---|---:|---:|---|---:|---:|");
+    } else {
+        let _ = writeln!(out, "| язык | wake пойман | по вариантам | ложные на обычной речи |");
+        let _ = writeln!(out, "|---|---:|---|---:|");
+    }
     for (code, tally) in tallies {
         let variants = tally
             .by_wake
@@ -188,15 +232,22 @@ fn report(tallies: &[(&str, Tally)]) -> String {
             .map(|(wake, (caught, total))| format!("{wake} {caught}/{total}"))
             .collect::<Vec<_>>()
             .join(", ");
-        let _ = writeln!(
-            out,
-            "| {code} | {}/{} ({:.0} %) | {variants} | {}/{} |",
-            tally.caught,
-            tally.total,
-            100.0 * tally.caught as f64 / tally.total.max(1) as f64,
-            tally.false_fires,
-            tally.negatives
-        );
+        let percent = |n: usize| 100.0 * n as f64 / tally.total.max(1) as f64;
+        if kws.is_some() {
+            let _ = writeln!(
+                out,
+                "| {code} | {}/{} ({:.0} %) | {}/{} ({:.0} %) | {variants} | {}/{} | {}/{} |",
+                tally.caught, tally.total, percent(tally.caught),
+                tally.kws_caught, tally.total, percent(tally.kws_caught),
+                tally.false_fires, tally.negatives, tally.kws_false, tally.negatives
+            );
+        } else {
+            let _ = writeln!(
+                out,
+                "| {code} | {}/{} ({:.0} %) | {variants} | {}/{} |",
+                tally.caught, tally.total, percent(tally.caught), tally.false_fires, tally.negatives
+            );
+        }
     }
     let _ = writeln!(out, "\n## Что детектор слышал вместо «ривер» (до 6 примеров на язык)\n");
     for (code, tally) in tallies {

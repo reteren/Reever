@@ -21,6 +21,7 @@ pub mod events;
 pub mod find;
 pub mod grammar;
 pub mod input_thread;
+pub mod kws;
 pub mod langid;
 pub mod launcher;
 pub mod local_index;
