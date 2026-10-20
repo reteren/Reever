@@ -44,7 +44,7 @@ cd tools\kws
 py -3.12 -m venv .venv
 .\.venv\Scripts\python -m pip install torch --index-url https://download.pytorch.org/whl/cu126
 .\.venv\Scripts\python -m pip install -r requirements.txt
-# голоса: архивы релиза sherpa-onnx tts-models в src-tauriesources\model	ts\<голос>
+# голоса: архивы релиза sherpa-onnx tts-models в src-tauri\resources\model\tts\<голос>
 esources\model	ts\<голос>
 $env:PYTHONIOENCODING="utf-8"
 .\.venv\Scripts\python gen_multilang.py           # корпус data\ml (wake / речь / созвучия)
