@@ -8,6 +8,12 @@
 Языки из --holdout-langs (по умолчанию нидерландский, венгерский, корейский) в обучение не
 попадают — на них проверяется, слышит ли детектор «river» на незнакомом языке.
 
+С --fleurs в отрицательные примеры и контекст вокруг слова идёт живая речь носителей
+(Google FLEURS, CC-BY 4.0: data/fleurs/<язык>/dev.tsv + dev/*.wav). Часть фраз каждого
+языка отложена для замера ложных срабатываний в час на речи, которую сеть не слышала. На
+шаге --mine-at сеть прогоняется по живой речи обучения: места ложных срабатываний
+становятся трудными отрицательными примерами (их доля — --hard-share).
+
 Признаки совпадают с src-tauri/src/kws.rs: окно Ханна 400, шаг 160, FFT 512, 40 мел, log.
 
     .venv\\Scripts\\python train_multilang.py --steps 30000 --output data/kws-ml.bin
@@ -122,6 +128,10 @@ class Pools:
         self.speech_by_voice: dict[tuple, list[np.ndarray]] = defaultdict(list)
         for r, a in self.speech:
             self.speech_by_voice[(r["voice"], r["sid"])].append(a)
+        # Живая речь (FLEURS) и трудные отрицательные примеры — int16.
+        self.real: list[np.ndarray] = []
+        self.hard: list[np.ndarray] = []
+        self.hard_share = 0.0
 
 
 def resample(audio: np.ndarray, factor: float) -> np.ndarray:
@@ -135,6 +145,51 @@ def level(audio: np.ndarray) -> np.ndarray:
     return audio / peak * 0.5 if peak > 1e-4 else audio
 
 
+# Фразы с самим словом или созвучием на любом языке — не отрицательный пример.
+WAKE_LIKE = ("river", "reever", "ривер", "рівер", "ривър", "riviera", "rivier", "rivière", "rivers")
+
+
+def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Живая речь: (обучение, тест) — int16, чтобы десятки часов поместились в память."""
+    rng = random.Random(seed)
+    train, test = [], []
+    for lang_dir in sorted(d for d in root.iterdir() if (d / "dev.tsv").is_file()):
+        rows = []
+        for line in (lang_dir / "dev.tsv").read_text(encoding="utf-8").splitlines():
+            cols = line.split("\t")
+            if len(cols) < 3:
+                continue
+            text = cols[2].lower()
+            path = lang_dir / "dev" / cols[1]
+            if path.is_file() and not any(word in text for word in WAKE_LIKE):
+                rows.append(path)
+        rows = sorted(set(rows))
+        rng.shuffle(rows)
+        for path in rows[:test_per_lang]:
+            test.append(read_wav_i16(path))
+        for path in rows[test_per_lang:test_per_lang + per_lang]:
+            train.append(read_wav_i16(path))
+    return train, test
+
+
+def read_wav_i16(path: Path) -> np.ndarray:
+    """Любой WAV (в FLEURS — float32) → int16 16 кГц mono."""
+    import soundfile
+
+    audio, rate = soundfile.read(str(path), dtype="float32", always_2d=True)
+    audio = audio.mean(axis=1)
+    if rate != RATE:
+        audio = resample(audio, rate / RATE)
+    return (np.clip(audio, -1.0, 1.0) * 32767).astype("<i2")
+
+
+def real_piece(real: list[np.ndarray], rng: random.Random, seconds: float) -> np.ndarray:
+    clip = rng.choice(real)
+    n = min(len(clip), int(seconds * RATE))
+    start = rng.randrange(0, max(1, len(clip) - n))
+    return level(clip[start:start + n].astype(np.float32) / 32768.0)
+
+
 def compose(pools: Pools, rng: random.Random, positive: bool) -> tuple[np.ndarray, int, int]:
     """Пример длиной SEG и (начало, конец) wake-слова в сэмплах; для отрицательного — (-1, -1)."""
     total = int(SEG * RATE)
@@ -145,14 +200,19 @@ def compose(pools: Pools, rng: random.Random, positive: bool) -> tuple[np.ndarra
         wake = level(resample(wake, rng.uniform(0.88, 1.12)))
         own = pools.speech_by_voice.get((row["voice"], row["sid"])) or [a for _, a in rng.sample(pools.speech, 1)]
         # До слова: тишина или конец чужой фразы (обращение посреди разговора).
-        if rng.random() < 0.55:
+        if rng.random() < 0.45:
             pre = np.zeros(int(rng.uniform(0.1, 1.4) * RATE), np.float32)
         else:
-            speech = level(rng.choice(own))
+            speech = real_piece(pools.real, rng, 1.5) if pools.real and rng.random() < 0.5 else level(rng.choice(own))
             pre = np.concatenate([speech[-int(rng.uniform(0.3, 1.3) * RATE):],
                                   np.zeros(int(rng.uniform(0.0, 0.4) * RATE), np.float32)])
         post_gap = np.zeros(int(rng.uniform(0.04, 0.45) * RATE), np.float32)
-        post = level(rng.choice(own)) if rng.random() < 0.6 else np.zeros(int(0.8 * RATE), np.float32)
+        if rng.random() < 0.4:
+            post = np.zeros(int(0.8 * RATE), np.float32)
+        elif pools.real and rng.random() < 0.5:
+            post = real_piece(pools.real, rng, 1.5)
+        else:
+            post = level(rng.choice(own))
         audio = np.concatenate([pre, wake, post_gap, post])
         start, end = len(pre), len(pre) + len(wake)
         # Конец слова — в пределах [0,7 c; SEG − 0,3 c] примера.
@@ -164,6 +224,18 @@ def compose(pools: Pools, rng: random.Random, positive: bool) -> tuple[np.ndarra
             audio = audio[shift:]
         start, end = start - shift, end - shift
         parts = [audio]
+    elif pools.hard and rng.random() < pools.hard_share:
+        # Место, где сеть уже ошиблась на живой речи.
+        audio = level(rng.choice(pools.hard).astype(np.float32) / 32768.0)
+    elif pools.real and rng.random() < 0.55:
+        # Живая речь: подряд куски разных носителей, иногда с созвучным словом внутри.
+        while sum(len(p) for p in parts) < total + RATE:
+            parts.append(real_piece(pools.real, rng, rng.uniform(1.0, 3.0)))
+            if rng.random() < 0.2:
+                parts.append(level(resample(rng.choice(pools.confusable)[1], rng.uniform(0.88, 1.12))))
+            parts.append(np.zeros(int(rng.uniform(0.0, 0.3) * RATE), np.float32))
+        audio = np.concatenate(parts)
+        audio = audio[rng.randrange(0, max(1, len(audio) - total)):]
     else:
         while sum(len(p) for p in parts) < total:
             pick = rng.random()
@@ -288,6 +360,42 @@ def evaluate(model: CausalTcn, mel: LogMel, pools: Pools, device: torch.device, 
     return result
 
 
+def real_false(model: CausalTcn, mel: LogMel, real: list[np.ndarray], device: torch.device, thresholds) -> dict:
+    """Ложные срабатывания в час на сплошном потоке живой речи."""
+    model.eval()
+    stream = np.concatenate([np.concatenate([c.astype(np.float32) / 32768.0, np.zeros(int(0.2 * RATE), np.float32)]) for c in real])
+    scores = []
+    with torch.no_grad():
+        for chunk in range(0, len(stream), RATE * 60):
+            piece = stream[max(0, chunk - RATE):chunk + RATE * 60]
+            sc = torch.sigmoid(model(mel(torch.from_numpy(piece).to(device)[None])))[0].cpu().numpy()
+            scores.append(sc[(RATE // HOP if chunk else 0):])
+    scores = np.concatenate(scores)
+    hours = len(stream) / RATE / 3600
+    model.train()
+    return {"real_hours": round(hours, 2), **{f"real_false_per_hour@{th}": round(len(events(scores, th)) / hours, 1) for th in thresholds}}
+
+
+def mine_hard(model: CausalTcn, mel: LogMel, real: list[np.ndarray], device: torch.device, threshold: float = 0.5) -> list[np.ndarray]:
+    """Куски живой речи по SEG секунд, которые кончаются на ложном срабатывании."""
+    model.eval()
+    total = int(SEG * RATE)
+    hard = []
+    with torch.no_grad():
+        for clip in real:
+            audio = clip.astype(np.float32) / 32768.0
+            if len(audio) < WIN:
+                continue
+            scores = torch.sigmoid(model(mel(torch.from_numpy(audio).to(device)[None])))[0].cpu().numpy()
+            for frame in events(scores, threshold, release=60):
+                end = min(len(audio), frame * HOP + WIN + int(0.15 * RATE))
+                piece = audio[max(0, end - total):end]
+                piece = np.concatenate([np.zeros(total - len(piece), np.float32), piece])
+                hard.append((piece * 32767).astype("<i2"))
+    model.train()
+    return hard
+
+
 # ── Экспорт ─────────────────────────────────────────────────────────────
 
 def fold(conv_w: torch.Tensor, conv_b: torch.Tensor, bn: nn.BatchNorm1d) -> tuple[torch.Tensor, torch.Tensor]:
@@ -334,6 +442,11 @@ def main() -> None:
     p.add_argument("--output", type=Path, default=Path("data/kws-ml.bin"))
     p.add_argument("--eval-every", type=int, default=5000)
     p.add_argument("--seed", type=int, default=11)
+    p.add_argument("--fleurs", type=Path, help="data/fleurs: живая речь носителей")
+    p.add_argument("--fleurs-per-lang", type=int, default=150)
+    p.add_argument("--fleurs-test-per-lang", type=int, default=40)
+    p.add_argument("--mine-at", default="", help="шаги добора трудных примеров, через запятую")
+    p.add_argument("--hard-share", type=float, default=0.25)
     args = p.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
 
@@ -350,6 +463,12 @@ def main() -> None:
     test_pools = Pools([r for r in rows if is_test(r)])
     print(f"train: wake {len(train_pools.wake)}, speech {len(train_pools.speech)}, confusable {len(train_pools.confusable)}")
     print(f"test:  wake {len(test_pools.wake)}, speech {len(test_pools.speech)}, confusable {len(test_pools.confusable)}; языки без обучения: {sorted(holdout_langs)}")
+    real_test: list[np.ndarray] = []
+    if args.fleurs:
+        train_pools.real, real_test = load_fleurs(args.fleurs, args.fleurs_per_lang, args.fleurs_test_per_lang, args.seed)
+        hours = lambda clips: sum(len(c) for c in clips) / RATE / 3600
+        print(f"живая речь: обучение {len(train_pools.real)} фраз ({hours(train_pools.real):.1f} ч), тест {len(real_test)} ({hours(real_test):.1f} ч)")
+    mine_steps = {int(x) for x in args.mine_at.split(",") if x}
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mel, augment = LogMel().to(device), Augment().to(device)
@@ -375,8 +494,16 @@ def main() -> None:
         optim.zero_grad(); loss.backward(); optim.step(); sched.step()
         if step % 200 == 0:
             print(f"step {step}/{args.steps} loss {loss.item():.4f} {time.time() - started:.0f} c", flush=True)
+        if step in mine_steps and train_pools.real:
+            found = mine_hard(model, mel, train_pools.real, device)
+            train_pools.hard = (train_pools.hard + found)[-6000:]
+            train_pools.hard_share = args.hard_share
+            print(f"шаг {step}: трудных примеров +{len(found)}, всего {len(train_pools.hard)}", flush=True)
         if step % args.eval_every == 0 or step == args.steps:
-            print(json.dumps(evaluate(model, mel, test_pools, device), ensure_ascii=False), flush=True)
+            report = evaluate(model, mel, test_pools, device)
+            if real_test:
+                report.update(real_false(model, mel, real_test, device, (0.5, 0.7, 0.85, 0.93, 0.97)))
+            print(json.dumps(report, ensure_ascii=False), flush=True)
             torch.save(model.state_dict(), args.output.with_suffix(".pt"))
     export(model, args.output)
     print(f"веса: {args.output} ({args.output.stat().st_size} байт)")
