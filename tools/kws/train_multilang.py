@@ -14,6 +14,10 @@
 шаге --mine-at сеть прогоняется по живой речи обучения: места ложных срабатываний
 становятся трудными отрицательными примерами (их доля — --hard-share).
 
+С --real-wake (data/globe/clips.jsonl, globe_river.py) в пул wake-слова идут живые «river»
+дикторов Common Voice с разными акцентами; часть дикторов отложена — это замер на живых
+людях по группам акцентов (globe-de, globe-zh, …).
+
 Признаки совпадают с src-tauri/src/kws.rs: окно Ханна 400, шаг 160, FFT 512, 40 мел, log.
 
     .venv\\Scripts\\python train_multilang.py --steps 30000 --output data/kws-ml.bin
@@ -119,6 +123,43 @@ def read_wav(path: Path) -> np.ndarray:
     return np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
 
 
+# Метка акцента Common Voice → короткая группа для отчёта.
+ACCENT_GROUPS = [
+    ("india", "india"), ("united states", "us"), ("england", "uk"), ("canad", "us"), ("austral", "uk"),
+    ("scot", "uk"), ("irish", "uk"), ("ireland", "uk"), ("new zealand", "uk"), ("wales", "uk"),
+    ("german", "de"), ("french", "fr"), ("france", "fr"), ("chin", "zh"), ("mandarin", "zh"),
+    ("hong kong", "zh"), ("cantonese", "zh"), ("taiwan", "zh"), ("russia", "ru"), ("ukrain", "ru"),
+    ("spanish", "es"), ("spain", "es"), ("mexic", "es"), ("latin", "es"), ("argentin", "es"),
+    ("dutch", "nl"), ("netherland", "nl"), ("belgi", "nl"), ("polish", "pl"), ("poland", "pl"),
+    ("italian", "it"), ("italy", "it"), ("japan", "ja"), ("korea", "ko"), ("portug", "pt"),
+    ("brazil", "pt"), ("swed", "nordic"), ("norw", "nordic"), ("danish", "nordic"), ("finn", "nordic"),
+    ("czech", "slavic"), ("slovak", "slavic"), ("croat", "slavic"), ("serb", "slavic"), ("bulgar", "slavic"),
+    ("hungar", "hu"), ("greek", "el"), ("roman", "ro"), ("african", "africa"), ("nigeria", "africa"),
+    ("kenya", "africa"), ("filipin", "asia"), ("philippin", "asia"), ("malay", "asia"), ("singapore", "asia"),
+    ("vietnam", "asia"), ("indonesia", "asia"), ("pakistan", "india"), ("bangla", "india"), ("arab", "arab"),
+]
+
+
+def accent_group(accent: str) -> str:
+    accent = (accent or "").lower()
+    return next((group for key, group in ACCENT_GROUPS if key in accent), "other")
+
+
+def globe_rows(path: Path) -> list[dict]:
+    """Клипы globe_river.py как строки манифеста: wake-слово, диктор = голос."""
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        item = json.loads(line)
+        if item.get("file"):
+            rows.append({"file": str((path.parent / item["file"]).resolve()), "kind": "wake",
+                         "lang": "globe-" + accent_group(item.get("accent", "")),
+                         "voice": "globe:" + item["speaker"], "sid": 0, "text": "river",
+                         # Метка начала слова у Parakeet запаздывает (~0,24 с, замер на 30
+                         # клипах), конец почти точный.
+                         "wake_start": max(0.0, item["wake_start"] - 0.24), "wake_end": item["wake_end"] + 0.04})
+    return rows
+
+
 class Pools:
     def __init__(self, rows: list[dict]):
         self.wake = [(r, read_wav(DATA / r["file"])) for r in rows if r["kind"] == "wake"]
@@ -129,6 +170,10 @@ class Pools:
         for r, a in self.speech:
             self.speech_by_voice[(r["voice"], r["sid"])].append(a)
         # Живая речь (FLEURS) и трудные отрицательные примеры — int16.
+        # Живые окна с «river» внутри (GLOBE): отдельно, их речь вокруг слова — своя.
+        self.wake_windows = [(r, a) for r, a in self.wake if r.get("wake_end") is not None]
+        self.wake = [(r, a) for r, a in self.wake if r.get("wake_end") is None]
+        self.window_share = 0.3
         self.real: list[np.ndarray] = []
         self.hard: list[np.ndarray] = []
         self.hard_share = 0.0
@@ -195,7 +240,21 @@ def compose(pools: Pools, rng: random.Random, positive: bool) -> tuple[np.ndarra
     total = int(SEG * RATE)
     parts: list[np.ndarray] = []
     start = end = -1
-    if positive:
+    if positive and pools.wake_windows and rng.random() < pools.window_share:
+        # Живая фраза с «river» внутри: речь вокруг слова уже настоящая.
+        row, clip = rng.choice(pools.wake_windows)
+        factor = rng.uniform(0.92, 1.08)
+        clip = level(resample(clip, factor))
+        pre = np.zeros(int(rng.uniform(0.0, 0.6) * RATE), np.float32)
+        audio = np.concatenate([pre, clip, np.zeros(int(0.5 * RATE), np.float32)])
+        start = len(pre) + int(row["wake_start"] * RATE / factor)
+        end = len(pre) + int(row["wake_end"] * RATE / factor)
+        want_end = int(rng.uniform(0.7, SEG - 0.3) * RATE)
+        shift = end - want_end
+        audio = np.concatenate([np.zeros(-shift, np.float32), audio]) if shift < 0 else audio[shift:]
+        start, end = start - shift, end - shift
+        parts = [audio]
+    elif positive:
         row, wake = rng.choice(pools.wake)
         wake = level(resample(wake, rng.uniform(0.88, 1.12)))
         own = pools.speech_by_voice.get((row["voice"], row["sid"])) or [a for _, a in rng.sample(pools.speech, 1)]
@@ -328,6 +387,13 @@ def evaluate(model: CausalTcn, mel: LogMel, pools: Pools, device: torch.device, 
     rng = random.Random(5)
     by_lang: dict[str, list] = defaultdict(list)
     with torch.no_grad():
+        for row, clip in pools.wake_windows:
+            audio = np.concatenate([np.zeros(int(0.6 * RATE), np.float32), level(clip), np.zeros(int(0.5 * RATE), np.float32)])
+            feats = mel(torch.from_numpy(audio).to(device)[None])
+            scores = torch.sigmoid(model(feats))[0].cpu().numpy()
+            s = (int((0.6 + row["wake_start"]) * RATE) - WIN // 2) // HOP
+            e = (int((0.6 + row["wake_end"]) * RATE) - WIN // 2) // HOP
+            by_lang[row["lang"]].append((scores, s, e))
         for row, wake in pools.wake:
             own = pools.speech_by_voice.get((row["voice"], row["sid"]))
             for with_command in (False, True):
@@ -447,6 +513,10 @@ def main() -> None:
     p.add_argument("--fleurs-test-per-lang", type=int, default=40)
     p.add_argument("--mine-at", default="", help="шаги добора трудных примеров, через запятую")
     p.add_argument("--hard-share", type=float, default=0.25)
+    p.add_argument("--real-wake", type=Path, help="data/globe/clips.jsonl: живые «river»")
+    p.add_argument("--eval-only", type=Path, help="только замер готовых весов (.pt) на том же разбиении")
+    p.add_argument("--real-wake-test", type=float, default=0.15, help="доля дикторов GLOBE в тест")
+    p.add_argument("--real-wake-repeat", type=int, default=3, help="во сколько раз чаще брать живые клипы")
     args = p.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
 
@@ -458,6 +528,17 @@ def main() -> None:
         multi[r["voice"]].add(r["sid"])
     held_sids = {(v, sid) for v, sids in multi.items() if len(sids) > 3
                  for sid in rng.sample(sorted(sids), max(1, int(len(sids) * args.holdout_share)))}
+    if args.real_wake:
+        real_rows = globe_rows(args.real_wake)
+        speakers = sorted({r["voice"] for r in real_rows})
+        held_globe = set(rng.sample(speakers, int(len(speakers) * args.real_wake_test)))
+        for r in real_rows:
+            if r["voice"] in held_globe:
+                held_sids.add((r["voice"], r["sid"]))
+        # Живых клипов меньше синтетических — в обучении их берут чаще.
+        train_real = [r for r in real_rows if r["voice"] not in held_globe]
+        rows += [r for r in real_rows if r["voice"] in held_globe] + train_real * args.real_wake_repeat
+        print(f"живые «river»: {len(real_rows)} клипов, {len(speakers)} дикторов, в тест {len(held_globe)}")
     is_test = lambda r: r["lang"] in holdout_langs or (r["voice"], r["sid"]) in held_sids
     train_pools = Pools([r for r in rows if not is_test(r)])
     test_pools = Pools([r for r in rows if is_test(r)])
@@ -474,6 +555,13 @@ def main() -> None:
     mel, augment = LogMel().to(device), Augment().to(device)
     model = CausalTcn(args.channels).to(device)
     print(f"параметров {sum(p.numel() for p in model.parameters())}, контекст {model.receptive_field()} кадров")
+    if args.eval_only:
+        model.load_state_dict(torch.load(args.eval_only, map_location=device))
+        report = evaluate(model, mel, test_pools, device, (0.85, 0.93, 0.97))
+        if real_test:
+            report.update(real_false(model, mel, real_test, device, (0.85, 0.93, 0.97)))
+        print(json.dumps(report, ensure_ascii=False))
+        return
     optim = torch.optim.AdamW(model.parameters(), lr=3e-3, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(optim, max_lr=3e-3, total_steps=args.steps, pct_start=0.05)
     frames = (int(SEG * RATE) - WIN) // HOP + 1

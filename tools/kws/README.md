@@ -57,3 +57,9 @@ cargo run --release --example wake_lang_eval -- --kws ..	ools\kws\data\kws-ml.bi
 Wake-слово синтезируется отдельно и склеивается с речью при обучении — граница слова
 точная, цель задаётся по кадрам. Нидерландский, венгерский и корейский по умолчанию не
 обучаются: на них видно, слышит ли детектор «river» на незнакомом языке.
+
+Живые «river» с акцентами (GLOBE, CC0, без аккаунта): `globe_river.py scan`, затем
+`globe_river.py cut` (≈20 ГБ трафика, части качаются по одной и удаляются); речь носителей —
+Google FLEURS (dev, 29 языков) в `data/fleurs`. Обучение со всем вместе:
+`train_multilang.py --steps 24000 --fleurs data/fleurs --mine-at 8000,15000 --real-wake data/globe/clips.jsonl`.
+`--eval-only <веса.pt>` — замер готовых весов на том же разбиении.
