@@ -595,10 +595,16 @@ where
     if !s.wake_spotter || s.activation_mode == "hotkey" {
         return;
     }
-    let weights = crate::config::resource(app, "wake/river.bin");
+    let mut name = crate::wake::weights_for(&cfg.models.languages());
+    let mut weights = crate::config::resource(app, name);
+    if !weights.is_file() {
+        name = "wake/river.bin";
+        weights = crate::config::resource(app, name);
+    }
     match crate::wake::AcousticWakeSpotter::new(&weights) {
         Ok(spotter) => {
-            ui_log(app, crate::msg!("log.spotter.ok", model = "river.bin (RKW2)"));
+            let file = name.rsplit('/').next().unwrap_or(name);
+            ui_log(app, crate::msg!("log.spotter.ok", model = format!("{file} (RKW2)")));
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         Err(e) => ui_log(app, crate::msg!("log.spotter.failed", error = format!("{e:#}"))),

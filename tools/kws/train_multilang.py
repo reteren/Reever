@@ -196,6 +196,28 @@ def level(audio: np.ndarray) -> np.ndarray:
 WAKE_LIKE = ("river", "reever", "ривер", "рівер", "ривър", "riviera", "rivier", "rivière", "rivers")
 
 
+# Латинское «River» в устах любого голоса — то же слово: для модели одних языков его не
+# берут ни в положительные, ни в отрицательные примеры.
+COMMON_WAKES = {"river", "rivver", "riva", "reever", "rivah"}
+
+
+def restrict_wake(rows: list[dict], wake_langs: set[str]) -> list[dict]:
+    """Модель «ривер» только для `wake_langs`: записи слова на других языках по их правилам
+    («瑞沃», «利和», «Riwer») — отрицательные примеры, латинское «River» — вне обучения."""
+    out = []
+    moved = dropped = 0
+    for r in rows:
+        if r["kind"] not in ("wake", "wake_phrase") or r["lang"] in wake_langs or r["lang"].startswith("globe-"):
+            out.append(r)
+        elif r["kind"] == "wake" and r["text"].strip(" .!?").lower() not in COMMON_WAKES:
+            out.append({**r, "kind": "confusable"})
+            moved += 1
+        else:
+            dropped += 1
+    print(f"«ривер» только для {sorted(wake_langs)}: в отрицательные {moved}, вне обучения {dropped}")
+    return out
+
+
 def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Живая речь: (обучение, тест) — int16, чтобы десятки часов поместились в память."""
     rng = random.Random(seed)
@@ -507,6 +529,8 @@ def main() -> None:
     p.add_argument("--batch", type=int, default=256)
     p.add_argument("--channels", type=int, default=64)
     p.add_argument("--holdout-langs", default="nl,hu,ko")
+    p.add_argument("--wake-langs", default="", help="через запятую: «ривер» только этих языков (и живой GLOBE); "
+                   "своеязычные записи остальных («瑞沃», «Riwer») — отрицательные примеры")
     p.add_argument("--holdout-share", type=float, default=0.15, help="доля дикторов многоголосых моделей в тест")
     p.add_argument("--output", type=Path, default=Path("data/kws-ml.bin"))
     p.add_argument("--eval-every", type=int, default=5000)
@@ -525,6 +549,10 @@ def main() -> None:
 
     rows = [json.loads(line) for line in (DATA / "manifest.jsonl").read_text(encoding="utf-8").splitlines()]
     holdout_langs = set(filter(None, args.holdout_langs.split(",")))
+    wake_langs = set(filter(None, args.wake_langs.split(",")))
+    if wake_langs:
+        rows = restrict_wake(rows, wake_langs)
+        holdout_langs &= wake_langs
     rng = random.Random(args.seed)
     multi = defaultdict(set)
     for r in rows:

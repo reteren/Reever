@@ -19,6 +19,18 @@ use std::path::Path;
 use crate::kws::{StreamingTcn, HOP_SAMPLES};
 use crate::speech::WakeSpotter;
 
+/// Веса детектора под включённые языки распознавания: у сети одних русского, украинского,
+/// болгарского и английского «ривер» нет китайских «瑞沃 / 里沃» — по сути скольжения
+/// гласных, из-за которых многоязычная сеть срабатывала на протяжное «и-а» и стон.
+pub fn weights_for(languages: &[&str]) -> &'static str {
+    const RU_EN: &[&str] = &["en", "ru", "uk", "bg"];
+    if languages.iter().all(|language| RU_EN.contains(language)) {
+        "wake/river-ru-en.bin"
+    } else {
+        "wake/river.bin"
+    }
+}
+
 /// Порог оценки сети. 0,9 — компромисс (docs/research/wake-detector.md): ~98 % «river» у
 /// живых дикторов английского, 112/150 русского корпуса на голосах Windows, около 8 ложных
 /// срабатываний в час сплошной живой речи. Выше порог — меньше ложных и больше пропусков.

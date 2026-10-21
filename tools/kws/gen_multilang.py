@@ -72,9 +72,17 @@ WAKES: dict[str, list[str]] = {
     "en-accent": ["River", "Ribaa", "Rivah", "Liva", "Ruiwo", "Ribeo", "Riwa"],
 }
 CONFUSABLES: dict[str, list[str]] = {
-    "en": ["reverse", "revert", "liver", "fever", "never", "deliver", "rather", "rival", "ever", "rivet", "reveal", "Riviera", "rover", "fiber"],
-    "ru": ["реверс", "ревёт", "привет", "ривьера", "вера", "ливер", "ровер", "верно", "рева", "ревёр", "привезли", "Ирина"],
-    "uk": ["реверс", "привіт", "віра", "рівень", "рівно", "реве"],
+    "en": ["reverse", "revert", "liver", "fever", "never", "deliver", "rather", "rival", "ever", "rivet", "reveal", "Riviera", "rover", "fiber",
+           "ivver", "eva", "iva", "eever", "ee-ah", "ahh", "ohh", "uh-huh",
+           "rubber", "robber", "rapper", "ripper", "reaper", "raver", "ribbon", "driver", "giver",
+           "rubble", "rabbit", "ruby", "robin", "rider", "Rebecca", "remember", "rib"],
+    "ru": ["реверс", "ревёт", "привет", "ривьера", "вера", "ливер", "ровер", "верно", "рева", "ревёр", "привезли", "Ирина",
+           # Без «р» детектор не должен срабатывать: «ивер», протяжное «иа», стон.
+           "ивер", "ибер", "Ивер?", "ивьер", "иа", "ия", "иааа", "ааа", "эээ", "уа", "ой", "ммм",
+           # Похожие на слух: на них детектор срабатывал в живой речи.
+           "рабер", "робер", "рубер", "рэпер", "рейвер", "ребер", "рёбер", "драйвер", "райдер",
+           "рыба", "ребята", "рубль", "Роберт", "ривьеру", "рейвен", "рабы", "лабер", "ровно"],
+    "uk": ["реверс", "привіт", "віра", "рівень", "рівно", "реве", "івер", "іа", "ааа"],
     "bg": ["реверс", "привет", "вяра", "равен"],
     "de": ["Revier", "Riviera", "lieber", "Fieber", "wieder", "Rivale", "Ritter"],
     "fr": ["rivière", "rêver", "Riviera", "livre", "lever", "river"],
@@ -220,7 +228,7 @@ def main() -> None:
             if len(speakers) > args.max_speakers:
                 speakers = sorted(rng.sample(speakers, args.max_speakers))
             wakes = list(dict.fromkeys(WAKES.get(lang, []) + COMMON))
-            confusables = CONFUSABLES.get(lang, []) + ["Riviera", "reverse", "ever"]
+            confusables = CONFUSABLES.get(lang, CONFUSABLES.get(lang.split("-")[0], [])) + ["Riviera", "reverse", "ever"]
             sentences = ui_sentences(lang)
             jobs: list[tuple[str, str, int, float]] = []
             for sid in speakers:
