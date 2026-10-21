@@ -298,6 +298,12 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     /// Детектор сработал в начале фразы, а не посреди речи: такое «ривер» можно чинить
     /// по `repair_wake`, как без ленивой загрузки.
     spot_at_start: bool,
+    /// Кандидат детектора ждёт подтверждения VAD, что это речь, а не шум: сэмплов с
+    /// срабатывания, «в начале фразы», описание для журнала.
+    spot_pending: Option<(usize, bool, Option<String>)>,
+    /// Речь ли по VAD в последних кусках простоя: (сэмплов, речь); всего не больше
+    /// `SPOT_VAD_WINDOW_MS`.
+    vad_history: std::collections::VecDeque<(usize, bool)>,
     /// Основная модель английская (режим «только английский»): «ривер» она пишет
     /// английскими словами — см. `strip_english_wake`.
     english_primary: bool,
@@ -337,6 +343,11 @@ const SPOT_WINDOW_MS: u32 = 1_000;
 /// Срабатывание детектора засчитывается фразе, если было не раньше этого до её конца
 /// сверх длины самой фразы.
 const SPOT_GRACE_MS: u32 = 1_500;
+/// VAD-проверка кандидата детектора: речь хотя бы 100 мс из последних 800 мс, ждать
+/// подтверждения не дольше 400 мс (`judge_pending_spot`).
+const SPOT_VAD_MIN_MS: u32 = 100;
+const SPOT_VAD_WINDOW_MS: u32 = 800;
+const SPOT_VAD_WAIT_MS: u32 = 400;
 
 impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     pub fn new(cfg: EngineConfig, asr: T, vad: V) -> Self {
@@ -367,6 +378,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             strict_spotted_wake: false,
             spot_age: None,
             spot_at_start: false,
+            spot_pending: None,
+            vad_history: std::collections::VecDeque::new(),
             english_primary: false,
             trace: std::env::var_os("REEVER_TRACE").is_some(),
             idle_speech_age: None,
@@ -490,10 +503,12 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     .idle_speech_age
                     .map_or(true, |age| age <= samples(SPOT_WINDOW_MS));
                 let fired = spotter.feed(pcm);
+                let note = spotter.take_note();
                 if fired && (at_phrase_start || self.strict_spotted_wake) {
-                    self.spot_age = Some(0);
-                    self.spot_at_start = at_phrase_start;
-                    out.push(EngineEvent::WakeSpotted);
+                    // Решение — когда VAD скажет, речь ли это (ниже, в цикле по кадрам).
+                    self.spot_pending = Some((0, at_phrase_start, note));
+                } else if let (false, Some(note)) = (fired, note.as_ref()) {
+                    out.push(EngineEvent::Log(format!("wake: detector candidate {note}").into()));
                 } else if fired && self.trace {
                     let ms = self.idle_speech_age.unwrap_or(0) * 1000 / SAMPLE_RATE as usize;
                     out.push(EngineEvent::Log(format!("trace: the detector heard the wake word {ms} ms into the phrase — not at its start, skipped").into()));
@@ -542,6 +557,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             let segment_events = self.segmenter.push(input, &mut self.vad);
             let vad_saw_speech = self.vad.saw_speech;
             offset += count;
+            self.judge_pending_spot(count, vad_saw_speech, &mut out);
 
             if is_muted {
                 self.mute_remaining = self.mute_remaining.saturating_sub(count);
@@ -594,6 +610,53 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
 
         out
+    }
+
+    /// Кандидат детектора принимается, если VAD слышал речь хотя бы `SPOT_VAD_MIN_MS` из
+    /// последних `SPOT_VAD_WINDOW_MS`; ждём этого не дольше `SPOT_VAD_WAIT_MS`. Сирена,
+    /// лай, дыхание — не речь: так отсекается ~80 % ложных срабатываний на шум, а живых
+    /// «river» теряется 0,1 % (examples/wake_gate_probe.rs).
+    fn judge_pending_spot(&mut self, count: usize, speech: bool, out: &mut Vec<EngineEvent>) {
+        self.vad_history.push_back((count, speech));
+        let mut total: usize = self.vad_history.iter().map(|(n, _)| n).sum();
+        while total > samples(SPOT_VAD_WINDOW_MS) {
+            let Some((n, _)) = self.vad_history.pop_front() else { break };
+            total -= n;
+        }
+        let Some((age, at_start, _)) = self.spot_pending.as_mut() else {
+            return;
+        };
+        *age += count;
+        let (age, at_start) = (*age, *at_start);
+        if !matches!(self.mode, Mode::Idle) {
+            self.spot_pending = None;
+            return;
+        }
+        let speech_samples: usize = self
+            .vad_history
+            .iter()
+            .filter(|(_, speech)| *speech)
+            .map(|(n, _)| n)
+            .sum();
+        let speech_ms = speech_samples * 1000 / SAMPLE_RATE as usize;
+        let accepted = speech_samples >= samples(SPOT_VAD_MIN_MS);
+        if !accepted && age < samples(SPOT_VAD_WAIT_MS) {
+            return;
+        }
+        let note = self.spot_pending.take().and_then(|(_, _, note)| note);
+        let note = note.map(|n| format!(" {n},")).unwrap_or_default();
+        if accepted {
+            out.push(EngineEvent::Log(
+                format!("wake: detector heard the wake word —{note} speech {speech_ms} ms").into(),
+            ));
+            self.spot_age = Some(age);
+            self.spot_at_start = at_start;
+            out.push(EngineEvent::WakeSpotted);
+        } else {
+            out.push(EngineEvent::Log(
+                format!("wake: detector candidate{note} — rejected: not speech (speech {speech_ms} ms)").into(),
+            ));
+        }
     }
 
     /// Грамматика из редактора: wake-слова и незаконченные фразы («ривер папка» →
@@ -662,6 +725,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             spotter.reset();
         }
         self.spot_age = None;
+        self.spot_pending = None;
         self.idle_speech_age = None;
         self.segmenter.reset();
         self.vad.reset();
@@ -1439,6 +1503,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         out.push(EngineEvent::State("listening"));
         self.dictation_lang = None;
         self.spot_age = None;
+        self.spot_pending = None;
         self.idle_speech_age = None;
         let (pre_roll, soft_max, max) = DICTATION_LIMITS;
         self.segmenter.set_limits(pre_roll, soft_max, max);
@@ -1925,6 +1990,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             spotter.reset();
         }
         self.spot_age = None;
+        self.spot_pending = None;
         self.idle_speech_age = None;
         self.mode = Mode::Idle;
         self.mute_remaining = 0;
@@ -2891,6 +2957,20 @@ mod tests {
         }
         fn reset(&mut self) {}
         fn set_wake_words(&mut self, _wake_words: &[String]) {}
+    }
+
+    #[test]
+    fn spotted_noise_without_speech_is_rejected() {
+        // Детектор сработал на шум, VAD речи не слышит: ни сигнала, ни загрузки моделей.
+        let (mut engine, _, _, _) = engine(test_config(), &["ривер открой загрузки"]);
+        engine.set_strict_spotted_wake(true);
+        engine.set_wake_spotter(Some(Box::new(ScriptedSpotter(VecDeque::from([true])))));
+        let events = engine.push_audio(&vec![0; samples(600)]);
+        assert!(!contains(&events, &EngineEvent::WakeSpotted), "{events:?}");
+        assert!(
+            events.iter().any(|event| matches!(event, EngineEvent::Log(message) if message.render("en").contains("not speech"))),
+            "{events:?}"
+        );
     }
 
     #[test]

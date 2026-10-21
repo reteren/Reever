@@ -69,6 +69,10 @@ pub trait WakeSpotter {
     /// Забыть текущую фразу (выход из простоя, пауза микрофона).
     fn reset(&mut self);
     fn set_wake_words(&mut self, wake_words: &[String]);
+    /// Описание последнего кандидата для журнала (оценка, громкость, почему отклонён).
+    fn take_note(&mut self) -> Option<String> {
+        None
+    }
 }
 
 /// Покадровый детектор речи.
