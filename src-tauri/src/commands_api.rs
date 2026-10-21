@@ -101,14 +101,16 @@ pub fn language_models(app: AppHandle) -> serde_json::Value {
     let languages: serde_json::Map<String, serde_json::Value> = crate::config::RECOGNITION_LANGUAGES
         .iter()
         .filter_map(|code| {
-            crate::models::pack_for(code).map(|pack| (code.to_string(), json!(pack.id)))
+            crate::models::family_for(code).map(|family| (code.to_string(), json!(family)))
         })
         .collect();
-    let installed: Vec<&str> = PACKS
+    // Семьи, у которых установлен хоть один вариант.
+    let mut installed: Vec<&str> = PACKS
         .iter()
         .filter(|pack| dirs.installed(pack))
-        .map(|pack| pack.id)
+        .map(|pack| pack.family)
         .collect();
+    installed.dedup();
     json!({ "languages": languages, "installed": installed })
 }
 

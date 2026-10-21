@@ -116,7 +116,7 @@ fn main() -> anyhow::Result<()> {
     let models = root.join("resources/model");
     let testdata = root.join("../testdata");
     let model = arg("--model")
-        .unwrap_or_else(|| reever_lib::models::EUROPEAN.dir.into());
+        .unwrap_or_else(|| reever_lib::models::EUROPEAN_INT8.dir.into());
     let model_dir = model_path(&models, &model);
     let second_model = arg("--second-model").unwrap_or_else(|| DEFAULT_SECOND_MODEL.into());
     let lid_model = arg("--lid-model").unwrap_or_else(|| DEFAULT_LID_MODEL.into());

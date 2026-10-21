@@ -1,20 +1,29 @@
 //! Каталог моделей распознавания и выбор модели под включённые языки.
 //!
-//! Базовые модели вшиты в установщик и лежат в resources/model: английская Parakeet 110m,
-//! детектор «ривер» и Silero VAD. Языковые пакеты и определитель языка установщик
-//! скачивает по галочкам в `%LOCALAPPDATA%\com.troid.reever\models`
-//! (src-tauri/windows/models.nsh — те же адреса и суммы, сверяет тест ниже).
+//! Базовые модели вшиты в установщик и лежат в resources/model: английская Parakeet 110m и
+//! Silero VAD. Языковые пакеты и определитель языка установщик скачивает по галочкам в
+//! `%LOCALAPPDATA%\com.troid.reever\models` (src-tauri/windows/models.nsh — те же адреса и
+//! суммы, сверяет тест ниже).
+//!
+//! У пакета (семьи: европейские языки, азиатские, определитель языка) есть варианты:
+//! «точный» и «лёгкий» в 4 битах (tools/asr_quant, архивы Reever) и прежний int8 sherpa-onnx,
+//! который установщик больше не предлагает, но уже скачанный продолжает работать. Программа
+//! берёт первый установленный вариант семьи в порядке `PACKS`.
 
 use std::path::PathBuf;
 
 /// Английская модель, которая есть всегда: основная, пока не скачан ни один пакет.
 pub const BASE_ENGLISH: &str = "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8";
 
-/// Скачиваемая модель: архив sherpa-onnx, из которого берутся только `files`.
+/// Скачиваемая модель: архив, из которого берутся только `files`.
 #[derive(Debug)]
 pub struct Pack {
-    /// Имя галочки в установщике и ключ в логах.
+    /// Вариант: имя галочки в установщике и ключ в логах.
     pub id: &'static str,
+    /// Семья: «european», «asian», «lid» — её ждут Настройки и выбор моделей.
+    pub family: &'static str,
+    /// Предлагается в установщике (прежние int8-архивы — нет).
+    pub offered: bool,
     /// Папка модели (она же корень архива).
     pub dir: &'static str,
     /// Языки, которые можно включить в Настройках, когда пакет скачан.
@@ -28,9 +37,50 @@ pub struct Pack {
     pub files: &'static [&'static str],
 }
 
-/// Parakeet TDT 0.6B v3: 25 европейских языков, английский и смешанная русско-английская речь.
+/// Parakeet TDT 0.6B v3 «точный»: MatMul в 4 битах блоками по 128, остальное без сжатия.
+/// 25 европейских языков, английский и смешанная русско-английская речь; точнее int8
+/// (FLEURS 5,9 ошибки на 100 слов против 8,3), ~650 МБ памяти.
 pub const EUROPEAN: Pack = Pack {
-    id: "european",
+    id: "european-accurate",
+    family: "european",
+    offered: true,
+    dir: "reever-parakeet-v3-int4-accurate",
+    languages: &[
+        "ru", "uk", "de", "fr", "es", "it", "pt", "pl", "cs", "sk", "bg", "hr", "sl", "nl", "da", "sv", "fi", "et", "lv", "lt", "el", "hu", "ro", "mt",
+    ],
+    covers: &[
+        "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv", "lt",
+        "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
+    ],
+    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-accurate.tar.bz2",
+    sha256: "98e063dad3d03b0b06ecea86010bda232b62b767e5807a8d0e7254d05de274bf",
+    files: &["encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"],
+};
+
+/// Parakeet v3 «лёгкий»: 4 бита + остальное в int8; ~420 МБ памяти, точность около int8.
+pub const EUROPEAN_LIGHT: Pack = Pack {
+    id: "european-light",
+    family: "european",
+    offered: true,
+    dir: "reever-parakeet-v3-int4-light",
+    languages: &[
+        "ru", "uk", "de", "fr", "es", "it", "pt", "pl", "cs", "sk", "bg", "hr", "sl", "nl", "da", "sv", "fi", "et", "lv", "lt", "el", "hu", "ro", "mt",
+    ],
+    covers: &[
+        "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv", "lt",
+        "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
+    ],
+    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-light.tar.bz2",
+    sha256: "0df11cfd2d039caa66a5327e16ac0130128f8a979142e8abe7b970412b18d83b",
+    files: &["encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"],
+};
+
+/// Прежний Parakeet v3 int8 из релиза sherpa-onnx: установщик его не предлагает, но уже
+/// скачанный работает.
+pub const EUROPEAN_INT8: Pack = Pack {
+    id: "european-int8",
+    family: "european",
+    offered: false,
     dir: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
     languages: &[
         "ru", "uk", "de", "fr", "es", "it", "pt", "pl", "cs", "sk", "bg", "hr", "sl", "nl", "da", "sv", "fi", "et", "lv", "lt", "el", "hu", "ro", "mt",
@@ -44,11 +94,39 @@ pub const EUROPEAN: Pack = Pack {
     files: &["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"],
 };
 
-/// SenseVoice small: китайский, японский, корейский, кантонский и английский. Версия
-/// 2024-07-17: в 2025-09-09 модель любую речь определяет как кантонскую и японский,
-/// корейский, английский пишет как попало (tools/asr_quant/eval_sensevoice.py).
+/// SenseVoice small 2024-07-17 «точный»: 4 бита блоками по 32; китайский, японский,
+/// корейский, кантонский и английский. Версия 2025-09-09 любую речь считает кантонской
+/// (tools/asr_quant/eval_sensevoice.py).
 pub const ASIAN: Pack = Pack {
-    id: "asian",
+    id: "asian-accurate",
+    family: "asian",
+    offered: true,
+    dir: "reever-sense-voice-int4-accurate",
+    languages: &["zh", "yue", "ja", "ko"],
+    covers: &["zh", "yue", "ja", "ko", "en"],
+    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-accurate.tar.bz2",
+    sha256: "afc9018d5d658ed946921cdb9fef95c3be25dcd16a027d7575bf3b0e0edeaf3a",
+    files: &["model.onnx", "tokens.txt"],
+};
+
+/// SenseVoice «лёгкий»: 4 бита блоками по 128 — меньше и быстрее, но ошибается чаще.
+pub const ASIAN_LIGHT: Pack = Pack {
+    id: "asian-light",
+    family: "asian",
+    offered: true,
+    dir: "reever-sense-voice-int4-light",
+    languages: &["zh", "yue", "ja", "ko"],
+    covers: &["zh", "yue", "ja", "ko", "en"],
+    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-light.tar.bz2",
+    sha256: "f7b83c8bbe50db2e12412502a9e41765358203b24b1a9e6d2946057a6c3d0c57",
+    files: &["model.onnx", "tokens.txt"],
+};
+
+/// SenseVoice 2024-07-17 int8 из релиза sherpa-onnx (Reever 0.4.4): уже скачанная работает.
+pub const ASIAN_INT8: Pack = Pack {
+    id: "asian-int8",
+    family: "asian",
+    offered: false,
     dir: "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17",
     languages: &["zh", "yue", "ja", "ko"],
     covers: &["zh", "yue", "ja", "ko", "en"],
@@ -61,6 +139,8 @@ pub const ASIAN: Pack = Pack {
 /// включены языки из обоих, — он решает, какой модели отдать фразу.
 pub const LID: Pack = Pack {
     id: "lid",
+    family: "lid",
+    offered: true,
     dir: "sherpa-onnx-whisper-base",
     languages: &[],
     covers: &[],
@@ -69,14 +149,17 @@ pub const LID: Pack = Pack {
     files: &["base-encoder.int8.onnx", "base-decoder.int8.onnx", "base-tokens.txt"],
 };
 
-pub const PACKS: &[&Pack] = &[&EUROPEAN, &ASIAN, &LID];
+/// Все варианты; внутри семьи — по убыванию предпочтения.
+pub const PACKS: &[&Pack] = &[
+    &EUROPEAN, &EUROPEAN_LIGHT, &EUROPEAN_INT8, &ASIAN, &ASIAN_LIGHT, &ASIAN_INT8, &LID,
+];
 
-/// Пакет, который нужен языку. Английский есть всегда, ему пакет не нужен.
-pub fn pack_for(language: &str) -> Option<&'static Pack> {
+/// Семья пакета, который нужен языку. Английский есть всегда, ему пакет не нужен.
+pub fn family_for(language: &str) -> Option<&'static str> {
     PACKS
         .iter()
-        .copied()
         .find(|pack| pack.languages.contains(&language))
+        .map(|pack| pack.family)
 }
 
 /// Самоназвание языка для журнала: «Deutsch», «中文».
@@ -147,6 +230,15 @@ impl ModelDirs {
     pub fn installed(&self, pack: &Pack) -> bool {
         self.find(pack.dir).is_some()
     }
+
+    /// Лучший установленный вариант семьи и его папка.
+    pub fn installed_variant(&self, family: &str) -> Option<(&'static Pack, PathBuf)> {
+        PACKS
+            .iter()
+            .copied()
+            .filter(|pack| pack.family == family)
+            .find_map(|pack| self.find(pack.dir).map(|dir| (pack, dir)))
+    }
 }
 
 /// `%LOCALAPPDATA%\com.troid.reever\models` — туда же качает установщик.
@@ -205,12 +297,12 @@ pub fn plan(languages: &[&'static str], dirs: &ModelDirs) -> ModelPlan {
     let mut groups: Vec<(&'static Pack, PathBuf, Vec<&'static str>)> = Vec::new();
     let mut missing = Vec::new();
     for &language in languages {
-        let Some(pack) = pack_for(language) else {
+        let Some(family) = family_for(language) else {
             continue;
         };
-        if let Some((_, _, served)) = groups.iter_mut().find(|(p, _, _)| p.id == pack.id) {
+        if let Some((_, _, served)) = groups.iter_mut().find(|(p, _, _)| p.family == family) {
             served.push(language);
-        } else if let Some(dir) = dirs.find(pack.dir) {
+        } else if let Some((pack, dir)) = dirs.installed_variant(family) {
             groups.push((pack, dir, vec![language]));
         } else {
             missing.push(language);
@@ -218,7 +310,7 @@ pub fn plan(languages: &[&'static str], dirs: &ModelDirs) -> ModelPlan {
     }
 
     let lid = if groups.len() > 1 {
-        dirs.find(LID.dir)
+        dirs.installed_variant(LID.family).map(|(_, dir)| dir)
     } else {
         None
     };
@@ -343,9 +435,23 @@ mod tests {
     }
 
     #[test]
+    fn a_variant_or_the_old_int8_serves_the_family() {
+        // Прежний int8 работает, пока не скачан вариант Reever; скачан — берётся он.
+        let (dirs, root) = fake_dirs(&[&EUROPEAN_INT8]);
+        assert_eq!(names(&plan(&["en", "ru"], &dirs)), [EUROPEAN_INT8.dir]);
+        let (dirs2, root2) = fake_dirs(&[&EUROPEAN_INT8, &EUROPEAN_LIGHT]);
+        assert_eq!(names(&plan(&["en", "ru"], &dirs2)), [EUROPEAN_LIGHT.dir]);
+        let (dirs3, root3) = fake_dirs(&[&EUROPEAN_LIGHT, &EUROPEAN]);
+        assert_eq!(names(&plan(&["en", "ru"], &dirs3)), [EUROPEAN.dir]);
+        for root in [root, root2, root3] {
+            let _ = std::fs::remove_dir_all(root);
+        }
+    }
+
+    #[test]
     fn installer_script_downloads_the_same_archives() {
         let script = include_str!("../windows/models.nsh");
-        for pack in PACKS {
+        for pack in PACKS.iter().filter(|pack| pack.offered) {
             assert!(script.contains(pack.url), "{}: адрес", pack.id);
             assert!(script.contains(pack.sha256), "{}: сумма", pack.id);
             assert!(script.contains(pack.dir), "{}: папка", pack.id);

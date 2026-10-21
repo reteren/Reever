@@ -710,7 +710,7 @@ mod tests {
             .unwrap_or_else(|| {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                     .join("resources/model")
-                    .join(crate::models::EUROPEAN.dir)
+                    .join(crate::models::EUROPEAN_INT8.dir)
             });
         let wav_path = PathBuf::from(env::var_os("ASR_TEST_WAV").expect("задайте ASR_TEST_WAV"));
         let wave = Wave::read(&wav_path.to_string_lossy()).expect("прочитать тестовый WAV");
@@ -739,7 +739,7 @@ mod tests {
             .unwrap_or_else(|| {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                     .join("resources/model")
-                    .join(crate::models::EUROPEAN.dir)
+                    .join(crate::models::EUROPEAN_INT8.dir)
             });
         let wav_path = PathBuf::from(env::var_os("ASR_TEST_WAV").expect("задайте ASR_TEST_WAV"));
         let wave = Wave::read(&wav_path.to_string_lossy()).expect("прочитать тестовый WAV");

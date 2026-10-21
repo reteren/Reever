@@ -28,7 +28,8 @@ import sys
 
 # Папка модели — аргументом; по умолчанию исходная SenseVoice 2024-07-17 (версия 2025-09-09
 # определяет любую речь как кантонскую).
-SENSE = (Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "data" / "sensevoice" / "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17") / "model.int8.onnx"
+SENSE = (Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "data" / "sensevoice" / "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
+SENSE = next(SENSE.glob("model*.onnx"))
 V3 = Path(os.environ["LOCALAPPDATA"]) / "com.troid.reever" / "models" / "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8"
 LANGS = ["cmn_hans_cn", "yue_hant_hk", "ja_jp", "ko_kr", "en_us"]
 PER_LANG = 40
@@ -96,8 +97,10 @@ def run(name: str, factory, langs) -> None:
 
 
 def main() -> None:
-    run("SenseVoice small int8", lambda: sherpa_onnx.OfflineRecognizer.from_sense_voice(
+    run(f"SenseVoice {SENSE.parent.name}", lambda: sherpa_onnx.OfflineRecognizer.from_sense_voice(
         model=str(SENSE), tokens=str(SENSE.parent / "tokens.txt"), num_threads=4, use_itn=False), LANGS)
+    if len(sys.argv) > 1:
+        return
     run("Parakeet v3 (точный)", lambda: sherpa_onnx.OfflineRecognizer.from_transducer(
         encoder=str(V3 / "encoder.int8.onnx"), decoder=str(V3 / "decoder.int8.onnx"), joiner=str(V3 / "joiner.int8.onnx"),
         tokens=str(V3 / "tokens.txt"), model_type="nemo_transducer", num_threads=4), ["en_us"])

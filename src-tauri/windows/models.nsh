@@ -11,17 +11,36 @@
 ; Модели кладутся в %LOCALAPPDATA%\com.troid.reever\models: обновление Reever их не
 ; трогает, а «удалить данные приложения» в деинсталляторе удаляет вместе с настройками.
 
-!define REEVER_EUROPEAN_DIR "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8"
-!define REEVER_EUROPEAN_URL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
-!define REEVER_EUROPEAN_SHA "5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf"
-!define REEVER_EUROPEAN_FILES "encoder.int8.onnx decoder.int8.onnx joiner.int8.onnx tokens.txt"
-!define REEVER_EUROPEAN_MB 465
+; Варианты моделей — архивы Reever (tools/asr_quant/pack_models.py): «точный» и «лёгкий».
+!define REEVER_EU_ACC_DIR "reever-parakeet-v3-int4-accurate"
+!define REEVER_EU_ACC_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-accurate.tar.bz2"
+!define REEVER_EU_ACC_SHA "98e063dad3d03b0b06ecea86010bda232b62b767e5807a8d0e7254d05de274bf"
+!define REEVER_EU_ACC_FILES "encoder.onnx decoder.onnx joiner.onnx tokens.txt"
+!define REEVER_EU_ACC_MB 573
 
-!define REEVER_ASIAN_DIR "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
-!define REEVER_ASIAN_URL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
-!define REEVER_ASIAN_SHA "7d1efa2138a65b0b488df37f8b89e3d91a60676e416f515b952358d83dfd347e"
-!define REEVER_ASIAN_FILES "model.int8.onnx tokens.txt"
-!define REEVER_ASIAN_MB 155
+!define REEVER_EU_LIGHT_DIR "reever-parakeet-v3-int4-light"
+!define REEVER_EU_LIGHT_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-light.tar.bz2"
+!define REEVER_EU_LIGHT_SHA "0df11cfd2d039caa66a5327e16ac0130128f8a979142e8abe7b970412b18d83b"
+!define REEVER_EU_LIGHT_FILES "encoder.onnx decoder.onnx joiner.onnx tokens.txt"
+!define REEVER_EU_LIGHT_MB 350
+
+!define REEVER_AS_ACC_DIR "reever-sense-voice-int4-accurate"
+!define REEVER_AS_ACC_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-accurate.tar.bz2"
+!define REEVER_AS_ACC_SHA "afc9018d5d658ed946921cdb9fef95c3be25dcd16a027d7575bf3b0e0edeaf3a"
+!define REEVER_AS_ACC_FILES "model.onnx tokens.txt"
+!define REEVER_AS_ACC_MB 139
+
+!define REEVER_AS_LIGHT_DIR "reever-sense-voice-int4-light"
+!define REEVER_AS_LIGHT_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-light.tar.bz2"
+!define REEVER_AS_LIGHT_SHA "f7b83c8bbe50db2e12412502a9e41765358203b24b1a9e6d2946057a6c3d0c57"
+!define REEVER_AS_LIGHT_FILES "model.onnx tokens.txt"
+!define REEVER_AS_LIGHT_MB 113
+
+; Прежние int8-архивы sherpa-onnx: уже скачанный пакет тоже считается установленным.
+!define REEVER_EU_OLD_DIR "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8"
+!define REEVER_EU_OLD_FILES "encoder.int8.onnx decoder.int8.onnx joiner.int8.onnx tokens.txt"
+!define REEVER_AS_OLD_DIR "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
+!define REEVER_AS_OLD_FILES "model.int8.onnx tokens.txt"
 
 !define REEVER_LID_DIR "sherpa-onnx-whisper-base"
 !define REEVER_LID_URL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2"
@@ -34,11 +53,15 @@
 !define REEVER_HOOKS_DIR "${__FILEDIR__}"
 
 Var ReeverModelsRoot
-Var ReeverEuropeanBox
-Var ReeverAsianBox
+Var ReeverEuAccBox
+Var ReeverEuLightBox
+Var ReeverAsAccBox
+Var ReeverAsLightBox
 Var ReeverLidBox
-Var ReeverWantEuropean
-Var ReeverWantAsian
+Var ReeverWantEuAcc
+Var ReeverWantEuLight
+Var ReeverWantAsAcc
+Var ReeverWantAsLight
 Var ReeverWantLid
 Var ReeverFailed
 Var ReeverUiBoxes
@@ -182,65 +205,124 @@ FunctionEnd
       Abort
     ${EndIf}
 
-    ${NSD_CreateCheckbox} 0 0u 100% 12u "$(reeverEuropean)"
-    Pop $ReeverEuropeanBox
-    ${NSD_CreateLabel} 12u 13u -12u 18u "$(reeverEuropeanInfo)"
+    ; Два блока: шапка семьи и два варианта (выбрать можно один), ниже — определитель языка.
+    ${NSD_CreateLabel} 0 0u 100% 10u "$(reeverEuropean)"
+    Pop $0
+    ${NSD_CreateCheckbox} 8u 10u -8u 11u "$(reeverEuAccurate)"
+    Pop $ReeverEuAccBox
+    ${NSD_CreateCheckbox} 8u 21u -8u 11u "$(reeverEuLight)"
+    Pop $ReeverEuLightBox
+    ${NSD_CreateLabel} 20u 33u -20u 17u "$(reeverEuropeanInfo)"
     Pop $0
 
-    ${NSD_CreateCheckbox} 0 34u 100% 12u "$(reeverAsian)"
-    Pop $ReeverAsianBox
-    ${NSD_CreateLabel} 12u 47u -12u 18u "$(reeverAsianInfo)"
+    ${NSD_CreateLabel} 0 52u 100% 10u "$(reeverAsian)"
     Pop $0
+    ${NSD_CreateCheckbox} 8u 62u -8u 11u "$(reeverAsAccurate)"
+    Pop $ReeverAsAccBox
+    ${NSD_CreateCheckbox} 8u 73u -8u 11u "$(reeverAsLight)"
+    Pop $ReeverAsLightBox
 
-    ${NSD_CreateCheckbox} 0 68u 100% 12u "$(reeverLid)"
+    ${NSD_CreateCheckbox} 0 88u 100% 11u "$(reeverLid)"
     Pop $ReeverLidBox
-    ${NSD_CreateLabel} 12u 81u -12u 18u "$(reeverLidInfo)"
+    ${NSD_CreateLabel} 12u 99u -12u 14u "$(reeverLidInfo)"
     Pop $0
 
-    ${NSD_CreateLabel} 0 106u 100% 26u "$(reeverModelsNote)"
+    ${NSD_CreateLabel} 0 114u 100% 26u "$(reeverModelsNote)"
     Pop $0
 
-    ${If} $ReeverWantEuropean = 1
-      ${NSD_Check} $ReeverEuropeanBox
+    ${If} $ReeverWantEuAcc = 1
+      ${NSD_Check} $ReeverEuAccBox
     ${EndIf}
-    ${If} $ReeverWantAsian = 1
-      ${NSD_Check} $ReeverAsianBox
+    ${If} $ReeverWantEuLight = 1
+      ${NSD_Check} $ReeverEuLightBox
+    ${EndIf}
+    ${If} $ReeverWantAsAcc = 1
+      ${NSD_Check} $ReeverAsAccBox
+    ${EndIf}
+    ${If} $ReeverWantAsLight = 1
+      ${NSD_Check} $ReeverAsLightBox
     ${EndIf}
     ${If} $ReeverWantLid = 1
       ${NSD_Check} $ReeverLidBox
     ${EndIf}
-    !insertmacro REEVER_MARK_INSTALLED $ReeverEuropeanBox "${REEVER_EUROPEAN_DIR}" "${REEVER_EUROPEAN_FILES}" "$(reeverEuropean)"
-    !insertmacro REEVER_MARK_INSTALLED $ReeverAsianBox "${REEVER_ASIAN_DIR}" "${REEVER_ASIAN_FILES}" "$(reeverAsian)"
+    !insertmacro REEVER_MARK_INSTALLED $ReeverEuAccBox "${REEVER_EU_ACC_DIR}" "${REEVER_EU_ACC_FILES}" "$(reeverEuAccurate)"
+    !insertmacro REEVER_MARK_INSTALLED $ReeverEuLightBox "${REEVER_EU_LIGHT_DIR}" "${REEVER_EU_LIGHT_FILES}" "$(reeverEuLight)"
+    !insertmacro REEVER_MARK_INSTALLED $ReeverAsAccBox "${REEVER_AS_ACC_DIR}" "${REEVER_AS_ACC_FILES}" "$(reeverAsAccurate)"
+    !insertmacro REEVER_MARK_INSTALLED $ReeverAsLightBox "${REEVER_AS_LIGHT_DIR}" "${REEVER_AS_LIGHT_FILES}" "$(reeverAsLight)"
     !insertmacro REEVER_MARK_INSTALLED $ReeverLidBox "${REEVER_LID_DIR}" "${REEVER_LID_FILES}" "$(reeverLid)"
 
-    ${NSD_OnClick} $ReeverEuropeanBox ReeverPackToggled
-    ${NSD_OnClick} $ReeverAsianBox ReeverPackToggled
+    ${NSD_OnClick} $ReeverEuAccBox ReeverEuAccToggled
+    ${NSD_OnClick} $ReeverEuLightBox ReeverEuLightToggled
+    ${NSD_OnClick} $ReeverAsAccBox ReeverAsAccToggled
+    ${NSD_OnClick} $ReeverAsLightBox ReeverAsLightToggled
     nsDialogs::Show
   FunctionEnd
 
-  ; Отмечены оба пакета — без определителя языка второй работать не будет: ставим
+  ; Внутри семьи — один вариант: отмеченный снимает соседний (если тот не скачан и не
+  ; заблокирован). Затем — общая проверка определителя языка.
+  !macro REEVER_EXCLUSIVE NAME THIS OTHER
+    Function ${NAME}
+      Pop $0
+      ${NSD_GetState} ${THIS} $1
+      ${If} $1 == ${BST_CHECKED}
+        System::Call "user32::IsWindowEnabled(p ${OTHER}) i .r2"
+        ${If} $2 <> 0
+          ${NSD_Uncheck} ${OTHER}
+        ${EndIf}
+      ${EndIf}
+      Call ReeverPackToggled
+    FunctionEnd
+  !macroend
+  !insertmacro REEVER_EXCLUSIVE ReeverEuAccToggled $ReeverEuAccBox $ReeverEuLightBox
+  !insertmacro REEVER_EXCLUSIVE ReeverEuLightToggled $ReeverEuLightBox $ReeverEuAccBox
+  !insertmacro REEVER_EXCLUSIVE ReeverAsAccToggled $ReeverAsAccBox $ReeverAsLightBox
+  !insertmacro REEVER_EXCLUSIVE ReeverAsLightToggled $ReeverAsLightBox $ReeverAsAccBox
+
+  ; Отмечены обе семьи — без определителя языка вторая работать не будет: ставим
   ; галочку за пользователя, снять её можно.
   Function ReeverPackToggled
-    Pop $0
-    ${NSD_GetState} $ReeverEuropeanBox $1
-    ${NSD_GetState} $ReeverAsianBox $2
+    ${NSD_GetState} $ReeverEuAccBox $1
+    ${NSD_GetState} $ReeverEuLightBox $2
+    ${NSD_GetState} $ReeverAsAccBox $3
+    ${NSD_GetState} $ReeverAsLightBox $4
     ${If} $1 == ${BST_CHECKED}
-    ${AndIf} $2 == ${BST_CHECKED}
-      ${NSD_Check} $ReeverLidBox
+    ${OrIf} $2 == ${BST_CHECKED}
+      ${If} $3 == ${BST_CHECKED}
+      ${OrIf} $4 == ${BST_CHECKED}
+        ${NSD_Check} $ReeverLidBox
+      ${EndIf}
     ${EndIf}
   FunctionEnd
 
   ; Без языкового пакета дальше нельзя: Reever ставится ради распознавания речи.
   ; Уже скачанный пакет отмечен и тоже считается.
   Function ReeverModelsLeave
-    ${NSD_GetState} $ReeverEuropeanBox $ReeverWantEuropean
-    ${NSD_GetState} $ReeverAsianBox $ReeverWantAsian
+    ${NSD_GetState} $ReeverEuAccBox $ReeverWantEuAcc
+    ${NSD_GetState} $ReeverEuLightBox $ReeverWantEuLight
+    ${NSD_GetState} $ReeverAsAccBox $ReeverWantAsAcc
+    ${NSD_GetState} $ReeverAsLightBox $ReeverWantAsLight
     ${NSD_GetState} $ReeverLidBox $ReeverWantLid
-    ${If} $ReeverWantEuropean != ${BST_CHECKED}
-    ${AndIf} $ReeverWantAsian != ${BST_CHECKED}
-      MessageBox MB_ICONEXCLAMATION|MB_OK "$(reeverNeedPack)"
-      Abort
+    ${If} $ReeverWantEuAcc == ${BST_CHECKED}
+    ${OrIf} $ReeverWantEuLight == ${BST_CHECKED}
+    ${OrIf} $ReeverWantAsAcc == ${BST_CHECKED}
+    ${OrIf} $ReeverWantAsLight == ${BST_CHECKED}
+      Return
     ${EndIf}
+    ; Прежний int8-пакет, уже скачанный, тоже годится.
+    StrCpy $0 "${REEVER_EU_OLD_DIR}"
+    StrCpy $1 "${REEVER_EU_OLD_FILES}"
+    Call ReeverPackInstalled
+    ${If} $2 = 1
+      Return
+    ${EndIf}
+    StrCpy $0 "${REEVER_AS_OLD_DIR}"
+    StrCpy $1 "${REEVER_AS_OLD_FILES}"
+    Call ReeverPackInstalled
+    ${If} $2 = 1
+      Return
+    ${EndIf}
+    MessageBox MB_ICONEXCLAMATION|MB_OK "$(reeverNeedPack)"
+    Abort
   FunctionEnd
 !macroend
 
@@ -403,14 +485,20 @@ FunctionEnd
     FileClose $1
   ${EndIf}
   StrCpy $ReeverFailed ""
-  ${If} $ReeverWantEuropean = ${BST_CHECKED}
-    !insertmacro REEVER_FETCH "Parakeet v3" "${REEVER_EUROPEAN_DIR}" "${REEVER_EUROPEAN_URL}" "${REEVER_EUROPEAN_SHA}" "${REEVER_EUROPEAN_MB}" "${REEVER_EUROPEAN_FILES}"
+  ${If} $ReeverWantEuAcc = ${BST_CHECKED}
+    !insertmacro REEVER_FETCH "Parakeet v3" "${REEVER_EU_ACC_DIR}" "${REEVER_EU_ACC_URL}" "${REEVER_EU_ACC_SHA}" "${REEVER_EU_ACC_MB}" "${REEVER_EU_ACC_FILES}"
+  ${EndIf}
+  ${If} $ReeverWantEuLight = ${BST_CHECKED}
+    !insertmacro REEVER_FETCH "Parakeet v3" "${REEVER_EU_LIGHT_DIR}" "${REEVER_EU_LIGHT_URL}" "${REEVER_EU_LIGHT_SHA}" "${REEVER_EU_LIGHT_MB}" "${REEVER_EU_LIGHT_FILES}"
   ${EndIf}
   ; SenseVoice 2025-09-09 любую речь считала кантонской — её заменила 2024-07-17;
   ; папка старой версии больше не нужна.
   RMDir /r "$ReeverModelsRoot\sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09"
-  ${If} $ReeverWantAsian = ${BST_CHECKED}
-    !insertmacro REEVER_FETCH "SenseVoice" "${REEVER_ASIAN_DIR}" "${REEVER_ASIAN_URL}" "${REEVER_ASIAN_SHA}" "${REEVER_ASIAN_MB}" "${REEVER_ASIAN_FILES}"
+  ${If} $ReeverWantAsAcc = ${BST_CHECKED}
+    !insertmacro REEVER_FETCH "SenseVoice" "${REEVER_AS_ACC_DIR}" "${REEVER_AS_ACC_URL}" "${REEVER_AS_ACC_SHA}" "${REEVER_AS_ACC_MB}" "${REEVER_AS_ACC_FILES}"
+  ${EndIf}
+  ${If} $ReeverWantAsLight = ${BST_CHECKED}
+    !insertmacro REEVER_FETCH "SenseVoice" "${REEVER_AS_LIGHT_DIR}" "${REEVER_AS_LIGHT_URL}" "${REEVER_AS_LIGHT_SHA}" "${REEVER_AS_LIGHT_MB}" "${REEVER_AS_LIGHT_FILES}"
   ${EndIf}
   ${If} $ReeverWantLid = ${BST_CHECKED}
     !insertmacro REEVER_FETCH "Whisper base" "${REEVER_LID_DIR}" "${REEVER_LID_URL}" "${REEVER_LID_SHA}" "${REEVER_LID_MB}" "${REEVER_LID_FILES}"
