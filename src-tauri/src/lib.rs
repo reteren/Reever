@@ -414,6 +414,7 @@ pub fn run() {
             commands_api::list_sound_packs,
             commands_api::language_models,
             commands_api::get_grammar,
+            commands_api::inactive_triggers,
             commands_api::save_grammar,
             commands_api::reset_grammar,
             commands_api::save_action,

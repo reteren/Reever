@@ -89,6 +89,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'list_actions': return [];
     case 'list_apps': return [];
     case 'list_sound_packs': return ['classic'];
+    case 'inactive_triggers': return [];
     case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
     case 'index_status': return {state:'ready',entries:0,bytes:0};
@@ -278,6 +279,9 @@ window.addEventListener('keydown',(e)=>{
 // grammarOpen — что раскрыто: id команды, 'cancel' (слова отмены) или 'general' (кнопка
 // «Изменить»: wake-слова, новые поиски и чаты, сброс). Открыт один редактор за раз.
 let grammar=defaultGrammarPreview(), grammarDraft=null, grammarOpen=null;
+// Встроенные фразы языков, которые сейчас не распознаются: в редакторе не видны, но не
+// удаляются (grammar.rs: inactive_triggers).
+let hiddenTriggers=new Set();
 const grammarEditor=$('#grammarEditor');
 // Языки распознавания — как RECOGNITION_LANGUAGES в config.rs: английский включён
 // всегда, остальным нужен скачанный языковой пакет (models.rs). Новый язык — строка
@@ -369,7 +373,8 @@ function placeGrammarEditor(){
   grammarEditor.hidden=!grammarDraft;
 }
 // Открыть редактор (key) или закрыть (null). Несохранённое в прежнем редакторе теряется.
-function openGrammar(key){
+async function openGrammar(key){
+  if(key){ try{ hiddenTriggers=new Set(await invoke('inactive_triggers')||[]); }catch(e){ reportError('inactiveTriggers',e); } }
   grammarOpen=key;
   grammarDraft=key?cloneValue(grammar):null;
   if(grammarDraft) renderGrammarEditor();
@@ -439,13 +444,14 @@ function grammarIntentFieldset(intent){
     const phraseLabel=el('div',{className:'fld grammar-field-label',textContent:t('grammar.phrases')}); group.append(phraseLabel);
     const getTriggers=()=>intent.triggers||[];
     const setTriggers=values=>intent.triggers=values;
-    const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim());
+    const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim()&&!hiddenTriggers.has(value));
     const triggerHost=el('div'); group.append(triggerHost);
     const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='web_chat'||intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')?1:0;
     if(minimumTriggers) triggerHost.append(el('div',{className:'hint grammar-small-note'}));
     addChipEditor(triggerHost,visibleTriggers,values=>{
       const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());
-      intent.triggers=hasBare?['',...values]:values;
+      const hidden=getTriggers().filter(value=>hiddenTriggers.has(value));
+      intent.triggers=[...(hasBare?['']:[]),...values,...hidden];
     },'phrase',minimumTriggers);
     if(intent.kind==='launch'){
       const bareRow=el('label',{className:'cbrow grammar-bare-launch'});

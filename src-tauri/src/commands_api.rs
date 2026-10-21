@@ -27,6 +27,16 @@ pub fn get_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
         .unwrap_or_else(|_| Grammar::defaults())
 }
 
+/// Встроенные фразы команд на языках, которые сейчас не распознаются, — редактор их прячет.
+#[tauri::command]
+pub fn inactive_triggers(state: State<'_, Arc<SharedState>>) -> Vec<String> {
+    state
+        .grammar
+        .lock()
+        .map(|grammar| grammar.inactive_triggers())
+        .unwrap_or_default()
+}
+
 /// Проверить и применить грамматику сразу, затем сохранить её для следующего запуска.
 #[tauri::command]
 pub fn save_grammar(state: State<'_, Arc<SharedState>>, grammar: Grammar) -> Result<(), String> {

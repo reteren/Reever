@@ -1139,6 +1139,26 @@ impl Grammar {
         self.match_trigger_for(text, active.as_deref())
     }
 
+    /// Встроенные фразы языков, которые сейчас не распознаются: редактор их не показывает
+    /// (в грамматике они остаются и вернутся, когда язык включат).
+    pub fn inactive_triggers(&self) -> Vec<String> {
+        let active = ACTIVE_LANGUAGES.read().ok().and_then(|active| active.clone());
+        self.inactive_triggers_for(active.as_deref())
+    }
+
+    fn inactive_triggers_for(&self, active: Option<&[String]>) -> Vec<String> {
+        let mut hidden = Vec::new();
+        for trigger in self.intents.iter().flat_map(|intent| &intent.triggers) {
+            if !trigger.trim().is_empty()
+                && !trigger_active(&normalize(trigger), active)
+                && !hidden.contains(trigger)
+            {
+                hidden.push(trigger.clone());
+            }
+        }
+        hidden
+    }
+
     /// `match_trigger` для заданных языков (`None` — все): тесты не трогают общее состояние.
     fn match_trigger_for(&self, text: &str, active: Option<&[String]>) -> Option<TriggerMatch<'_>> {
         let normalized = strip_leading_fillers(&normalize(text));
@@ -1552,6 +1572,16 @@ mod tests {
     use super::{Grammar, Intent, IntentKind};
     use crate::actions::Action;
     use crate::config::Settings;
+
+    #[test]
+    fn editor_hides_builtin_phrases_of_inactive_languages() {
+        let grammar = Grammar::defaults();
+        let active = vec!["en".to_string(), "ru".to_string()];
+        let hidden = grammar.inactive_triggers_for(Some(&active));
+        assert!(hidden.iter().any(|phrase| phrase == "öffne"), "{hidden:?}");
+        assert!(!hidden.iter().any(|phrase| phrase == "открой" || phrase == "open"));
+        assert!(grammar.inactive_triggers_for(None).is_empty());
+    }
 
     /// Только русские фразы: английские (версия 9) проверяются отдельно.
     fn russian(triggers: &[String]) -> Vec<&str> {
