@@ -136,9 +136,11 @@ pub struct Settings {
     #[serde(default = "default_ui_languages")]
     pub ui_languages: Vec<String>,
     /// Через сколько секунд простоя выгружать тяжёлые модели распознавания (в покое
-    /// остаётся только детектор «ривер»); 0 — не выгружать никогда.
-    #[serde(default = "default_models_unload_s")]
-    pub models_unload_s: u32,
+    /// остаётся только детектор «ривер»): 0 — сразу после команды, больше
+    /// `MODELS_UNLOAD_MAX_S` — никогда. Прежний ключ `models_unload_s`, где 0 значило
+    /// «никогда», не читается: все переходят на 10 с.
+    #[serde(default = "default_models_unload_after_s")]
+    pub models_unload_after_s: u32,
     /// Свой индекс дисков для «найди …» и «папка …». Выключен — ни снимка в памяти, ни
     /// фоновых потоков, но и искать файлы голосом нечем.
     #[serde(default = "default_true")]
@@ -158,8 +160,11 @@ pub struct Settings {
 fn default_dictation_english_level() -> u8 {
     crate::anglicism::DEFAULT_STRENGTH
 }
-fn default_models_unload_s() -> u32 {
-    60
+/// Наибольшая задержка выгрузки; всё, что больше, — «не выгружать».
+pub const MODELS_UNLOAD_MAX_S: u32 = 120;
+
+fn default_models_unload_after_s() -> u32 {
+    10
 }
 fn default_mascot_mode() -> String {
     "always".into()
@@ -381,7 +386,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("endpoint_ms", endpoint_ms, u64);
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
-    restore!("models_unload_s", models_unload_s, u32);
+    restore!("models_unload_after_s", models_unload_after_s, u32);
     restore!("local_index", local_index, bool);
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
@@ -441,7 +446,7 @@ impl Default for Settings {
             ui_language: default_ui_language(),
             ui_languages: default_ui_languages(),
             languages: default_languages(),
-            models_unload_s: default_models_unload_s(),
+            models_unload_after_s: default_models_unload_after_s(),
             local_index: true,
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),

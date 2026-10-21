@@ -190,7 +190,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         );
     }
 
-    let lazy_loading = s.models_unload_s > 0;
+    let lazy_loading = s.models_unload_after_s <= crate::config::MODELS_UNLOAD_MAX_S;
     let asr = if lazy_loading {
         ui_log(
             app,
@@ -537,8 +537,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         if lazy_loading
             && asr.is_loaded()
             && load_rx.is_none()
-            && s.models_unload_s > 0
-            && last_activity.elapsed() >= Duration::from_secs(s.models_unload_s as u64)
+            && last_activity.elapsed() >= Duration::from_secs(s.models_unload_after_s as u64)
             && engine.can_keep_warm()
             && worker.confirm_op.is_none()
             && worker.calibrating.is_none()

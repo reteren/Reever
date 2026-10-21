@@ -2,7 +2,7 @@ const tauri = window.__TAURI__;
 const previewSettings={
   wake_words:['ривер','ревер','ривьер'],
   match_threshold:0.7,
-  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_s:60,local_index:true,
+  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_after_s:10,local_index:true,
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
@@ -540,7 +540,7 @@ const GROUPS=[
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[
-    ['asr_threads','number'],['models_unload_s','number'],['vad_threshold','number'],['wake_pause_ms','number'],
+    ['asr_threads','number'],['models_unload_after_s','unload'],['vad_threshold','number'],['wake_pause_ms','number'],
     ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number']]],
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_english_level','strength'],
@@ -663,6 +663,19 @@ function fieldEl(key,type,opts,when='save'){
     row.append(inp,out); wrap.append(row,about);
     return wrap;
   }
+  else if(type==='unload'){
+    // 0 — сразу после команды, 1–120 с, крайнее правое положение — не выгружать.
+    const NEVER=121;
+    const row=el('div',{className:'mascot-scale'});
+    const value=Math.min(NEVER,Math.max(0,Math.round(Number(settingsObj[key]??10)||0)));
+    inp=el('input',{type:'range',min:'0',max:String(NEVER),step:'1',value:String(value)});
+    const label=v=>v>=NEVER?t(`settings.${key}.never`):v===0?t(`settings.${key}.now`):t(`settings.${key}.seconds`,{n:v});
+    const out=el('span',{className:'mascot-scale-value',textContent:label(value)});
+    inp.oninput=()=>{ const v=Number(inp.value); settingsObj[key]=v; out.textContent=label(v); };
+    row.append(inp,out); wrap.append(row);
+    if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+    return wrap;
+  }
   else if(type==='select'){ inp=el('select'); for(const o of opts){const optionKey=`settings.${key}.${o}`;const label=I18N.has(optionKey)?t(optionKey):I18N.has(`mode.${o}`)?t(`mode.${o}`):o;const op=el('option',{value:o,textContent:label});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }
   else if(type==='hotkey'){
     inp=el('button',{type:'button',className:'sm'}); inp.style.minWidth='150px';
@@ -697,7 +710,7 @@ function fieldEl(key,type,opts,when='save'){
       window.addEventListener('keydown',onKey,true);
     };
   }
-  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } if(key==='models_unload_s'){ inp.step='1'; inp.min='0'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
+  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
   wrap.append(inp);
   if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
   if(key==='local_index'){
