@@ -17,11 +17,11 @@
 !define REEVER_EUROPEAN_FILES "encoder.int8.onnx decoder.int8.onnx joiner.int8.onnx tokens.txt"
 !define REEVER_EUROPEAN_MB 465
 
-!define REEVER_ASIAN_DIR "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09"
-!define REEVER_ASIAN_URL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09.tar.bz2"
-!define REEVER_ASIAN_SHA "7305f7905bfcf77fa0b39388a313f3da35c68d971661a65475b56fb2162c8e63"
+!define REEVER_ASIAN_DIR "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
+!define REEVER_ASIAN_URL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
+!define REEVER_ASIAN_SHA "7d1efa2138a65b0b488df37f8b89e3d91a60676e416f515b952358d83dfd347e"
 !define REEVER_ASIAN_FILES "model.int8.onnx tokens.txt"
-!define REEVER_ASIAN_MB 158
+!define REEVER_ASIAN_MB 155
 
 !define REEVER_LID_DIR "sherpa-onnx-whisper-base"
 !define REEVER_LID_URL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2"
@@ -406,6 +406,9 @@ FunctionEnd
   ${If} $ReeverWantEuropean = ${BST_CHECKED}
     !insertmacro REEVER_FETCH "Parakeet v3" "${REEVER_EUROPEAN_DIR}" "${REEVER_EUROPEAN_URL}" "${REEVER_EUROPEAN_SHA}" "${REEVER_EUROPEAN_MB}" "${REEVER_EUROPEAN_FILES}"
   ${EndIf}
+  ; SenseVoice 2025-09-09 любую речь считала кантонской — её заменила 2024-07-17;
+  ; папка старой версии больше не нужна.
+  RMDir /r "$ReeverModelsRoot\sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09"
   ${If} $ReeverWantAsian = ${BST_CHECKED}
     !insertmacro REEVER_FETCH "SenseVoice" "${REEVER_ASIAN_DIR}" "${REEVER_ASIAN_URL}" "${REEVER_ASIAN_SHA}" "${REEVER_ASIAN_MB}" "${REEVER_ASIAN_FILES}"
   ${EndIf}

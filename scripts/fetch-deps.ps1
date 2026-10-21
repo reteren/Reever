@@ -51,7 +51,7 @@ $BaseModels = @(
 $PackModels = @{
     european = @{ Name = 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8'
                   Files = @('encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx', 'tokens.txt') }
-    asian    = @{ Name = 'sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09'
+    asian    = @{ Name = 'sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17'
                   Files = @('model.int8.onnx', 'tokens.txt') }
     lid      = @{ Name = 'sherpa-onnx-whisper-base'
                   Files = @('base-encoder.int8.onnx', 'base-decoder.int8.onnx', 'base-tokens.txt') }

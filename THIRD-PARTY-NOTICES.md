@@ -42,7 +42,7 @@ sherpa-onnx (`src-tauri/windows/models.nsh`) в `%LOCALAPPDATA%\com.troid.reever
 
 ### SenseVoice Small (китайский, японский, корейский)
 
-- **Компонент**: `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09`
+- **Компонент**: `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17`
 - **Лицензия**: код SenseVoice — MIT (Copyright (c) 2025 FunASR); веса модели — по лицензии модели
   FunAudioLLM («model-license» в карточке модели).
 - **Источник**: https://huggingface.co/FunAudioLLM/SenseVoiceSmall, https://github.com/FunAudioLLM/SenseVoice

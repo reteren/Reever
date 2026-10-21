@@ -44,14 +44,16 @@ pub const EUROPEAN: Pack = Pack {
     files: &["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"],
 };
 
-/// SenseVoice small: китайский, японский, корейский, кантонский и английский.
+/// SenseVoice small: китайский, японский, корейский, кантонский и английский. Версия
+/// 2024-07-17: в 2025-09-09 модель любую речь определяет как кантонскую и японский,
+/// корейский, английский пишет как попало (tools/asr_quant/eval_sensevoice.py).
 pub const ASIAN: Pack = Pack {
     id: "asian",
-    dir: "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09",
+    dir: "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17",
     languages: &["zh", "yue", "ja", "ko"],
     covers: &["zh", "yue", "ja", "ko", "en"],
-    url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09.tar.bz2",
-    sha256: "7305f7905bfcf77fa0b39388a313f3da35c68d971661a65475b56fb2162c8e63",
+    url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+    sha256: "7d1efa2138a65b0b488df37f8b89e3d91a60676e416f515b952358d83dfd347e",
     files: &["model.int8.onnx", "tokens.txt"],
 };
 
