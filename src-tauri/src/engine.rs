@@ -1290,7 +1290,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     // после загрузки) или один шум: подтверждать нечего, в журнал не пишем.
                     if !timed.text.trim().is_empty() {
                         out.push(EngineEvent::Log(
-                            "wake: the detector fired, but the main model did not confirm the wake word; phrase ignored".into(),
+                            format!(
+                                "wake: the detector fired, but the main model did not confirm the wake word; phrase ignored (heard «{}»)",
+                                timed.text.trim()
+                            )
+                            .into(),
                         ));
                     }
                     self.spot_age = None;

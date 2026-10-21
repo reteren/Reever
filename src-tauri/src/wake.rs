@@ -132,6 +132,32 @@ impl AcousticWakeSpotter {
 
 impl WakeSpotter for AcousticWakeSpotter {
     fn feed(&mut self, pcm: &[i16]) -> bool {
+        // Кусками по 20 мс: громкость слова берётся там, где сработала сеть, даже когда
+        // после загрузки моделей приходит сразу несколько секунд звука.
+        let mut spotted = false;
+        for piece in pcm.chunks(320) {
+            spotted |= self.feed_piece(piece);
+        }
+        spotted
+    }
+
+    fn reset(&mut self) {
+        self.kws.reset();
+        self.run = 0;
+        self.peak = 0.0;
+        self.fired = false;
+        self.quiet = 0;
+    }
+
+    fn set_wake_words(&mut self, _wake_words: &[String]) {}
+
+    fn take_note(&mut self) -> Option<String> {
+        self.note.take()
+    }
+}
+
+impl AcousticWakeSpotter {
+    fn feed_piece(&mut self, pcm: &[i16]) -> bool {
         self.buffer.clear();
         self.buffer
             .extend(pcm.iter().map(|sample| *sample as f32 / 32_768.0));
@@ -166,19 +192,5 @@ impl WakeSpotter for AcousticWakeSpotter {
             }
         }
         spotted
-    }
-
-    fn reset(&mut self) {
-        self.kws.reset();
-        self.run = 0;
-        self.peak = 0.0;
-        self.fired = false;
-        self.quiet = 0;
-    }
-
-    fn set_wake_words(&mut self, _wake_words: &[String]) {}
-
-    fn take_note(&mut self) -> Option<String> {
-        self.note.take()
     }
 }
