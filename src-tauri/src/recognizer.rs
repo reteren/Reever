@@ -104,7 +104,9 @@ impl Transcriber for LazyAsr {
 }
 
 /// Загруженные модели и ошибка определителя языка, если он не загрузился.
-type LoadedModels = anyhow::Result<(AsrSet, Option<String>)>;
+/// Модели распознавания, ошибка определителя языка и словарь англицизмов (если он нужен):
+/// словарь грузится вместе с моделями и живёт столько же.
+type LoadedModels = anyhow::Result<(AsrSet, Option<String>, Option<anyhow::Result<Anglicisms>>)>;
 
 #[derive(Clone, Copy)]
 enum LoadReason {
@@ -232,7 +234,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     engine.set_english_primary(true);
     log_languages(app, cfg);
     crate::grammar::set_active_languages(&cfg.models.languages());
-    enable_anglicisms(app, cfg, &mut engine);
+    if !lazy_loading {
+        install_anglicisms(app, cfg, &mut engine, load_anglicisms(cfg));
+    }
     enable_wake_spotter(app, cfg, &mut engine);
     // Один раз подготовить оптимизированные графы моделей (ortopt.rs): загрузка большой
     // модели после этого быстрее. Не сразу — пусть сначала запустится всё остальное.
@@ -462,10 +466,11 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         clear_recent_audio(&mut recent_chunks, &mut recent_samples);
                         loading_audio_truncated = false;
                     }
-                    Ok(Ok((models, lid_error))) => {
+                    Ok(Ok((models, lid_error, anglicisms))) => {
                         load_rx.take();
                         let reason = load_reason.take().unwrap_or(LoadReason::Wake);
                         asr.install(models);
+                        install_anglicisms(app, cfg, &mut engine, anglicisms);
                         if let Some(error) = lid_error {
                             ui_log(app, crate::msg!("log.lid.unavailable", error = error));
                         }
@@ -541,6 +546,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             && worker.choice_session.is_none()
         {
             if asr.unload() {
+                engine.set_anglicisms(None, Vec::new());
                 ui_log(app, crate::msg!("log.models.unloaded"));
                 set_asr_status(app, &status, "ready");
                 last_activity = std::time::Instant::now();
@@ -552,21 +558,30 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
 }
 
 /// Словарь англицизмов для диктовки (anglicism.rs): только по галочке и только когда
-/// распознаётся кириллический язык, иначе словарь даже не загружается. Нет файла —
-/// не фатально: диктовка пишет английские слова так, как их услышала модель.
-fn enable_anglicisms<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
-where
+/// распознаётся кириллический язык, иначе словарь даже не загружается (`None`). В режиме
+/// с выгрузкой моделей он грузится вместе с ними и выгружается вместе с ними (~43 МБ).
+fn load_anglicisms(cfg: &ReeverConfig) -> Option<anyhow::Result<Anglicisms>> {
+    let s = &cfg.settings;
+    if !s.dictation_english || cfg.cyrillic_spellcheck().is_empty() {
+        return None;
+    }
+    Some(Anglicisms::load(&cfg.anglicisms_path, s.dictation_english_level))
+}
+
+/// Нет файла — не фатально: диктовка пишет английские слова так, как их услышала модель.
+fn install_anglicisms<T, V>(
+    app: &AppHandle,
+    cfg: &ReeverConfig,
+    engine: &mut Engine<T, V>,
+    anglicisms: Option<anyhow::Result<Anglicisms>>,
+) where
     T: crate::speech::Transcriber,
     V: crate::speech::VoiceDetector,
 {
-    let s = &cfg.settings;
-    let spellcheck = cfg.cyrillic_spellcheck();
-    if !s.dictation_english || spellcheck.is_empty() {
-        return;
-    }
-    match Anglicisms::load(&cfg.anglicisms_path, s.dictation_english_level) {
-        Ok(anglicisms) => engine.set_anglicisms(Some(anglicisms), spellcheck),
-        Err(error) => ui_log(app, crate::msg!("log.anglicismsFailed", error = format!("{error:#}"))),
+    match anglicisms {
+        Some(Ok(anglicisms)) => engine.set_anglicisms(Some(anglicisms), cfg.cyrillic_spellcheck()),
+        Some(Err(error)) => ui_log(app, crate::msg!("log.anglicismsFailed", error = format!("{error:#}"))),
+        None => engine.set_anglicisms(None, Vec::new()),
     }
 }
 
@@ -595,10 +610,14 @@ fn spawn_model_loader(cfg: &ReeverConfig) -> Receiver<LoadedModels> {
     let cfg = cfg.clone();
     let (tx, rx) = channel();
     std::thread::spawn(move || {
-        let _ = tx.send(AsrSet::load(
-            &cfg.models,
-            cfg.settings.asr_threads.max(1) as i32,
-        ));
+        // Словарь (~0,2 с) грузится параллельно с моделями (~1 с) и не задерживает их.
+        let anglicisms = std::thread::spawn({
+            let cfg = cfg.clone();
+            move || load_anglicisms(&cfg)
+        });
+        let loaded = AsrSet::load(&cfg.models, cfg.settings.asr_threads.max(1) as i32);
+        let anglicisms = anglicisms.join().unwrap_or(None);
+        let _ = tx.send(loaded.map(|(models, lid_error)| (models, lid_error, anglicisms)));
     });
     rx
 }
