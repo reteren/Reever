@@ -162,7 +162,9 @@ def globe_rows(path: Path) -> list[dict]:
 
 class Pools:
     def __init__(self, rows: list[dict]):
-        self.wake = [(r, read_wav(DATA / r["file"])) for r in rows if r["kind"] == "wake"]
+        # wake_phrase — «Ривер, открой …» с границами слова (align_phrases.py): живое окно.
+        self.wake = [(r, read_wav(DATA / r["file"])) for r in rows
+                     if r["kind"] == "wake" or (r["kind"] == "wake_phrase" and r.get("wake_end") is not None)]
         self.speech = [(r, read_wav(DATA / r["file"])) for r in rows if r["kind"] == "speech"]
         self.confusable = [(r, read_wav(DATA / r["file"])) for r in rows if r["kind"] == "confusable"]
         # Речь того же голоса — чтобы контекст вокруг wake-слова звучал как один человек.
@@ -173,7 +175,7 @@ class Pools:
         # Живые окна с «river» внутри (GLOBE): отдельно, их речь вокруг слова — своя.
         self.wake_windows = [(r, a) for r, a in self.wake if r.get("wake_end") is not None]
         self.wake = [(r, a) for r, a in self.wake if r.get("wake_end") is None]
-        self.window_share = 0.3
+        self.window_share = 0.45
         self.real: list[np.ndarray] = []
         self.hard: list[np.ndarray] = []
         self.hard_share = 0.0
@@ -265,8 +267,9 @@ def compose(pools: Pools, rng: random.Random, positive: bool) -> tuple[np.ndarra
             speech = real_piece(pools.real, rng, 1.5) if pools.real and rng.random() < 0.5 else level(rng.choice(own))
             pre = np.concatenate([speech[-int(rng.uniform(0.3, 1.3) * RATE):],
                                   np.zeros(int(rng.uniform(0.0, 0.4) * RATE), np.float32)])
-        post_gap = np.zeros(int(rng.uniform(0.04, 0.45) * RATE), np.float32)
-        if rng.random() < 0.4:
+        # «ривер открой» слитно: следующее слово часто идёт сразу, без паузы.
+        post_gap = np.zeros(0 if rng.random() < 0.4 else int(rng.uniform(0.02, 0.45) * RATE), np.float32)
+        if rng.random() < 0.25:
             post = np.zeros(int(0.8 * RATE), np.float32)
         elif pools.real and rng.random() < 0.5:
             post = real_piece(pools.real, rng, 1.5)
