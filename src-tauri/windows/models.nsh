@@ -115,6 +115,21 @@ FunctionEnd
   ${EndIf}
 !macroend
 
+; Внутри семьи моделей — один вариант (см. REEVER_MODELS_PAGE).
+!macro REEVER_EXCLUSIVE NAME THIS OTHER
+  Function ${NAME}
+    Pop $0
+    ${NSD_GetState} ${THIS} $1
+    ${If} $1 == ${BST_CHECKED}
+      System::Call "user32::IsWindowEnabled(p ${OTHER}) i .r2"
+      ${If} $2 <> 0
+        ${NSD_Uncheck} ${OTHER}
+      ${EndIf}
+    ${EndIf}
+    Call ReeverPackToggled
+  FunctionEnd
+!macroend
+
 !macro REEVER_MODELS_PAGE
   Page custom ReeverUiShow ReeverUiLeave
   Page custom ReeverModelsShow ReeverModelsLeave
@@ -260,19 +275,6 @@ FunctionEnd
 
   ; Внутри семьи — один вариант: отмеченный снимает соседний (если тот не скачан и не
   ; заблокирован). Затем — общая проверка определителя языка.
-  !macro REEVER_EXCLUSIVE NAME THIS OTHER
-    Function ${NAME}
-      Pop $0
-      ${NSD_GetState} ${THIS} $1
-      ${If} $1 == ${BST_CHECKED}
-        System::Call "user32::IsWindowEnabled(p ${OTHER}) i .r2"
-        ${If} $2 <> 0
-          ${NSD_Uncheck} ${OTHER}
-        ${EndIf}
-      ${EndIf}
-      Call ReeverPackToggled
-    FunctionEnd
-  !macroend
   !insertmacro REEVER_EXCLUSIVE ReeverEuAccToggled $ReeverEuAccBox $ReeverEuLightBox
   !insertmacro REEVER_EXCLUSIVE ReeverEuLightToggled $ReeverEuLightBox $ReeverEuAccBox
   !insertmacro REEVER_EXCLUSIVE ReeverAsAccToggled $ReeverAsAccBox $ReeverAsLightBox
