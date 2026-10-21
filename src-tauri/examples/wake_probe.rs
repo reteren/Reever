@@ -5,8 +5,8 @@
 //!   cargo run --release --example wake_probe -- --idle-seconds 20
 //!
 //! Первая команда повторно прогоняет WAV из testdata/manifest.json, кусками по 20 мс.
-//! Вторая держит только StreamingWakeSpotter на синтетическом потоке тишины; READY
-//! печатается после загрузки модели, чтобы снаружи снять память/CPU процесса.
+//! Вторая держит только AcousticWakeSpotter (resources/wake/river.bin) на синтетическом
+//! потоке тишины; READY печатается после загрузки, чтобы снаружи снять память/CPU процесса.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -14,12 +14,10 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use reever_lib::speech::WakeSpotter;
-use reever_lib::wake::StreamingWakeSpotter;
+use reever_lib::wake::AcousticWakeSpotter;
 use serde::Deserialize;
 
 const CHUNK: usize = 320; // 20 ms at 16 kHz
-const MODEL: &str = "sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16";
-const DEFAULT_WAKE_WORDS: &[&str] = &["ривер", "ревер", "ривьер"];
 
 #[derive(Deserialize)]
 struct Case {
@@ -57,29 +55,15 @@ fn read_wav(path: &Path) -> Result<Vec<i16>> {
         .collect())
 }
 
-fn load_spotter(args: &[String], root: &Path) -> Result<StreamingWakeSpotter> {
-    let model_dir = arg_value(args, "--model")
+fn load_spotter(args: &[String], root: &Path) -> Result<AcousticWakeSpotter> {
+    let weights = arg_value(args, "--model")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("src-tauri/resources/model").join(MODEL));
-    println!("model={}", model_dir.display());
-    let wake_words: Vec<String> = arg_value(args, "--wake-words")
-        .map(|words| {
-            words
-                .split(',')
-                .map(str::trim)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_else(|| {
-            DEFAULT_WAKE_WORDS
-                .iter()
-                .map(|word| (*word).to_string())
-                .collect()
-        });
-    StreamingWakeSpotter::new(&model_dir, &wake_words)
+        .unwrap_or_else(|| root.join("src-tauri/resources/wake/river.bin"));
+    println!("model={}", weights.display());
+    AcousticWakeSpotter::new(&weights)
 }
 
-fn run_idle(args: &[String], spotter: &mut StreamingWakeSpotter) -> Result<()> {
+fn run_idle(args: &[String], spotter: &mut AcousticWakeSpotter) -> Result<()> {
     let seconds = arg_value(args, "--idle-seconds")
         .context("после --idle-seconds укажите количество секунд")?
         .parse::<u64>()?;
@@ -106,7 +90,7 @@ fn run_idle(args: &[String], spotter: &mut StreamingWakeSpotter) -> Result<()> {
     Ok(())
 }
 
-fn run_corpus(args: &[String], root: &Path, spotter: &mut StreamingWakeSpotter) -> Result<()> {
+fn run_corpus(args: &[String], root: &Path, spotter: &mut AcousticWakeSpotter) -> Result<()> {
     let corpus = arg_value(args, "--corpus")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("testdata/corpus"));

@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Ставит в src-tauri/resources/model/ то же, что вшито в установщик: английскую
-    Parakeet 110m, детектор «ривер» (streaming zipformer small-ru) и Silero VAD. Сама
+    Parakeet 110m и Silero VAD (детектор «ривер» — свои веса в resources/wake). Сама
     библиотека sherpa-onnx линкуется статически и скачивается сборкой cargo.
 
     Языковые пакеты (src-tauri/src/models.rs) установщик скачивает у пользователя сам.
@@ -46,9 +46,7 @@ $SileroName = 'silero_vad.onnx'
 # что должно лежать в папке модели после распаковки.
 $BaseModels = @(
     @{ Name = 'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8'
-       Files = @('encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx', 'tokens.txt') },
-    @{ Name = 'sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16'
-       Files = @('encoder.int8.onnx', 'decoder.onnx', 'joiner.int8.onnx', 'tokens.txt') }
+       Files = @('encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx', 'tokens.txt') }
 )
 $PackModels = @{
     european = @{ Name = 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8'

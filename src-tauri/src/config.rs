@@ -125,8 +125,6 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub wake_spotter: bool,
     /// Папка модели детектора в resources/model.
-    #[serde(default = "default_wake_spotter_model")]
-    pub wake_spotter_model: String,
     /// Сигнал сразу, как только услышано wake-слово.
     #[serde(default = "default_true")]
     pub wake_sound: bool,
@@ -276,9 +274,6 @@ fn sync_installer_ui_languages(settings: &mut Settings, settings_path: &std::pat
     }
 }
 
-fn default_wake_spotter_model() -> String {
-    "sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16".into()
-}
 
 fn default_dictation_pause_ms() -> u32 {
     800
@@ -394,7 +389,6 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_english_level", dictation_english_level, u8);
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_spotter", wake_spotter, bool);
-    restore!("wake_spotter_model", wake_spotter_model, String);
     restore!("wake_sound", wake_sound, bool);
     restore!("ui_language", ui_language, String);
     restore!("ui_languages", ui_languages, Vec<String>);
@@ -443,7 +437,6 @@ impl Default for Settings {
             dictation_english_level: default_dictation_english_level(),
             webchat_send: true,
             wake_spotter: true,
-            wake_spotter_model: default_wake_spotter_model(),
             wake_sound: true,
             ui_language: default_ui_language(),
             ui_languages: default_ui_languages(),

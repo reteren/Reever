@@ -23,7 +23,7 @@ use reever_lib::models::{Pack, ASIAN, EUROPEAN};
 use reever_lib::speech::samples;
 use reever_lib::textnorm::{join_cjk, normalize};
 use reever_lib::vad::SileroVad;
-use reever_lib::wake::StreamingWakeSpotter;
+use reever_lib::wake::AcousticWakeSpotter;
 use sherpa_onnx::{
     GenerationConfig, LinearResampler, OfflineTts, OfflineTtsConfig, OfflineTtsModelConfig,
     OfflineTtsVitsModelConfig,
@@ -184,10 +184,7 @@ fn main() -> anyhow::Result<()> {
         engine.set_english_primary(true);
         // Как в приложении: фоновый детектор «ривер» подтверждает искажённое wake-слово
         // («viva öffne…» у немецкого голоса).
-        engine.set_wake_spotter(Some(Box::new(StreamingWakeSpotter::new(
-            &models.join("sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16"),
-            &grammar.wake_words,
-        )?)));
+        engine.set_wake_spotter(Some(Box::new(AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?)));
 
         let mut hotkey = (0, 0);
         let mut wake = (0, 0);

@@ -63,3 +63,11 @@ Wake-слово синтезируется отдельно и склеивае�
 Google FLEURS (dev, 29 языков) в `data/fleurs`. Обучение со всем вместе:
 `train_multilang.py --steps 24000 --fleurs data/fleurs --mine-at 8000,15000 --real-wake data/globe/clips.jsonl`.
 `--eval-only <веса.pt>` — замер готовых весов на том же разбиении.
+
+## Данные весов resources/wake/river.bin
+
+- Google FLEURS, dev (CC-BY 4.0) — живая речь носителей 29 языков, отрицательные примеры;
+- GLOBE / Mozilla Common Voice English (CC0) — живые «river» с метками акцента;
+- голоса sherpa-onnx TTS: piper (лицензии — MODEL_CARD каждого голоса), VCTK (CC-BY 4.0),
+  AISHELL-3 (Apache-2.0), Kokoro (Apache-2.0), Coqui CV, mimic3;
+- голоса Windows (SAPI, RHVoice) установленные на машине разработки.

@@ -559,8 +559,8 @@ where
     }
 }
 
-/// Фоновый детектор wake-слова на маленькой потоковой модели (docs/voice-pipeline.md).
-/// Модели нет или выключен — не фатально: «ривер» ловит только большая модель.
+/// Фоновый детектор wake-слова: акустическая сеть RKW2 (wake.rs, docs/voice-pipeline.md).
+/// Весов нет или выключен — не фатально: «ривер» ловит только большая модель.
 fn enable_wake_spotter<T, V>(app: &AppHandle, cfg: &ReeverConfig, engine: &mut Engine<T, V>)
 where
     T: crate::speech::Transcriber,
@@ -570,13 +570,10 @@ where
     if !s.wake_spotter || s.activation_mode == "hotkey" {
         return;
     }
-    let dir = crate::config::resource(app, &format!("model/{}", s.wake_spotter_model));
-    match crate::wake::StreamingWakeSpotter::new(&dir, &s.wake_words) {
+    let weights = crate::config::resource(app, "wake/river.bin");
+    match crate::wake::AcousticWakeSpotter::new(&weights) {
         Ok(spotter) => {
-            ui_log(
-                app,
-                crate::msg!("log.spotter.ok", model = &s.wake_spotter_model),
-            );
+            ui_log(app, crate::msg!("log.spotter.ok", model = "river.bin (RKW2)"));
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         Err(e) => ui_log(app, crate::msg!("log.spotter.failed", error = format!("{e:#}"))),

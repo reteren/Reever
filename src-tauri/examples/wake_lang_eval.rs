@@ -1,4 +1,4 @@
-//! Детектор «ривер» (маленькая русская потоковая модель, wake.rs) на голосах разных языков:
+//! Детектор «ривер» программы (wake.rs, resources/wake/river.bin) на голосах разных языков:
 //! слышит ли он «river» у нерусских голосов и как часто срабатывает на обычной речи.
 //!
 //! Голос каждого языка читает «River» и написания, близкие к тому, как слово произнесёт
@@ -8,7 +8,7 @@
 //! кэш — testdata/wake-lang-corpus/ (не в git). Для японского, болгарского, эстонского,
 //! литовского и мальтийского офлайн-голосов нет.
 //!   cargo run --release --example wake_lang_eval [-- --lang zh] [--kws ../tools/kws/data/kws-ml.bin --threshold 0.85]
-//! С `--kws` рядом считается многоязычный детектор RKW2 (kws.rs) на тех же файлах.
+//! С `--kws` рядом считаются веса-кандидат RKW2 (tools/kws) на тех же файлах.
 //! Отчёт: testdata/wake-lang-report.md
 
 use std::collections::BTreeMap;
@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use reever_lib::kws::StreamingTcn;
 use reever_lib::speech::WakeSpotter;
-use reever_lib::wake::StreamingWakeSpotter;
+use reever_lib::wake::AcousticWakeSpotter;
 use sherpa_onnx::{
     GenerationConfig, LinearResampler, OfflineTts, OfflineTtsConfig, OfflineTtsModelConfig,
     OfflineTtsVitsModelConfig,
@@ -107,9 +107,7 @@ fn main() -> anyhow::Result<()> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let tts_root = root.join("resources/model/tts");
     let cache = root.join("../testdata/wake-lang-corpus");
-    let spotter_dir = root.join("resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16");
-    let wake_words: Vec<String> = vec!["ривер".into(), "ревер".into(), "ривьер".into()];
-    let mut spotter = StreamingWakeSpotter::new(&spotter_dir, &wake_words)?;
+    let mut spotter = AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?;
     let value = |flag: &str| args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned();
     let threshold: f32 = value("--threshold").and_then(|t| t.parse().ok()).unwrap_or(0.85);
     let mut kws = value("--kws").map(|path| StreamingTcn::from_path(Path::new(&path), threshold)).transpose()?;
@@ -185,18 +183,15 @@ fn run_kws(kws: &mut StreamingTcn, audio: &[i16]) -> bool {
 }
 
 /// Тишина, речь, тишина — как фраза в эфире; срабатывание засчитывается на любом чанке.
-fn run(spotter: &mut StreamingWakeSpotter, audio: &[i16]) -> (bool, String) {
+fn run(spotter: &mut AcousticWakeSpotter, audio: &[i16]) -> (bool, String) {
     let silence = |ms: usize| vec![0i16; 16 * ms];
     let mut stream = silence(300);
     stream.extend_from_slice(audio);
     stream.extend(silence(1_800));
     let mut fired = false;
-    let mut heard = String::new();
+    let heard = String::new();
     for chunk in stream.chunks(CHUNK) {
         fired |= spotter.feed(chunk);
-        if !spotter.heard().is_empty() {
-            heard = spotter.heard().to_string();
-        }
     }
     spotter.reset();
     (fired, heard)
@@ -207,19 +202,19 @@ fn report(tallies: &[(&str, Tally)], kws: Option<f32>) -> String {
     let _ = writeln!(out, "# Детектор «ривер» на голосах разных языков\n");
     let _ = writeln!(
         out,
-        "`cargo run --release --example wake_lang_eval`. Детектор — текущий (Vosk small-ru, \
-         варианты «ривер», «ревер», «ривьер»), считается сырое срабатывание на файле. Голоса \
+        "`cargo run --release --example wake_lang_eval`. Детектор — тот, что в программе \
+         (RKW2, resources/wake/river.bin), считается сырое срабатывание на файле. Голоса \
          sherpa-onnx TTS, скорость 0,9 и 1,15; «River» и запись по правилам языка, одно и с \
          командой. `hr*` — сербский голос. Синтез — не живые люди: это оценка, а не приговор.\n"
     );
     if let Some(threshold) = kws {
         let _ = writeln!(
             out,
-            "Столбцы «новый» — многоязычный детектор RKW2 (kws.rs, tools/kws/train_multilang.py), \
+            "Столбцы «новый» — веса-кандидат RKW2 (tools/kws/train_multilang.py), \
              порог {threshold}. Нидерландский, венгерский и корейский в его обучение не входили; \
              голоса остальных языков — те же, что в обучении (но другие фразы и склейка).\n"
         );
-        let _ = writeln!(out, "| язык | wake: Vosk | wake: новый | по вариантам (Vosk) | ложные: Vosk | ложные: новый |");
+        let _ = writeln!(out, "| язык | wake: программа | wake: новый | по вариантам (программа) | ложные: программа | ложные: новый |");
         let _ = writeln!(out, "|---|---:|---:|---|---:|---:|");
     } else {
         let _ = writeln!(out, "| язык | wake пойман | по вариантам | ложные на обычной речи |");
@@ -249,7 +244,7 @@ fn report(tallies: &[(&str, Tally)], kws: Option<f32>) -> String {
             );
         }
     }
-    let _ = writeln!(out, "\n## Что детектор слышал вместо «ривер» (до 6 примеров на язык)\n");
+    let _ = writeln!(out, "\n## Пропуски и ложные срабатывания (до 6 примеров на язык)\n");
     for (code, tally) in tallies {
         if tally.misses.is_empty() && tally.alarms.is_empty() {
             continue;

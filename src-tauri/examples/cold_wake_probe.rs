@@ -16,13 +16,12 @@ use reever_lib::engine::{Engine, EngineConfig, EngineEvent};
 use reever_lib::grammar::Grammar;
 use reever_lib::speech::{samples, WakeSpotter};
 use reever_lib::vad::SileroVad;
-use reever_lib::wake::StreamingWakeSpotter;
+use reever_lib::wake::AcousticWakeSpotter;
 use serde::Deserialize;
 
 const CHUNK: usize = 320; // 20 мс
 const LEAD_MS: u32 = 1_000;
 const TAIL_MS: u32 = 2_500;
-const SPOTTER: &str = "sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16";
 const ASR: &str = "sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16";
 
 #[derive(Deserialize)]
@@ -98,7 +97,7 @@ fn warm(engine: &mut Engine<Asr, SileroVad>, stream: &[i16]) -> Outcome {
 /// None — детектор не сработал вовсе.
 fn cold(
     engine: &mut Engine<Asr, SileroVad>,
-    spotter: &mut StreamingWakeSpotter,
+    spotter: &mut AcousticWakeSpotter,
     stream: &[i16],
     preroll: usize,
     load: usize,
@@ -170,11 +169,8 @@ fn main() -> anyhow::Result<()> {
     engine.set_strict_spotted_wake(true);
     // Режим «только английский»: основная модель английская (--asr <Parakeet en>).
     engine.set_english_primary(args.iter().any(|value| value == "--english"));
-    engine.set_wake_spotter(Some(Box::new(StreamingWakeSpotter::new(
-        &models.join(SPOTTER),
-        &wake_words,
-    )?)));
-    let mut spotter = StreamingWakeSpotter::new(&models.join(SPOTTER), &wake_words)?;
+    engine.set_wake_spotter(Some(Box::new(AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?)));
+    let mut spotter = AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?;
 
     // Живая запись: весь журнал Engine (с REEVER_TRACE=1 — и что услышала GigaAM).
     if let Some(path) = arg("--wav") {

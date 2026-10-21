@@ -29,12 +29,10 @@ fn main() -> anyhow::Result<()> {
     let mut lid = SpeechLid::new(&model.join("sherpa-onnx-whisper-base"), 2)?;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let spotter_dir = model.join("sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16");
     if args.first().map(String::as_str) == Some("--spot") {
         // Где фоновый детектор слышит wake-слово (секунды от начала файла), по 20 мс.
-        let wake = vec!["ривер".to_string(), "ревер".into(), "ривьер".into(), "ливер".into()];
         for path in &args[1..] {
-            let mut spotter = reever_lib::wake::StreamingWakeSpotter::new(&spotter_dir, &wake)?;
+            let mut spotter = reever_lib::wake::AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?;
             let mut pcm = read_wav(Path::new(path))?;
             pcm.extend(std::iter::repeat(0i16).take(samples(1_500)));
             let mut hits = Vec::new();
@@ -60,10 +58,7 @@ fn main() -> anyhow::Result<()> {
         engine.set_grammar(Grammar::defaults());
         let with_spotter = std::env::var_os("LANG_PROBE_NO_SPOTTER").is_none();
         if with_spotter {
-            let spotter = reever_lib::wake::StreamingWakeSpotter::new(
-                &spotter_dir,
-                &["ривер".to_string(), "ревер".into(), "ривьер".into(), "ливер".into()],
-            )?;
+            let spotter = reever_lib::wake::AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?;
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         for path in &args[1..] {
@@ -122,10 +117,7 @@ fn main() -> anyhow::Result<()> {
         engine.set_grammar(Grammar::defaults());
         engine.set_bilingual(Some(Box::new(en)), Some(Box::new(lid)), LangMode::Auto);
         if std::env::var_os("LANG_PROBE_SPOTTER").is_some() {
-            let spotter = reever_lib::wake::StreamingWakeSpotter::new(
-                &spotter_dir,
-                &["ривер".to_string(), "ревер".into(), "ривьер".into(), "ливер".into()],
-            )?;
+            let spotter = reever_lib::wake::AcousticWakeSpotter::new(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin"))?;
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         // LANG_PROBE_CONFIRM: после команды — как recognizer при confirm_close — ждать «да».

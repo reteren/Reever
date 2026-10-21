@@ -1,13 +1,10 @@
-//! Offline probe без доступа к микрофону; также подтягивает unit-тесты kws.rs.
-
-#[path = "../src/kws.rs"]
-mod kws;
+//! Offline probe детектора RKW1 (tiny DS-CNN) без доступа к микрофону.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::{bail, Context};
-use kws::{StreamingKws, HOP_SAMPLES, SAMPLE_RATE};
+use reever_lib::kws::{StreamingKws, HOP_SAMPLES, SAMPLE_RATE};
 
 fn read_pcm16_mono(path: &Path) -> anyhow::Result<Vec<f32>> {
     let bytes = std::fs::read(path).with_context(|| format!("чтение {}", path.display()))?;

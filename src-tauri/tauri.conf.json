@@ -118,12 +118,9 @@
       "resources/aliases.json": "resources/aliases.json",
       "resources/anglicisms.tsv": "resources/anglicisms.tsv",
       "resources/settings.json": "resources/settings.json",
+      "resources/wake/river.bin": "resources/wake/river.bin",
       "resources/actions.json": "resources/actions.json",
-      "resources/wallpaper.png": "resources/wallpaper.png",
-      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/encoder.int8.onnx": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/encoder.int8.onnx",
-      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/decoder.onnx": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/decoder.onnx",
-      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/joiner.int8.onnx": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/joiner.int8.onnx",
-      "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/tokens.txt": "resources/model/sherpa-onnx-streaming-zipformer-small-ru-vosk-int8-2025-08-16/tokens.txt"
+      "resources/wallpaper.png": "resources/wallpaper.png"
     },
     "windows": {
       "nsis": {

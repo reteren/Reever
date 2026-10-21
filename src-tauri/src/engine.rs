@@ -1967,6 +1967,10 @@ fn repair_wake(
     let canonical = wake_words.first()?.clone();
     let words: Vec<&str> = timed.text.split_whitespace().collect();
     if words.len() <= 1 && audio_len <= samples(1_500) {
+        // Детектор акустический и иногда ошибается: настоящее слово («да», «окей») — не wake.
+        if words.first().is_some_and(|word| is_real_word(word) == Some(true)) {
+            return None;
+        }
         return Some(Timed {
             text: canonical,
             words: Vec::new(),
