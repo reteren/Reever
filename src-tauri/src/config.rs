@@ -330,8 +330,13 @@ fn default_activation() -> String {
 fn default_hotkey() -> String {
     "Ctrl+Shift+G".into()
 }
+/// Единственный встроенный набор звуков.
+pub const SOUND_PACK: &str = "classic";
+/// Прежние встроенные наборы: из %APPDATA% удаляются при запуске, свои наборы остаются.
+const RETIRED_SOUND_PACKS: [&str; 3] = ["default", "doresearchedition", "hloppupok"];
+
 fn default_sound_pack() -> String {
-    "default".into()
+    SOUND_PACK.into()
 }
 
 /// Десериализует настройки по одному полю: ошибка одного значения не сбрасывает
@@ -510,7 +515,7 @@ impl ReeverConfig {
             model_dirs,
             vad_model_path: resource(app, "model/silero_vad.onnx"),
             anglicisms_path: resource(app, "anglicisms.tsv"),
-            sounds_dir: user_config_dir(app, "sounds"),
+            sounds_dir: sounds_dir(app),
             settings_path,
             aliases,
             settings,
@@ -532,10 +537,10 @@ impl ReeverConfig {
             .collect()
     }
 
-    /// Путь к звуку активного пака; если в паке файла нет — берём из default.
+    /// Путь к звуку активного пака; если в паке файла нет — берём из classic.
     pub fn sound(&self, name: &str) -> PathBuf {
         let pack = if self.settings.sound_pack.trim().is_empty() {
-            "default"
+            SOUND_PACK
         } else {
             self.settings.sound_pack.as_str()
         };
@@ -543,9 +548,26 @@ impl ReeverConfig {
         if p.exists() {
             p
         } else {
-            self.sounds_dir.join("default").join(name)
+            self.sounds_dir.join(SOUND_PACK).join(name)
         }
     }
+}
+
+/// Папка наборов звуков без прежних встроенных наборов; classic досеивается, если его нет.
+fn sounds_dir(app: &AppHandle) -> PathBuf {
+    let dir = user_config_dir(app, "sounds");
+    if cfg!(debug_assertions) {
+        return dir;
+    }
+    for pack in RETIRED_SOUND_PACKS {
+        let _ = std::fs::remove_dir_all(dir.join(pack));
+    }
+    if !dir.join(SOUND_PACK).is_dir() {
+        if let Some(seed) = bundled(app, "sounds") {
+            let _ = copy_dir_recursive(&seed.join(SOUND_PACK), &dir.join(SOUND_PACK));
+        }
+    }
+    dir
 }
 
 /// Пользовательская ДИРЕКТОРИЯ (звуки-паки): dev — src-tauri/resources/<name>;

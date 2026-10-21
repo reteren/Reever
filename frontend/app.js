@@ -6,7 +6,7 @@ const previewSettings={
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
-  sound_pack:'default',private_log:false,offline_mode:false,mute_hotkey:'',
+  sound_pack:'classic',private_log:false,offline_mode:false,mute_hotkey:'',
   dictation_clipboard:true,dictation_live:true,dictation_english:false,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
 };
 const defaultGrammarPreview=()=>({
@@ -88,7 +88,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'reset_grammar': previewGrammar=defaultGrammarPreview(); return cloneValue(previewGrammar);
     case 'list_actions': return [];
     case 'list_apps': return [];
-    case 'list_sound_packs': return ['default'];
+    case 'list_sound_packs': return ['classic'];
     case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
     case 'index_status': return {state:'ready',entries:0,bytes:0};
@@ -827,7 +827,7 @@ function languagesEditor(models){
   if(addable.some(code=>!installed(packOf(code)))) box.append(el('div',{className:'hint',textContent:t('settings.languages.installer')}));
   return box;
 }
-let languageModels=null, soundPacks=['default'], autostart=false;
+let languageModels=null, soundPacks=['classic'], autostart=false;
 async function loadSettings(){
   try{ settingsObj=await invoke('get_settings'); }
   catch(e){ reportError('loadSettings',e); settingsObj={...previewSettings}; }
@@ -856,7 +856,7 @@ function renderSettings(){
   asRow.append(asCb, el('label',{htmlFor:'cbAuto',textContent:settingLabel('autostart','instant')}));
   g.append(asRow);
   const spWrap=el('div'); spWrap.append(el('label',{className:'fld',textContent:settingLabel('sound_pack')}));
-  const sp=el('select'); for(const p of soundPacks){const o=el('option',{value:p,textContent:p});if((settingsObj.sound_pack??'default')===p)o.selected=true;sp.append(o);}
+  const sp=el('select'); for(const p of soundPacks){const o=el('option',{value:p,textContent:p});if((settingsObj.sound_pack??'classic')===p)o.selected=true;sp.append(o);}
   sp.onchange=()=>settingsObj.sound_pack=sp.value; spWrap.append(sp); g.append(spWrap);
   F.append(g);
   const mode=settingsObj.activation_mode||'both';

@@ -86,7 +86,7 @@ pub fn list_sound_packs(config: State<'_, LiveConfig>) -> Vec<String> {
         })
         .unwrap_or_default();
     if packs.is_empty() {
-        packs.push("default".into());
+        packs.push(crate::config::SOUND_PACK.into());
     }
     packs.sort();
     packs
