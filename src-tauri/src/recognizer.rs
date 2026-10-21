@@ -234,6 +234,16 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     crate::grammar::set_active_languages(&cfg.models.languages());
     enable_anglicisms(app, cfg, &mut engine);
     enable_wake_spotter(app, cfg, &mut engine);
+    // Один раз подготовить оптимизированные графы моделей (ortopt.rs): загрузка большой
+    // модели после этого быстрее. Не сразу — пусть сначала запустится всё остальное.
+    #[cfg(windows)]
+    {
+        let dirs: Vec<std::path::PathBuf> = cfg.models.models.iter().map(|model| model.dir.clone()).collect();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_secs(20));
+            crate::ortopt::prepare(&dirs);
+        });
+    }
     set_asr_status(app, &status, "ready");
 
     let (tx, rx) = audio_channel(AUDIO_QUEUE);

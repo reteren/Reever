@@ -34,6 +34,11 @@ pub(crate) struct CpuProviderConfig {
 
 impl CpuProviderConfig {
     pub(crate) fn new() -> anyhow::Result<Self> {
+        Self::with_options("")
+    }
+
+    /// `extra` — ещё строки конфига провайдера sherpa-onnx (`ключ=значение\n`).
+    pub(crate) fn with_options(extra: &str) -> anyhow::Result<Self> {
         static NEXT_ID: AtomicU64 = AtomicU64::new(0);
         for _ in 0..32 {
             let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
@@ -53,7 +58,7 @@ impl CpuProviderConfig {
             };
             let config = Self { path };
             let mut file = file;
-            file.write_all(b"EnableCpuMemArena=0\n").with_context(|| {
+            file.write_all(format!("EnableCpuMemArena=0\n{extra}").as_bytes()).with_context(|| {
                 format!(
                     "failed to write the ONNX Runtime config {}",
                     config.path.display()
@@ -86,8 +91,19 @@ pub struct Asr {
 }
 
 impl Asr {
-    /// Загружает поддерживаемую sherpa-onnx модель по её файлам.
+    /// Загружает поддерживаемую sherpa-onnx модель по её файлам. Есть заранее
+    /// оптимизированные графы (ortopt.rs) — грузит их, не загрузились — исходные файлы.
     pub fn new(cfg: &AsrConfig) -> anyhow::Result<Self> {
+        match Self::build(cfg, true) {
+            Ok(Some(asr)) => return Ok(asr),
+            Ok(None) => {}
+            Err(_) => crate::ortopt::forget(&cfg.model_dir),
+        }
+        Self::build(cfg, false).map(|asr| asr.expect("без кэша модель собирается всегда"))
+    }
+
+    /// `optimized` — только из кэша оптимизированных графов; `Ok(None)` — кэша нет.
+    fn build(cfg: &AsrConfig, optimized: bool) -> anyhow::Result<Option<Self>> {
         let model_dir = &cfg.model_dir;
         if !model_dir.is_dir() {
             bail!("ASR model folder not found: {}", model_dir.display());
@@ -102,6 +118,23 @@ impl Asr {
         let qwen_tokenizer = model_dir.join("tokenizer");
         let whisper_encoder = best_onnx_component(model_dir, "-encoder")?;
         let whisper_decoder = best_onnx_component(model_dir, "-decoder")?;
+        let cached = |path: &Option<PathBuf>| path.as_deref().and_then(crate::ortopt::cached);
+        if optimized
+            && [&encoder, &decoder, &joiner, &ctc_model, &whisper_encoder, &whisper_decoder]
+                .iter()
+                .all(|path| path.is_none() || cached(path).is_none())
+        {
+            return Ok(None);
+        }
+        let swap = |path: Option<PathBuf>| -> Option<PathBuf> {
+            if optimized {
+                path.map(|p| crate::ortopt::cached(&p).unwrap_or(p))
+            } else {
+                path
+            }
+        };
+        let (encoder, decoder, joiner, ctc_model) = (swap(encoder), swap(decoder), swap(joiner), swap(ctc_model));
+        let (whisper_encoder, whisper_decoder) = (swap(whisper_encoder), swap(whisper_decoder));
         let whisper_tokens = if tokens.is_file() {
             Some(tokens.clone())
         } else {
@@ -111,7 +144,8 @@ impl Asr {
         let mut recognizer_config = OfflineRecognizerConfig::default();
         recognizer_config.model_config.tokens = Some(path_string(&tokens));
         recognizer_config.model_config.num_threads = cfg.num_threads.max(1);
-        let cpu_provider = CpuProviderConfig::new()?;
+        // Граф уже оптимизирован — второй раз ORT его не трогает: в этом и выигрыш загрузки.
+        let cpu_provider = CpuProviderConfig::with_options(if optimized { "GraphOptimizationLevel=0\n" } else { "" })?;
         recognizer_config.model_config.provider = Some(cpu_provider.provider());
 
         let sense_voice = model_dir
@@ -211,7 +245,7 @@ impl Asr {
             )
         })?;
 
-        Ok(Self { recognizer })
+        Ok(Some(Self { recognizer }))
     }
 
     /// Возвращает исходный вывод sherpa-onnx без нормализации; используется бенчмарком.

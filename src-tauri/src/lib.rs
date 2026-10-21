@@ -27,6 +27,8 @@ pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
 pub mod models;
+#[cfg(windows)]
+pub mod ortopt;
 pub mod bubble;
 pub mod mascot;
 pub mod picker;
