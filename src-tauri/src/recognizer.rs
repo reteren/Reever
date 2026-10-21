@@ -797,6 +797,14 @@ impl Worker<'_> {
 
     /// Сигнал «услышал ривер»: сразу от детектора, а если его нет — когда фраза разобрана.
     /// Повтор того же «ривер» (детектор, потом GigaAM) в пределах 3 с не звучит.
+    /// «Ривер» — индекс файлов (в покое он только на диске) подгружается заранее, пока
+    /// распознаётся команда: «ривер найди …» не ждёт чтения снимка.
+    fn prefetch_index(&self) {
+        if let Some(index) = tauri::Manager::try_state::<crate::local_index::IndexManager>(self.app) {
+            index.prefetch();
+        }
+    }
+
     fn wake_sound(&mut self) {
         if !self.cfg.settings.wake_sound {
             return;
@@ -947,6 +955,7 @@ impl Worker<'_> {
             EngineEvent::State(s) => set_state(self.app, s),
             EngineEvent::WakeHeard => {
                 ui_log(self.app, crate::msg!("log.listen"));
+                self.prefetch_index();
                 // Сигнал уже прозвучал на детекторе — большая модель «ривер» лишь подтвердила.
                 let spotted = self
                     .last_spot_sound
@@ -961,6 +970,7 @@ impl Worker<'_> {
                 // срабатывание детектора даст лишний сигнал, зато настоящее «ривер» слышно сразу.
                 self.wake_sound();
                 self.last_spot_sound = Some(std::time::Instant::now());
+                self.prefetch_index();
             }
             EngineEvent::Partial(t) => {
                 if !self.private() {

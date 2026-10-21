@@ -3,7 +3,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -28,7 +28,9 @@ use windows::Win32::System::Threading::{
 use windows::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
 
 const MAGIC: &[u8; 8] = b"RVIDX001";
-const SNAPSHOT_VERSION: u32 = 1;
+/// v2: после записей и имён — готовые фильтры блоков и отсортированные ключи поиска, чтобы
+/// загрузка не пересчитывала их (5 с → доли секунды на 2,8 млн записей). v1 читается.
+const SNAPSHOT_VERSION: u32 = 2;
 const BLOCK_SIZE: usize = 512;
 const BLOOM_BITS: usize = 32_768;
 const BLOOM_WORDS: usize = BLOOM_BITS / 64;
@@ -503,6 +505,8 @@ fn build_fast_indexes(records: &[Record], names: &[u8]) -> (Vec<u64>, Vec<u64>) 
     }
     exact_names.sort_unstable();
     prefix3_names.sort_unstable();
+    // Имён короче трёх символов в префиксном ключе нет — запас ёмкости не нужен.
+    prefix3_names.shrink_to_fit();
     (exact_names, prefix3_names)
 }
 
@@ -916,33 +920,48 @@ fn save_snapshot(index: &DiskIndex, path: &Path) -> std::io::Result<()> {
     }
     file.write_all(&chunk)?;
     file.write_all(&index.names)?;
+    for words in [&index.blocks, &index.exact_names, &index.prefix3_names] {
+        file.write_all(&(words.len() as u64).to_le_bytes())?;
+        let mut bytes = Vec::with_capacity(words.len() * 8);
+        for word in words.iter() {
+            bytes.extend_from_slice(&word.to_le_bytes());
+        }
+        file.write_all(&bytes)?;
+    }
     file.sync_all()?;
     fs::rename(&temp, path)?;
     Ok(())
 }
 
 fn load_snapshot(path: &Path) -> std::io::Result<DiskIndex> {
-    let mut file = File::open(path)?;
-    let file_len = file.metadata()?.len();
-    let mut magic = [0u8; 8];
-    file.read_exact(&mut magic)?;
-    if &magic != MAGIC {
+    // Файл целиком одним чтением: по записи за системный вызов это были секунды.
+    let data = fs::read(path)?;
+    let mut cursor = &data[..];
+    let mut take = |n: usize| -> std::io::Result<&[u8]> {
+        if cursor.len() < n {
+            return Err(invalid_snapshot());
+        }
+        let (head, tail) = cursor.split_at(n);
+        cursor = tail;
+        Ok(head)
+    };
+    if take(8)? != MAGIC {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             "версия снимка",
         ));
     }
-    let version = read_u32(&mut file)?;
-    if version != SNAPSHOT_VERSION {
+    let version = u32::from_le_bytes(take(4)?.try_into().unwrap());
+    if version != 1 && version != SNAPSHOT_VERSION {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             "версия снимка",
         ));
     }
-    let count = usize::try_from(read_u64(&mut file)?).map_err(|_| {
+    let count = usize::try_from(u64::from_le_bytes(take(8)?.try_into().unwrap())).map_err(|_| {
         std::io::Error::new(std::io::ErrorKind::InvalidData, "слишком большой снимок")
     })?;
-    let names_len = usize::try_from(read_u64(&mut file)?).map_err(|_| {
+    let names_len = usize::try_from(u64::from_le_bytes(take(8)?.try_into().unwrap())).map_err(|_| {
         std::io::Error::new(std::io::ErrorKind::InvalidData, "слишком большой снимок")
     })?;
     if count > u32::MAX as usize || names_len > u32::MAX as usize {
@@ -951,38 +970,56 @@ fn load_snapshot(path: &Path) -> std::io::Result<DiskIndex> {
             "слишком большой снимок",
         ));
     }
-    let expected_len = 28u64
-        .checked_add(
-            (count as u64)
-                .checked_mul(12)
-                .ok_or_else(invalid_snapshot)?,
-        )
-        .and_then(|len| len.checked_add(names_len as u64))
-        .ok_or_else(invalid_snapshot)?;
-    if file_len != expected_len {
-        return Err(invalid_snapshot());
-    }
-    let mut records = Vec::with_capacity(count);
-    let mut raw = [0u8; 12];
-    for _ in 0..count {
-        file.read_exact(&mut raw)?;
-        records.push(Record {
+    let raw_records = take(count.checked_mul(12).ok_or_else(invalid_snapshot)?)?;
+    let records: Vec<Record> = raw_records
+        .chunks_exact(12)
+        .map(|raw| Record {
             parent: u32::from_le_bytes(raw[0..4].try_into().unwrap()),
             name_offset: u32::from_le_bytes(raw[4..8].try_into().unwrap()),
             name_len: u16::from_le_bytes(raw[8..10].try_into().unwrap()),
             flags: raw[10],
             reserved: raw[11],
-        });
+        })
+        .collect();
+    let names = take(names_len)?.to_vec();
+    let mut words = |expected: Option<usize>| -> std::io::Result<Vec<u64>> {
+        let len = usize::try_from(u64::from_le_bytes(take(8)?.try_into().unwrap())).map_err(|_| invalid_snapshot())?;
+        if expected.is_some_and(|expected| expected != len) {
+            return Err(invalid_snapshot());
+        }
+        Ok(take(len.checked_mul(8).ok_or_else(invalid_snapshot)?)?
+            .chunks_exact(8)
+            .map(|raw| u64::from_le_bytes(raw.try_into().unwrap()))
+            .collect())
+    };
+    let precomputed = if version == SNAPSHOT_VERSION {
+        let blocks = words(Some(records.len().div_ceil(BLOCK_SIZE) * BLOOM_WORDS))?;
+        let exact_names = words(Some(records.len()))?;
+        let prefix3_names = words(None)?;
+        if prefix3_names.len() > records.len()
+            || [&exact_names, &prefix3_names]
+                .iter()
+                .any(|keys| keys.iter().any(|key| (*key as u32 as usize) >= records.len()))
+        {
+            return Err(invalid_snapshot());
+        }
+        Some((blocks, exact_names, prefix3_names))
+    } else {
+        None
+    };
+    if !cursor.is_empty() {
+        return Err(invalid_snapshot());
     }
-    let mut names = vec![0; names_len];
-    file.read_exact(&mut names)?;
+    if std::str::from_utf8(&names).is_err() {
+        return Err(invalid_snapshot());
+    }
     for record in &records {
         let start = record.name_offset as usize;
         let end = start
             .checked_add(record.name_len as usize)
             .ok_or_else(invalid_snapshot)?;
         if end > names.len()
-            || std::str::from_utf8(&names[start..end]).is_err()
+            || !names.is_char_boundary(start, end)
             || (record.parent != ROOT_PARENT
                 && (record.parent as usize >= records.len()
                     || records[record.parent as usize].flags & DIRECTORY_FLAG == 0))
@@ -1013,8 +1050,14 @@ fn load_snapshot(path: &Path) -> std::io::Result<DiskIndex> {
             colors[id] = 2;
         }
     }
-    let blocks = build_blocks(&records, &names);
-    let (exact_names, prefix3_names) = build_fast_indexes(&records, &names);
+    let (blocks, exact_names, prefix3_names) = match precomputed {
+        Some(precomputed) => precomputed,
+        None => {
+            let blocks = build_blocks(&records, &names);
+            let (exact_names, prefix3_names) = build_fast_indexes(&records, &names);
+            (blocks, exact_names, prefix3_names)
+        }
+    };
     Ok(DiskIndex {
         records,
         names,
@@ -1024,6 +1067,18 @@ fn load_snapshot(path: &Path) -> std::io::Result<DiskIndex> {
     })
 }
 
+/// Границы имени в общем буфере имён приходятся на начала символов UTF-8.
+trait CharBoundaries {
+    fn is_char_boundary(&self, start: usize, end: usize) -> bool;
+}
+
+impl CharBoundaries for Vec<u8> {
+    fn is_char_boundary(&self, start: usize, end: usize) -> bool {
+        let boundary = |at: usize| at == self.len() || (self[at] & 0xC0) != 0x80;
+        boundary(start) && boundary(end)
+    }
+}
+
 fn invalid_snapshot() -> std::io::Error {
     std::io::Error::new(
         std::io::ErrorKind::InvalidData,
@@ -1031,16 +1086,6 @@ fn invalid_snapshot() -> std::io::Error {
     )
 }
 
-fn read_u32(r: &mut impl Read) -> std::io::Result<u32> {
-    let mut b = [0u8; 4];
-    r.read_exact(&mut b)?;
-    Ok(u32::from_le_bytes(b))
-}
-fn read_u64(r: &mut impl Read) -> std::io::Result<u64> {
-    let mut b = [0u8; 8];
-    r.read_exact(&mut b)?;
-    Ok(u64::from_le_bytes(b))
-}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct IndexStatus {
@@ -1057,9 +1102,19 @@ struct RuntimeStatus {
     bytes: usize,
 }
 
+/// Индекс в памяти держится столько после последнего поиска (или «ривер»), потом
+/// выгружается: в покое он лежит только снимком на диске.
+const HOT_FOR: Duration = Duration::from_secs(60);
+/// Пересканирование после изменений на дисках — не чаще: каждое строит весь индекс заново.
+const RESCAN_EVERY: Duration = Duration::from_secs(60);
+
 struct ManagerInner {
     snapshot_path: PathBuf,
     index: RwLock<Option<Arc<DiskIndex>>>,
+    /// Когда индекс в последний раз был нужен; `None` — ни разу с запуска.
+    last_use: Mutex<Option<Instant>>,
+    /// Загрузка снимка с диска идёт одна за раз.
+    loading: Mutex<()>,
     status: Mutex<RuntimeStatus>,
     worker: Mutex<Option<JoinHandle<()>>>,
     stop: Mutex<Option<Arc<AtomicBool>>>,
@@ -1077,6 +1132,8 @@ impl IndexManager {
         Self(Arc::new(ManagerInner {
             snapshot_path,
             index: RwLock::new(None),
+            last_use: Mutex::new(None),
+            loading: Mutex::new(()),
             status: Mutex::new(RuntimeStatus::default()),
             worker: Mutex::new(None),
             stop: Mutex::new(None),
@@ -1164,8 +1221,36 @@ impl IndexManager {
         self.0.scan_entries.store(0, Ordering::Relaxed);
     }
 
+    /// Индекс для поиска. В покое он только на диске: первый поиск после простоя читает
+    /// снимок (доли секунды), следующие минуту берут его из памяти.
     pub fn snapshot(&self) -> Option<Arc<DiskIndex>> {
-        self.0.index.read().ok().and_then(|i| i.clone())
+        touch(&self.0);
+        if let Some(index) = self.0.index.read().ok().and_then(|i| i.clone()) {
+            return Some(index);
+        }
+        if !self.0.status.lock().map(|s| s.enabled).unwrap_or(false) {
+            return None;
+        }
+        let _loading = self.0.loading.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(index) = self.0.index.read().ok().and_then(|i| i.clone()) {
+            return Some(index);
+        }
+        let index = Arc::new(load_snapshot(&self.0.snapshot_path).ok()?);
+        if let Ok(mut slot) = self.0.index.write() {
+            *slot = Some(index.clone());
+        }
+        Some(index)
+    }
+
+    /// Прозвучало «ривер»: подгрузить индекс заранее, пока грузится большая модель, —
+    /// к разбору команды «найди …» он уже будет в памяти.
+    pub fn prefetch(&self) {
+        let manager = self.clone();
+        let _ = thread::Builder::new()
+            .name("reever-index-prefetch".into())
+            .spawn(move || {
+                manager.snapshot();
+            });
     }
 
     pub fn status(&self) -> IndexStatus {
@@ -1188,12 +1273,39 @@ impl IndexManager {
     }
 }
 
+fn touch(inner: &ManagerInner) {
+    if let Ok(mut last) = inner.last_use.lock() {
+        *last = Some(Instant::now());
+    }
+}
+
+/// Индекс нужен прямо сейчас (поиск был меньше `HOT_FOR` назад).
+fn is_hot(inner: &ManagerInner) -> bool {
+    inner
+        .last_use
+        .lock()
+        .ok()
+        .and_then(|last| *last)
+        .is_some_and(|at| at.elapsed() < HOT_FOR)
+}
+
+/// Выгрузить индекс из памяти, если он давно не нужен; на диске остаётся снимок.
+fn drop_if_cold(inner: &ManagerInner) {
+    if is_hot(inner) {
+        return;
+    }
+    if let Ok(mut slot) = inner.index.write() {
+        slot.take();
+    }
+}
+
+/// Новый индекс: в статус — всегда, в память — только если он сейчас нужен.
 fn publish(inner: &ManagerInner, index: DiskIndex, scanning: bool) {
     let entries = index.entries();
     let bytes = index.memory_bytes();
-    let index = Arc::new(index);
+    let hot = is_hot(inner);
     if let Ok(mut slot) = inner.index.write() {
-        *slot = Some(index);
+        *slot = hot.then(|| Arc::new(index));
     }
     if let Ok(mut state) = inner.status.lock() {
         state.enabled = true;
@@ -1235,6 +1347,8 @@ fn run_manager(inner: Arc<ManagerInner>, stop: Arc<AtomicBool>, stop_event: usiz
             break;
         }
     }
+    // Старый снимок — только для статуса и поиска до конца первого обхода; в память он
+    // попадёт, лишь если поиск нужен прямо сейчас.
     if let Ok(index) = load_snapshot(&inner.snapshot_path) {
         publish(&inner, index, true);
     }
@@ -1256,8 +1370,11 @@ fn run_manager(inner: Arc<ManagerInner>, stop: Arc<AtomicBool>, stop_event: usiz
         }
         let _ = save_snapshot(&index, &inner.snapshot_path);
         publish(&inner, index, false);
-        // Любое изменение и переполнение уведомителя сводятся к debounce + перескану.
+        let scanned = Instant::now();
+        // Любое изменение и переполнение уведомителя сводятся к debounce + перескану, но не
+        // чаще `RESCAN_EVERY`. Пока ждём — выгружаем давно не нужный индекс из памяти.
         loop {
+            drop_if_cold(&inner);
             match events_rx.recv_timeout(Duration::from_millis(250)) {
                 Ok(()) => break,
                 Err(mpsc::RecvTimeoutError::Timeout) if !stop.load(Ordering::Relaxed) => continue,
@@ -1265,6 +1382,10 @@ fn run_manager(inner: Arc<ManagerInner>, stop: Arc<AtomicBool>, stop_event: usiz
             }
         }
         while events_rx.recv_timeout(Duration::from_millis(700)).is_ok() {}
+        while scanned.elapsed() < RESCAN_EVERY && !stop.load(Ordering::Relaxed) {
+            drop_if_cold(&inner);
+            while events_rx.recv_timeout(Duration::from_millis(250)).is_ok() {}
+        }
         if stop.load(Ordering::Relaxed) {
             break;
         }
@@ -1481,6 +1602,29 @@ mod tests {
             items.first().map(|item| item.name.as_str()),
             Some("Memory_Vault")
         );
+    }
+
+    #[test]
+    fn cold_index_lives_on_disk_and_loads_on_search() {
+        let dir = std::env::temp_dir().join(format!("reever-cold-index-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("index-v1.bin");
+        save_snapshot(&fixture(), &path).unwrap();
+        let manager = IndexManager::new(path);
+        manager.0.status.lock().unwrap().enabled = true;
+        // Поиска не было — новый индекс в память не попадает.
+        publish(&manager.0, fixture(), false);
+        assert!(manager.0.index.read().unwrap().is_none());
+        // Поиск читает снимок с диска и держит его, пока индекс нужен.
+        assert!(manager.snapshot().is_some_and(|index| index.entries() == fixture().entries()));
+        assert!(manager.0.index.read().unwrap().is_some());
+        drop_if_cold(&manager.0);
+        assert!(manager.0.index.read().unwrap().is_some());
+        // Минута без поисков — индекс выгружается.
+        *manager.0.last_use.lock().unwrap() = Some(Instant::now() - HOT_FOR - Duration::from_secs(1));
+        drop_if_cold(&manager.0);
+        assert!(manager.0.index.read().unwrap().is_none());
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
