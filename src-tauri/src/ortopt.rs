@@ -54,11 +54,32 @@ fn cache_dir(model_dir: &Path) -> Option<PathBuf> {
     Some(cache_root()?.join(model_dir.file_name()?))
 }
 
-/// Оптимизированный граф для файла модели, если кэш папки готов.
+/// Отпечаток исходного файла: размер и время изменения. Подменили модель в папке —
+/// отпечаток другой, и старый граф не используется.
+fn fingerprint(path: &Path) -> Option<String> {
+    let meta = std::fs::metadata(path).ok()?;
+    let modified = meta.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs();
+    Some(format!("{}\t{}\t{modified}", path.file_name()?.to_string_lossy(), meta.len()))
+}
+
+/// Кэш папки готов и сделан из тех же файлов, что лежат в ней сейчас.
+fn fresh(model_dir: &Path) -> bool {
+    let Some(done) = cache_dir(model_dir).and_then(|dir| std::fs::read_to_string(dir.join(DONE)).ok()) else {
+        return false;
+    };
+    let Ok(entries) = std::fs::read_dir(model_dir) else { return false };
+    entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "onnx"))
+        .all(|path| fingerprint(&path).is_some_and(|line| done.lines().any(|known| known == line)))
+}
+
+/// Оптимизированный граф для файла модели, если кэш папки готов и свежий.
 pub fn cached(model_file: &Path) -> Option<PathBuf> {
-    let dir = cache_dir(model_file.parent()?)?;
-    let file = dir.join(model_file.file_name()?);
-    (dir.join(DONE).is_file() && file.is_file()).then_some(file)
+    let model_dir = model_file.parent()?;
+    let file = cache_dir(model_dir)?.join(model_file.file_name()?);
+    (fresh(model_dir) && file.is_file()).then_some(file)
 }
 
 /// Забыть кэш папки модели (граф не загрузился).
@@ -76,8 +97,7 @@ pub fn prepare(model_dirs: &[PathBuf]) {
         return;
     }
     for dir in model_dirs {
-        let ready = cache_dir(dir).is_some_and(|cache| cache.join(DONE).is_file());
-        if ready || !dir.is_dir() {
+        if fresh(dir) || !dir.is_dir() {
             continue;
         }
         // CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS
@@ -99,14 +119,16 @@ pub fn run_cli(model_dir: &Path) -> anyhow::Result<()> {
     let partial = target.with_file_name(partial_name);
     let _ = std::fs::remove_dir_all(&partial);
     std::fs::create_dir_all(&partial)?;
+    let mut prints = Vec::new();
     for entry in std::fs::read_dir(model_dir)? {
         let path = entry?.path();
         if path.extension().is_some_and(|ext| ext == "onnx") {
             optimize_file(&path, &partial.join(path.file_name().unwrap()))
                 .with_context(|| format!("optimizing {}", path.display()))?;
+            prints.extend(fingerprint(&path));
         }
     }
-    std::fs::write(partial.join(DONE), ort_version())?;
+    std::fs::write(partial.join(DONE), prints.join("\n"))?;
     let _ = std::fs::remove_dir_all(&target);
     std::fs::rename(&partial, &target)?;
     Ok(())
