@@ -275,7 +275,9 @@ window.addEventListener('keydown',(e)=>{
   else if($('#calOverlay').classList.contains('on')) $('#calDone').click();
 });
 
-let grammar=defaultGrammarPreview(), grammarDraft=null;
+// grammarOpen — что раскрыто: id команды, 'cancel' (слова отмены) или 'general' (кнопка
+// «Изменить»: wake-слова, новые поиски и чаты, сброс). Открыт один редактор за раз.
+let grammar=defaultGrammarPreview(), grammarDraft=null, grammarOpen=null;
 const grammarEditor=$('#grammarEditor');
 // Языки распознавания — как RECOGNITION_LANGUAGES в config.rs: английский включён
 // всегда, остальным нужен скачанный языковой пакет (models.rs). Новый язык — строка
@@ -309,54 +311,71 @@ function renderHomeHint(){
   const launch=(grammar?.intents||[]).find(intent=>intent.kind==='launch'&&intent.enabled);
   last.textContent=t('home.hint',{wake:displayWake(),open:pickPhrase(launch?.triggers,phraseLanguage()==='ru'?'открой':'open')});
 }
-function grammarExampleRow(command,description){
+function grammarExampleRow(command,description,key=null,off=false){
   const row=el('div',{className:'row'});
   row.append(el('code',{textContent:command}),el('span',{textContent:description}));
+  if(off) row.classList.add('off');
+  if(key){
+    row.classList.add('editable'); row.dataset.key=key; row.tabIndex=0; row.setAttribute('role','button');
+    row.setAttribute('aria-expanded',String(grammarOpen===key));
+    if(grammarOpen===key) row.classList.add('open');
+    const toggle=()=>openGrammar(grammarOpen===key?null:key);
+    row.onclick=toggle;
+    row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle();}};
+  }
   return row;
+}
+// Пример команды для строки: [что сказать, что произойдёт] или null.
+function grammarExample(intent,wake,russian){
+  const triggers=(intent.triggers||[]).map(value=>String(value).trim());
+  const trigger=pickPhrase(triggers);
+  if(intent.kind==='launch'&&triggers.includes('')) return [`${wake} X`,t('example.launch',{label:intentLabel(intent)})];
+  if(!trigger) return null;
+  if(intent.kind==='close'||intent.kind==='kill') return [`${wake} ${trigger} X`,t(intent.kind==='close'?'example.close':'example.kill')];
+  if(intent.kind==='calc') return [`${wake} ${trigger} X`,t('example.calc',{expr:russian?'33 умножить на 78':'33 times 78'})];
+  if(intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file'){
+    const help=intent.kind==='find_folder'?'example.findFolders':intent.kind==='find_file'?'example.findFiles':'example.findBoth';
+    return [`${wake} ${trigger} X`,t(help)];
+  }
+  if(intent.kind==='web_chat') return [`${wake} ${trigger} X`,t('example.chat',{label:intentLabel(intent)||t('example.chatDefault')})];
+  if(intent.kind==='dictate'){
+    const stop=pickPhrase(grammar.dictation_stop,russian?'стоп ввод':'stop typing');
+    // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs: is_dictation_stop).
+    const end=russian?'стоп':'stop';
+    const cancel=pickPhrase((grammar.cancel_words||[]).filter(word=>!['стоп','stop','хватит','остановись'].includes(String(word).trim().toLowerCase())),russian?'отмена':'cancel');
+    return [`${wake} ${trigger} …`,t('example.dictate',{wake,stop,cancel,end})];
+  }
+  return [`${wake} ${trigger} X`,intentLabel(intent)||t('example.command')];
 }
 function renderGrammarExamples(){
   const host=$('#grammarExamples'); host.replaceChildren();
   const wake=displayWake(), russian=phraseLanguage()==='ru';
   renderHomeHint();
   for(const intent of grammar.intents||[]){
-    if(!intent.enabled) continue;
-    const triggers=(intent.triggers||[]).map(value=>String(value).trim());
-    const bare=intent.kind==='launch'&&triggers.includes('');
-    const trigger=pickPhrase(triggers);
-    if(bare){
-      host.append(grammarExampleRow(`${wake} X`,t('example.launch',{label:intentLabel(intent)})));
-      continue;
-    }
-    if((intent.kind==='close'||intent.kind==='kill')&&trigger){
-      const help=t(intent.kind==='close'?'example.close':'example.kill');
-      host.append(grammarExampleRow(wake+' '+trigger+' X',help));
-      continue;
-    }
-    if(intent.kind==='calc'&&trigger){
-      host.append(grammarExampleRow(`${wake} ${trigger} X`,t('example.calc',{expr:russian?'33 умножить на 78':'33 times 78'})));
-      continue;
-    }
-    if((intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')&&trigger){
-      const help=intent.kind==='find_folder'?'example.findFolders':intent.kind==='find_file'?'example.findFiles':'example.findBoth';
-      host.append(grammarExampleRow(`${wake} ${trigger} X`,t(help)));
-      continue;
-    }
-    if(intent.kind==='web_chat'&&trigger){
-      host.append(grammarExampleRow(`${wake} ${trigger} X`,t('example.chat',{label:intentLabel(intent)||t('example.chatDefault')})));
-      continue;
-    }
-    if(intent.kind==='dictate'&&trigger){
-      const stop=pickPhrase(grammar.dictation_stop,russian?'стоп ввод':'stop typing');
-      // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs: is_dictation_stop).
-      const end=russian?'стоп':'stop';
-      const cancel=pickPhrase((grammar.cancel_words||[]).filter(word=>!['стоп','stop','хватит','остановись'].includes(String(word).trim().toLowerCase())),russian?'отмена':'cancel');
-      host.append(grammarExampleRow(`${wake} ${trigger} …`,t('example.dictate',{wake,stop,cancel,end})));
-      continue;
-    }
-    if(trigger) host.append(grammarExampleRow(`${wake} ${trigger} X`,intentLabel(intent)||t('example.command')));
+    const example=grammarExample(intent,wake,russian);
+    if(example) host.append(grammarExampleRow(example[0],example[1],intent.id,!intent.enabled));
   }
   host.append(grammarExampleRow(`${wake} ${russian?'выключи комп':'shut down computer'}`,t('example.shutdown')));
-  host.append(grammarExampleRow(`${wake} ${pickPhrase(grammar.cancel_words,russian?'отмена':'cancel')}`,t('example.cancel')));
+  host.append(grammarExampleRow(`${wake} ${pickPhrase(grammar.cancel_words,russian?'отмена':'cancel')}`,t('example.cancel'),'cancel'));
+  placeGrammarEditor();
+}
+// Редактор стоит под раскрытой строкой («Изменить» — над списком).
+function placeGrammarEditor(){
+  const host=$('#grammarExamples');
+  const row=grammarOpen&&grammarOpen!=='general'?host.querySelector(`.row[data-key="${CSS.escape(grammarOpen)}"]`):null;
+  if(grammarOpen==='general') host.prepend(grammarEditor);
+  else if(row) row.after(grammarEditor);
+  else host.after(grammarEditor);
+  grammarEditor.hidden=!grammarDraft;
+}
+// Открыть редактор (key) или закрыть (null). Несохранённое в прежнем редакторе теряется.
+function openGrammar(key){
+  grammarOpen=key;
+  grammarDraft=key?cloneValue(grammar):null;
+  if(grammarDraft) renderGrammarEditor();
+  setGrammarButton();
+  renderGrammarExamples();
+  if(key&&key!=='general') grammarEditor.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 async function loadGrammar(){
   $('#grammarPreviewNote').hidden=!!tauri;
@@ -397,13 +416,7 @@ function addChipEditor(parent,getValues,setValues,kind,minimum=0){
   line.append(input,el('button',{type:'button',className:'sm',textContent:t('common.add'),onclick:add}));
   box.append(chips,line); parent.append(box); refresh();
 }
-function renderGrammarEditor(){
-  grammarEditor.replaceChildren();
-  const wakeGroup=el('fieldset',{className:'grp'}); wakeGroup.append(el('legend',{textContent:t('grammar.wakeLegend')}));
-  wakeGroup.append(el('div',{className:'hint grammar-small-note',textContent:t('grammar.wakeHint')}));
-  addChipEditor(wakeGroup,()=>grammarDraft.wake_words||[],values=>grammarDraft.wake_words=values,'wake',1);
-  grammarEditor.append(wakeGroup);
-  for(const intent of grammarDraft.intents||[]){
+function grammarIntentFieldset(intent){
     const group=el('fieldset',{className:'grp grammar-intent'});
     const kindIcons={launch:'play',folder:'folder',search:'lens',close:'x',kill:'stop',calc:'sum',dictate:'pen',web_chat:'spark',find:'lens',find_folder:'folder',find_file:'file'};
     const legend=el('legend');
@@ -420,7 +433,7 @@ function renderGrammarEditor(){
     head.append(enabledWrap,labelWrap);
     if((intent.kind==='search'&&String(intent.id).startsWith('search_'))||(intent.kind==='web_chat'&&String(intent.id).startsWith('chat_custom_'))){
       const remove=el('button',{type:'button',className:'sm danger grammar-delete-intent',textContent:t(intent.kind==='web_chat'?'grammar.deleteChat':'grammar.deleteSearch')});
-      remove.onclick=()=>{grammarDraft.intents=grammarDraft.intents.filter(item=>item!==intent);renderGrammarEditor();}; head.append(remove);
+      remove.onclick=()=>{grammarDraft.intents=grammarDraft.intents.filter(item=>item!==intent);if(grammarOpen===intent.id)grammarOpen='general';renderGrammarEditor();}; head.append(remove);
     }
     group.append(head);
     const phraseLabel=el('div',{className:'fld grammar-field-label',textContent:t('grammar.phrases')}); group.append(phraseLabel);
@@ -452,33 +465,45 @@ function renderGrammarEditor(){
       const urlWrap=el('label',{className:'grammar-url-field'}); urlWrap.append(el('span',{className:'fld',textContent:t('grammar.searchUrl')}));
       const urlInput=el('input',{value:intent.url||'',placeholder:'https://example.com/?q={q}'}); urlInput.oninput=()=>intent.url=urlInput.value; urlWrap.append(urlInput); group.append(urlWrap);
     }
-    grammarEditor.append(group);
+    return group;
+}
+function grammarWordsGroup(legend,hint,get,set,kind,minimum){
+  const group=el('fieldset',{className:'grp'}); group.append(el('legend',{textContent:t(legend)}));
+  group.append(el('div',{className:'hint grammar-small-note',textContent:t(hint)}));
+  addChipEditor(group,get,set,kind,minimum);
+  return group;
+}
+function renderGrammarEditor(){
+  grammarEditor.replaceChildren();
+  const open=grammarOpen;
+  if(open==='general'){
+    grammarEditor.append(grammarWordsGroup('grammar.wakeLegend','grammar.wakeHint',()=>grammarDraft.wake_words||[],values=>grammarDraft.wake_words=values,'wake',1));
+    // Новые, ещё не сохранённые поиски и чаты правятся здесь же; сохранённые — по клику на строку.
+    const saved=new Set((grammar.intents||[]).map(intent=>intent.id));
+    for(const intent of grammarDraft.intents||[]) if(!saved.has(intent.id)) grammarEditor.append(grammarIntentFieldset(intent));
+    const addSearch=el('button',{type:'button',className:'sm grammar-add-search',textContent:t('grammar.addSearch')});
+    addSearch.onclick=()=>{
+      let timestamp=Date.now();
+      while(grammarDraft.intents.some(intent=>intent.id===`search_${timestamp}`)) timestamp++;
+      grammarDraft.intents.push({id:`search_${timestamp}`,kind:'search',label:t('grammar.newSearch'),triggers:['поиск'],url:'https://example.com/?q={q}',enabled:true,lang:'auto'});
+      renderGrammarEditor();
+    };
+    const addChat=el('button',{type:'button',className:'sm grammar-add-search',textContent:t('grammar.addChat')});
+    addChat.onclick=()=>{
+      let timestamp=Date.now();
+      while(grammarDraft.intents.some(intent=>intent.id===`chat_custom_${timestamp}`)) timestamp++;
+      grammarDraft.intents.push({id:`chat_custom_${timestamp}`,kind:'web_chat',label:t('grammar.newChat'),triggers:['чат'],url:'https://chatgpt.com/',enabled:true,lang:'auto'});
+      renderGrammarEditor();
+    };
+    grammarEditor.append(addSearch,addChat);
+  }else if(open==='cancel'){
+    grammarEditor.append(grammarWordsGroup('grammar.cancelLegend','grammar.cancelHint',()=>grammarDraft.cancel_words||[],values=>grammarDraft.cancel_words=values,'cancel',0));
+  }else{
+    const intent=(grammarDraft.intents||[]).find(item=>item.id===open);
+    if(!intent){openGrammar(null);return;}
+    grammarEditor.append(grammarIntentFieldset(intent));
+    if(intent.kind==='dictate') grammarEditor.append(grammarWordsGroup('grammar.stopLegend','grammar.stopHint',()=>grammarDraft.dictation_stop||[],values=>grammarDraft.dictation_stop=values,'stop',1));
   }
-  const addSearch=el('button',{type:'button',className:'sm grammar-add-search',textContent:t('grammar.addSearch')});
-  addSearch.onclick=()=>{
-    let timestamp=Date.now();
-    while(grammarDraft.intents.some(intent=>intent.id===`search_${timestamp}`)) timestamp++;
-    const id=`search_${timestamp}`;
-    grammarDraft.intents.push({id,kind:'search',label:t('grammar.newSearch'),triggers:['поиск'],url:'https://example.com/?q={q}',enabled:true,lang:'auto'});
-    renderGrammarEditor();
-  };
-  grammarEditor.append(addSearch);
-  const addChat=el('button',{type:'button',className:'sm grammar-add-search',textContent:t('grammar.addChat')});
-  addChat.onclick=()=>{
-    let timestamp=Date.now();
-    while(grammarDraft.intents.some(intent=>intent.id===`chat_custom_${timestamp}`)) timestamp++;
-    grammarDraft.intents.push({id:`chat_custom_${timestamp}`,kind:'web_chat',label:t('grammar.newChat'),triggers:['чат'],url:'https://chatgpt.com/',enabled:true,lang:'auto'});
-    renderGrammarEditor();
-  };
-  grammarEditor.append(addChat);
-  const cancelGroup=el('fieldset',{className:'grp'}); cancelGroup.append(el('legend',{textContent:t('grammar.cancelLegend')}));
-  cancelGroup.append(el('div',{className:'hint grammar-small-note',textContent:t('grammar.cancelHint')}));
-  addChipEditor(cancelGroup,()=>grammarDraft.cancel_words||[],values=>grammarDraft.cancel_words=values,'cancel');
-  grammarEditor.append(cancelGroup);
-  const stopGroup=el('fieldset',{className:'grp'}); stopGroup.append(el('legend',{textContent:t('grammar.stopLegend')}));
-  stopGroup.append(el('div',{className:'hint grammar-small-note',textContent:t('grammar.stopHint')}));
-  addChipEditor(stopGroup,()=>grammarDraft.dictation_stop||[],values=>grammarDraft.dictation_stop=values,'stop',1);
-  grammarEditor.append(stopGroup);
   const actions=el('div',{className:'grammar-actions'});
   const save=el('button',{type:'button',className:'default',textContent:t('common.save')});
   const cancel=el('button',{type:'button',className:'sm',textContent:t('common.cancel')});
@@ -496,36 +521,32 @@ function renderGrammarEditor(){
       const problems=grammarErrors(grammarDraft);
       if(problems.length) throw new Error(problems.join('\n'));
       await invoke('save_grammar',{grammar:grammarDraft});
-      grammar=cloneValue(grammarDraft); grammarDraft=null; grammarEditor.hidden=true; setGrammarButton();
-      renderGrammarExamples();
+      grammar=cloneValue(grammarDraft); openGrammar(null);
     }catch(error){setErrors(error);reportError('saveGrammar',error);}
     finally{save.disabled=false;}
   };
-  cancel.onclick=()=>{grammarDraft=null;grammarEditor.hidden=true;setGrammarButton();};
+  cancel.onclick=()=>openGrammar(null);
   reset.onclick=async()=>{
     if(!window.confirm(t('grammar.confirmReset')))return;
     reset.disabled=true;errors.hidden=true;
     try{
       const result=await invoke('reset_grammar');
       grammar=result&&Array.isArray(result.intents)?result:defaultGrammarPreview();
-      grammarDraft=null;grammarEditor.hidden=true;setGrammarButton();renderGrammarExamples();
+      openGrammar(null);
     }catch(error){setErrors(error);reportError('resetGrammar',error);}
     finally{reset.disabled=false;}
   };
-  actions.append(save,cancel,reset); grammarEditor.append(actions,errors);
+  actions.append(save,cancel); if(grammarOpen==='general') actions.append(reset); grammarEditor.append(actions,errors);
 }
 function setGrammarButton(){
   const button=$('#editGrammarBtn');
-  button.dataset.i18n=grammarDraft?'grammar.closeEditor':'grammar.edit';
+  button.dataset.i18n=grammarOpen==='general'?'grammar.closeEditor':'grammar.edit';
   button.textContent=t(button.dataset.i18n);
 }
-$('#editGrammarBtn').onclick=()=>{
-  if(grammarDraft){grammarDraft=null;grammarEditor.hidden=true;setGrammarButton();return;}
-  grammarDraft=cloneValue(grammar);renderGrammarEditor();grammarEditor.hidden=false;setGrammarButton();
-};
+$('#editGrammarBtn').onclick=()=>openGrammar(grammarOpen==='general'?null:'general');
 $('#grammarSettingsLink').onclick=event=>{
   event.preventDefault();selectNav(document.querySelector('[data-nav="home"]'));
-  if(!grammarDraft)$('#editGrammarBtn').click();
+  if(grammarOpen!=='general')openGrammar('general');
   $('#grammarPanel').scrollIntoView({block:'start',behavior:'smooth'});
 };
 
