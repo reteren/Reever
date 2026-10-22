@@ -25,3 +25,6 @@
 /testdata/wake-lang-corpus/
 # Записи голоса пользователя для детектора «ривер» — личные, не в git.
 /testdata/wake/
+
+# Тестовый exe без установки (tools/test_build.sh)
+/test-build/
