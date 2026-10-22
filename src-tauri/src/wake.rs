@@ -11,6 +11,10 @@
 //! wake-detector.md): слово заметно громче фона и всплеск уверенности не случайный.
 //! Третий фильтр — речь ли это по Silero VAD — в engine.rs, где VAD уже работает.
 //!
+//! Вторая ступень (`with_verifier`): сеть пошире, с окном 1,5 с вместо 0,73 с, слушает
+//! кандидата целиком вместе с тем, что вокруг. Работает только на кандидатах — в покое ни
+//! процессора, ни лишней памяти, кроме 1,6 с звука (100 КБ) и весов (~0,6 МБ).
+//!
 //! Детектор знает только «river»: свои wake-слова из настроек он не слышит (их по-прежнему
 //! находит большая модель, пока она загружена).
 
@@ -32,6 +36,11 @@ pub fn weights_for(languages: &[&str]) -> &'static str {
     }
 }
 
+/// Вторая ступень к весам `weights_for` (пока есть только у русско-английских).
+pub fn verifier_for(weights: &str) -> Option<&'static str> {
+    (weights == "wake/river-ru-en.bin").then_some("wake/verify-ru-en.bin")
+}
+
 /// Порог оценки сети. 0,9 — компромисс (docs/research/wake-detector.md): ~98 % «river» у
 /// живых дикторов английского, 112/150 русского корпуса на голосах Windows, около 8 ложных
 /// срабатываний в час сплошной живой речи. Выше порог — меньше ложных и больше пропусков.
@@ -46,6 +55,13 @@ const RELEASE_FRAMES: usize = 30;
 /// Громкость слова — пик за последние 700 мс, фон — 10-й перцентиль за 3 с.
 const WORD_FRAMES: usize = 70;
 const FLOOR_FRAMES: usize = 300;
+/// Порог второй ступени.
+pub const VERIFY_THRESHOLD: f32 = 0.5;
+/// Сколько звука до кандидата слышит вторая ступень, сэмплов (1,6 с).
+const VERIFY_CONTEXT: usize = 25_600;
+/// Её оценки за последние 200 мс до кандидата; не уверена — ждать ещё до 150 мс.
+const VERIFY_LOOKBACK: usize = 20;
+const VERIFY_WAIT_FRAMES: usize = 15;
 
 pub struct AcousticWakeSpotter {
     kws: StreamingTcn,
@@ -60,6 +76,12 @@ pub struct AcousticWakeSpotter {
     fired: bool,
     quiet: usize,
     note: Option<String>,
+    verifier: Option<StreamingTcn>,
+    verify_threshold: f32,
+    /// Последние `VERIFY_CONTEXT` сэмплов — для второй ступени (только если она есть).
+    history: VecDeque<f32>,
+    /// Вторая ступень решает: кадров на ожидание и описание кандидата до решения.
+    verifying: Option<(usize, String)>,
 }
 
 impl AcousticWakeSpotter {
@@ -77,7 +99,40 @@ impl AcousticWakeSpotter {
             fired: false,
             quiet: 0,
             note: None,
+            verifier: None,
+            verify_threshold: VERIFY_THRESHOLD,
+            history: VecDeque::new(),
+            verifying: None,
         })
+    }
+
+    /// Вторая ступень — веса RKW2 (resources/wake/verify-*.bin).
+    pub fn with_verifier(mut self, weights: &Path) -> anyhow::Result<Self> {
+        self.verifier = Some(StreamingTcn::from_path(weights, 0.99)?);
+        self.history = VecDeque::with_capacity(VERIFY_CONTEXT + 320);
+        Ok(self)
+    }
+
+    /// Для замеров (examples/wake_gate_probe.rs): другой порог второй ступени.
+    pub fn set_verify_threshold(&mut self, threshold: f32) {
+        self.verify_threshold = threshold;
+    }
+
+    /// Решение второй ступени по новым оценкам: `Some(принят)` или `None` — ждать дальше.
+    fn verify_scores(&mut self, scores: &[f32]) -> Option<bool> {
+        let (left, note) = self.verifying.take()?;
+        let best = scores.iter().copied().fold(0.0, f32::max);
+        if best >= self.verify_threshold {
+            self.note = Some(format!("{note}, verifier {best:.2}"));
+            return Some(true);
+        }
+        let left = left.saturating_sub(scores.len());
+        if left == 0 {
+            self.note = Some(format!("{note} — rejected: verifier {best:.2}"));
+            return Some(false);
+        }
+        self.verifying = Some((left, note));
+        None
     }
 
     fn push_levels(&mut self) {
@@ -144,6 +199,8 @@ impl WakeSpotter for AcousticWakeSpotter {
 
     fn reset(&mut self) {
         self.kws.reset();
+        self.history.clear();
+        self.verifying = None;
         self.run = 0;
         self.peak = 0.0;
         self.fired = false;
@@ -158,14 +215,42 @@ impl WakeSpotter for AcousticWakeSpotter {
 }
 
 impl AcousticWakeSpotter {
+    /// Кандидат прошёл фильтры: без второй ступени принят, с ней — её слово.
+    fn second_opinion(&mut self) -> bool {
+        let Some(verifier) = self.verifier.as_mut() else {
+            return true;
+        };
+        verifier.reset();
+        let context: Vec<f32> = self.history.iter().copied().collect();
+        let mut scores = Vec::new();
+        verifier.feed_scores(&context, &mut scores);
+        let recent = scores.len().saturating_sub(VERIFY_LOOKBACK);
+        let note = self.note.take().unwrap_or_default();
+        // Оценки до кандидата не тратят ожидание после него.
+        self.verifying = Some((VERIFY_WAIT_FRAMES + scores.len() - recent, note));
+        self.verify_scores(&scores[recent..]) == Some(true)
+    }
+
     fn feed_piece(&mut self, pcm: &[i16]) -> bool {
         self.buffer.clear();
         self.buffer
             .extend(pcm.iter().map(|sample| *sample as f32 / 32_768.0));
         self.push_levels();
+        let mut spotted = false;
+        if let Some(verifier) = self.verifier.as_mut() {
+            let overflow = (self.history.len() + self.buffer.len()).saturating_sub(VERIFY_CONTEXT);
+            self.history.drain(..overflow.min(self.history.len()));
+            self.history.extend(self.buffer.iter().copied());
+            if self.verifying.is_some() {
+                self.scores.clear();
+                verifier.feed_scores(&self.buffer, &mut self.scores);
+                let scores = std::mem::take(&mut self.scores);
+                spotted |= self.verify_scores(&scores) == Some(true);
+                self.scores = scores;
+            }
+        }
         self.scores.clear();
         self.kws.feed_scores(&self.buffer, &mut self.scores);
-        let mut spotted = false;
         for i in 0..self.scores.len() {
             let score = self.scores[i];
             if self.fired {
@@ -187,7 +272,9 @@ impl AcousticWakeSpotter {
                 // Срабатывание решено: дальше этот всплеск не рассматривается, как бы он
                 // ни кончился, — повторное только после затишья.
                 self.fired = true;
-                spotted |= self.judge();
+                if self.judge() {
+                    spotted |= self.second_opinion();
+                }
                 self.run = 0;
                 self.peak = 0.0;
             }

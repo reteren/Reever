@@ -5,7 +5,8 @@
 //! Строка CSV на каждое срабатывание базового правила (два кадра подряд ≥ порога) и
 //! строка `none` на файл без срабатываний — для подсчёта пропусков.
 //! С `SPOTTER=1` — сам детектор программы (wake.rs, без VAD-проверки engine.rs): по классу
-//! число файлов и срабатываний. `WEIGHTS=<файл>` — другие веса вместо resources/wake/river.bin.
+//! число файлов и срабатываний. `WEIGHTS=<файл>` — другие веса вместо resources/wake/river.bin,
+//! `VERIFY=<файл>` и `VERIFY_THRESHOLD=<порог>` — вторая ступень.
 
 use std::path::{Path, PathBuf};
 
@@ -53,6 +54,13 @@ fn main() -> anyhow::Result<()> {
                 let Some(audio) = read(file) else { continue };
                 let pcm: Vec<i16> = audio.iter().map(|x| (x.clamp(-1.0, 1.0) * 32_767.0) as i16).collect();
                 let mut spotter = AcousticWakeSpotter::new(&weights)?;
+                // VERIFY=<файл> [VERIFY_THRESHOLD=<порог>] — со второй ступенью.
+                if let Ok(verify) = std::env::var("VERIFY") {
+                    spotter = spotter.with_verifier(Path::new(&verify))?;
+                    if let Some(t) = std::env::var("VERIFY_THRESHOLD").ok().and_then(|v| v.parse().ok()) {
+                        spotter.set_verify_threshold(t);
+                    }
+                }
                 let mut n = 0;
                 for (i, chunk) in pcm.chunks(320).enumerate() {
                     if spotter.feed(chunk) {

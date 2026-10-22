@@ -608,10 +608,22 @@ where
         name = "wake/river.bin";
         weights = crate::config::resource(app, name);
     }
-    match crate::wake::AcousticWakeSpotter::new(&weights) {
+    // Вторая ступень проверяет кандидатов первой — если её веса есть.
+    let verifier = crate::wake::verifier_for(name)
+        .map(|verify| (verify, crate::config::resource(app, verify)))
+        .filter(|(_, path)| path.is_file());
+    let spotter = crate::wake::AcousticWakeSpotter::new(&weights).and_then(|spotter| match &verifier {
+        Some((_, path)) => spotter.with_verifier(path),
+        None => Ok(spotter),
+    });
+    match spotter {
         Ok(spotter) => {
             let file = name.rsplit('/').next().unwrap_or(name);
-            ui_log(app, crate::msg!("log.spotter.ok", model = format!("{file} (RKW2)")));
+            let model = match &verifier {
+                Some((verify, _)) => format!("{file} + {} (RKW2)", verify.rsplit('/').next().unwrap_or(verify)),
+                None => format!("{file} (RKW2)"),
+            };
+            ui_log(app, crate::msg!("log.spotter.ok", model = model));
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         Err(e) => ui_log(app, crate::msg!("log.spotter.failed", error = format!("{e:#}"))),

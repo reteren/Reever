@@ -222,8 +222,10 @@ def restrict_wake(rows: list[dict], wake_langs: set[str]) -> list[dict]:
     return out
 
 
-def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int) -> tuple[list[np.ndarray], list[np.ndarray]]:
-    """Живая речь: (обучение, тест) — int16, чтобы десятки часов поместились в память."""
+def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int,
+                lang_max: dict[str, int] | None = None) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Живая речь: (обучение, тест) — int16, чтобы десятки часов поместились в память.
+    `lang_max` — своя норма фраз для языка (исландский: на нём детектор срабатывал чаще всего)."""
     rng = random.Random(seed)
     train, test = [], []
     for lang_dir in sorted(d for d in root.iterdir() if (d / "dev.tsv").is_file()):
@@ -240,7 +242,7 @@ def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int) -> tup
         rng.shuffle(rows)
         for path in rows[:test_per_lang]:
             test.append(read_wav_i16(path))
-        for path in rows[test_per_lang:test_per_lang + per_lang]:
+        for path in rows[test_per_lang:test_per_lang + (lang_max or {}).get(lang_dir.name, per_lang)]:
             train.append(read_wav_i16(path))
     return train, test
 
@@ -532,6 +534,8 @@ def main() -> None:
     p.add_argument("--steps", type=int, default=30000)
     p.add_argument("--batch", type=int, default=256)
     p.add_argument("--channels", type=int, default=64)
+    p.add_argument("--dilations", default="1,2,4,8,1,2",
+                   help="расширения блоков; длиннее — шире окно (проверка кандидата: 1,2,4,8,16,1,2,4)")
     p.add_argument("--holdout-langs", default="nl,hu,ko")
     p.add_argument("--wake-langs", default="", help="через запятую: «ривер» только этих языков (и живой GLOBE); "
                    "своеязычные записи остальных («瑞沃», «Riwer») — отрицательные примеры")
@@ -541,6 +545,7 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=11)
     p.add_argument("--fleurs", type=Path, help="data/fleurs: живая речь носителей")
     p.add_argument("--fleurs-per-lang", type=int, default=150)
+    p.add_argument("--fleurs-lang-max", default="", help="своя норма фраз: is_is=800,ru_ru=300")
     p.add_argument("--fleurs-test-per-lang", type=int, default=40)
     p.add_argument("--mine-at", default="", help="шаги добора трудных примеров, через запятую")
     p.add_argument("--hard-share", type=float, default=0.25)
@@ -583,14 +588,15 @@ def main() -> None:
     print(f"test:  wake {len(test_pools.wake)}, speech {len(test_pools.speech)}, confusable {len(test_pools.confusable)}; языки без обучения: {sorted(holdout_langs)}")
     real_test: list[np.ndarray] = []
     if args.fleurs:
-        train_pools.real, real_test = load_fleurs(args.fleurs, args.fleurs_per_lang, args.fleurs_test_per_lang, args.seed)
+        train_pools.real, real_test = load_fleurs(args.fleurs, args.fleurs_per_lang, args.fleurs_test_per_lang, args.seed,
+                                                     {k: int(v) for k, v in (x.split("=") for x in args.fleurs_lang_max.split(",") if x)})
         hours = lambda clips: sum(len(c) for c in clips) / RATE / 3600
         print(f"живая речь: обучение {len(train_pools.real)} фраз ({hours(train_pools.real):.1f} ч), тест {len(real_test)} ({hours(real_test):.1f} ч)")
     mine_steps = {int(x) for x in args.mine_at.split(",") if x}
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mel, augment = LogMel().to(device), Augment().to(device)
-    model = CausalTcn(args.channels).to(device)
+    model = CausalTcn(args.channels, dilations=tuple(int(d) for d in args.dilations.split(","))).to(device)
     print(f"параметров {sum(p.numel() for p in model.parameters())}, контекст {model.receptive_field()} кадров")
     if args.eval_only:
         model.load_state_dict(torch.load(args.eval_only, map_location=device))
