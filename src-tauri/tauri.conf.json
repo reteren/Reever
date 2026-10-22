@@ -58,6 +58,22 @@
         "focus": true
       },
       {
+        "label": "traymenu",
+        "create": false,
+        "title": "Reever",
+        "url": "traymenu.html",
+        "width": 268,
+        "height": 158,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": true
+      },
+      {
         "label": "bubble",
         "create": false,
         "title": "Reever",

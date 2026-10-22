@@ -283,18 +283,16 @@ pub fn index_status(index: State<'_, crate::local_index::IndexManager>) -> crate
     index.status()
 }
 
-/// Язык интерфейса: сохраняет выбор и сразу переводит меню трея. Возвращает
+/// Язык интерфейса: сохраняет выбор; меню трея (traymenu.rs) берёт его при показе. Возвращает
 /// итоговый код языка (`auto` раскрывается в язык Windows).
 #[tauri::command]
 pub fn set_ui_language(
     config: State<'_, LiveConfig>,
-    tray: State<'_, crate::uilang::TrayItems>,
     language: String,
 ) -> Result<String, String> {
     let config = config.get();
     let locale =
         crate::uilang::resolve_enabled(&language, &config.settings.interface_languages());
-    crate::uilang::apply_tray(&tray, locale);
     *crate::uilang::CURRENT.lock().map_err(|e| e.to_string())? = locale;
     persist_hotkey(&config, "ui_language", &language)?;
     Ok(locale.into())

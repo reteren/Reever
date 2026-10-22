@@ -9,8 +9,6 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use tauri::menu::MenuItem;
-use tauri::Wry;
 
 pub const SUPPORTED: [&str; 30] = [
     "en",
@@ -80,13 +78,6 @@ const SOURCES: [(&str, &str); 30] = [
 
 /// Текущий язык интерфейса (для строк, которые Rust шлёт в журнал).
 pub static CURRENT: std::sync::Mutex<&'static str> = std::sync::Mutex::new("en");
-
-/// Пункты меню трея — чтобы сменить им подписи при смене языка без перезапуска.
-pub struct TrayItems {
-    pub show: MenuItem<Wry>,
-    pub pause: MenuItem<Wry>,
-    pub quit: MenuItem<Wry>,
-}
 
 /// Как `resolve`, но среди включённых языков интерфейса (`Settings::ui_languages`):
 /// выключенный — английский.
@@ -234,13 +225,6 @@ impl From<&str> for LogText {
     fn from(text: &str) -> Self {
         LogText::Raw(text.to_string())
     }
-}
-
-/// Подписи меню трея на языке `locale`.
-pub fn apply_tray(items: &TrayItems, locale: &str) {
-    let _ = items.show.set_text(text(locale, "tray.show"));
-    let _ = items.pause.set_text(text(locale, "tray.pause"));
-    let _ = items.quit.set_text(text(locale, "tray.quit"));
 }
 
 #[cfg(test)]

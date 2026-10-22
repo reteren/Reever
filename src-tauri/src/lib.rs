@@ -41,6 +41,7 @@ pub mod speech;
 pub mod spellcheck;
 pub mod system;
 pub mod textnorm;
+pub mod traymenu;
 pub mod typing;
 pub mod uilang;
 pub mod vad;
@@ -54,7 +55,6 @@ use std::sync::Arc;
 
 use actions::SharedState;
 use config::{LiveConfig, ReeverConfig};
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{Manager, RunEvent, WebviewWindow, WindowEvent};
@@ -89,6 +89,21 @@ fn window_ready(app: tauri::AppHandle) {
     if SHOW_REQUESTED.load(Ordering::SeqCst) && !WINDOW_SHOWN.swap(true, Ordering::SeqCst) {
         reveal_main(&app);
     }
+}
+
+/// Пауза микрофона и обратно (меню трея).
+fn toggle_pause(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<Arc<SharedState>>() {
+        let now = !state.paused.load(Ordering::Relaxed);
+        state.paused.store(now, Ordering::Relaxed);
+        events::set_state(app, if now { "paused" } else { "idle" });
+        events::ui_log(app, if now { crate::msg!("log.paused") } else { crate::msg!("log.resumed") });
+    }
+}
+
+fn quit(app: &tauri::AppHandle) {
+    EXIT_REQUESTED.store(true, Ordering::SeqCst);
+    app.exit(0);
 }
 
 fn show_main(app: &tauri::AppHandle) {
@@ -305,42 +320,25 @@ pub fn run() {
                 &cfg.settings.interface_languages(),
             );
             *uilang::CURRENT.lock().unwrap() = locale;
-            let show = MenuItemBuilder::with_id("show", uilang::text(locale, "tray.show")).build(app)?;
-            let pause = MenuItemBuilder::with_id("pause", uilang::text(locale, "tray.pause")).build(app)?;
-            let quit = MenuItemBuilder::with_id("quit", uilang::text(locale, "tray.quit")).build(app)?;
-            let menu = MenuBuilder::new(app).items(&[&show, &pause, &quit]).build()?;
+            // Меню по правому клику — своё окно в стиле программы (traymenu.rs).
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Reever")
-                .menu(&menu)
-                .on_menu_event(|app, event| match event.id().as_ref() {
-                    "show" => show_main(app),
-                    "pause" => {
-                        if let Some(state) = app.try_state::<Arc<SharedState>>() {
-                            let now = !state.paused.load(Ordering::Relaxed);
-                            state.paused.store(now, Ordering::Relaxed);
-                            events::set_state(app, if now { "paused" } else { "idle" });
-                            events::ui_log(app, if now { crate::msg!("log.paused") } else { crate::msg!("log.resumed") });
-                        }
-                    }
-                    "quit" => {
-                        EXIT_REQUESTED.store(true, Ordering::SeqCst);
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
+                .on_tray_icon_event(|tray, event| match event {
+                    TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
                         ..
-                    } = event
-                    {
-                        show_main(tray.app_handle());
-                    }
+                    } => show_main(tray.app_handle()),
+                    TrayIconEvent::Click {
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Up,
+                        position,
+                        ..
+                    } => traymenu::show(tray.app_handle(), position),
+                    _ => {}
                 })
                 .build(app)?;
-            app.manage(uilang::TrayItems { show, pause, quit });
 
             // Второй запуск поднимает этот экземпляр, не создавая ещё один аудиопоток.
             listen_for_second_instance(app.handle().clone());
@@ -452,6 +450,8 @@ pub fn run() {
             picker::picker_ready,
             confirm::confirm_ready,
             confirm::confirm_answer,
+            traymenu::traymenu_ready,
+            traymenu::traymenu_action,
             skin::set_window_shape,
         ])
         .build(tauri::generate_context!())
