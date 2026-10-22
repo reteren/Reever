@@ -221,6 +221,8 @@ I18N.register('ar', {
   "settings.wake_spotter": "كاشف «river» في الخلفية (نموذج صغير)",
   "settings.wake_spotter.help": "يستمع باستمرار ويلتقط كلمة التنبيه فورًا، حتى أثناء الكلام؛ ويساعد النموذج الكبير إذا لم يلتقطها.",
   "settings.wake_sound": "إصدار الإشارة فور سماع «river»",
+  "settings.wake_blackbox": "تسجيل حالات التقاط «river»",
+  "settings.wake_blackbox.help": "لتصحيح الأخطاء: تُحفظ 15 ثانية من الصوت حول كل التقاط بصيغة WAV في مجلد الإعدادات (blackbox)، حتى 400 ملف. يُكتب صوت الميكروفون على القرص.",
   "settings.hotkey": "مفتاح الاختصار للتحدث",
   "settings.mute_hotkey": "مفتاح اختصار كتم الميكروفون",
   "settings.private_log": "سجل خاص",

@@ -221,6 +221,8 @@ I18N.register('fr', {
   "settings.wake_spotter": "Détecteur «river» en arrière-plan (modèle léger)",
   "settings.wake_spotter.help": "Écoute en continu et détecte immédiatement le mot de réveil, même au milieu d’une phrase ; le grand modèle prend le relais s’il ne le détecte pas.",
   "settings.wake_sound": "Émettre le signal dès que «river» est détecté",
+  "settings.wake_blackbox": "Enregistrer les détections de «river»",
+  "settings.wake_blackbox.help": "Pour le débogage : 15 secondes d’audio autour de chaque détection sont enregistrées en WAV dans le dossier des réglages (blackbox), jusqu’à 400 fichiers. Le son du micro est écrit sur le disque.",
   "settings.hotkey": "Raccourci clavier pour parler",
   "settings.mute_hotkey": "Raccourci clavier « Couper le microphone »",
   "settings.private_log": "Journal privé",

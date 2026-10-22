@@ -222,6 +222,8 @@ I18N.register('lt', {
   "settings.wake_spotter": "Foninis «river» detektorius (mažas modelis)",
   "settings.wake_spotter.help": "Klausosi nuolat ir aktyvinimo žodį pagauna iš karto, net kalbos viduryje; apdraudžia didįjį modelį, kai šis jį praleidžia.",
   "settings.wake_sound": "Signalas, vos tik išgirstas «river»",
+  "settings.wake_blackbox": "Įrašyti «river» aptikimus",
+  "settings.wake_blackbox.help": "Derinimui: 15 sekundžių garso aplink kiekvieną aptikimą įrašoma kaip WAV į nustatymų aplanką (blackbox), iki 400 failų. Mikrofono garsas rašomas į diską.",
   "settings.hotkey": "Spartusis klavišas „spausk ir kalbėk“",
   "settings.mute_hotkey": "Spartusis klavišas „Nutildyti mikrofoną“",
   "settings.private_log": "Privatus žurnalas",

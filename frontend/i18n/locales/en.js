@@ -223,6 +223,8 @@ I18N.register('en', {
   "settings.wake_spotter": "Background «river» detector (small model)",
   "settings.wake_spotter.help": "Listens continuously and catches the wake word right away, mid-speech; backs up the large model when it misses it.",
   "settings.wake_sound": "Signal as soon as «river» is heard",
+  "settings.wake_blackbox": "Record «river» detections",
+  "settings.wake_blackbox.help": "For debugging: 15 seconds of audio around each detector trigger are saved as WAV in the settings folder (blackbox), up to 400 files. This writes microphone audio to disk.",
   "settings.hotkey": "Push-to-talk hotkey",
   "settings.mute_hotkey": "“Mute microphone” hotkey",
   "settings.private_log": "Private log",

@@ -222,6 +222,8 @@ I18N.register('sl', {
   "settings.wake_spotter": "Detektor «river» v ozadju (majhen model)",
   "settings.wake_spotter.help": "Posluša neprekinjeno in besedo za aktivacijo ujame takoj, tudi sredi govora; varuje veliki model, ko jo ta preslišal.",
   "settings.wake_sound": "Signal takoj, ko zasliši «river»",
+  "settings.wake_blackbox": "Snemaj zaznave «river»",
+  "settings.wake_blackbox.help": "Za odpravljanje napak: 15 sekund zvoka okoli vsake zaznave se shrani kot WAV v mapo nastavitev (blackbox), do 400 datotek. Zvok mikrofona se zapisuje na disk.",
   "settings.hotkey": "Bližnjica »pritisni in govori«",
   "settings.mute_hotkey": "Bližnjica »Utišaj mikrofon«",
   "settings.private_log": "Zasebni dnevnik",

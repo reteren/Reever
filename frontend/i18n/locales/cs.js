@@ -222,6 +222,8 @@ I18N.register('cs', {
   "settings.wake_spotter": "Detektor «river» na pozadí (malý model)",
   "settings.wake_spotter.help": "Poslouchá nepřetržitě a zachytí aktivační slovo hned, i uprostřed řeči; jistí velký model, když ho přeslechne.",
   "settings.wake_sound": "Signál, jakmile zazní «river»",
+  "settings.wake_blackbox": "Nahrávat detekce «river»",
+  "settings.wake_blackbox.help": "Pro ladění: 15 sekund zvuku kolem každé detekce se uloží jako WAV do složky nastavení (blackbox), nejvýše 400 souborů. Zapisuje se zvuk z mikrofonu na disk.",
   "settings.hotkey": "Zkratka „stiskni a mluv“",
   "settings.mute_hotkey": "Zkratka „Ztlumit mikrofon“",
   "settings.private_log": "Soukromý protokol",

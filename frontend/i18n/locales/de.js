@@ -221,6 +221,8 @@ I18N.register('de', {
   "settings.wake_spotter": "Hintergrunddetektor für «river» (kleines Modell)",
   "settings.wake_spotter.help": "Hört ständig zu und erkennt das Aktivierungswort sofort, auch mitten im Satz; springt ein, wenn das große Modell es überhört.",
   "settings.wake_sound": "Signalton, sobald «river» erkannt wird",
+  "settings.wake_blackbox": "«river»-Erkennungen aufnehmen",
+  "settings.wake_blackbox.help": "Zur Fehlersuche: 15 Sekunden Audio rund um jede Erkennung werden als WAV im Einstellungsordner (blackbox) gespeichert, bis zu 400 Dateien. Dabei wird Mikrofonton auf die Festplatte geschrieben.",
   "settings.hotkey": "Tastenkürzel für Push-to-talk",
   "settings.mute_hotkey": "Tastenkürzel zum Stummschalten des Mikrofons",
   "settings.private_log": "Privates Protokoll",

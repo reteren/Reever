@@ -8,6 +8,7 @@ pub mod apps;
 pub mod asr;
 pub mod audio;
 pub mod bilingual;
+pub mod blackbox;
 pub mod calc;
 pub mod calcapp;
 pub mod commands;

@@ -222,6 +222,8 @@ I18N.register('nl', {
   "settings.wake_spotter": "«river»-detector op de achtergrond (klein model)",
   "settings.wake_spotter.help": "Luistert continu en vangt het activeringswoord meteen op, ook midden in een zin; vangt het grote model op als dat het mist.",
   "settings.wake_sound": "Signaal zodra «river» is gehoord",
+  "settings.wake_blackbox": "«river»-detecties opnemen",
+  "settings.wake_blackbox.help": "Voor foutopsporing: 15 seconden audio rond elke detectie worden als WAV opgeslagen in de instellingenmap (blackbox), tot 400 bestanden. Dit schrijft microfoongeluid naar de schijf.",
   "settings.hotkey": "Sneltoets voor „druk en spreek”",
   "settings.mute_hotkey": "Sneltoets „Microfoon dempen”",
   "settings.private_log": "Privélogboek",

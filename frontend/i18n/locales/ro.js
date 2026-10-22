@@ -222,6 +222,8 @@ I18N.register('ro', {
   "settings.wake_spotter": "Detector «river» în fundal (model mic)",
   "settings.wake_spotter.help": "Ascultă continuu și prinde imediat cuvântul de activare, chiar în mijlocul vorbirii; asigură modelul mare când acesta îl ratează.",
   "settings.wake_sound": "Semnal imediat ce se aude «river»",
+  "settings.wake_blackbox": "Înregistrează detectările «river»",
+  "settings.wake_blackbox.help": "Pentru depanare: 15 secunde de sunet din jurul fiecărei detectări se salvează ca WAV în folderul de setări (blackbox), până la 400 de fișiere. Sunetul microfonului se scrie pe disc.",
   "settings.hotkey": "Tastă rapidă „apasă și vorbește”",
   "settings.mute_hotkey": "Tastă rapidă „Dezactivează microfonul”",
   "settings.private_log": "Jurnal privat",

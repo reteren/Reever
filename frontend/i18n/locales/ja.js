@@ -221,6 +221,8 @@ I18N.register('ja', {
   "settings.wake_spotter": "バックグラウンドの «river» 検出器（小型モデル）",
   "settings.wake_spotter.help": "常時聴き取り、会話の途中でも起動ワードをすぐに検出します。大型モデルが聞き逃した場合の補助にもなります。",
   "settings.wake_sound": "«river»を認識したらすぐに合図",
+  "settings.wake_blackbox": "«river» の検出を録音",
+  "settings.wake_blackbox.help": "デバッグ用：検出ごとに前後15秒の音声を設定フォルダー（blackbox）にWAVで保存します（最大400ファイル）。マイクの音声がディスクに書き込まれます。",
   "settings.hotkey": "プッシュ・トゥ・トークのホットキー",
   "settings.mute_hotkey": "「マイクをミュート」のホットキー",
   "settings.private_log": "プライベートログ",

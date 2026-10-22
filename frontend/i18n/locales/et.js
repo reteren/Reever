@@ -222,6 +222,8 @@ I18N.register('et', {
   "settings.wake_spotter": "«river»-tuvasti taustal (väike mudel)",
   "settings.wake_spotter.help": "Kuulab pidevalt ja püüab äratussõna kohe kinni, ka keset kõnet; kindlustab suurt mudelit, kui see sõna maha magab.",
   "settings.wake_sound": "Signaal kohe, kui «river» kõlab",
+  "settings.wake_blackbox": "Salvesta «river» tuvastused",
+  "settings.wake_blackbox.help": "Silumiseks: iga tuvastuse ümbert salvestatakse 15 sekundit heli WAV-failina seadete kausta (blackbox), kuni 400 faili. Mikrofoni heli kirjutatakse kettale.",
   "settings.hotkey": "Kiirklahv „vajuta ja räägi”",
   "settings.mute_hotkey": "Kiirklahv „Vaigista mikrofon”",
   "settings.private_log": "Privaatne logi",

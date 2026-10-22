@@ -221,6 +221,8 @@ I18N.register('zh', {
   "settings.wake_spotter": "后台 «river» 检测器（小型模型）",
   "settings.wake_spotter.help": "持续监听，可在说话过程中立即捕捉唤醒词；大型模型漏听时，它会提供补充检测。",
   "settings.wake_sound": "听到 «river» 后立即播放提示音",
+  "settings.wake_blackbox": "录制 «river» 检测",
+  "settings.wake_blackbox.help": "用于调试：每次检测前后 15 秒的声音以 WAV 保存到设置文件夹（blackbox），最多 400 个文件。麦克风声音会写入磁盘。",
   "settings.hotkey": "按键说话快捷键",
   "settings.mute_hotkey": "“静音麦克风”快捷键",
   "settings.private_log": "隐私日志",

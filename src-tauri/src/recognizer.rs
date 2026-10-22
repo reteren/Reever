@@ -270,6 +270,10 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         last_wake_sound: None,
         last_spot_sound: None,
         choice_session: None,
+        blackbox: cfg.settings.wake_blackbox.then(|| {
+            let dir = tauri::Manager::path(app).app_config_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            crate::blackbox::BlackBox::new(dir.join("blackbox"))
+        }),
     };
     set_state(app, "idle");
     ui_log(
@@ -397,6 +401,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         };
 
         meter.push(app, &chunk);
+        if let Some(saved) = worker.blackbox.as_mut().and_then(|bb| bb.push(&chunk)) {
+            ui_log(app, format!("blackbox: saved {}", saved.display()));
+        }
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
         let model_ready = asr.is_loaded();
@@ -763,6 +770,8 @@ struct Worker<'a> {
     last_wake_sound: Option<std::time::Instant>,
     /// Сигнал на срабатывание детектора: подтверждение большой моделью его не повторяет.
     last_spot_sound: Option<std::time::Instant>,
+    /// Звук вокруг срабатываний детектора — в WAV (Настройки → «Записывать срабатывания»).
+    blackbox: Option<crate::blackbox::BlackBox>,
 }
 
 /// Состояние одной диктовки: оформление текста и то, что ушло в буфер обмена.
@@ -807,6 +816,12 @@ impl Worker<'_> {
     fn prefetch_index(&self) {
         if let Some(index) = tauri::Manager::try_state::<crate::local_index::IndexManager>(self.app) {
             index.prefetch();
+        }
+    }
+
+    fn blackbox_mark(&mut self, tag: &'static str) {
+        if let Some(bb) = self.blackbox.as_mut() {
+            bb.mark(tag);
         }
     }
 
@@ -959,6 +974,7 @@ impl Worker<'_> {
         match ev {
             EngineEvent::State(s) => set_state(self.app, s),
             EngineEvent::WakeHeard => {
+                self.blackbox_mark("heard");
                 ui_log(self.app, crate::msg!("log.listen"));
                 self.prefetch_index();
                 // Сигнал уже прозвучал на детекторе — большая модель «ривер» лишь подтвердила.
@@ -971,6 +987,7 @@ impl Worker<'_> {
                 }
             }
             EngineEvent::WakeSpotted => {
+                self.blackbox_mark("spot");
                 // Сразу, не дожидаясь загрузки большой модели (~1,7 с у Parakeet v3): ложное
                 // срабатывание детектора даст лишний сигнал, зато настоящее «ривер» слышно сразу.
                 self.wake_sound();
@@ -1001,7 +1018,12 @@ impl Worker<'_> {
             EngineEvent::Dictation(text) => self.dictation_text(&text),
             EngineEvent::DictationPartial(text) => self.dictation_partial(&text),
             EngineEvent::DictationEnd(reason) => self.dictation_end(reason),
-            EngineEvent::Log(m) => ui_log(self.app, m),
+            EngineEvent::Log(m) => {
+                if m.render("en").contains("did not confirm") {
+                    self.blackbox_mark("unconfirmed");
+                }
+                ui_log(self.app, m)
+            }
         }
     }
 

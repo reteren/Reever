@@ -222,6 +222,8 @@ I18N.register('mt', {
   "settings.wake_spotter": "Detettur ta' «river» fl-isfond (mudell żgħir)",
   "settings.wake_spotter.help": "Jisma' l-ħin kollu u jaqbad il-kelma ta' attivazzjoni minnufih, anke f'nofs it-taħdit; jassigura l-mudell il-kbir meta dan jitlifha.",
   "settings.wake_sound": "Sinjal hekk kif jinstema' «river»",
+  "settings.wake_blackbox": "Irrekordja l-identifikazzjonijiet ta' «river»",
+  "settings.wake_blackbox.help": "Għad-debugging: 15-il sekonda ta' ħoss madwar kull identifikazzjoni jiġu salvati bħala WAV fil-folder tas-settings (blackbox), sa 400 fajl. Il-ħoss tal-mikrofonu jinkiteb fuq id-diska.",
   "settings.hotkey": "Shortcut “agħfas u tkellem”",
   "settings.mute_hotkey": "Shortcut “Itfi l-mikrofonu”",
   "settings.private_log": "Reġistru privat",

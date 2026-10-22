@@ -222,6 +222,8 @@ I18N.register('ko', {
   "settings.wake_spotter": "백그라운드 «river» 감지기 (작은 모델)",
   "settings.wake_spotter.help": "계속 들으면서 말하는 도중에도 호출어를 바로 잡아냅니다. 큰 모델이 놓쳤을 때 보완합니다.",
   "settings.wake_sound": "«river»가 들리면 바로 신호",
+  "settings.wake_blackbox": "«river» 감지 녹음",
+  "settings.wake_blackbox.help": "디버깅용: 감지될 때마다 앞뒤 15초의 소리를 설정 폴더(blackbox)에 WAV로 저장합니다(최대 400개). 마이크 소리가 디스크에 기록됩니다.",
   "settings.hotkey": "“누르고 말하기” 단축키",
   "settings.mute_hotkey": "“마이크 음소거” 단축키",
   "settings.private_log": "비공개 로그",

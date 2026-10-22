@@ -221,6 +221,8 @@ I18N.register('it', {
   "settings.wake_spotter": "Rilevatore di «river» in background (modello piccolo)",
   "settings.wake_spotter.help": "Ascolta in modo continuo e rileva subito la parola di attivazione, anche mentre stai parlando; aiuta il modello grande quando non la sente.",
   "settings.wake_sound": "Emetti il segnale appena viene riconosciuto «river»",
+  "settings.wake_blackbox": "Registra i rilevamenti di «river»",
+  "settings.wake_blackbox.help": "Per il debug: 15 secondi di audio attorno a ogni rilevamento vengono salvati come WAV nella cartella delle impostazioni (blackbox), fino a 400 file. L’audio del microfono viene scritto su disco.",
   "settings.hotkey": "Scorciatoia push-to-talk",
   "settings.mute_hotkey": "Scorciatoia “disattiva microfono”",
   "settings.private_log": "Log privato",

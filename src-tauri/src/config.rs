@@ -128,6 +128,10 @@ pub struct Settings {
     /// Сигнал сразу, как только услышано wake-слово.
     #[serde(default = "default_true")]
     pub wake_sound: bool,
+    /// «Чёрный ящик» (blackbox.rs): звук вокруг срабатываний детектора — в WAV, для отладки
+    /// и дообучения. Выключен по умолчанию: это запись микрофона на диск.
+    #[serde(default)]
+    pub wake_blackbox: bool,
     /// Язык интерфейса: `auto` (язык Windows) или код из `uilang::SUPPORTED`.
     #[serde(default = "default_ui_language")]
     pub ui_language: String,
@@ -400,6 +404,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_spotter", wake_spotter, bool);
     restore!("wake_sound", wake_sound, bool);
+    restore!("wake_blackbox", wake_blackbox, bool);
     restore!("ui_language", ui_language, String);
     restore!("ui_languages", ui_languages, Vec<String>);
     restore!("languages", languages, Vec<String>);
@@ -448,6 +453,7 @@ impl Default for Settings {
             webchat_send: true,
             wake_spotter: true,
             wake_sound: true,
+            wake_blackbox: false,
             ui_language: default_ui_language(),
             ui_languages: default_ui_languages(),
             languages: default_languages(),

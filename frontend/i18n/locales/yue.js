@@ -222,6 +222,8 @@ I18N.register('yue', {
   "settings.wake_spotter": "背景 «river» 偵測器（細模型）",
   "settings.wake_spotter.help": "一直聽住，講緊嘢都即刻捉到喚醒詞；大模型漏咗就幫手補。",
   "settings.wake_sound": "一聽到 «river» 就響提示音",
+  "settings.wake_blackbox": "錄低 «river» 偵測",
+  "settings.wake_blackbox.help": "用嚟除錯：每次偵測前後 15 秒嘅聲音會以 WAV 存入設定資料夾（blackbox），最多 400 個檔案。咪高峰聲音會寫入磁碟。",
   "settings.hotkey": "「撳住講嘢」快捷鍵",
   "settings.mute_hotkey": "「靜音咪」快捷鍵",
   "settings.private_log": "私人記錄",

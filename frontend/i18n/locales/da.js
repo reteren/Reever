@@ -222,6 +222,8 @@ I18N.register('da', {
   "settings.wake_spotter": "«river»-detektor i baggrunden (lille model)",
   "settings.wake_spotter.help": "Lytter hele tiden og fanger vækkeordet med det samme, også midt i talen; sikrer den store model, når den overhører det.",
   "settings.wake_sound": "Signal, så snart «river» høres",
+  "settings.wake_blackbox": "Optag registreringer af «river»",
+  "settings.wake_blackbox.help": "Til fejlfinding: 15 sekunders lyd omkring hver registrering gemmes som WAV i indstillingsmappen (blackbox), op til 400 filer. Det skriver mikrofonlyd til disken.",
   "settings.hotkey": "Genvejstast til ”tryk og tal”",
   "settings.mute_hotkey": "Genvejstast ”Slå mikrofonen fra”",
   "settings.private_log": "Privat log",

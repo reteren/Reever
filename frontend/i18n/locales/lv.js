@@ -222,6 +222,8 @@ I18N.register('lv', {
   "settings.wake_spotter": "Fona «river» detektors (mazs modelis)",
   "settings.wake_spotter.help": "Klausās nepārtraukti un aktivizēšanas vārdu uztver uzreiz, pat runas vidū; apdrošina lielo modeli, kad tas to palaiž garām.",
   "settings.wake_sound": "Signāls, tiklīdz izskan «river»",
+  "settings.wake_blackbox": "Ierakstīt «river» atpazīšanas",
+  "settings.wake_blackbox.help": "Atkļūdošanai: 15 sekundes skaņas ap katru atpazīšanu tiek saglabātas kā WAV iestatījumu mapē (blackbox), līdz 400 failiem. Mikrofona skaņa tiek rakstīta diskā.",
   "settings.hotkey": "Īsinājumtaustiņš „nospied un runā”",
   "settings.mute_hotkey": "Īsinājumtaustiņš „Izslēgt mikrofonu”",
   "settings.private_log": "Privāts žurnāls",

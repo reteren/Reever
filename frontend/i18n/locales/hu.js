@@ -222,6 +222,8 @@ I18N.register('hu', {
   "settings.wake_spotter": "Háttérbeli «river»-érzékelő (kis modell)",
   "settings.wake_spotter.help": "Folyamatosan figyel, és azonnal elkapja az ébresztőszót, akár beszéd közben is; biztosítja a nagy modellt, ha az elszalasztja.",
   "settings.wake_sound": "Jelzés, amint elhangzik a «river»",
+  "settings.wake_blackbox": "«river» észlelések rögzítése",
+  "settings.wake_blackbox.help": "Hibakereséshez: minden észlelés körül 15 másodpercnyi hang WAV-ként a beállítások mappájába kerül (blackbox), legfeljebb 400 fájl. A mikrofon hangja lemezre íródik.",
   "settings.hotkey": "„Nyomd és beszélj” billentyűparancs",
   "settings.mute_hotkey": "„Mikrofon némítása” billentyűparancs",
   "settings.private_log": "Privát napló",

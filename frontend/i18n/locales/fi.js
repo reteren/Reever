@@ -222,6 +222,8 @@ I18N.register('fi', {
   "settings.wake_spotter": "«river»-tunnistin taustalla (pieni malli)",
   "settings.wake_spotter.help": "Kuuntelee jatkuvasti ja tunnistaa herätyssanan heti, myös kesken puheen; varmistaa suuren mallin, kun se ohittaa sanan.",
   "settings.wake_sound": "Merkkiääni heti, kun «river» kuuluu",
+  "settings.wake_blackbox": "Tallenna «river»-tunnistukset",
+  "settings.wake_blackbox.help": "Vianetsintään: jokaisen tunnistuksen ympäriltä tallennetaan 15 sekuntia ääntä WAV-tiedostona asetuskansioon (blackbox), enintään 400 tiedostoa. Mikrofonin ääni tallentuu levylle.",
   "settings.hotkey": "Pikanäppäin ”paina ja puhu”",
   "settings.mute_hotkey": "Pikanäppäin ”Mykistä mikrofoni”",
   "settings.private_log": "Yksityinen loki",
