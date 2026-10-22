@@ -509,7 +509,7 @@ fn time_overlap(left: &TimedWord, right: &TimedWord) -> f32 {
     (left.end.min(right.end) - left.start.max(right.start)).max(0.0)
 }
 
-fn russian_sound_key(word: &str) -> String {
+pub(crate) fn russian_sound_key(word: &str) -> String {
     let chars: Vec<char> = word.chars().collect();
     let mut output = String::new();
     let mut index = 0;
@@ -570,7 +570,7 @@ fn russian_sound_key(word: &str) -> String {
     output
 }
 
-fn english_sound_key(word: &str) -> String {
+pub(crate) fn english_sound_key(word: &str) -> String {
     word.to_lowercase()
         .replace("ough", "uff")
         .replace("ph", "f")

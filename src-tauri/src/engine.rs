@@ -1305,7 +1305,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             match repair_wake(&timed, &self.cfg.wake_words, audio.len(), &is_russian_word) {
                 Some(repaired) => {
                     out.push(EngineEvent::Log(
-                        "wake: the wake word was confirmed by the background detector".into(),
+                        format!(
+                            "wake: the wake word was confirmed by the background detector (heard «{}»)",
+                            timed.text.trim()
+                        )
+                        .into(),
                     ));
                     repaired
                 }
@@ -1957,7 +1961,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
         let fixed = repair_wake(timed, &self.cfg.wake_words, audio_len, &is_russian_word)?;
         out.push(EngineEvent::Log(
-            "wake: the wake word was confirmed by the background detector".into(),
+            format!(
+                "wake: the wake word was confirmed by the background detector (heard «{}»)",
+                timed.text.trim()
+            )
+            .into(),
         ));
         Some(fixed)
     }
@@ -2027,6 +2035,9 @@ fn join_command(prefix: &str, text: &str) -> String {
 ///   после pre-roll, не больше двух; без тайминга — первое слово), и каждое из них должно
 ///   быть НЕ словарным русским словом («рибер», «ривир»), а не «река» / «ревёт».
 ///   `is_real_word` — проверка словаря; `None` (словаря нет) — не чиним.
+/// - И в обоих случаях искажённое должно звучать похоже на wake (`sounds_like_wake`):
+///   Parakeet пишет «ривер» как «Diver», «Ariba», «Рвер», а чужая речь после ложного
+///   срабатывания детектора («вот такое») командой не становится.
 fn repair_wake(
     timed: &Timed,
     wake_words: &[String],
@@ -2038,7 +2049,11 @@ fn repair_wake(
     let words: Vec<&str> = timed.text.split_whitespace().collect();
     if words.len() <= 1 && audio_len <= samples(1_500) {
         // Детектор акустический и иногда ошибается: настоящее слово («да», «окей») — не wake.
-        if words.first().is_some_and(|word| is_real_word(word) == Some(true)) {
+        // Пустой текст — модель не расслышала ничего: верим детектору (в ленивом режиме
+        // пустое отсекает `confirm_wake` раньше).
+        if words.first().is_some_and(|word| is_real_word(word) == Some(true))
+            || (!words.is_empty() && !sounds_like_wake(&words, wake_words))
+        {
             return None;
         }
         return Some(Timed {
@@ -2064,7 +2079,7 @@ fn repair_wake(
     let all_garbled = words[..dropped]
         .iter()
         .all(|word| is_real_word(word) == Some(false));
-    if !all_garbled {
+    if !all_garbled || !sounds_like_wake(&words[..dropped], wake_words) {
         return None;
     }
 
@@ -2083,6 +2098,30 @@ fn repair_wake(
     Some(Timed {
         text: text_words.join(" "),
         words: timed_words,
+    })
+}
+
+/// Похоже ли на звук wake-слова: первое слово или первые два вместе («Re well») по
+/// звуковому ключу (dictation.rs). Порог по записям пользователя: «Diver» 0,87, «Ariba»
+/// 0,78, «Report» 0,76 — да; «вот» 0, «голубые» 0, «real» 0,67 — нет.
+fn sounds_like_wake(words: &[&str], wake_words: &[String]) -> bool {
+    const MIN_SIMILARITY: f64 = 0.75;
+    let key = |word: &str| {
+        let word = word.to_lowercase();
+        if word.chars().any(|c| c.is_ascii_alphabetic()) {
+            crate::dictation::english_sound_key(&word)
+        } else {
+            crate::dictation::russian_sound_key(&word)
+        }
+    };
+    let mut targets: Vec<String> = wake_words.iter().map(|wake| key(wake)).collect();
+    targets.extend(["river", "rever", "riva"].map(String::from));
+    let one = words.first().map(|word| key(word)).unwrap_or_default();
+    let two: String = words.iter().take(2).map(|word| key(word)).collect();
+    [one, two].iter().filter(|candidate| !candidate.is_empty()).any(|candidate| {
+        targets
+            .iter()
+            .any(|target| strsim::jaro_winkler(candidate, target) >= MIN_SIMILARITY)
     })
 }
 
@@ -3026,6 +3065,15 @@ mod tests {
         assert_eq!(
             repair_wake(&timed("река открой хром"), &wake, long, &dict),
             None
+        );
+        // После ложного срабатывания детектора: не похоже на «ривер» — не команда.
+        assert_eq!(
+            repair_wake(&timed("вот такое"), &wake, long, &dict),
+            None
+        );
+        assert_eq!(
+            repair_wake(&timed("diver открой хром"), &wake, long, &dict).map(|t| t.text),
+            Some("ривер открой хром".into())
         );
         assert_eq!(
             repair_wake(&timed("ре"), &wake, samples(800), &dict).map(|t| t.text),
