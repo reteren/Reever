@@ -1031,8 +1031,12 @@ impl Worker<'_> {
             EngineEvent::DictationPartial(text) => self.dictation_partial(&text),
             EngineEvent::DictationEnd(reason) => self.dictation_end(reason),
             EngineEvent::Log(m) => {
-                if m.render("en").contains("did not confirm") {
+                let text = m.render("en");
+                if text.contains("did not confirm") {
                     self.blackbox_mark("unconfirmed");
+                } else if text.starts_with("wake: detector candidate") {
+                    // Отброшенные кандидаты — главный материал для дообучения детектора.
+                    self.blackbox_mark("rejected");
                 }
                 ui_log(self.app, m)
             }
