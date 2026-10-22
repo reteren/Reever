@@ -11,6 +11,9 @@
 //! wake-detector.md): слово заметно громче фона и всплеск уверенности не случайный.
 //! Третий фильтр — речь ли это по Silero VAD — в engine.rs, где VAD уже работает.
 //!
+//! «Ривер» — начало обращения: перед словом нужна пауза (`PAUSE_FRAMES`). Срабатывания
+//! посреди разговора, видео и песен (живая речь — главный источник ложных) отсекаются.
+//!
 //! Вторая ступень (`with_verifier`): сеть пошире, с окном 1,5 с вместо 0,73 с, слушает
 //! кандидата целиком вместе с тем, что вокруг. Работает только на кандидатах — в покое ни
 //! процессора, ни лишней памяти, кроме 1,6 с звука (100 КБ) и весов (~0,6 МБ).
@@ -63,6 +66,16 @@ const VERIFY_CONTEXT: usize = 25_600;
 /// Её оценки за последние 200 мс до кандидата; не уверена — ждать ещё до 150 мс.
 const VERIFY_LOOKBACK: usize = 20;
 const VERIFY_WAIT_FRAMES: usize = 15;
+/// Тихий кандидат (слово тише этого, дБ) проходит вторую ступень только с этой оценкой:
+/// пользователь говорит в микрофон на −24…−30 дБ, ложные «из ничего» — на −44…−48 дБ.
+const QUIET_WORD_DB: f32 = -38.0;
+const QUIET_VERIFY_THRESHOLD: f32 = 0.5;
+/// Пауза перед словом: столько кадров 10 мс тише `PAUSE_BELOW_WORD_DB` под громкостью
+/// слова (и не меньше чем на 10 дБ выше фона), закончившаяся не дальше `PAUSE_SEARCH`
+/// кадров до пика слова.
+const PAUSE_FRAMES: usize = 25;
+const PAUSE_BELOW_WORD_DB: f32 = 25.0;
+const PAUSE_SEARCH: usize = 60;
 
 pub struct AcousticWakeSpotter {
     kws: StreamingTcn,
@@ -81,8 +94,9 @@ pub struct AcousticWakeSpotter {
     verify_threshold: f32,
     /// Последние `VERIFY_CONTEXT` сэмплов — для второй ступени (только если она есть).
     history: VecDeque<f32>,
-    /// Вторая ступень решает: кадров на ожидание и описание кандидата до решения.
-    verifying: Option<(usize, String)>,
+    /// Вторая ступень решает: кадров на ожидание, порог и описание кандидата до решения.
+    verifying: Option<(usize, f32, String)>,
+    pause_gate: bool,
 }
 
 impl AcousticWakeSpotter {
@@ -104,6 +118,7 @@ impl AcousticWakeSpotter {
             verify_threshold: VERIFY_THRESHOLD,
             history: VecDeque::new(),
             verifying: None,
+            pause_gate: true,
         })
     }
 
@@ -119,11 +134,16 @@ impl AcousticWakeSpotter {
         self.verify_threshold = threshold;
     }
 
+    /// Для замеров: без проверки паузы перед словом.
+    pub fn set_pause_gate(&mut self, on: bool) {
+        self.pause_gate = on;
+    }
+
     /// Решение второй ступени по новым оценкам: `Some(принят)` или `None` — ждать дальше.
     fn verify_scores(&mut self, scores: &[f32]) -> Option<bool> {
-        let (left, note) = self.verifying.take()?;
+        let (left, threshold, note) = self.verifying.take()?;
         let best = scores.iter().copied().fold(0.0, f32::max);
-        if best >= self.verify_threshold {
+        if best >= threshold {
             self.note = Some(format!("{note}, verifier {best:.2}"));
             return Some(true);
         }
@@ -132,7 +152,7 @@ impl AcousticWakeSpotter {
             self.note = Some(format!("{note} — rejected: verifier {best:.2}"));
             return Some(false);
         }
-        self.verifying = Some((left, note));
+        self.verifying = Some((left, threshold, note));
         None
     }
 
@@ -168,12 +188,33 @@ impl AcousticWakeSpotter {
         (word, *floor)
     }
 
+    /// Была ли пауза перед словом: идём назад от пика громкости за последние 700 мс.
+    /// Кадры до начала истории (сразу после запуска) считаются тишиной.
+    fn paused_before(&self, word: f32, floor: f32) -> bool {
+        let quiet = (word - PAUSE_BELOW_WORD_DB).max(floor + MIN_SNR_DB);
+        let newest = self.levels.len();
+        let peak = (newest.saturating_sub(WORD_FRAMES)..newest)
+            .max_by(|&a, &b| self.levels[a].total_cmp(&self.levels[b]))
+            .unwrap_or(newest);
+        let mut run = 0;
+        for back in 1..=PAUSE_SEARCH + PAUSE_FRAMES {
+            let level = peak.checked_sub(back).map_or(-120.0, |i| self.levels[i]);
+            run = if level < quiet { run + 1 } else { 0 };
+            if run >= PAUSE_FRAMES {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Кандидат: оценка выше порога, всплеск не случайный. Возвращает, принят ли он.
     fn judge(&mut self) -> bool {
         let (word, floor) = self.loudness();
         let snr = word - floor;
         let verdict = if snr < MIN_SNR_DB {
             Some(format!("rejected: only {snr:+.0} dB over the background"))
+        } else if self.pause_gate && !self.paused_before(word, floor) {
+            Some("rejected: no pause before the word".to_string())
         } else {
             None
         };
@@ -227,8 +268,14 @@ impl AcousticWakeSpotter {
         verifier.feed_scores(&context, &mut scores);
         let recent = scores.len().saturating_sub(VERIFY_LOOKBACK);
         let note = self.note.take().unwrap_or_default();
+        let (word, _) = self.loudness();
+        let threshold = if word < QUIET_WORD_DB {
+            self.verify_threshold.max(QUIET_VERIFY_THRESHOLD)
+        } else {
+            self.verify_threshold
+        };
         // Оценки до кандидата не тратят ожидание после него.
-        self.verifying = Some((VERIFY_WAIT_FRAMES + scores.len() - recent, note));
+        self.verifying = Some((VERIFY_WAIT_FRAMES + scores.len() - recent, threshold, note));
         self.verify_scores(&scores[recent..]) == Some(true)
     }
 

@@ -6,7 +6,8 @@
 //! строка `none` на файл без срабатываний — для подсчёта пропусков.
 //! С `SPOTTER=1` — сам детектор программы (wake.rs, без VAD-проверки engine.rs): по классу
 //! число файлов и срабатываний. `WEIGHTS=<файл>` — другие веса вместо resources/wake/river.bin,
-//! `VERIFY=<файл>` и `VERIFY_THRESHOLD=<порог>` — вторая ступень.
+//! `VERIFY=<файл>` и `VERIFY_THRESHOLD=<порог>` — вторая ступень; `NO_PAUSE=1` — без
+//! проверки паузы перед словом.
 
 use std::path::{Path, PathBuf};
 
@@ -54,6 +55,10 @@ fn main() -> anyhow::Result<()> {
                 let Some(audio) = read(file) else { continue };
                 let pcm: Vec<i16> = audio.iter().map(|x| (x.clamp(-1.0, 1.0) * 32_767.0) as i16).collect();
                 let mut spotter = AcousticWakeSpotter::new(&weights)?;
+                // NO_PAUSE=1 — без проверки паузы перед словом.
+                if std::env::var("NO_PAUSE").is_ok() {
+                    spotter.set_pause_gate(false);
+                }
                 // VERIFY=<файл> [VERIFY_THRESHOLD=<порог>] — со второй ступенью.
                 if let Ok(verify) = std::env::var("VERIFY") {
                     spotter = spotter.with_verifier(Path::new(&verify))?;
