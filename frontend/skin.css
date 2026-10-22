@@ -465,3 +465,25 @@ body.shaded #shade { display: block !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
 }
+
+/* ── Подсказки (skin/tooltip.js) ─────────────────────────────────────────
+   Маленький ЭЛТ-экран вместо системной плашки: то же стекло и люминофор, что у табло. */
+.tip {
+  position: fixed; z-index: 10000; pointer-events: none; overflow: hidden;
+  max-width: 280px; padding: 6px 10px 5px; border-radius: 6px;
+  background: radial-gradient(120% 120% at 50% 30%, var(--glass-3) 0%, var(--glass) 75%), var(--glass);
+  border: 1px solid var(--acc-3);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .7), 0 0 14px rgba(39, 230, 170, .22), 0 6px 18px rgba(0, 0, 0, .55);
+  font: 500 15px/1.15 var(--f-lcd); font-variation-settings: 'ELSH' 2, 'ELGR' 1;
+  letter-spacing: .07em; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere;
+  color: var(--acc-hot); text-shadow: var(--g2);
+  opacity: 0; transform: translateY(-3px);
+  transition: opacity .14s var(--e-out), transform .18s var(--e-out);
+}
+.tip.above { transform: translateY(3px); }
+.tip.on { opacity: 1; transform: none; }
+.tip::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px);
+}
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; transform: none; } }
