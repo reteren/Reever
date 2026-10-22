@@ -268,6 +268,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         targets_checked: None,
         dictation: None,
         last_wake_sound: None,
+        last_spot_sound: None,
         choice_session: None,
     };
     set_state(app, "idle");
@@ -760,6 +761,8 @@ struct Worker<'a> {
     /// Когда последний раз играл сигнал wake-слова: детектор и GigaAM слышат одно «ривер»,
     /// сигнал должен прозвучать один раз.
     last_wake_sound: Option<std::time::Instant>,
+    /// Сигнал на срабатывание детектора: подтверждение большой моделью его не повторяет.
+    last_spot_sound: Option<std::time::Instant>,
 }
 
 /// Состояние одной диктовки: оформление текста и то, что ушло в буфер обмена.
@@ -958,12 +961,20 @@ impl Worker<'_> {
             EngineEvent::WakeHeard => {
                 ui_log(self.app, crate::msg!("log.listen"));
                 self.prefetch_index();
-                self.wake_sound();
+                // Сигнал уже прозвучал на детекторе — большая модель «ривер» лишь подтвердила.
+                let spotted = self
+                    .last_spot_sound
+                    .take()
+                    .is_some_and(|at| at.elapsed() < Duration::from_secs(15));
+                if !spotted {
+                    self.wake_sound();
+                }
             }
             EngineEvent::WakeSpotted => {
-                // Без сигнала: детектор лишь будит большую модель, «ривер» подтверждает она
-                // (WakeHeard). Сигнал на сам детектор звучал и на его ложные срабатывания —
-                // шум и чужую речь, — а по тексту большая модель почти не ошибается.
+                // Сразу, не дожидаясь загрузки большой модели (~1,7 с у Parakeet v3): ложное
+                // срабатывание детектора даст лишний сигнал, зато настоящее «ривер» слышно сразу.
+                self.wake_sound();
+                self.last_spot_sound = Some(std::time::Instant::now());
                 self.prefetch_index();
             }
             EngineEvent::Partial(t) => {
