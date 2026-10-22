@@ -119,6 +119,7 @@
       "resources/anglicisms.tsv": "resources/anglicisms.tsv",
       "resources/settings.json": "resources/settings.json",
       "resources/wake/river.bin": "resources/wake/river.bin",
+      "resources/wake/river-ru-en.bin": "resources/wake/river-ru-en.bin",
       "resources/actions.json": "resources/actions.json",
       "resources/wallpaper.png": "resources/wallpaper.png"
     },
