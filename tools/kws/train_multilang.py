@@ -146,17 +146,21 @@ def accent_group(accent: str) -> str:
 
 
 def globe_rows(path: Path) -> list[dict]:
-    """Клипы globe_river.py как строки манифеста: wake-слово, диктор = голос."""
+    """Клипы globe_river.py (или user_wake.py) как строки манифеста: wake-слово, диктор = голос.
+    У user_wake.py границы слова точные (`exact`), язык свой (`lang`), а клип повторяется
+    `repeat` раз — записей одного голоса мало."""
     rows = []
     for line in path.read_text(encoding="utf-8").splitlines():
         item = json.loads(line)
         if item.get("file"):
-            rows.append({"file": str((path.parent / item["file"]).resolve()), "kind": "wake",
-                         "lang": "globe-" + accent_group(item.get("accent", "")),
-                         "voice": "globe:" + item["speaker"], "sid": 0, "text": "river",
-                         # Метка начала слова у Parakeet запаздывает (~0,24 с, замер на 30
-                         # клипах), конец почти точный.
-                         "wake_start": max(0.0, item["wake_start"] - 0.24), "wake_end": item["wake_end"] + 0.04})
+            # Метка начала слова у Parakeet запаздывает (~0,24 с, замер на 30 клипах),
+            # конец почти точный.
+            lag, late = (0.0, 0.0) if item.get("exact") else (0.24, 0.04)
+            row = {"file": str((path.parent / item["file"]).resolve()), "kind": "wake",
+                   "lang": item.get("lang") or "globe-" + accent_group(item.get("accent", "")),
+                   "voice": "globe:" + item["speaker"], "sid": 0, "text": "river",
+                   "wake_start": max(0.0, item["wake_start"] - lag), "wake_end": item["wake_end"] + late}
+            rows += [row] * item.get("repeat", 1)
     return rows
 
 
@@ -540,7 +544,8 @@ def main() -> None:
     p.add_argument("--fleurs-test-per-lang", type=int, default=40)
     p.add_argument("--mine-at", default="", help="шаги добора трудных примеров, через запятую")
     p.add_argument("--hard-share", type=float, default=0.25)
-    p.add_argument("--real-wake", type=Path, help="data/globe/clips.jsonl: живые «river»")
+    p.add_argument("--real-wake", type=Path, action="append", default=[],
+                   help="data/globe/clips.jsonl, data/user/clips.jsonl: живые «river» (можно несколько)")
     p.add_argument("--eval-only", type=Path, help="только замер готовых весов (.pt) на том же разбиении")
     p.add_argument("--real-wake-test", type=float, default=0.15, help="доля дикторов GLOBE в тест")
     p.add_argument("--real-wake-repeat", type=int, default=3, help="во сколько раз чаще брать живые клипы")
@@ -560,8 +565,9 @@ def main() -> None:
     held_sids = {(v, sid) for v, sids in multi.items() if len(sids) > 3
                  for sid in rng.sample(sorted(sids), max(1, int(len(sids) * args.holdout_share)))}
     if args.real_wake:
-        real_rows = globe_rows(args.real_wake)
-        speakers = sorted({r["voice"] for r in real_rows})
+        real_rows = [r for path in args.real_wake for r in globe_rows(path)]
+        # Голос пользователя целиком в обучении: его проверка — отдельная часть записи.
+        speakers = sorted({r["voice"] for r in real_rows if not r["lang"].startswith("user-")})
         held_globe = set(rng.sample(speakers, int(len(speakers) * args.real_wake_test)))
         for r in real_rows:
             if r["voice"] in held_globe:

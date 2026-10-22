@@ -23,3 +23,5 @@
 # Синтез lang_eval (голоса piper), кэш.
 /testdata/lang-corpus/
 /testdata/wake-lang-corpus/
+# Записи голоса пользователя для детектора «ривер» — личные, не в git.
+/testdata/wake/

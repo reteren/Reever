@@ -5,7 +5,7 @@
 //! Строка CSV на каждое срабатывание базового правила (два кадра подряд ≥ порога) и
 //! строка `none` на файл без срабатываний — для подсчёта пропусков.
 //! С `SPOTTER=1` — сам детектор программы (wake.rs, без VAD-проверки engine.rs): по классу
-//! число файлов и срабатываний.
+//! число файлов и срабатываний. `WEIGHTS=<файл>` — другие веса вместо resources/wake/river.bin.
 
 use std::path::{Path, PathBuf};
 
@@ -38,7 +38,8 @@ fn wavs(dir: &Path, out: &mut Vec<PathBuf>) {
 
 fn main() -> anyhow::Result<()> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let weights = root.join("resources/wake/river.bin");
+    // WEIGHTS=<файл> — другие веса (например, свежеобученные из tools/kws/data).
+    let weights = std::env::var("WEIGHTS").map(PathBuf::from).unwrap_or_else(|_| root.join("resources/wake/river.bin"));
     let vad_model = root.join("resources/model/silero_vad.onnx");
     let limit: usize = std::env::var("LIMIT").ok().and_then(|v| v.parse().ok()).unwrap_or(usize::MAX);
     if std::env::var("SPOTTER").is_ok() {
@@ -52,7 +53,16 @@ fn main() -> anyhow::Result<()> {
                 let Some(audio) = read(file) else { continue };
                 let pcm: Vec<i16> = audio.iter().map(|x| (x.clamp(-1.0, 1.0) * 32_767.0) as i16).collect();
                 let mut spotter = AcousticWakeSpotter::new(&weights)?;
-                let n = pcm.chunks(320).filter(|chunk| spotter.feed(chunk)).count();
+                let mut n = 0;
+                for (i, chunk) in pcm.chunks(320).enumerate() {
+                    if spotter.feed(chunk) {
+                        n += 1;
+                        // TIMES=1 — время каждого срабатывания, мс.
+                        if std::env::var("TIMES").is_ok() {
+                            println!("fire,{},{}", file.display(), (i + 1) * 20);
+                        }
+                    }
+                }
                 hit += (n > 0) as usize;
                 fires += n;
             }
