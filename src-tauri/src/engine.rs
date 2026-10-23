@@ -73,6 +73,8 @@ pub enum EngineEvent {
     WakeHeard,
     /// Фоновый детектор услышал wake-слово прямо по ходу речи (сигнал «услышал»).
     WakeSpotted,
+    /// Большая модель расслышала фразу после `WakeSpotted`, но wake-слова в ней нет.
+    WakeRejected,
     /// Промежуточный текст текущей фразы — для `reever://partial`.
     Partial(String),
     /// Готовая команда без wake-слова (нормализованная).
@@ -1296,6 +1298,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                             )
                             .into(),
                         ));
+                        out.push(EngineEvent::WakeRejected);
                     }
                     self.spot_age = None;
                     return;

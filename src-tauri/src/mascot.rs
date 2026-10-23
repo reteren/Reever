@@ -48,6 +48,10 @@ const LEAVE: Duration = Duration::from_millis(1260);
 /// осьминог успел скрыться в первом. Только когда главное окно видно — иначе сферы не видно
 /// и ждать незачем.
 const TELEPORT: Duration = Duration::from_millis(450);
+/// Сколько маскот ждёт после срабатывания детектора, пока большая модель подтвердит
+/// «ривер» (загрузка и распознавание — 1–2 с, на медленной машине дольше). Не подтвердила
+/// и ничего не случилось — ложное срабатывание, маскот уходит.
+const WAKE_GRACE: Duration = Duration::from_secs(8);
 
 static MODE: Mutex<String> = Mutex::new(String::new());
 /// Осьминог сидит в сфере главного окна.
@@ -59,6 +63,8 @@ static BIG: AtomicU32 = AtomicU32::new(2000);
 /// Поколение показа: отложенное скрытие срабатывает, только если с тех пор ничего не менялось.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 static DRAGGING: AtomicBool = AtomicBool::new(false);
+/// Маскот вышел по детектору (`on_wake`), а большая модель «ривер» ещё не подтвердила.
+static WAKE_PENDING: AtomicBool = AtomicBool::new(false);
 /// Маскот на экране. Само окно после создания не прячется и не обрезается регионом
 /// никогда: и показ скрытого прозрачного окна без рамки, и смена его региона Windows
 /// сопровождает кадром со стандартной белой рамкой. Спрятанный маскот — пустой холст
@@ -187,6 +193,14 @@ pub fn on_state(app: &AppHandle, state: &str) {
     if mode() != "commands" || state == "loading" {
         return;
     }
+    // После `on_wake` «idle» ещё ничего не значит: его ставят и по окончании загрузки
+    // моделей, пока человек договаривает команду. Решают «слушаю»/«выполняю» или отказ.
+    if state == "idle" && WAKE_PENDING.load(Ordering::Relaxed) {
+        return;
+    }
+    if matches!(state, "listening" | "busy") {
+        WAKE_PENDING.store(false, Ordering::Relaxed);
+    }
     let Some(window) = app.get_webview_window("mascot") else { return };
     let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
     if matches!(state, "listening" | "busy") {
@@ -208,6 +222,34 @@ pub fn on_state(app: &AppHandle, state: &str) {
         }
     } else {
         hide_later(window, generation);
+    }
+}
+
+/// Режим `commands`: детектор услышал «ривер» — выйти сразу, вместе с мгновенным сигналом,
+/// а не когда большая модель подтвердит слово. Любая смена состояния после этого (слушаю,
+/// команда, отказ) ведёт маскота как обычно; если её так и не было — уйти через `WAKE_GRACE`.
+pub fn on_wake(app: &AppHandle) {
+    if mode() != "commands" {
+        return;
+    }
+    on_state(app, "listening");
+    WAKE_PENDING.store(true, Ordering::Relaxed);
+    let Some(window) = app.get_webview_window("mascot") else { return };
+    let generation = GENERATION.load(Ordering::Relaxed);
+    std::thread::spawn(move || {
+        std::thread::sleep(WAKE_GRACE);
+        if GENERATION.load(Ordering::Relaxed) == generation {
+            WAKE_PENDING.store(false, Ordering::Relaxed);
+            hide_later(window, generation);
+        }
+    });
+}
+
+/// Большая модель не нашла «ривер» во фразе после срабатывания детектора — уйти, не
+/// дожидаясь `WAKE_GRACE`.
+pub fn on_wake_rejected(app: &AppHandle) {
+    if WAKE_PENDING.swap(false, Ordering::Relaxed) {
+        on_state(app, "idle");
     }
 }
 

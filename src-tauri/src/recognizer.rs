@@ -1030,8 +1030,10 @@ impl Worker<'_> {
                 // срабатывание детектора даст лишний сигнал, зато настоящее «ривер» слышно сразу.
                 self.wake_sound();
                 self.last_spot_sound = Some(std::time::Instant::now());
+                crate::mascot::on_wake(self.app);
                 self.prefetch_index();
             }
+            EngineEvent::WakeRejected => crate::mascot::on_wake_rejected(self.app),
             EngineEvent::Partial(t) => {
                 if !self.private() {
                     let _ = self.app.emit("reever://partial", t);
