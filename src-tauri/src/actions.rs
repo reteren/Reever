@@ -68,6 +68,10 @@ const WORD_MIN_SIMILARITY: f64 = 0.82;
 /// Склейку сравниваем только у строк близкой длины: это те же звуки, разбитые на слова
 /// иначе («маркноут» / «марк ноут»), а не короткое слово в начале длинного («плей» / «плейлист»).
 const GLUED_MIN_LENGTH_RATIO: f64 = 0.75;
+/// Слово с словом — тоже только близкой длины: Jaro-Winkler у короткого слова почти целиком
+/// входящего в длинное высокий — «час» (фраза калибровки «chess») ~ «чанский» 0,85, и
+/// бред открывал chess.com (живой журнал 2026-10-23).
+const WORD_MIN_LENGTH_RATIO: f64 = 0.6;
 
 /// Jaro по строке целиком здесь нет намеренно: он засчитывает общие буквы поперёк границ
 /// слов, и бред проходил порог — «отмена» ~ «дота» 0.75, «at me no» ~ «shut down
@@ -120,7 +124,7 @@ fn word_overlap_score(left: &str, right: &str) -> f64 {
         let best = right_words
             .iter()
             .enumerate()
-            .filter(|(index, _)| !used[*index])
+            .filter(|(index, other)| !used[*index] && similar_length(word, other))
             .map(|(index, other)| (index, jaro_winkler(word, other)))
             .filter(|(_, similarity)| *similarity >= WORD_MIN_SIMILARITY)
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
@@ -130,6 +134,11 @@ fn word_overlap_score(left: &str, right: &str) -> f64 {
         }
     }
     2.0 * matched / (left_words.len() + right_words.len()) as f64
+}
+
+fn similar_length(left: &str, right: &str) -> bool {
+    let (l, r) = (left.chars().count(), right.chars().count());
+    l.min(r) as f64 >= l.max(r) as f64 * WORD_MIN_LENGTH_RATIO
 }
 
 pub fn load_actions(path: &Path) -> Vec<Action> {
@@ -279,6 +288,22 @@ mod tests {
     fn word_overlap_contributes_without_making_one_shared_word_a_full_match() {
         assert!(score("act_mqlpc0cc", "студио файл") >= 0.7);
         assert!(word_overlap_score("файл студио", "студио") < 0.7);
+    }
+
+    #[test]
+    fn a_short_phrase_does_not_match_a_long_word_it_resembles() {
+        // Живой журнал 2026-10-23: фраза калибровки «час» (chess) и «чанский» — 0,85.
+        let chess = Action {
+            id: "chess".into(),
+            label: "chess".into(),
+            kind: "url".into(),
+            target: "https://www.chess.com".into(),
+            verbs: Vec::new(),
+            phrases: vec!["шахматы".into(), "час".into(), "chess".into()],
+        };
+        assert!(chess.score(&["чанский".into()]) < 0.7);
+        assert!(chess.score(&["шахматы".into()]) >= 0.9);
+        assert!(chess.score(&["шахмат".into()]) >= 0.7);
     }
 
     #[test]
