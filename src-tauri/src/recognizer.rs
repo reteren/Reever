@@ -299,6 +299,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut load_reason: Option<LoadReason> = None;
     let mut recent_chunks: VecDeque<Vec<i16>> = VecDeque::new();
     let mut recent_samples = 0usize;
+    let mut last_chunk = std::time::Instant::now();
+    let mut stalled = false;
     loop {
         if shared.reload.load(Ordering::Relaxed) {
             loading_audio.fill(0);
@@ -370,10 +372,19 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             std::thread::sleep(Duration::from_millis(150));
             continue;
         }
+        // Поток умер (ошибка cpal) или звука нет 3 с — переоткрыть микрофон, иначе Reever
+        // молча глохнет до перезапуска (переключили улучшения звука в Windows).
+        if stream.is_some() && (crate::audio::STREAM_FAILED.load(Ordering::SeqCst) || stalled) {
+            stream = None;
+            stalled = false;
+            ui_log(app, "⚠ microphone stream stopped — reopening it");
+            std::thread::sleep(Duration::from_millis(300));
+        }
         if stream.is_none() {
             match start_capture(tx.clone()) {
                 Ok(st) => {
                     stream = Some(st);
+                    last_chunk = std::time::Instant::now();
                     set_state(app, "idle");
                     mic_level = crate::micwatch::mic_level();
                     mic_checked = std::time::Instant::now();
@@ -395,8 +406,15 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
 
         // recv с таймаутом — чтобы реагировать на паузу даже без аудио.
         let mut chunk = match rx.recv_timeout(Duration::from_millis(200)) {
-            Ok(c) => c,
-            Err(RecvTimeoutError::Timeout) => continue,
+            Ok(c) => {
+                last_chunk = std::time::Instant::now();
+                c
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                // Только по пустой очереди: долгое распознавание фразы — не обрыв.
+                stalled = last_chunk.elapsed() >= Duration::from_secs(3);
+                continue;
+            }
             Err(RecvTimeoutError::Disconnected) => break,
         };
 

@@ -377,8 +377,15 @@ fn f32_to_i16(s: f32) -> i16 {
     (s.clamp(-1.0, 1.0) * 32767.0) as i16
 }
 
+/// Поток микрофона умер: Windows пересоздаёт устройство, когда меняют его улучшения звука
+/// (эквалайзер, «Голосовая ясность»), формат или устройство по умолчанию. Callback после
+/// этого не приходит; recognizer.rs по этому флагу (или по тишине без callback'ов)
+/// открывает микрофон заново.
+pub static STREAM_FAILED: AtomicBool = AtomicBool::new(false);
+
 fn on_stream_error(e: cpal::StreamError) {
     eprintln!("[reever] cpal stream error: {e}");
+    STREAM_FAILED.store(true, Ordering::SeqCst);
 }
 
 /// Запускает захват микрофона. Возвращённый Stream НЕЛЬЗЯ дропать (иначе захват
@@ -490,6 +497,7 @@ impl CaptureProcessor {
 }
 
 pub fn start_capture(tx: AudioSender) -> anyhow::Result<Stream> {
+    STREAM_FAILED.store(false, Ordering::SeqCst);
     let host = cpal::default_host();
     let device = host
         .default_input_device()
