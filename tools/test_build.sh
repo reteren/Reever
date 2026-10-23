@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Тестовый Reever без установщика: собирает release и кладёт reever.exe с ресурсами в
 # test-build/. Настройки, модели и журнал — общие с установленной копией (%APPDATA%).
-# Перед запуском закрыть установленный Reever (трей → «Выход»): второй экземпляр только
-# поднимает окно первого и выходит.
+# При запуске тестовый exe сам закрывает установленный Reever и работает вместо него
+# (lib.rs, replace_other_instances_if_test_build).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="$root/test-build"

@@ -260,7 +260,50 @@ pub fn harden_dll_search() {
     }
 }
 
+/// Тестовая сборка (tools/test_build.sh, папка test-build) при запуске закрывает другие
+/// экземпляры Reever, например установленный: иначе она лишь подняла бы окно установленного
+/// и вышла, а проверялась бы старая версия. Два слушающих Reever сразу — двойные команды.
+fn replace_other_instances_if_test_build() {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+    };
+    use windows::Win32::System::Threading::{
+        OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
+    };
+
+    let Ok(own) = std::env::current_exe() else { return };
+    let is_test_build = own
+        .parent()
+        .and_then(|dir| dir.file_name())
+        .is_some_and(|name| name.eq_ignore_ascii_case("test-build"));
+    if !is_test_build {
+        return;
+    }
+    let own_pid = std::process::id();
+    unsafe {
+        let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else { return };
+        let mut entry = PROCESSENTRY32W { dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
+        let mut more = Process32FirstW(snapshot, &mut entry).is_ok();
+        while more {
+            let len = entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(entry.szExeFile.len());
+            let name = String::from_utf16_lossy(&entry.szExeFile[..len]);
+            if entry.th32ProcessID != own_pid && name.eq_ignore_ascii_case("reever.exe") {
+                if let Ok(process) = OpenProcess(PROCESS_TERMINATE | PROCESS_SYNCHRONIZE, false, entry.th32ProcessID) {
+                    if TerminateProcess(process, 0).is_ok() {
+                        let _ = WaitForSingleObject(process, 3_000);
+                    }
+                    let _ = CloseHandle(process);
+                }
+            }
+            more = Process32NextW(snapshot, &mut entry).is_ok();
+        }
+        let _ = CloseHandle(snapshot);
+    }
+}
+
 pub fn run() {
+    replace_other_instances_if_test_build();
     // Второй запуск отправляет сигнал первому экземпляру и не запускает второй аудиопоток.
     if signal_existing_instance_or_register() {
         return;
