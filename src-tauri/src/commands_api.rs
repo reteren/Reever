@@ -345,7 +345,7 @@ pub fn index_status(index: State<'_, crate::local_index::IndexManager>) -> crate
     index.status()
 }
 
-/// Язык интерфейса: сохраняет выбор; меню трея (traymenu.rs) берёт его при показе. Возвращает
+/// Язык интерфейса: сохраняет выбор; меню трея (traymenu.rs) подхватывает его при открытии. Возвращает
 /// итоговый код языка (`auto` раскрывается в язык Windows).
 #[tauri::command]
 pub fn set_ui_language(
