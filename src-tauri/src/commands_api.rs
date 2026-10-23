@@ -8,6 +8,7 @@ use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 use crate::actions::{Action, SharedState};
 use crate::apps::{self, AppEntry};
+use crate::appscan;
 use crate::config::{LiveConfig, ReeverConfig};
 use crate::grammar::Grammar;
 
@@ -81,6 +82,67 @@ pub fn reset_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
 #[tauri::command]
 pub fn list_apps() -> Vec<AppEntry> {
     apps::list_start_apps()
+}
+
+/// Сканер программ (кнопка «Сканировать» во вкладке «Действия»): программы из меню
+/// «Пуск» с готовыми фразами на включённых языках распознавания.
+#[tauri::command]
+pub async fn scan_apps(
+    state: State<'_, Arc<SharedState>>,
+    config: State<'_, LiveConfig>,
+) -> Result<Vec<appscan::ScannedApp>, String> {
+    let config = config.get();
+    let languages = config.settings.recognition_languages();
+    let actions = state.actions.lock().map(|a| a.clone()).unwrap_or_default();
+    let reserved: Vec<String> = state
+        .grammar
+        .lock()
+        .map(|grammar| {
+            let mut words = grammar.wake_words.clone();
+            words.extend(grammar.cancel_words.iter().cloned());
+            words.extend(grammar.dictation_stop.iter().cloned());
+            words.extend(grammar.intents.iter().flat_map(|intent| intent.triggers.iter().cloned()));
+            words
+        })
+        .unwrap_or_default();
+    tauri::async_runtime::spawn_blocking(move || {
+        appscan::scan(apps::list_start_apps(), &languages, &actions, &reserved)
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// Иконки программ из списка сканера (data-URL по AppID) — отдельно, пачками: список
+/// показывается сразу, иконки подгружаются следом.
+#[tauri::command]
+pub async fn scan_app_icons(ids: Vec<String>) -> Result<std::collections::HashMap<String, String>, String> {
+    tauri::async_runtime::spawn_blocking(move || appscan::icons(&ids))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Добавить отмеченные в сканере программы как действия. Возвращает, сколько добавлено.
+#[tauri::command]
+pub fn add_scanned_apps(
+    state: State<'_, Arc<SharedState>>,
+    apps: Vec<appscan::ChosenApp>,
+) -> Result<usize, String> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis())
+        .unwrap_or_default();
+    let added = {
+        let mut actions = state.actions.lock().map_err(|e| e.to_string())?;
+        let mut new = appscan::to_actions(apps, &actions, stamp);
+        for action in &mut new {
+            action.target = universalize(&action.target, &action.kind);
+        }
+        let count = new.len();
+        actions.extend(new);
+        count
+    };
+    state.persist();
+    Ok(added)
 }
 
 /// Доступные наборы звуков (подпапки sounds/).

@@ -92,9 +92,10 @@
             <div class="md">
               <div class="md-list">
                 <div class="md-top">
-                  <div class="editrow">
-                    <input id="search" class="grow" data-i18n-placeholder="actions.search" />
+                  <input id="search" data-i18n-placeholder="actions.search" />
+                  <div class="editrow list-keys">
                     <button id="addBtn" class="key" data-i18n-title="actions.newTitle" data-i18n="actions.create">Создать</button>
+                    <button id="scanBtn" class="key" data-i18n-title="actions.scanTitle" data-i18n="actions.scan">Сканировать</button>
                   </div>
                   <div class="chips" id="filters">
                     <div class="chip on" data-f="all" tabindex="0" data-i18n="filter.all">Все</div>
@@ -177,6 +178,29 @@
           <div id="appList"></div>
         </div>
         <div class="modal-foot"><button id="appCancel" class="key" data-i18n="common.close">Закрыть</button></div>
+      </div>
+    </div>
+
+    <!-- Сканер программ: список из меню «Пуск» с готовыми фразами (src-tauri/src/appscan.rs). -->
+    <div class="overlay" id="scanOverlay">
+      <div class="modal lcd scan-modal" role="dialog" aria-modal="true" data-i18n-aria-label="scan.title">
+        <div class="modal-body">
+          <div class="scan-head">
+            <h2 class="h2" data-i18n="scan.title">Программы на компьютере</h2>
+            <span class="scan-count" id="scanCount"></span>
+          </div>
+          <div class="hint" data-i18n="scan.hint">Отмеченные станут действиями с готовыми фразами.</div>
+          <div class="editrow scan-tools">
+            <input id="scanSearch" class="grow" data-i18n-placeholder="scan.search" />
+            <button id="scanAll" class="sm" data-i18n="scan.all">Все</button>
+            <button id="scanNone" class="sm" data-i18n="scan.none">Ничего</button>
+          </div>
+          <div id="scanList" role="list"></div>
+        </div>
+        <div class="modal-foot">
+          <button id="scanCancel" class="key" data-i18n="common.cancel">Отмена</button>
+          <button id="scanAdd" class="key default" disabled></button>
+        </div>
       </div>
     </div>
 

@@ -2913,8 +2913,10 @@ name = "reever"
 version = "0.5.2"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "cpal",
  "lnk",
+ "png 0.17.16",
  "rodio",
  "rubato",
  "serde",

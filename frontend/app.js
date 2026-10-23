@@ -88,6 +88,15 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'reset_grammar': previewGrammar=defaultGrammarPreview(); return cloneValue(previewGrammar);
     case 'list_actions': return [];
     case 'list_apps': return [];
+    case 'scan_apps': return [
+      {id:'dv',name:'DaVinci Resolve',kind:'uwp',target:'dv',phrases:['davinci resolve','davinci','resolve davinci','давинчи резолв','давинчи'],checked:true,note:null},
+      {id:'dc',name:'Discord',kind:'uwp',target:'dc',phrases:['discord','дискорд'],checked:true,note:null},
+      {id:'cam',name:'Camera',kind:'uwp',target:'cam',phrases:['camera','камера'],checked:false,note:'generic'},
+      {id:'sp',name:'Spotify',kind:'shell',target:'sp',phrases:['spotify','спотифай'],checked:false,note:'exists'},
+      {id:'cmd',name:'Командная строка',kind:'uwp',target:'cmd',phrases:['командная строка'],checked:false,note:'system'},
+    ];
+    case 'scan_app_icons': return {};
+    case 'add_scanned_apps': return (commandArgs.apps||[]).length;
     case 'list_sound_packs': return ['classic'];
     case 'inactive_triggers': return [];
     case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
@@ -202,6 +211,11 @@ function visible(a){
 }
 function renderRows(){
   const R=$('#rows'); R.innerHTML='';
+  // Своих программ ещё нет (только встроенные системные действия) — подсказать сканер.
+  if(filter==='all' && !query && !actions.some(a=>a.kind!=='system')){
+    const go=el('button',{className:'key',textContent:t('actions.scan')}); go.onclick=openScan;
+    R.append(el('div',{className:'scan-tip'},[el('div',{className:'hint',textContent:t('actions.scanTip')}),go]));
+  }
   const list=actions.filter(visible);
   if(!list.length){ R.append(el('div',{className:'hint',style:'padding:12px;',textContent:t('actions.empty')})); return; }
   for(const a of list){
@@ -269,10 +283,83 @@ async function openAppPicker(a,targetInput){
   $('#appSearch').oninput=()=>render($('#appSearch').value); render('');
 }
 $('#appCancel').onclick=()=>$('#appPicker').classList.remove('on');
+
+// Сканер программ (appscan.rs): список из меню «Пуск» с готовыми фразами; отмеченные —
+// в действия одним нажатием. Иконки догружаются после списка, чтобы он не ждал их.
+let scanApps=[], scanSession=0, scanBusy=false;
+const scanOpen=()=>$('#scanOverlay').classList.contains('on');
+const scanSelectable=app=>app.note!=='exists' && app.phrases.length>0;
+function scanVisible(app){
+  const q=$('#scanSearch').value.trim().toLowerCase();
+  return !q || app.name.toLowerCase().includes(q) || app.phrases.some(p=>p.includes(q));
+}
+function renderScanCount(){
+  const total=scanApps.filter(scanSelectable).length, checked=scanApps.filter(a=>a.checked).length;
+  $('#scanCount').textContent=scanApps.length?t('scan.count',{checked,total}):'';
+  const add=$('#scanAdd'); add.textContent=t('scan.add',{count:checked}); add.disabled=!checked||scanBusy;
+}
+function renderScanList(){
+  const list=$('#scanList'); list.replaceChildren();
+  const shown=scanApps.filter(scanVisible);
+  if(!shown.length) list.append(el('div',{className:'hint',textContent:t(scanApps.length?'common.nothingFound':'scan.empty')}));
+  for(const app of shown){
+    const off=!scanSelectable(app);
+    const box=el('input',{type:'checkbox',checked:app.checked,disabled:off});
+    box.onchange=()=>{ app.checked=box.checked; renderScanCount(); };
+    const iconBox=el('span',{className:'sicon'},[app.icon?el('img',{src:app.icon,alt:''}):icon(app.target.includes('://')?'play':'grid')]);
+    iconBox.dataset.id=app.id;
+    const name=el('span',{className:'sname'},[el('span',{textContent:app.name})]);
+    if(app.note) name.append(el('em',{className:'snote',textContent:t('scan.note.'+app.note),title:t('scan.noteTitle.'+app.note)}));
+    const phrases=app.phrases.join(' · ');
+    const row=el('label',{className:'scanrow'+(off?' off':'')},[box,iconBox,el('span',{className:'sbody'},[name,el('span',{className:'sphr',textContent:phrases||'—',title:phrases})])]);
+    row.setAttribute('role','listitem');
+    list.append(row);
+  }
+  renderScanCount();
+}
+async function openScan(){
+  if(!await confirmDiscardActionEdits()) return;
+  const session=++scanSession;
+  scanApps=[]; $('#scanSearch').value='';
+  $('#scanList').replaceChildren(el('div',{className:'hint loading',textContent:t('scan.loading')}));
+  renderScanCount();
+  $('#scanOverlay').classList.add('on');
+  let found=[];
+  try{ found=await invoke('scan_apps')||[]; }catch(e){ reportError('scanApps',e); }
+  if(session!==scanSession||!scanOpen()) return;
+  scanApps=found; renderScanList();
+  if(!scanApps.length) return;
+  try{
+    const icons=await invoke('scan_app_icons',{ids:scanApps.map(a=>a.id)})||{};
+    if(session!==scanSession) return;
+    for(const app of scanApps) if(icons[app.id]) app.icon=icons[app.id];
+    for(const box of $('#scanList').querySelectorAll('.sicon')){ const url=icons[box.dataset.id]; if(url) box.replaceChildren(el('img',{src:url,alt:''})); }
+  }catch(e){ reportError('scanIcons',e); }
+}
+function closeScan(){ scanSession++; $('#scanOverlay').classList.remove('on'); }
+function checkVisible(on){ for(const app of scanApps) if(scanSelectable(app)&&scanVisible(app)) app.checked=on; renderScanList(); }
+$('#scanBtn').onclick=openScan;
+$('#scanCancel').onclick=closeScan;
+$('#scanSearch').oninput=renderScanList;
+$('#scanAll').onclick=()=>checkVisible(true);
+$('#scanNone').onclick=()=>checkVisible(false);
+$('#scanAdd').onclick=async()=>{
+  const apps=scanApps.filter(a=>a.checked).map(({name,kind,target,phrases})=>({name,kind,target,phrases}));
+  if(!apps.length||scanBusy) return;
+  scanBusy=true; renderScanCount();
+  try{
+    const count=await invoke('add_scanned_apps',{apps});
+    appendLog(t('scan.added',{count}));
+    closeScan();
+    await loadActions();
+  }catch(e){ reportError('addScanned',e); }
+  finally{ scanBusy=false; renderScanCount(); }
+};
 // Esc закрывает любое открытое модальное окно.
 window.addEventListener('keydown',(e)=>{
   if(e.key!=='Escape') return;
-  if($('#appPicker').classList.contains('on')) $('#appPicker').classList.remove('on');
+  if(scanOpen()) closeScan();
+  else if($('#appPicker').classList.contains('on')) $('#appPicker').classList.remove('on');
   else if($('#calOverlay').classList.contains('on')) $('#calDone').click();
 });
 

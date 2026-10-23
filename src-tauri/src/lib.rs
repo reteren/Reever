@@ -5,6 +5,7 @@
 pub mod actions;
 pub mod anglicism;
 pub mod apps;
+pub mod appscan;
 pub mod asr;
 pub mod audio;
 pub mod bilingual;
@@ -454,6 +455,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands_api::list_actions,
             commands_api::list_apps,
+            commands_api::scan_apps,
+            commands_api::scan_app_icons,
+            commands_api::add_scanned_apps,
             commands_api::list_sound_packs,
             commands_api::language_models,
             commands_api::get_grammar,

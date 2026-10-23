@@ -315,7 +315,7 @@ fieldset.grp legend {
 .md { display: grid; grid-template-columns: 200px 1fr; gap: 14px; height: 100%; }
 .md-list { display: flex; flex-direction: column; min-height: 0; }
 .md-top { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-.md-top #addBtn { padding: 0 9px; }
+.md-top .list-keys .key { flex: 1; min-width: 0; padding: 0 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip {
   padding: 3px 7px; border-radius: 4px; cursor: pointer; font: 500 14px/1 var(--f-lcd); letter-spacing: .06em; text-transform: uppercase;
@@ -450,6 +450,30 @@ body.shaded #shade { display: block !important; }
 #appList { max-height: 44vh; overflow: auto; margin-top: 8px; }
 .appitem { padding: 5px 8px; border-radius: 4px; cursor: pointer; }
 .appitem:hover { background: var(--acc); color: var(--glass); text-shadow: none; }
+
+/* Сканер программ: строка — галочка, иконка, название и фразы. Иконки программ цветные —
+   тонируются в люминофор, чтобы список оставался одним экраном, а не витриной. */
+.scan-modal { width: 640px; max-height: 82vh; }
+.scan-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.scan-count { margin-left: auto; font: 400 11px/1 var(--f-data); color: var(--acc-2); text-shadow: var(--g1); white-space: nowrap; }
+.scan-tools { margin: 12px 0 6px; }
+#scanList { height: 52vh; overflow: auto; margin: 0 -6px; }
+#scanList > .hint { padding: 18px 6px; }
+#scanList .loading { animation: blink 1.2s ease-in-out infinite; }
+.scanrow { display: grid; grid-template-columns: 16px 22px 1fr; gap: 10px; align-items: center; padding: 6px; border-radius: 5px; cursor: pointer; transition: background-color .12s; }
+.scanrow:hover { background: var(--acc-5); }
+.scanrow.off { cursor: default; opacity: .45; }
+.scanrow .sicon { width: 22px; height: 22px; display: grid; place-items: center; color: var(--acc-3); }
+.scanrow .sicon img { width: 22px; height: 22px; filter: grayscale(1) sepia(1) saturate(2.6) hue-rotate(112deg) brightness(1.05) drop-shadow(0 0 3px rgba(39, 230, 170, .35)); }
+.scanrow .sicon .ico { width: 16px; height: 16px; }
+.scanrow .sbody { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.scanrow .sname { display: flex; align-items: baseline; gap: 8px; min-width: 0; color: var(--acc-hot); text-shadow: var(--g1); }
+.scanrow .sname span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scanrow .snote { flex: none; font: 500 13px/1 var(--f-lcd); letter-spacing: .06em; text-transform: uppercase; color: var(--acc-3); border: 1px dashed var(--acc-4); border-radius: 3px; padding: 1px 5px; }
+.scanrow .sphr { font: 500 14px/1.15 var(--f-lcd); letter-spacing: .04em; color: var(--acc-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scanrow:has(input:checked) .sphr { color: var(--acc-2); }
+.scan-tip { margin: 2px 4px 8px; padding: 8px; border: 1px dashed var(--acc-4); border-radius: 5px; display: flex; flex-direction: column; gap: 7px; }
+.scan-tip .key { align-self: flex-start; }
 
 /* ── Включение: экраны с первого кадра — тёмное стекло со сканлайнами,
    ЭЛТ-включением появляется только их содержимое ─────────────────────── */

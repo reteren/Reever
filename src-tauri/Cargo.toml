@@ -35,6 +35,10 @@ sherpa-onnx = "1.13.8"
 # shortcut parsing
 lnk = "0.5"
 
+# appscan.rs: иконки программ в списке сканера (PNG data-URL)
+png    = "0.17"
+base64 = "0.22"
+
 [dependencies.windows]
 version  = "0.58"
 features = [

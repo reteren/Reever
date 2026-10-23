@@ -606,7 +606,7 @@ const ENGLISH_COMMAND_WORDS: &[(&str, &str)] = &[
     ("play", "плей"),
 ];
 
-fn transliterate_word(word: &str) -> String {
+pub(crate) fn transliterate_word(word: &str) -> String {
     match word {
         "youtube" => return "ютуб".into(),
         "tiktok" => return "тик ток".into(),
