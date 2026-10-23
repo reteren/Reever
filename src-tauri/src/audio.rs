@@ -496,8 +496,33 @@ impl CaptureProcessor {
     }
 }
 
-pub fn start_capture(tx: AudioSender) -> anyhow::Result<Stream> {
+/// Идущий захват микрофона: сырой режим WASAPI (rawmic.rs) или cpal, если сырой не вышел.
+/// Дроп останавливает захват.
+pub enum Capture {
+    Raw(crate::rawmic::RawCapture),
+    Cpal(Stream),
+}
+
+impl Capture {
+    pub fn is_raw(&self) -> bool {
+        matches!(self, Capture::Raw(_))
+    }
+}
+
+/// Захват микрофона по умолчанию: сначала в обход улучшений Windows (`REEVER_NO_RAWMIC` —
+/// сразу через cpal, для сравнения), иначе обычный.
+pub fn start_capture(tx: AudioSender) -> anyhow::Result<Capture> {
     STREAM_FAILED.store(false, Ordering::SeqCst);
+    if std::env::var_os("REEVER_NO_RAWMIC").is_none() {
+        match crate::rawmic::start(tx.clone()) {
+            Ok(raw) => return Ok(Capture::Raw(raw)),
+            Err(error) => eprintln!("[reever] raw microphone unavailable, using cpal: {error:#}"),
+        }
+    }
+    start_cpal_capture(tx).map(Capture::Cpal)
+}
+
+fn start_cpal_capture(tx: AudioSender) -> anyhow::Result<Stream> {
     let host = cpal::default_host();
     let device = host
         .default_input_device()

@@ -34,6 +34,7 @@ pub mod bubble;
 pub mod mascot;
 pub mod picker;
 pub mod procs;
+pub mod rawmic;
 pub mod recognizer;
 pub mod segmenter;
 pub mod skin;

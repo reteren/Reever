@@ -254,6 +254,14 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     // Поток микрофона держим в Option: на паузе/мьюте реально закрываем его
     // (дроп Stream останавливает захват → системный индикатор микрофона гаснет).
     let mut stream = Some(start_capture(tx.clone())?);
+    ui_log(
+        app,
+        if stream.as_ref().is_some_and(|capture| capture.is_raw()) {
+            "microphone: raw mode — Windows sound enhancements (equalizer, voice clarity) are bypassed"
+        } else {
+            "microphone: standard mode — raw mode is unavailable, Windows sound enhancements apply"
+        },
+    );
     let mut worker = Worker {
         app,
         cfg,
