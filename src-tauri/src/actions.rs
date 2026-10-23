@@ -100,6 +100,12 @@ fn glued_score(left: &str, right: &str) -> f64 {
     if shorter == 0 || (shorter as f64) < longer as f64 * GLUED_MIN_LENGTH_RATIO {
         return 0.0;
     }
+    // Склейка — те же звуки, разбитые иначе, значит и начало то же. Без этого Jaro
+    // засчитывал общие буквы вразнобой: «поиск» ~ «спотик» (фраза калибровки Spotify
+    // «с по тик») 0,82 — и «ривер поиск» запускал Spotify (живой журнал 2026-10-23).
+    if left.chars().next() != right.chars().next() {
+        return 0.0;
+    }
     let similarity = jaro_winkler(&left, &right);
     if similarity >= WORD_MIN_SIMILARITY {
         similarity
@@ -302,6 +308,12 @@ mod tests {
             phrases: vec!["шахматы".into(), "час".into(), "chess".into()],
         };
         assert!(chess.score(&["чанский".into()]) < 0.7);
+        let spotify = Action {
+            phrases: vec!["спати фай".into(), "spotify".into(), "с по тик".into()],
+            ..chess.clone()
+        };
+        assert!(spotify.score(&["поиск".into()]) < 0.7);
+        assert!(spotify.score(&["спотифай".into()]) >= 0.7);
         assert!(chess.score(&["шахматы".into()]) >= 0.9);
         assert!(chess.score(&["шахмат".into()]) >= 0.7);
     }
