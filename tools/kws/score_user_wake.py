@@ -5,14 +5,15 @@ testdata/wake/ и считает, сколько кусков проверочн
 и сколько раз сработал там мимо них.
 
     .venv\\Scripts\\python score_user_wake.py <веса.bin> [<веса.bin> ...]
+    .venv\\Scripts\\python score_user_wake.py --data data/friend-fr --source testdata/wake/friend/fr <веса.bin>
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
-import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
@@ -27,13 +28,18 @@ TEST = Path(__file__).resolve().parent / "data" / "user" / "test.json"
 
 
 def main() -> None:
-    pieces = json.loads(TEST.read_text(encoding="utf-8"))
+    p = argparse.ArgumentParser()
+    p.add_argument("weights", nargs="+")
+    p.add_argument("--data", type=Path, default=TEST.parent, help="выход user_wake.py --out (там test.json)")
+    p.add_argument("--source", type=Path, default=SOURCE, help="папка с записями, как у user_wake.py --source")
+    args = p.parse_args()
+    pieces = json.loads((args.data / "test.json").read_text(encoding="utf-8"))
     files = sorted({p["file"] for p in pieces})
     with tempfile.TemporaryDirectory() as tmp:
         # Зонд читает WAV через sherpa-onnx: float-стерео FL Studio — в 16 кГц PCM.
         for name in files:
-            sf.write(Path(tmp) / name, load(SOURCE / name), 16_000, subtype="PCM_16")
-        for weights in sys.argv[1:]:
+            sf.write(Path(tmp) / name, load(args.source / name), 16_000, subtype="PCM_16")
+        for weights in args.weights:
             env = dict(os.environ, SPOTTER="1", TIMES="1", WEIGHTS=str(Path(weights).resolve()))
             out = subprocess.run([str(PROBE), f"user={tmp}"], env=env, capture_output=True,
                                  text=True, encoding="utf-8", check=True).stdout

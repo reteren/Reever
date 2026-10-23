@@ -3,6 +3,8 @@
 Записи лежат в testdata/wake/ (личные, не в git): `<язык>-river.wav` — «ривер» с паузами,
 `<язык>-cmd.wav` — «ривер, открой …». Каждая запись делится по времени: первые 70 % —
 клипы для обучения, последние 30 % — проверка (`--split`), их в обучение не берут.
+Другой диктор — своя папка и свой выход: `--source testdata/wake/friend/fr --out data/friend-fr
+--speaker friend`.
 
 Слова — по паузам (громкость кадра 10 мс выше −55 дБ, паузы короче 200 мс внутри слова).
 Конец «ривер» во фразе с командой — по меткам токенов Parakeet v3: начало второго слова.
@@ -80,11 +82,15 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--split", type=float, default=0.7, help="доля записи для обучения")
     p.add_argument("--repeat", type=int, default=4, help="во сколько раз чаще брать эти клипы (×3 от --real-wake-repeat)")
+    p.add_argument("--source", type=Path, default=SOURCE, help="папка с записями <язык>-river.wav / <язык>-cmd.wav")
+    p.add_argument("--out", type=Path, default=OUT, help="куда положить клипы, clips.jsonl и test.json")
+    p.add_argument("--speaker", default="user", help="имя диктора: у каждого свой голос в обучении")
     args = p.parse_args()
-    (OUT / "clips").mkdir(parents=True, exist_ok=True)
+    out = args.out
+    (out / "clips").mkdir(parents=True, exist_ok=True)
     rec = recognizer()
     clips, test = [], []
-    for path in sorted(SOURCE.glob("*-*.wav")):
+    for path in sorted(args.source.glob("*-*.wav")):
         lang, kind = path.stem.split("-", 1)
         audio = load(path)
         border = int(len(audio) / 160 * args.split)
@@ -106,13 +112,13 @@ def main() -> None:
                     continue
                 end = second
             name = f"clips/{path.stem}-{n:03d}.wav"
-            sf.write(OUT / name, clip, RATE, subtype="PCM_16")
-            clips.append({"speaker": f"user-{lang}", "lang": f"user-{lang}", "text": text, "file": name,
+            sf.write(out / name, clip, RATE, subtype="PCM_16")
+            clips.append({"speaker": f"{args.speaker}-{lang}", "lang": f"user-{lang}", "text": text, "file": name,
                           "wake_start": round(start, 3), "wake_end": round(end, 3), "exact": True,
                           "repeat": args.repeat})
-    (OUT / "clips.jsonl").write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in clips),
+    (out / "clips.jsonl").write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in clips),
                                      encoding="utf-8")
-    (OUT / "test.json").write_text(json.dumps(test, ensure_ascii=False, indent=0), encoding="utf-8")
+    (out / "test.json").write_text(json.dumps(test, ensure_ascii=False, indent=0), encoding="utf-8")
     by_lang = {}
     for c in clips:
         by_lang[c["lang"]] = by_lang.get(c["lang"], 0) + 1
