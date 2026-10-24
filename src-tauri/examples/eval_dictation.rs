@@ -285,7 +285,7 @@ fn run_scenario(engine: &mut Engine<Asr, SileroVad>, audio: &[i16], trace: bool)
                     run.commands.push(CommandEvent { at_ms, text, alt });
                 }
                 EngineEvent::Timeout => run.timeouts_ms.push(at_ms),
-                EngineEvent::Log(message) => run.logs.push(message),
+                EngineEvent::Log(message) => run.logs.push(message.render("en")),
                 _ => {}
             }
         }
