@@ -30,6 +30,32 @@ fn mic_level_local() -> Option<MicLevel> {
     }
 }
 
+/// Микрофон по умолчанию: (идентификатор устройства, имя для журнала). `None` — микрофона
+/// по умолчанию нет. По идентификатору recognizer.rs замечает, что Windows сменила
+/// микрофон (подключили гарнитуру, вернули выдернутый USB): открытый поток при этом
+/// не обрывается и молча продолжает слушать прежнее устройство.
+pub fn default_mic() -> Option<(String, String)> {
+    crate::input_thread::call(default_mic_local).flatten()
+}
+
+fn default_mic_local() -> Option<(String, String)> {
+    use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
+    use windows::Win32::System::Com::{CoTaskMemFree, STGM_READ};
+    unsafe {
+        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+        let device = enumerator.GetDefaultAudioEndpoint(eCapture, eConsole).ok()?;
+        let raw = device.GetId().ok()?;
+        let id = raw.to_string().ok();
+        CoTaskMemFree(Some(raw.0 as *const _));
+        let name = device
+            .OpenPropertyStore(STGM_READ)
+            .and_then(|store| store.GetValue(&PKEY_Device_FriendlyName))
+            .map(|value| value.to_string())
+            .unwrap_or_default();
+        Some((id?, name))
+    }
+}
+
 /// Строка журнала о смене громкости; `None` — менять нечего или изменение мелкое.
 pub fn describe_change(before: MicLevel, after: MicLevel) -> Option<crate::uilang::Msg> {
     if before == after || (before.muted == after.muted && before.percent.abs_diff(after.percent) < 3) {

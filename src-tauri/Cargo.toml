@@ -71,6 +71,9 @@ features = [
   # micwatch.rs: громкость микрофона в Windows (её меняют другие программы, например Discord)
   "Win32_Media_Audio",
   "Win32_Media_Audio_Endpoints",
+  # micwatch.rs: какой микрофон сейчас по умолчанию и его имя — переход на новый
+  "Win32_UI_Shell_PropertiesSystem",
+  "Win32_Devices_FunctionDiscovery",
 ]
 
 [profile.release]

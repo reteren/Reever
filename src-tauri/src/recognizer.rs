@@ -253,15 +253,26 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let (tx, rx) = audio_channel(AUDIO_QUEUE);
     // Поток микрофона держим в Option: на паузе/мьюте реально закрываем его
     // (дроп Stream останавливает захват → системный индикатор микрофона гаснет).
-    let mut stream = Some(start_capture(tx.clone())?);
-    ui_log(
-        app,
-        if stream.as_ref().is_some_and(|capture| capture.is_raw()) {
-            "microphone: raw mode — Windows sound enhancements (equalizer, voice clarity) are bypassed"
-        } else {
-            "microphone: standard mode — raw mode is unavailable, Windows sound enhancements apply"
-        },
-    );
+    // Микрофона нет при запуске — не ошибка воркера: цикл ниже ждёт его и подхватит.
+    let mut mic = MicLink::default();
+    let mut stream = match start_capture(tx.clone()) {
+        Ok(capture) => {
+            ui_log(
+                app,
+                if capture.is_raw() {
+                    "microphone: raw mode — Windows sound enhancements (equalizer, voice clarity) are bypassed"
+                } else {
+                    "microphone: standard mode — raw mode is unavailable, Windows sound enhancements apply"
+                },
+            );
+            mic.opened();
+            Some(capture)
+        }
+        Err(error) => {
+            mic.lost(app, &error);
+            None
+        }
+    };
     let mut worker = Worker {
         app,
         cfg,
@@ -380,13 +391,17 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             std::thread::sleep(Duration::from_millis(150));
             continue;
         }
-        // Поток умер (ошибка cpal) или звука нет 3 с — переоткрыть микрофон, иначе Reever
-        // молча глохнет до перезапуска (переключили улучшения звука в Windows).
+        // Поток умер (ошибка cpal/WASAPI) или звука нет 3 с — переоткрыть микрофон, иначе
+        // Reever молча глохнет до перезапуска (переключили улучшения звука в Windows).
         if stream.is_some() && (crate::audio::STREAM_FAILED.load(Ordering::SeqCst) || stalled) {
             stream = None;
             stalled = false;
             ui_log(app, "⚠ microphone stream stopped — reopening it");
             std::thread::sleep(Duration::from_millis(300));
+        }
+        // Windows сменила микрофон по умолчанию — перейти на него.
+        if stream.is_some() && mic.default_changed(app) {
+            stream = None;
         }
         if stream.is_none() {
             match start_capture(tx.clone()) {
@@ -403,10 +418,12 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         ),
                         None => ui_log(app, crate::msg!("log.mic.on")),
                     }
+                    mic.opened();
+                    mic.back(app);
                 }
                 Err(e) => {
-                    ui_log(app, crate::msg!("log.mic.unavailable", error = e));
-                    std::thread::sleep(Duration::from_millis(500));
+                    mic.lost(app, &e);
+                    std::thread::sleep(MIC_RETRY);
                     continue;
                 }
             }
@@ -810,6 +827,87 @@ struct Worker<'a> {
     last_spot_sound: Option<std::time::Instant>,
     /// Звук вокруг срабатываний детектора — в WAV (Настройки → «Записывать срабатывания»).
     blackbox: Option<crate::blackbox::BlackBox>,
+}
+
+/// Как часто пробовать открыть пропавший микрофон.
+const MIC_RETRY: Duration = Duration::from_millis(500);
+/// Как часто сверять микрофон по умолчанию с открытым.
+const MIC_DEVICE_CHECK: Duration = Duration::from_secs(1);
+
+/// Какой микрофон открыт и с каких пор его нет. Пропал — журнал пишет об этом один раз,
+/// а не на каждую попытку (раз в 0,5 с), и отмечает, когда микрофон вернулся.
+struct MicLink {
+    /// Идентификатор микрофона по умолчанию, который был при открытии.
+    device: Option<String>,
+    checked: std::time::Instant,
+    missing_since: Option<std::time::Instant>,
+}
+
+impl Default for MicLink {
+    fn default() -> Self {
+        Self {
+            device: None,
+            checked: std::time::Instant::now(),
+            missing_since: None,
+        }
+    }
+}
+
+impl MicLink {
+    /// Захват открыт: запомнить, какое устройство сейчас по умолчанию.
+    fn opened(&mut self) {
+        self.device = crate::micwatch::default_mic().map(|(id, _)| id);
+        self.checked = std::time::Instant::now();
+    }
+
+    /// Открыть не вышло: в журнал — только первая неудача.
+    fn lost(&mut self, app: &AppHandle, error: &anyhow::Error) {
+        if self.missing_since.is_none() {
+            self.missing_since = Some(std::time::Instant::now());
+            ui_log(app, crate::msg!("log.mic.unavailable", error = error));
+            ui_log(app, "🎙 waiting for the microphone — Reever will pick it up as soon as it is back");
+        }
+    }
+
+    /// Микрофон снова открыт после пропажи.
+    fn back(&mut self, app: &AppHandle) {
+        if let Some(since) = self.missing_since.take() {
+            ui_log(
+                app,
+                format!("🎙 microphone is back after {:.1} s", since.elapsed().as_secs_f32()),
+            );
+        }
+    }
+
+    /// Раз в `MIC_DEVICE_CHECK`: Windows сменила микрофон по умолчанию? Открытый поток
+    /// при этом не обрывается и слушал бы прежнее устройство.
+    fn default_changed(&mut self, app: &AppHandle) -> bool {
+        if self.checked.elapsed() < MIC_DEVICE_CHECK {
+            return false;
+        }
+        self.checked = std::time::Instant::now();
+        match self.switch_to(crate::micwatch::default_mic()) {
+            Some(name) => {
+                ui_log(app, format!("🎙 Windows default microphone changed to «{name}» — switching to it"));
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Решение по текущему микрофону по умолчанию: имя нового, если надо переходить.
+    /// Микрофона по умолчанию нет — не переходим: оборвётся поток, его и переоткроем.
+    fn switch_to(&mut self, current: Option<(String, String)>) -> Option<String> {
+        let (id, name) = current?;
+        match &self.device {
+            Some(device) if *device != id => Some(if name.is_empty() { id } else { name }),
+            Some(_) => None,
+            None => {
+                self.device = Some(id);
+                None
+            }
+        }
+    }
 }
 
 /// Состояние одной диктовки: оформление текста и то, что ушло в буфер обмена.
@@ -1569,5 +1667,24 @@ mod audio_buffer_tests {
         clear_recent_audio(&mut recent, &mut recent_samples);
         assert!(recent.is_empty());
         assert_eq!(recent_samples, 0);
+    }
+}
+
+#[cfg(test)]
+mod mic_link_tests {
+    use super::MicLink;
+
+    #[test]
+    fn microphone_follows_the_windows_default() {
+        let mic = |id: &str, name: &str| Some((id.to_string(), name.to_string()));
+        let mut link = MicLink::default();
+        // Устройство при открытии не прочиталось — запоминаем первое увиденное.
+        assert_eq!(link.switch_to(mic("usb", "HyperX")), None);
+        assert_eq!(link.switch_to(mic("usb", "HyperX")), None);
+        // Микрофона по умолчанию нет — ждём обрыва потока, не дёргаемся.
+        assert_eq!(link.switch_to(None), None);
+        // Windows перешла на другой — переходим и мы.
+        assert_eq!(link.switch_to(mic("webcam", "Webcam Mic")), Some("Webcam Mic".into()));
+        assert_eq!(link.switch_to(mic("webcam", "")), Some("webcam".into()));
     }
 }
