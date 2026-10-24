@@ -607,7 +607,14 @@ fn dispatch_find(
                 (None, Some(name)) => name.clone(),
                 (None, None) => String::new(),
             };
-            let _ = crate::picker::show(app, shared, &title, &items);
+            // Поле поиска в окне начинается с того, что искали голосом, в том же синтаксисе.
+            let query = match (&extension, names.first()) {
+                (Some(ext), Some(name)) => format!("{name} ext:{ext}"),
+                (Some(ext), None) => format!("ext:{ext}"),
+                (None, Some(name)) => name.clone(),
+                (None, None) => String::new(),
+            };
+            let _ = crate::picker::show(app, shared, &title, &query, scope, &items);
             DispatchResult::Choose(n)
         }
     }

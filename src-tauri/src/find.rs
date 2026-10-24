@@ -16,7 +16,7 @@ use strsim::jaro_winkler;
 use crate::local_index::DiskIndex;
 
 /// Что искать.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FindScope {
     Any,
@@ -637,6 +637,114 @@ pub fn search(
     usage: &Usage,
     recent: &HashMap<String, u64>,
 ) -> Vec<FindItem> {
+    search_with(index, candidates, scope, extension, usage, recent, MAX_SHOWN, SEARCH_BUDGET_MS)
+}
+
+/// Сколько показывать, когда запрос набран в окне выбора.
+pub const TYPED_SHOWN: usize = 100;
+/// Набранный запрос пересчитывается на каждую букву: нечёткие проходы — не дольше этого.
+const TYPED_BUDGET_MS: u64 = 400;
+/// Сколько брать у индекса на запрос с его синтаксисом (`|`, `wfn:`, `startwith:`).
+const TYPED_RAW_COUNT: usize = 400;
+
+/// Запрос, набранный в окне выбора, — как в Everything: слова через пробел должны все
+/// встретиться в имени; `ext:pdf`, `folder:`, `file:` — где угодно в запросе; `|` — «или»,
+/// `wfn:` / `startwith:` — имя целиком / начало имени, как есть индексу. Без синтаксиса —
+/// тот же поиск, что голосом: транслит, слова без пунктуации, нечёткий проход.
+pub fn search_typed(
+    index: &DiskIndex,
+    query: &str,
+    scope: FindScope,
+    usage: &Usage,
+    recent: &HashMap<String, u64>,
+) -> Vec<FindItem> {
+    let mut scope = scope;
+    let mut extension = None;
+    let mut words = Vec::new();
+    for token in query.split_whitespace() {
+        let lower = token.to_lowercase();
+        match lower.as_str() {
+            "folder:" => scope = FindScope::Folder,
+            "file:" => scope = FindScope::File,
+            _ => match lower.strip_prefix("ext:") {
+                Some(ext) => {
+                    let ext = ext.trim_start_matches('.');
+                    if !ext.is_empty() {
+                        extension = Some(ext.to_string());
+                    }
+                }
+                None => words.push(token),
+            },
+        }
+    }
+    let text = words.join(" ");
+    let extension = extension.as_deref();
+    if text.contains('|') || text.starts_with("wfn:") || text.starts_with("startwith:") {
+        // Индекс отдаёт совпадения в порядке дисков: имя, ближе всего к одному из
+        // вариантов, — выше («hive» раньше «myselfhive»).
+        let terms: Vec<String> = text
+            .split(|c: char| c == '|' || c.is_whitespace())
+            .map(|term| {
+                let term = term.strip_prefix("wfn:").unwrap_or(term);
+                term.strip_prefix("startwith:").unwrap_or(term).to_string()
+            })
+            .filter(|term| !term.is_empty())
+            .collect();
+        let mut items: Vec<FindItem> = index
+            .search_items(&text.to_lowercase(), scope, extension, TYPED_RAW_COUNT)
+            .into_iter()
+            .map(|(full, folder)| {
+                let full = full.to_string_lossy().into_owned();
+                let boost = usage_boost(&full, usage, recent);
+                let name = Path::new(&full)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| full.clone());
+                let similarity = terms
+                    .iter()
+                    .map(|term| name_score(&name, term))
+                    .fold(0.0, f64::max);
+                FindItem {
+                    name,
+                    folder,
+                    frequent: boost >= 0.15,
+                    score: similarity + boost - noise_penalty(&full),
+                    path: full,
+                }
+            })
+            .collect();
+        sort_items(&mut items);
+        items.truncate(TYPED_SHOWN);
+        return items;
+    }
+    if text.is_empty() && extension.is_none() {
+        return Vec::new();
+    }
+    let candidates: Vec<String> = if text.is_empty() { Vec::new() } else { vec![text] };
+    search_with(index, &candidates, scope, extension, usage, recent, TYPED_SHOWN, TYPED_BUDGET_MS)
+}
+
+/// Частые — первым разделом, внутри каждого — по рангу; при равенстве короче путь.
+fn sort_items(items: &mut [FindItem]) {
+    items.sort_by(|a, b| {
+        b.frequent
+            .cmp(&a.frequent)
+            .then(b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal))
+            .then(a.path.len().cmp(&b.path.len()))
+    });
+}
+
+#[allow(clippy::too_many_arguments)]
+fn search_with(
+    index: &DiskIndex,
+    candidates: &[String],
+    scope: FindScope,
+    extension: Option<&str>,
+    usage: &Usage,
+    recent: &HashMap<String, u64>,
+    limit: usize,
+    budget_ms: u64,
+) -> Vec<FindItem> {
     let variants = query_variants(candidates);
     let prefix = match (scope, extension) {
         (_, Some(ext)) => format!("file: ext:{ext} "),
@@ -647,7 +755,7 @@ pub fn search(
     let prefix = prefix.as_str();
     let mut found: HashMap<String, FindItem> = HashMap::new();
     let deadline =
-        std::time::Instant::now() + std::time::Duration::from_millis(SEARCH_BUDGET_MS);
+        std::time::Instant::now() + std::time::Duration::from_millis(budget_ms);
     let mut first = true;
     let mut run = |found: &mut HashMap<String, FindItem>,
                    query: &str,
@@ -747,14 +855,8 @@ pub fn search(
     if best >= 0.7 {
         items.retain(|item| item.score >= WEAK_SCORE);
     }
-    // Частые — первым разделом, внутри каждого — по рангу; при равенстве короче путь.
-    items.sort_by(|a, b| {
-        b.frequent
-            .cmp(&a.frequent)
-            .then(b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal))
-            .then(a.path.len().cmp(&b.path.len()))
-    });
-    items.truncate(MAX_SHOWN);
+    sort_items(&mut items);
+    items.truncate(limit);
     items
 }
 
@@ -795,6 +897,35 @@ pub fn parse_choice(text: &str) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+
+    fn typed(query: &str, scope: FindScope) -> Vec<String> {
+        let index = crate::local_index::test_index(&[
+            ("Downloads", true),
+            ("download-list.txt", false),
+            ("report.pdf", false),
+            ("report", true),
+            ("photos", true),
+        ]);
+        search_typed(&index, query, scope, &Usage::default(), &HashMap::new())
+            .into_iter()
+            .map(|item| item.name)
+            .collect()
+    }
+
+    #[test]
+    fn typed_search_finds_like_everything() {
+        assert!(typed("", FindScope::Any).is_empty());
+        let found = typed("downl", FindScope::Any);
+        assert!(found.contains(&"Downloads".to_string()), "{found:?}");
+        assert!(found.contains(&"download-list.txt".to_string()), "{found:?}");
+        assert_eq!(typed("downl", FindScope::Folder), vec!["Downloads".to_string()]);
+        assert_eq!(typed("report folder:", FindScope::Any), vec!["report".to_string()]);
+        assert_eq!(typed("ext:pdf report", FindScope::Any), vec!["report.pdf".to_string()]);
+        let either = typed("photos|downloads", FindScope::Folder);
+        assert_eq!(either.len(), 2, "{either:?}");
+        // Точное имя выше вхождения.
+        assert_eq!(typed("report|xyz", FindScope::Any).first().map(String::as_str), Some("report"));
+    }
     use super::*;
 
     #[test]

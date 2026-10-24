@@ -1,10 +1,16 @@
 //! Окно выбора «ривер найди …»: несколько совпадений из индекса — список в центре
 //! экрана (окно `picker`, frontend/picker.html). Выбор — кликом, клавишами или голосом
 //! («третий»); открытие записывается в историю для ранжирования (find::Usage).
+//! В окне можно и печатать: поле поиска ищет по индексу на каждую букву, как Everything
+//! (`picker_search`, `find::search_typed`).
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc, Mutex,
+    },
+    time::{Duration, Instant},
 };
 
 use serde_json::{json, Value};
@@ -13,22 +19,36 @@ use tauri::{webview::WebviewWindowBuilder, AppHandle, Emitter, Manager, State, W
 use crate::actions::SharedState;
 use crate::config::ReeverConfig;
 use crate::events::ui_log;
-use crate::find::{FindItem, Usage};
+use crate::find::{FindItem, FindScope, Usage};
 use crate::{launcher, winutil};
 
 static PICKER_CREATE_PENDING: AtomicBool = AtomicBool::new(false);
 static PICKER_READY: AtomicBool = AtomicBool::new(false);
 static PENDING_PICKER: Mutex<Option<Value>> = Mutex::new(None);
+/// Номер последнего набранного запроса: ответ на устаревший не трогает список.
+static SEARCH_GENERATION: AtomicU64 = AtomicU64::new(0);
+/// Недавние Windows (`find::windows_recent` читает папку ярлыков) — на время набора.
+static RECENT: Mutex<Option<(Instant, Arc<HashMap<String, u64>>)>> = Mutex::new(None);
+const RECENT_FOR: Duration = Duration::from_secs(30);
 
-/// Показать варианты. `title` — что искали (для заголовка окна).
-/// Возвращает номер окна — по нему аудио-поток узнаёт, что закрыли именно его.
-pub fn show(app: &AppHandle, shared: &SharedState, title: &str, items: &[FindItem]) -> u64 {
+/// Показать варианты. `title` — что искали (для заголовка окна); `query` и `scope` —
+/// с чего начинается поле поиска в окне. Возвращает номер окна — по нему аудио-поток
+/// узнаёт, что закрыли именно его.
+pub fn show(
+    app: &AppHandle,
+    shared: &SharedState,
+    title: &str,
+    query: &str,
+    scope: FindScope,
+    items: &[FindItem],
+) -> u64 {
     let session = shared.picker_session.fetch_add(1, Ordering::SeqCst) + 1;
+    SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst);
     if let Ok(mut picker) = shared.picker.lock() {
         *picker = items.to_vec();
     }
     if let Ok(mut pending) = PENDING_PICKER.lock() {
-        *pending = Some(json!({ "title": title, "items": items }));
+        *pending = Some(json!({ "title": title, "query": query, "scope": scope, "items": items }));
     }
     ensure_picker(app);
     session
@@ -144,6 +164,8 @@ pub fn mark_closed(shared: &SharedState) {
 
 /// Спрятать окно и забыть варианты.
 pub fn hide(app: &AppHandle, shared: &SharedState) {
+    // Поиск, набранный в окне и ещё идущий, не вернёт список закрытому окну.
+    SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst);
     if let Ok(mut picker) = shared.picker.lock() {
         picker.clear();
     }
@@ -204,6 +226,53 @@ pub fn picker_choose(
     // Отметить до открытия: оно может занять время, а за это время может открыться новое окно.
     mark_closed(&shared);
     Ok(choose(&app, &shared, &cfg.get(), index))
+}
+
+fn windows_recent() -> Arc<HashMap<String, u64>> {
+    let mut cached = RECENT.lock().unwrap_or_else(|e| e.into_inner());
+    match cached.as_ref() {
+        Some((at, recent)) if at.elapsed() < RECENT_FOR => recent.clone(),
+        _ => {
+            let recent = Arc::new(crate::find::windows_recent());
+            *cached = Some((Instant::now(), recent.clone()));
+            recent
+        }
+    }
+}
+
+/// Поиск, набранный в окне: варианты по индексу дисков (`find::search_typed`). Найденное
+/// становится списком окна — его номера выбирают и голосом, и клавишами. `None` в ответе —
+/// пришёл более новый запрос, этот ответ устарел. Индекс выключен — ошибка `index-off`.
+#[tauri::command]
+pub async fn picker_search(
+    app: AppHandle,
+    shared: State<'_, Arc<SharedState>>,
+    query: String,
+    scope: FindScope,
+) -> Result<Option<Vec<FindItem>>, String> {
+    let generation = SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    let shared = shared.inner().clone();
+    let manager = app
+        .try_state::<crate::local_index::IndexManager>()
+        .map(|manager| manager.inner().clone());
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(index) = manager.and_then(|manager| manager.snapshot()) else {
+            return Err("index-off".to_string());
+        };
+        if SEARCH_GENERATION.load(Ordering::SeqCst) != generation {
+            return Ok(None);
+        }
+        let usage = Usage::load(&shared.usage_path);
+        let items = crate::find::search_typed(&index, &query, scope, &usage, &windows_recent());
+        let mut picker = shared.picker.lock().unwrap_or_else(|e| e.into_inner());
+        if SEARCH_GENERATION.load(Ordering::SeqCst) != generation {
+            return Ok(None);
+        }
+        *picker = items.clone();
+        Ok(Some(items))
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

@@ -440,7 +440,7 @@ pub fn run() {
                             )
                         })
                         .unwrap_or_default();
-                    let _ = picker::show(&handle, &shared, &query, &items);
+                    let _ = picker::show(&handle, &shared, &query, &query, find::FindScope::Any, &items);
                 });
                 return Ok(());
             }
@@ -497,6 +497,7 @@ pub fn run() {
             commands_api::set_mascot,
             picker::picker_choose,
             picker::picker_close,
+            picker::picker_search,
             picker::picker_ready,
             confirm::confirm_ready,
             confirm::confirm_answer,

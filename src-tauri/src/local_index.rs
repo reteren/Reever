@@ -682,6 +682,17 @@ impl ScanShard {
     }
 }
 
+/// Индекс из списка (имя, папка ли) в корне `Z:` — для тестов других модулей.
+#[cfg(test)]
+pub(crate) fn test_index(entries: &[(&str, bool)]) -> DiskIndex {
+    let mut drive = DriveIndex::default();
+    add_record(&mut drive, ROOT_PARENT, std::ffi::OsStr::new("Z:"), true);
+    for (name, folder) in entries {
+        add_record(&mut drive, 0, std::ffi::OsStr::new(name), *folder);
+    }
+    DiskIndex::from_drive_indexes(vec![drive])
+}
+
 #[cfg(test)]
 fn scan_roots(roots: &[PathBuf], options: &ScanOptions, stop: Arc<AtomicBool>) -> DiskIndex {
     scan_roots_with_progress(roots, options, stop, None)
