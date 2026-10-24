@@ -18,6 +18,9 @@
 дикторов Common Voice с разными акцентами; часть дикторов отложена — это замер на живых
 людях по группам акцентов (globe-de, globe-zh, …).
 
+Каждые --save-every шагов состояние пишется в <output>.ckpt; с --resume обучение
+продолжается с него (после обрыва — например, нехватки памяти), а не с нуля.
+
 Признаки совпадают с src-tauri/src/kws.rs: окно Ханна 400, шаг 160, FFT 512, 40 мел, log.
 
     .venv\\Scripts\\python train_multilang.py --steps 30000 --output data/kws-ml.bin
@@ -554,6 +557,8 @@ def main() -> None:
     p.add_argument("--eval-only", type=Path, help="только замер готовых весов (.pt) на том же разбиении")
     p.add_argument("--real-wake-test", type=float, default=0.15, help="доля дикторов GLOBE в тест")
     p.add_argument("--real-wake-repeat", type=int, default=3, help="во сколько раз чаще брать живые клипы")
+    p.add_argument("--save-every", type=int, default=1000, help="шагов между сохранениями <output>.ckpt")
+    p.add_argument("--resume", action="store_true", help="продолжить с <output>.ckpt, если он есть")
     args = p.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
 
@@ -608,8 +613,27 @@ def main() -> None:
     optim = torch.optim.AdamW(model.parameters(), lr=3e-3, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(optim, max_lr=3e-3, total_steps=args.steps, pct_start=0.05)
     frames = (int(SEG * RATE) - WIN) // HOP + 1
+    ckpt = args.output.with_suffix(".ckpt")
+    # Те же аргументы — то же обучение: продолжать чужой .ckpt нельзя.
+    same = {k: v for k, v in vars(args).items() if k not in ("resume", "save_every", "eval_every")}
+    same = json.loads(json.dumps(same, default=str))
+    first = 1
+    if args.resume and ckpt.is_file():
+        state = torch.load(ckpt, map_location=device, weights_only=False)
+        if state["args"] != same:
+            raise SystemExit(f"{ckpt}: другие аргументы обучения, удалите его или уберите --resume")
+        model.load_state_dict(state["model"]); optim.load_state_dict(state["optim"]); sched.load_state_dict(state["sched"])
+        rng.setstate(state["rng"]); np.random.set_state(state["np"]); torch.set_rng_state(state["torch"].cpu())
+        if device.type == "cuda":
+            torch.cuda.set_rng_state(state["cuda"].cpu())
+        first = state["step"] + 1
+        # Трудные примеры не сохраняются (сотни МБ): добрать их заново тем же способом.
+        if any(m < first for m in mine_steps) and train_pools.real:
+            train_pools.hard = mine_hard(model, mel, train_pools.real, device)[-6000:]
+            train_pools.hard_share = args.hard_share
+        print(f"продолжение с шага {first}, трудных примеров {len(train_pools.hard)}", flush=True)
     started = time.time()
-    for step in range(1, args.steps + 1):
+    for step in range(first, args.steps + 1):
         batch, tgt, msk = [], [], []
         for i in range(args.batch):
             audio, s, e = compose(train_pools, rng, positive=i % 2 == 0)
@@ -636,7 +660,14 @@ def main() -> None:
                 report.update(real_false(model, mel, real_test, device, (0.5, 0.7, 0.85, 0.93, 0.97)))
             print(json.dumps(report, ensure_ascii=False), flush=True)
             torch.save(model.state_dict(), args.output.with_suffix(".pt"))
+        if step % args.save_every == 0 and step < args.steps:
+            state = {"args": same, "step": step, "model": model.state_dict(), "optim": optim.state_dict(),
+                     "sched": sched.state_dict(), "rng": rng.getstate(), "np": np.random.get_state(),
+                     "torch": torch.get_rng_state(), "cuda": torch.cuda.get_rng_state() if device.type == "cuda" else None}
+            torch.save(state, ckpt.with_suffix(".tmp"))
+            ckpt.with_suffix(".tmp").replace(ckpt)
     export(model, args.output)
+    ckpt.unlink(missing_ok=True)
     print(f"веса: {args.output} ({args.output.stat().st_size} байт)")
 
 
