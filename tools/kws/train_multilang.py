@@ -5,6 +5,9 @@
 после конца слова, «нет» — на обычной речи, созвучных словах и шуме. Аугментации — на GPU:
 громкость, высота/темп, шум, эхо комнаты, полоса телефона/Discord.
 
+С --real-neg (data/blackbox/clips.jsonl, blackbox_negatives.py) в отрицательные идут
+ложные срабатывания из «чёрного ящика» программы: микрофон и комната пользователя.
+
 С --aug-extra ещё: голос издалека (длинное эхо), чужая речь фоном, перегруз и грубое
 сжатие, «дыры» шумодава (Windows, Discord, NVIDIA Broadcast режут тихие полосы спектра).
 
@@ -199,6 +202,9 @@ class Pools:
         self.real: list[np.ndarray] = []
         self.hard: list[np.ndarray] = []
         self.hard_share = 0.0
+        # Ложные срабатывания из чёрного ящика (--real-neg): не вытесняются добором.
+        self.real_neg: list[np.ndarray] = []
+        self.real_neg_share = 0.0
 
 
 def resample(audio: np.ndarray, factor: float) -> np.ndarray:
@@ -352,6 +358,8 @@ def compose(pools: Pools, rng: random.Random, positive: bool) -> tuple[np.ndarra
             audio = audio[shift:]
         start, end = start - shift, end - shift
         parts = [audio]
+    elif pools.real_neg and rng.random() < pools.real_neg_share:
+        audio = level(rng.choice(pools.real_neg))
     elif pools.hard and rng.random() < pools.hard_share:
         # Место, где сеть уже ошиблась на живой речи.
         audio = level(rng.choice(pools.hard).astype(np.float32) / 32768.0)
@@ -640,6 +648,9 @@ def main() -> None:
     p.add_argument("--eval-only", type=Path, help="только замер готовых весов (.pt) на том же разбиении")
     p.add_argument("--real-wake-test", type=float, default=0.15, help="доля дикторов GLOBE в тест")
     p.add_argument("--real-wake-repeat", type=int, default=3, help="во сколько раз чаще брать живые клипы")
+    p.add_argument("--real-neg", type=Path, action="append", default=[],
+                   help="data/blackbox/clips.jsonl: ложные срабатывания из чёрного ящика (можно несколько)")
+    p.add_argument("--real-neg-share", type=float, default=0.08, help="их доля среди отрицательных примеров")
     p.add_argument("--aug-extra", action="store_true", help="дальний голос, фон речи, перегруз, сжатие, шумодав")
     p.add_argument("--save-every", type=int, default=1000, help="шагов между сохранениями <output>.ckpt")
     p.add_argument("--resume", action="store_true", help="продолжить с <output>.ckpt, если он есть")
@@ -681,6 +692,12 @@ def main() -> None:
                                                      {k: int(v) for k, v in (x.split("=") for x in args.fleurs_lang_max.split(",") if x)})
         hours = lambda clips: sum(len(c) for c in clips) / RATE / 3600
         print(f"живая речь: обучение {len(train_pools.real)} фраз ({hours(train_pools.real):.1f} ч), тест {len(real_test)} ({hours(real_test):.1f} ч)")
+    for path in args.real_neg:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            train_pools.real_neg.append(read_wav_i16(path.parent / json.loads(line)["file"]))
+        train_pools.real_neg_share = args.real_neg_share
+    if args.real_neg:
+        print(f"ложные из чёрного ящика: {len(train_pools.real_neg)}")
     mine_steps = {int(x) for x in args.mine_at.split(",") if x}
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
