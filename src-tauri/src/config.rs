@@ -129,8 +129,8 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub wake_sound: bool,
     /// «Чёрный ящик» (blackbox.rs): звук вокруг срабатываний детектора — в WAV, для отладки
-    /// и дообучения. Пока детектор доводится на живой работе — включён по умолчанию.
-    #[serde(default = "default_true")]
+    /// и дообучения. Пишет микрофон на диск — по умолчанию выключен, включает разработчик.
+    #[serde(default)]
     pub wake_blackbox: bool,
     /// Язык интерфейса: `auto` (язык Windows) или код из `uilang::SUPPORTED`.
     #[serde(default = "default_ui_language")]
@@ -453,7 +453,7 @@ impl Default for Settings {
             webchat_send: true,
             wake_spotter: true,
             wake_sound: true,
-            wake_blackbox: true,
+            wake_blackbox: false,
             ui_language: default_ui_language(),
             ui_languages: default_ui_languages(),
             languages: default_languages(),
