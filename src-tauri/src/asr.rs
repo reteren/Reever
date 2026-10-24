@@ -88,6 +88,10 @@ pub struct AsrConfig {
 
 pub struct Asr {
     recognizer: OfflineRecognizer,
+    /// Последнее распознавание: (отпечаток звука, результат). Готовый кусок диктовки
+    /// спрашивают у модели дважды — текст и тайминги слов (`mix_english_words`); второй
+    /// раз — из памяти, а не полное распознавание заново (на длинном куске — секунды).
+    last: Option<(u64, sherpa_onnx::OfflineRecognizerResult)>,
 }
 
 impl Asr {
@@ -245,7 +249,10 @@ impl Asr {
             )
         })?;
 
-        Ok(Some(Self { recognizer }))
+        Ok(Some(Self {
+            recognizer,
+            last: None,
+        }))
     }
 
     /// Возвращает исходный вывод sherpa-onnx без нормализации; используется бенчмарком.
@@ -262,6 +269,12 @@ impl Asr {
     ) -> anyhow::Result<Option<sherpa_onnx::OfflineRecognizerResult>> {
         if pcm.is_empty() {
             return Ok(None);
+        }
+        let key = audio_key(pcm);
+        if let Some((last_key, result)) = &self.last {
+            if *last_key == key {
+                return Ok(Some(result.clone()));
+            }
         }
 
         let mut waveform: Vec<f32> = pcm
@@ -286,8 +299,17 @@ impl Asr {
         let result = stream
             .get_result()
             .context("sherpa-onnx returned no recognition result")?;
+        self.last = Some((key, result.clone()));
         Ok(Some(result))
     }
+}
+
+/// Отпечаток всего звука и его длины: тот же кусок — тот же результат распознавания.
+fn audio_key(pcm: &[i16]) -> u64 {
+    pcm.iter().fold(
+        0xcbf2_9ce4_8422_2325_u64 ^ pcm.len() as u64,
+        |hash, sample| (hash ^ u64::from(*sample as u16)).wrapping_mul(0x0100_0000_01b3),
+    )
 }
 
 impl Transcriber for Asr {

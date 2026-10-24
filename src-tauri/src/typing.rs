@@ -4,6 +4,7 @@
 use std::{
     ffi::c_void,
     mem::size_of,
+    sync::{Arc, Mutex},
     thread::sleep,
     time::Duration,
 };
@@ -495,29 +496,31 @@ pub fn is_foreground(target: isize) -> bool {
     ensure_foreground_window(target).is_ok()
 }
 
+fn press_backspace_local(target: isize, count: usize) -> usize {
+    let mut sent = 0;
+    while sent < count {
+        if ensure_foreground_window(target).is_err() {
+            break;
+        }
+        let batch = (count - sent).min(24);
+        let mut inputs = Vec::with_capacity(batch * 2);
+        for _ in 0..batch {
+            inputs.push(key(VK_BACK, 0, KEYBD_EVENT_FLAGS(0)));
+            inputs.push(key(VK_BACK, 0, KEYEVENTF_KEYUP));
+        }
+        if send_inputs(&inputs) as usize != inputs.len() {
+            break;
+        }
+        sent += batch;
+        std::thread::sleep(std::time::Duration::from_millis(4));
+    }
+    sent
+}
+
 /// Стереть `count` символов Backspace в окне `target` (пока оно активно). Возвращает,
 /// сколько нажатий отправлено.
 pub fn press_backspace(target: isize, count: usize) -> usize {
-    crate::input_thread::call(move || {
-        let mut sent = 0;
-        while sent < count {
-            if ensure_foreground_window(target).is_err() {
-                break;
-            }
-            let batch = (count - sent).min(24);
-            let mut inputs = Vec::with_capacity(batch * 2);
-            for _ in 0..batch {
-                inputs.push(key(VK_BACK, 0, KEYBD_EVENT_FLAGS(0)));
-                inputs.push(key(VK_BACK, 0, KEYEVENTF_KEYUP));
-            }
-            if send_inputs(&inputs) as usize != inputs.len() {
-                break;
-            }
-            sent += batch;
-            std::thread::sleep(std::time::Duration::from_millis(4));
-        }
-        sent
-    })
+    crate::input_thread::call(move || press_backspace_local(target, count))
     .unwrap_or(0)
 }
 
@@ -578,6 +581,12 @@ impl LiveField {
     /// Привести напечатанное к `wanted` в окне `target`. `false` — окно сменилось или ввод не
     /// прошёл; `typed` тогда отражает то, что реально успело напечататься.
     pub fn reconcile(&mut self, target: isize, wanted: &str) -> bool {
+        self.reconcile_with(target, wanted, false)
+    }
+
+    /// `reconcile`; `local` — вызвано в самом потоке ввода (`LiveTypist`): печатать
+    /// напрямую, а не заданием в тот же поток, которое ждало бы само себя.
+    fn reconcile_with(&mut self, target: isize, wanted: &str, local: bool) -> bool {
         let typed: Vec<char> = self.typed.chars().collect();
         let wanted_chars: Vec<char> = wanted.chars().collect();
         let prefix = typed
@@ -587,7 +596,11 @@ impl LiveField {
             .count();
         let erase = typed.len() - prefix;
         if erase > 0 {
-            let sent = press_backspace(target, erase);
+            let sent = if local {
+                press_backspace_local(target, erase)
+            } else {
+                press_backspace(target, erase)
+            };
             self.typed = typed[..typed.len() - sent].iter().collect();
             if sent < erase {
                 return false;
@@ -597,7 +610,12 @@ impl LiveField {
         if rest.is_empty() {
             return true;
         }
-        let progress = type_pieces(target, &text_to_pieces(&rest));
+        let pieces = text_to_pieces(&rest);
+        let progress = if local {
+            type_pieces_local(target, &pieces)
+        } else {
+            type_pieces(target, &pieces)
+        };
         self.typed.push_str(&pieces_to_text(&progress.typed));
         progress.remaining.is_empty()
     }
@@ -612,6 +630,120 @@ impl LiveField {
         let prefix = common_prefix_chars(&self.typed, &goal);
         goal.chars().skip(prefix).collect()
     }
+}
+
+/// Печать по ходу речи без ожидания: воркер отдаёт цель и сразу распознаёт дальше, а поток
+/// ввода дописывает поле до последней цели по слову за задание. Раньше воркер стоял, пока
+/// печатался каждый символ (`CHAR_PAUSE`), звук копился в очереди, и следующий вариант
+/// приходил позже — текст в поле шёл рывками. Между словами в потоке ввода успевают
+/// проверка орфографии и прочие задания. Промежуточные цели, которые устарели раньше, чем
+/// до них дошла печать, пропускаются.
+#[derive(Clone, Default)]
+pub struct LiveTypist {
+    state: Arc<Mutex<TypistState>>,
+}
+
+#[derive(Default)]
+struct TypistState {
+    field: LiveField,
+    /// Последняя цель: окно и текст, к которому привести поле.
+    goal: Option<(isize, String)>,
+    /// Задание печати стоит в очереди потока ввода или выполняется.
+    busy: bool,
+    /// Окно сменилось или ввод не прошёл — до `finish` не печатаем.
+    failed: bool,
+}
+
+impl LiveTypist {
+    fn lock(&self) -> std::sync::MutexGuard<'_, TypistState> {
+        self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// Привести поле к `goal`, не дожидаясь печати. `false` — печать уже не удалась
+    /// (окно сменилось); новые цели до `finish` не принимаются.
+    pub fn post(&self, target: isize, goal: String) -> bool {
+        let mut state = self.lock();
+        if state.failed {
+            return false;
+        }
+        state.goal = Some((target, goal));
+        if !state.busy {
+            state.busy = true;
+            let typist = self.clone();
+            if !crate::input_thread::post(move || typist.step()) {
+                state.busy = false;
+                state.failed = true;
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Одно слово к цели (или стирание расходящегося хвоста) и следующее задание в очередь.
+    fn step(&self) {
+        let (target, goal, mut field) = {
+            let mut state = self.lock();
+            match state.goal.clone() {
+                Some((target, goal)) if !state.failed && state.field.typed != goal => {
+                    (target, goal, state.field.clone())
+                }
+                _ => {
+                    state.goal = None;
+                    state.busy = false;
+                    return;
+                }
+            }
+        };
+        let next = next_live_step(&field.typed, &goal);
+        let ok = field.reconcile_with(target, &next, true);
+        let mut state = self.lock();
+        state.field = field;
+        if !ok {
+            state.failed = true;
+            state.goal = None;
+            state.busy = false;
+            return;
+        }
+        let typist = self.clone();
+        if !crate::input_thread::post(move || typist.step()) {
+            state.failed = true;
+            state.busy = false;
+        }
+    }
+
+    /// Дождаться, пока допечатается последняя цель, и забрать поле: дальше с ним работает
+    /// воркер (готовый кусок, конец, отмена). `true` во втором — печать не удалась.
+    pub fn finish(&self) -> (LiveField, bool) {
+        // Поток ввода выполняет задания по очереди: пустое задание в конце очереди
+        // дожидается очередного слова печати. Предел — на случай упавшего задания.
+        for _ in 0..10_000 {
+            if !self.lock().busy || crate::input_thread::call(|| ()).is_none() {
+                break;
+            }
+        }
+        let mut state = self.lock();
+        let state = std::mem::take(&mut *state);
+        (state.field, state.failed)
+    }
+}
+
+/// Ближайший шаг от `typed` к `goal`: стереть расходящийся хвост, иначе допечатать одно
+/// слово (с пробелами перед ним).
+fn next_live_step(typed: &str, goal: &str) -> String {
+    let prefix = common_prefix_chars(typed, goal);
+    if prefix < typed.chars().count() {
+        return goal.chars().take(prefix).collect();
+    }
+    let rest_start = goal
+        .char_indices()
+        .nth(prefix)
+        .map_or(goal.len(), |(index, _)| index);
+    let rest = &goal[rest_start..];
+    let word_start = rest.len() - rest.trim_start().len();
+    let word_end = rest[word_start..]
+        .find(char::is_whitespace)
+        .map_or(rest.len(), |end| word_start + end);
+    goal[..rest_start + word_end].to_string()
 }
 
 /// Сколько символов в конце уже напечатанного можно переписать: исправление последних
@@ -700,16 +832,28 @@ pub fn settle_goal(typed: &str, wanted: &str) -> String {
 /// прошлый. Последнее слово ещё меняется, поэтому печатаются только слова, которые
 /// совпали в двух вариантах подряд; стирать по ходу речи можно лишь чуть-чуть
 /// (`PARTIAL_REWRITE_CHARS`), остальное выровняет окончательный текст. `None` — ничего не делать.
-pub fn partial_goal(typed: &str, previous: &str, preview: &str) -> Option<String> {
+///
+/// `settled` — вариант посчитан, когда после речи уже пауза (`Engine`): последнее слово
+/// договорено, и печатается всё, не дожидаясь окончательного текста куска. Так же, если
+/// вариант не изменился: новых слов не прозвучало, последнее слово закончено.
+pub fn partial_goal(typed: &str, previous: &str, preview: &str, settled: bool) -> Option<String> {
     let spans = word_spans(preview);
     let previous_spans = word_spans(previous);
-    // Без последнего (ещё звучащего) слова.
-    let stable = spans.len().saturating_sub(1);
-    let agreed = spans[..stable]
-        .iter()
-        .zip(previous_spans.iter())
-        .take_while(|(&(a, b), &(c, d))| preview[a..b] == previous[c..d])
-        .count();
+    let agreed = if settled {
+        spans.len()
+    } else {
+        // Без последнего (ещё звучащего) слова, если вариант изменился.
+        let stable = if preview == previous {
+            spans.len()
+        } else {
+            spans.len().saturating_sub(1)
+        };
+        spans[..stable]
+            .iter()
+            .zip(previous_spans.iter())
+            .take_while(|(&(a, b), &(c, d))| preview[a..b] == previous[c..d])
+            .count()
+    };
     if agreed == 0 {
         return None;
     }
@@ -773,24 +917,53 @@ mod tests {
 
     #[test]
     fn partial_types_only_words_seen_twice() {
-        assert_eq!(partial_goal("", "", "привет как дела"), None);
+        assert_eq!(partial_goal("", "", "привет как дела", false), None);
         assert_eq!(
-            partial_goal("", "привет как де", "привет как дела у"),
+            partial_goal("", "привет как де", "привет как дела у", false),
             Some("привет как".into())
         );
         // Последнее слово сменилось — уже напечатанное не трогаем.
-        assert_eq!(partial_goal("привет как", "привет как дела", "привет как дела"), None);
+        assert_eq!(partial_goal("привет как", "привет как де", "привет как дела", false), None);
+    }
+
+    #[test]
+    fn live_steps_go_word_by_word_and_erase_first() {
+        assert_eq!(next_live_step("", "Привет, как дела"), "Привет,");
+        assert_eq!(next_live_step("Привет,", "Привет, как дела"), "Привет, как");
+        assert_eq!(next_live_step("Привет, как", "Привет, как дела"), "Привет, как дела");
+        assert_eq!(next_live_step("Привет, как де", "Привет, как дела"), "Привет, как дела");
+        assert_eq!(next_live_step("Привет, как", "Привет,\nкак дела"), "Привет,");
+        assert_eq!(next_live_step("Привет,", "Привет,\nкак"), "Привет,\nкак");
+    }
+
+    #[test]
+    fn partial_types_the_last_word_once_it_is_finished() {
+        // Вариант не изменился — новых слов нет, последнее договорено.
+        assert_eq!(
+            partial_goal("привет как", "привет как дела", "привет как дела", false),
+            Some("привет как дела".into())
+        );
+        // После речи пауза — печатается всё сразу, даже первый вариант.
+        assert_eq!(
+            partial_goal("", "", "привет как дела", true),
+            Some("привет как дела".into())
+        );
+        assert_eq!(partial_goal("привет как дела", "", "привет как дела", true), None);
     }
 
     #[test]
     fn partial_never_erases_far_back() {
         let typed = "раз два три четыре пять шесть семь";
         assert_eq!(
-            partial_goal(typed, "раз дважды три четыре пять шесть семь восемь", "раз дважды три четыре пять шесть семь восемь девять"),
+            partial_goal(typed, "раз дважды три четыре пять шесть семь восемь", "раз дважды три четыре пять шесть семь восемь девять", false),
             None
         );
         assert_eq!(
-            partial_goal("раз два три", "раз два тридцать пять", "раз два тридцать пять шесть"),
+            partial_goal(typed, "", "раз дважды три четыре пять шесть семь", true),
+            None
+        );
+        assert_eq!(
+            partial_goal("раз два три", "раз два тридцать пять", "раз два тридцать пять шесть", false),
             Some("раз два тридцать пять".into())
         );
     }

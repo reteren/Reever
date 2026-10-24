@@ -92,7 +92,8 @@ pub enum EngineEvent {
     /// Очередной продиктованный кусок «как сказано» (без нормализации).
     Dictation(String),
     /// Промежуточный текст текущего куска «как сказано» — для печати по ходу речи.
-    DictationPartial(String),
+    /// `true` — посчитан на паузе после речи: последнее слово договорено, печатать всё.
+    DictationPartial(String, bool),
     /// Диктовка закончилась.
     DictationEnd(DictationEndReason),
     /// Диагностика для лога (без распознанного текста — приватность решает glue).
@@ -116,12 +117,75 @@ pub enum DictationEndReason {
 /// Pre-roll и пределы длины фразы: короткие команды и длинная диктовка.
 const COMMAND_LIMITS: (u32, u32, u32) = (300, 0, 15_000);
 const DICTATION_LIMITS: (u32, u32, u32) = (500, 12_000, 24_000);
-/// Как часто пересчитывать текст при живой диктовке.
+/// Как часто пересчитывать текст «ривер напиши …» в начале фразы.
 const LIVE_PARTIAL_MS: u32 = 400;
-/// Длиннее этого кусок пересчитывается реже: распознавание всего куска дорожает.
-const DICTATION_PARTIAL_SLOW_MS: u32 = 10_000;
-/// Интервал промежуточного текста у длинного куска.
-const LIVE_PARTIAL_SLOW_MS: u32 = 1_000;
+/// Живая диктовка пересчитывает кусок не чаще этого и не реже `LIVE_PARTIAL_MAX_MS`;
+/// между ними — вдвое дольше, чем занял прошлый пересчёт. Распознавание всего куска
+/// дорожает с его длиной: при постоянном интервале воркер на длинном куске не успевал за
+/// звуком, очередь росла, и текст приходил пачками. Так воркер занят не больше половины
+/// времени, а короткий кусок пересчитывается часто — слова попадают в поле быстрее.
+const LIVE_PARTIAL_MIN_MS: u32 = 250;
+const LIVE_PARTIAL_MAX_MS: u32 = 1_500;
+/// Тишина после речи, на которой кусок пересчитывается сразу и последний раз до новой
+/// речи: последнее слово договорено, его можно печатать, не дожидаясь конца куска
+/// (`dictation_pause_ms`) и его окончательного распознавания двумя моделями.
+const LIVE_SETTLED_SILENCE_MS: u32 = 250;
+/// Текст второй (английской) модели и ответ определителя языка на кусок диктовки.
+type SecondOpinion = (String, Option<(Lang, f32)>);
+
+/// Английскую модель слушаем всегда: определитель языка на английском с русским акцентом
+/// уверенно говорит «ru», а русская модель слышит транслит или пустоту. Определитель —
+/// только в автоматическом режиме и на куске, где он не гадает.
+fn second_opinion(
+    second: &mut (dyn Transcriber + Send + 'static),
+    lid: Option<&mut (dyn LanguageId + Send + 'static)>,
+    audio: &[i16],
+    mode: LangMode,
+) -> SecondOpinion {
+    let en_raw = second.transcribe_verbatim(audio).unwrap_or_default();
+    let long_enough = audio.len() as f32 * 1000.0 / SAMPLE_RATE as f32 >= MIN_LID_DURATION_MS;
+    let lid = match lid {
+        Some(lid) if mode == LangMode::Auto && long_enough => lid.detect(audio).ok(),
+        _ => None,
+    };
+    (en_raw, lid)
+}
+
+/// Воркер отстаёт от звука больше этого (очередь микрофона копится, пока считался готовый
+/// кусок) — промежуточный текст живой диктовки не считается: он устарел бы раньше, чем
+/// его напечатают. Воркер быстро догоняет звук, и следующий вариант — уже по свежему звуку.
+const LIVE_STALE_MS: f64 = 300.0;
+/// Часы микрофона и системы расходятся на доли процента: опора отставания (`Lag`)
+/// поднимается на столько мс за секунду, чтобы расхождение не копилось в «отставание».
+const LAG_DRIFT_MS_PER_S: f64 = 2.0;
+
+/// Насколько обработка отстаёт от звука: настоящее время минус время поданного звука,
+/// считая от наименьшего замеченного (звук приходит в реальном времени, всё сверх —
+/// очередь перед воркером).
+#[derive(Default)]
+struct Lag {
+    start: Option<std::time::Instant>,
+    audio: usize,
+    floor_ms: f64,
+    last_wall_ms: f64,
+}
+
+impl Lag {
+    /// Подан ещё `count` сэмплов; вернуть отставание, мс.
+    fn advance(&mut self, count: usize) -> f64 {
+        let now = std::time::Instant::now();
+        let wall_ms = now.duration_since(*self.start.get_or_insert(now)).as_secs_f64() * 1000.0;
+        self.audio += count;
+        let lag = wall_ms - self.audio as f64 * 1000.0 / SAMPLE_RATE as f64;
+        let drift = (wall_ms - self.last_wall_ms) / 1000.0 * LAG_DRIFT_MS_PER_S;
+        self.floor_ms = (self.floor_ms + drift).min(lag);
+        self.last_wall_ms = wall_ms;
+        lag - self.floor_ms
+    }
+}
+
+/// Сколько ответов словарей помнить (`Engine::spelled`); больше — забываем все.
+const SPELLED_CACHE_WORDS: usize = 20_000;
 
 /// Пауза перед «ривер» посреди фразы, после которой это обращение, а не слово в разговоре
 /// («я ривер потестил» — без паузы, «…ну короче. Ривер, открой ютуб» — с паузой).
@@ -240,6 +304,8 @@ struct DictationState {
     /// Текущий кусок начался словами «ривер напиши …» (диктовка включилась посреди фразы):
     /// команду в начале надо отрезать.
     opening: bool,
+    /// На этой паузе после речи кусок уже пересчитан (`LIVE_SETTLED_SILENCE_MS`).
+    settled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -321,6 +387,14 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     idle_speech_age: Option<usize>,
     /// Сэмплов с последней проверки «ривер напиши …» посреди фразы простоя.
     idle_partial_elapsed: usize,
+    /// Интервал пересчёта живой диктовки по цене прошлого пересчёта (мс).
+    live_partial_ms: u32,
+    /// Отставание обработки от звука и его последнее значение (мс).
+    lag: Lag,
+    behind_ms: f64,
+    /// Ответы словарей Windows на слова диктовки: промежуточный текст пересчитывается
+    /// целиком, и без запоминания каждое слово куска заново шло в поток ввода.
+    spelled: std::cell::RefCell<std::collections::HashMap<String, Option<bool>>>,
     /// Цели действий (фразы и названия, нормализованные): «открой <цель>» с такой
     /// целью — законченная команда, её не нужно дослушивать полную паузу.
     /// Цель → действие (пустая строка — у цели несколько действий).
@@ -386,6 +460,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             trace: std::env::var_os("REEVER_TRACE").is_some(),
             idle_speech_age: None,
             idle_partial_elapsed: 0,
+            live_partial_ms: LIVE_PARTIAL_MIN_MS,
+            lag: Lag::default(),
+            behind_ms: 0.0,
+            spelled: Default::default(),
             anglicisms: None,
             anglicism_spellcheck: Vec::new(),
             known_targets: std::collections::HashMap::new(),
@@ -432,6 +510,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     pub fn set_anglicisms(&mut self, anglicisms: Option<Anglicisms>, spellcheck: Vec<&'static str>) {
         self.anglicisms = anglicisms;
         self.anglicism_spellcheck = spellcheck;
+        self.spelled.borrow_mut().clear();
     }
 
     /// Фоновый детектор wake-слова (маленькая потоковая модель); `None` — только GigaAM.
@@ -555,6 +634,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             } else {
                 &pcm[offset..offset + count]
             };
+            self.behind_ms = self.lag.advance(count);
             self.vad.saw_speech = false;
             let segment_events = self.segmenter.push(input, &mut self.vad);
             let vad_saw_speech = self.vad.saw_speech;
@@ -806,11 +886,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return samples(LIVE_PARTIAL_MS);
         }
         if matches!(self.mode, Mode::Dictating(_)) && self.cfg.dictation_live {
-            if self.segmenter.current_audio().len() > samples(DICTATION_PARTIAL_SLOW_MS) {
-                samples(LIVE_PARTIAL_SLOW_MS)
-            } else {
-                samples(LIVE_PARTIAL_MS)
-            }
+            samples(self.live_partial_ms)
         } else {
             samples(self.cfg.partial_interval_ms)
         }
@@ -867,7 +943,32 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         }
 
-        let should_transcribe = match self.partial_progress() {
+        // Живая диктовка: пауза после речи — кусок пересчитывается сразу, один раз до новой речи.
+        let live = matches!(self.mode, Mode::Dictating(_)) && self.cfg.dictation_live;
+        if live && self.behind_ms > LIVE_STALE_MS {
+            // Пересчёт — на первом кадре после того, как воркер догонит звук (не раньше
+            // кадра: иначе `partial_samples_until_next` дробил бы звук по сэмплу).
+            let ready = interval.saturating_sub(self.vad.frame_len().max(1));
+            if let Some((_, partial_elapsed)) = self.partial_progress() {
+                *partial_elapsed = (*partial_elapsed).max(ready);
+            }
+            return;
+        }
+        let paused = live && self.segmenter.trailing_silence() >= samples(LIVE_SETTLED_SILENCE_MS);
+        let mut settled = false;
+        if let Mode::Dictating(state) = &mut self.mode {
+            if !paused {
+                state.settled = false;
+            } else if state.settled {
+                return;
+            } else if state.speech_started {
+                state.settled = true;
+                state.partial_elapsed = 0;
+                settled = true;
+            }
+        }
+
+        let should_transcribe = settled || match self.partial_progress() {
             Some((speech_started, partial_elapsed)) if *speech_started => {
                 *partial_elapsed = partial_elapsed.saturating_add(count);
                 if *partial_elapsed >= interval {
@@ -894,7 +995,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
 
         // Живая диктовка: промежуточный текст «как сказано» — его печатают по ходу речи.
-        if matches!(self.mode, Mode::Dictating(_)) && self.cfg.dictation_live {
+        if live {
+            let started = std::time::Instant::now();
             let result = {
                 let audio = self.segmenter.current_audio();
                 self.asr.transcribe_verbatim(audio)
@@ -917,7 +1019,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     } else {
                         self.english_words(raw)
                     };
-                    out.push(EngineEvent::DictationPartial(text));
+                    out.push(EngineEvent::DictationPartial(text, settled));
                 }
                 Ok(_) => {}
                 Err(error) => {
@@ -926,6 +1028,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     self.return_to_idle(true, out);
                 }
             }
+            let spent = started.elapsed().as_millis().min(u32::MAX as u128) as u32;
+            self.live_partial_ms = spent
+                .saturating_mul(2)
+                .clamp(LIVE_PARTIAL_MIN_MS, LIVE_PARTIAL_MAX_MS);
             return;
         }
 
@@ -1525,6 +1631,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             speech_started: true,
             partial_elapsed: 0,
             opening: true,
+            settled: false,
         });
         let text = self.before_wake_word(&trim_words(&raw, skip, 0));
         if !text.trim().is_empty() {
@@ -1533,7 +1640,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             } else {
                 self.english_words(text)
             };
-            out.push(EngineEvent::DictationPartial(text));
+            out.push(EngineEvent::DictationPartial(text, false));
         }
         true
     }
@@ -1619,6 +1726,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             speech_started: false,
             partial_elapsed: 0,
             opening: false,
+            settled: false,
         });
         self.mute_remaining = 0;
         self.mode_epoch = self.mode_epoch.wrapping_add(1);
@@ -1626,7 +1734,22 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
 
     /// Законченный кусок диктовки: фраза остановки, новая команда с wake-словом или текст.
     fn dictation_segment(&mut self, audio: &[i16], out: &mut Vec<EngineEvent>) {
-        let raw = match self.asr.transcribe_verbatim(audio) {
+        // Вторая модель и определитель языка слушают кусок в своём потоке, пока основная
+        // распознаёт его здесь: по очереди готовый кусок держал воркер секунду-две, и
+        // печать следующего куска по ходу речи всё это время стояла.
+        let mode = self.dictation_mode();
+        let (raw, opinion) = match self.second.as_deref_mut() {
+            Some(second) if mode != LangMode::Ru => {
+                let (asr, lid) = (&mut self.asr, self.lid.as_deref_mut());
+                std::thread::scope(|scope| {
+                    let other = scope.spawn(|| second_opinion(second, lid, audio, mode));
+                    let raw = asr.transcribe_verbatim(audio);
+                    (raw, other.join().ok())
+                })
+            }
+            _ => (self.asr.transcribe_verbatim(audio), None),
+        };
+        let raw = match raw {
             Ok(raw) => raw,
             Err(error) => {
                 out.push(EngineEvent::Log(crate::msg!("log.asrError", error = error).into()));
@@ -1713,7 +1836,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         }
 
-        let text = self.dictation_text(audio, raw);
+        let text = self.dictation_text_with(audio, raw, opinion);
         if !text.trim().is_empty() {
             out.push(EngineEvent::Dictation(text));
         }
@@ -1725,7 +1848,45 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     /// намерения «английский» или определитель уверенно слышит английский, а русский
     /// вариант не состоит из явно русских слов (то же вето, что у цели команды).
     fn dictation_text(&mut self, audio: &[i16], ru_raw: String) -> String {
-        let mode = match self.dictation_lang {
+        self.dictation_text_with(audio, ru_raw, None)
+    }
+
+    /// `dictation_text`, когда вторая модель и определитель уже выслушали кусок
+    /// (`second_opinion`).
+    fn dictation_text_with(
+        &mut self,
+        audio: &[i16],
+        ru_raw: String,
+        opinion: Option<SecondOpinion>,
+    ) -> String {
+        let mode = self.dictation_mode();
+        if mode == LangMode::Ru {
+            return self.english_words(ru_raw);
+        }
+        let (en_raw, lid) = match (opinion, self.second.as_deref_mut()) {
+            (Some(opinion), _) => opinion,
+            (None, Some(second)) => second_opinion(second, self.lid.as_deref_mut(), audio, mode),
+            (None, None) => return self.english_words(ru_raw),
+        };
+        if mode == LangMode::En {
+            return if en_raw.trim().is_empty() {
+                ru_raw
+            } else {
+                en_raw
+            };
+        }
+        match choose_language(&ru_raw, &en_raw, lid) {
+            Lang::En => en_raw,
+            Lang::Ru => {
+                let mixed = self.mix_english_words(audio, ru_raw);
+                self.english_words(mixed)
+            }
+        }
+    }
+
+    /// Язык диктовки: выбранный голосом, иначе язык намерения «напиши», иначе общий режим.
+    fn dictation_mode(&self) -> LangMode {
+        match self.dictation_lang {
             Some(Lang::Ru) => LangMode::Ru,
             Some(Lang::En) => LangMode::En,
             None => {
@@ -1746,34 +1907,6 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     intent_lang
                 }
             }
-        };
-        if mode == LangMode::Ru {
-            return self.english_words(ru_raw);
-        }
-        let Some(second) = self.second.as_deref_mut() else {
-            return self.english_words(ru_raw);
-        };
-        // Английскую модель слушаем всегда: определитель языка на английском с русским
-        // акцентом уверенно говорит «ru», а русская модель слышит транслит или пустоту.
-        let en_raw = second.transcribe_verbatim(audio).unwrap_or_default();
-        if mode == LangMode::En {
-            return if en_raw.trim().is_empty() {
-                ru_raw
-            } else {
-                en_raw
-            };
-        }
-        let long_enough = audio.len() as f32 * 1000.0 / SAMPLE_RATE as f32 >= MIN_LID_DURATION_MS;
-        let lid = match self.lid.as_deref_mut() {
-            Some(lid) if long_enough => lid.detect(audio).ok(),
-            _ => None,
-        };
-        match choose_language(&ru_raw, &en_raw, lid) {
-            Lang::En => en_raw,
-            Lang::Ru => {
-                let mixed = self.mix_english_words(audio, ru_raw);
-                self.english_words(mixed)
-            }
         }
     }
 
@@ -1790,17 +1923,28 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             {
                 return Some(true);
             }
+            if let Some(&known) = self.spelled.borrow().get(word) {
+                return known;
+            }
             // Знает хоть один словарь — слово родное. Словаря языка может не быть в Windows
             // (украинский и болгарский ставятся вместе с языком в «Параметрах»): такой
             // пропускаем, иначе замена выключилась бы и для русского. Нет ни одного — `None`.
             let mut verdict = None;
             for &language in &self.anglicism_spellcheck {
                 match crate::spellcheck::misspelled_ratio(language, word) {
-                    Some((ratio, count)) if count == 1 && ratio == 0.0 => return Some(true),
+                    Some((ratio, count)) if count == 1 && ratio == 0.0 => {
+                        verdict = Some(true);
+                        break;
+                    }
                     Some(_) => verdict = Some(false),
                     None => {}
                 }
             }
+            let mut spelled = self.spelled.borrow_mut();
+            if spelled.len() >= SPELLED_CACHE_WORDS {
+                spelled.clear();
+            }
+            spelled.insert(word.to_string(), verdict);
             verdict
         };
         anglicisms.restore(&text, &is_russian)
@@ -3376,7 +3520,7 @@ mod tests {
         assert!(
             events
                 .iter()
-                .any(|e| matches!(e, EngineEvent::DictationPartial(t) if t == "привет мир")),
+                .any(|e| matches!(e, EngineEvent::DictationPartial(t, _) if t == "привет мир")),
             "{events:?}"
         );
         assert_eq!(dictated(&events), vec!["привет мир".to_string()]);
@@ -3660,8 +3804,42 @@ mod tests {
         assert!(
             events
                 .iter()
-                .any(|e| matches!(e, EngineEvent::DictationPartial(t) if t.starts_with("привет"))),
+                .any(|e| matches!(e, EngineEvent::DictationPartial(t, _) if t.starts_with("привет"))),
             "{events:?}"
         );
+    }
+
+    #[test]
+    fn live_dictation_settles_the_chunk_once_on_a_pause() {
+        let mut cfg = test_config();
+        cfg.dictation_pause_ms = 800;
+        cfg.dictation_live = true;
+        let mut texts = vec!["ривер напиши"];
+        texts.extend(["привет мир"; 12]);
+        let (mut engine, _, _, _) = engine(cfg, &texts);
+        engine.set_grammar(crate::grammar::Grammar::defaults());
+        engine.push_audio(&phrase(123, 700));
+        // Речь, затем 600 мс тишины: кусок ещё не закончен (пауза 800 мс).
+        let mut pcm = vec![123; samples(900)];
+        pcm.resize(samples(900 + 600), 0);
+        let events = engine.push_audio(&pcm);
+        let settled: Vec<usize> = events
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| matches!(e, EngineEvent::DictationPartial(_, true)))
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(settled.len(), 1, "{events:?}");
+        assert!(dictated(&events).is_empty(), "{events:?}");
+        // После договорённого варианта на этой паузе пересчётов больше нет.
+        assert!(
+            !events[settled[0] + 1..]
+                .iter()
+                .any(|e| matches!(e, EngineEvent::DictationPartial(..))),
+            "{events:?}"
+        );
+        // Пауза дошла до конца куска — окончательный текст.
+        let events = engine.push_audio(&vec![0; samples(400)]);
+        assert_eq!(dictated(&events), vec!["привет мир".to_string()]);
     }
 }

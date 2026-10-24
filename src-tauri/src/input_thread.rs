@@ -87,6 +87,12 @@ pub fn call<R: Send + 'static>(f: impl FnOnce() -> R + Send + 'static) -> Option
     rx.recv_timeout(CALL_TIMEOUT).ok()
 }
 
+/// Поставить `f` в очередь потока ввода, не дожидаясь (печать по ходу речи не держит
+/// аудио-воркер). `false` — поток недоступен.
+pub fn post(f: impl FnOnce() + Send + 'static) -> bool {
+    sender().is_some_and(|tx| tx.send(Box::new(f)).is_ok())
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

@@ -826,8 +826,12 @@ struct Dictation {
     focus_logged: bool,
     /// Окно, выбранное для ввода в начале диктовки.
     target: Option<isize>,
-    /// Напечатанное по ходу речи для текущего куска.
+    /// Напечатанное по ходу речи для текущего куска — актуально после `sync_live`.
     live: typing::LiveField,
+    /// Печать по ходу речи в потоке ввода (воркер её не ждёт).
+    typist: typing::LiveTypist,
+    /// Последняя цель печати по ходу речи — к ней придёт поле.
+    live_goal: String,
     /// Печать по ходу речи в этом куске не удалась — до конца куска только готовый текст.
     live_broken: bool,
     /// Прошлый промежуточный текст куска: по ходу речи печатаются слова, совпавшие дважды.
@@ -1056,7 +1060,7 @@ impl Worker<'_> {
             }
             EngineEvent::DictationStart => self.dictation_start(),
             EngineEvent::Dictation(text) => self.dictation_text(&text),
-            EngineEvent::DictationPartial(text) => self.dictation_partial(&text),
+            EngineEvent::DictationPartial(text, settled) => self.dictation_partial(&text, settled),
             EngineEvent::DictationEnd(reason) => self.dictation_end(reason),
             EngineEvent::Log(m) => {
                 let text = m.render("en");
@@ -1138,9 +1142,9 @@ impl Worker<'_> {
     }
 
     /// Промежуточный текст куска — печать по ходу речи (`typing::partial_goal`): только слова,
-    /// совпавшие в двух вариантах подряд, и почти без стирания; окончательный текст
-    /// выровняет `dictation_text`.
-    fn dictation_partial(&mut self, raw: &str) {
+    /// совпавшие в двух вариантах подряд (после речи пауза — все), и почти без стирания;
+    /// окончательный текст выровняет `dictation_text`. Печатает поток ввода, воркер не ждёт.
+    fn dictation_partial(&mut self, raw: &str, settled: bool) {
         if !self.private() {
             let _ = self.app.emit("reever://partial", raw.to_string());
         }
@@ -1151,14 +1155,30 @@ impl Worker<'_> {
         if session.live_broken || !session.pending.is_empty() {
             return;
         }
-        let Some(goal) = typing::partial_goal(&session.live.typed, &previous, &preview) else {
+        let Some(goal) = typing::partial_goal(&session.live_goal, &previous, &preview, settled)
+        else {
             return;
         };
         let Some(target) = self.dictation_target(Duration::ZERO) else {
             return;
         };
         let session = self.dictation.get_or_insert_with(Dictation::default);
-        if !session.live.reconcile(target, &goal) {
+        if session.typist.post(target, goal.clone()) {
+            session.live_goal = goal;
+        } else {
+            session.live_broken = true;
+        }
+    }
+
+    /// Дождаться печати по ходу речи и забрать поле: готовый кусок, конец и отмена
+    /// работают с тем, что действительно напечатано.
+    fn sync_live(&mut self) {
+        let Some(session) = self.dictation.as_mut() else {
+            return;
+        };
+        let (field, failed) = session.typist.finish();
+        session.live = field;
+        if failed {
             session.live_broken = true;
         }
     }
@@ -1168,6 +1188,7 @@ impl Worker<'_> {
     /// ненапечатанными — так текст не разбивается между полем и буфером обмена.
     fn dictation_text(&mut self, raw: &str) {
         let _ = self.app.emit("reever://partial", String::new());
+        self.sync_live();
         let private = self.private();
         let session = self.dictation.get_or_insert_with(Dictation::default);
         let pieces = session.formatter.format(raw);
@@ -1202,6 +1223,7 @@ impl Worker<'_> {
         };
         session.typed_chars += session.live.typed.chars().count();
         session.live.typed.clear();
+        session.live_goal.clear();
         session.last_preview.clear();
         session.live_broken = false;
         let waiting = !rest.is_empty();
@@ -1267,6 +1289,7 @@ impl Worker<'_> {
         }
         // Напечатанное по ходу речи для незаконченного куска («ривер открой …», «ривер стоп»)
         // стереть.
+        self.sync_live();
         let target = self.dictation.as_ref().and_then(|session| session.target);
         if let Some(session) = self.dictation.as_mut() {
             let mut live = std::mem::take(&mut session.live);
@@ -1307,6 +1330,7 @@ impl Worker<'_> {
     /// «Ривер отмена» в диктовке: стереть напечатанное (пока окно то же) и вернуть буфер
     /// обмена, каким он был до диктовки.
     fn cancel_dictation(&mut self) {
+        self.sync_live();
         let session = self.dictation.take().unwrap_or_default();
         let total = session.typed_chars + session.live.typed.chars().count();
         let mut erased = 0;

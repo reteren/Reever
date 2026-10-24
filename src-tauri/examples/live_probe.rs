@@ -86,11 +86,23 @@ $f.Add_Shown({{ $f.Activate(); $t.Focus() }})
     let total = first.chars().count() + next.typed.chars().count();
     let erased = typing::press_backspace(target, total);
     let after = field("после отмены");
+    // 4. Печать без ожидания (`LiveTypist`): цели приходят быстрее, чем печатаются, как от
+    // воркера; устаревшие пропускаются, поле приходит к последней.
+    let typist = typing::LiveTypist::default();
+    for step in ["Раз", "Раз два", "Раз два тре", "Раз два три четыре", "Раз два три четыре пять"] {
+        assert!(typist.post(target, step.to_string()), "цель «{step}» не принята");
+        sleep(Duration::from_millis(15));
+    }
+    let (typed, failed) = typist.finish();
+    let async_text = field("печать без ожидания");
 
     let _ = std::fs::write(&quit, "1");
     let ok = first == "Привет, как дела"
         && second.replace("\r\n", "\n") == "Привет, как дела и hardness.\nНовая строка"
         && after.is_empty()
-        && erased == total;
+        && erased == total
+        && !failed
+        && typed.typed == "Раз два три четыре пять"
+        && async_text == "Раз два три четыре пять";
     println!("{}", if ok { "✓ печать по ходу речи и отмена работают" } else { "✗ расхождение" });
 }
