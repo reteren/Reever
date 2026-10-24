@@ -5,6 +5,9 @@
 после конца слова, «нет» — на обычной речи, созвучных словах и шуме. Аугментации — на GPU:
 громкость, высота/темп, шум, эхо комнаты, полоса телефона/Discord.
 
+С --aug-extra ещё: голос издалека (длинное эхо), чужая речь фоном, перегруз и грубое
+сжатие, «дыры» шумодава (Windows, Discord, NVIDIA Broadcast режут тихие полосы спектра).
+
 Языки из --holdout-langs (по умолчанию нидерландский, венгерский, корейский) в обучение не
 попадают — на них проверяется, слышит ли детектор «river» на незнакомом языке.
 
@@ -395,15 +398,32 @@ def targets(start: int, end: int, frames: int) -> tuple[np.ndarray, np.ndarray]:
 
 
 class Augment(nn.Module):
-    """На GPU: громкость, шум с SNR, эхо, полоса пропускания (микрофон, телефон, Discord)."""
+    """На GPU: громкость, шум с SNR, эхо, полоса пропускания (микрофон, телефон, Discord).
+    `extra` — ещё дальний голос, фон чужой речи, перегруз, сжатие и шумодав."""
 
-    def forward(self, audio: torch.Tensor) -> torch.Tensor:
+    def __init__(self, extra: bool = False):
+        super().__init__()
+        self.extra = extra
+
+    def forward(self, audio: torch.Tensor, background: torch.Tensor | None = None) -> torch.Tensor:
         n, s = audio.shape
         dev = audio.device
+        if self.extra and background is not None:
+            # Чужая речь фоном (телевизор, разговор рядом): отрицательные примеры того же
+            # батча, на 8–25 дБ тише.
+            pick = background[torch.randint(len(background), (n,), device=dev)]
+            rms = lambda x: x.pow(2).mean(dim=1, keepdim=True).sqrt().clamp_min(1e-4)
+            snr = torch.empty(n, 1, device=dev).uniform_(8, 25)
+            use = (torch.rand(n, 1, device=dev) < 0.2).float()
+            audio = audio + use * pick * rms(audio) / rms(pick) / (10 ** (snr / 20))
         audio = audio * torch.empty(n, 1, device=dev).uniform_(0.05, 1.6)
-        # Эхо: экспоненциально затухающий шум как импульс комнаты.
-        rir_len = 4000
+        # Эхо: экспоненциально затухающий шум как импульс комнаты; с extra — иногда
+        # длинное (до 0,5 с), как у голоса с другого конца комнаты.
+        rir_len = 8000 if self.extra else 4000
         decay = torch.empty(n, 1, device=dev).uniform_(0.01, 0.12)
+        if self.extra:
+            far = torch.rand(n, 1, device=dev) < 0.15
+            decay = torch.where(far, torch.empty(n, 1, device=dev).uniform_(0.15, 0.5), decay)
         t = torch.arange(rir_len, device=dev) / RATE
         rir = torch.randn(n, rir_len, device=dev) * torch.exp(-t / decay)
         rir[:, 0] = 1.0
@@ -417,6 +437,8 @@ class Augment(nn.Module):
         low = torch.where(torch.rand(n, 1, device=dev) < 0.4, torch.empty(n, 1, device=dev).uniform_(80, 400), torch.zeros(n, 1, device=dev))
         high = torch.where(torch.rand(n, 1, device=dev) < 0.4, torch.empty(n, 1, device=dev).uniform_(3200, 7000), torch.full((n, 1), 8000.0, device=dev))
         audio = torch.fft.irfft(spec * ((freqs >= low) & (freqs <= high)).float(), n=s)
+        if self.extra:
+            audio = self.degrade(audio)
         # Шум: белый или розоватый, SNR 0–35 дБ, иногда без шума.
         rms = audio.pow(2).mean(dim=1, keepdim=True).sqrt().clamp_min(3e-4)
         snr = torch.empty(n, 1, device=dev).uniform_(0, 35)
@@ -428,6 +450,34 @@ class Augment(nn.Module):
         keep = (torch.rand(n, 1, device=dev) < 0.85).float()
         audio = audio + keep * noise * rms / (10 ** (snr / 20))
         return audio.clamp(-1, 1)
+
+    def degrade(self, audio: torch.Tensor) -> torch.Tensor:
+        n, s = audio.shape
+        dev = audio.device
+        coin = lambda p: (torch.rand(n, 1, device=dev) < p).float()
+        # Перегруз микрофона: мягкое ограничение tanh.
+        drive = torch.empty(n, 1, device=dev).uniform_(2, 8)
+        peak = audio.abs().amax(dim=1, keepdim=True).clamp_min(1e-4)
+        clipped = torch.tanh(audio / peak * drive) / torch.tanh(drive) * peak
+        use = coin(0.1)
+        audio = use * clipped + (1 - use) * audio
+        # Грубое сжатие: μ-law на 6–8 бит (звук старых гарнитур и низкого битрейта).
+        bits = torch.randint(6, 9, (n, 1), device=dev).float()
+        mu = 2 ** bits - 1
+        x = (audio / peak).clamp(-1, 1)
+        y = torch.sign(x) * torch.log1p(mu * x.abs()) / torch.log1p(mu)
+        y = torch.round((y + 1) / 2 * mu) / mu * 2 - 1
+        coded = torch.sign(y) * ((1 + mu) ** y.abs() - 1) / mu * peak
+        use = coin(0.15)
+        audio = use * coded + (1 - use) * audio
+        # Шумодав: кадры спектра, где полоса тише своего порога, обнуляются.
+        win = torch.hann_window(512, device=dev)
+        spec = torch.stft(audio, 512, 128, window=win, return_complex=True)
+        power = spec.abs()
+        floor = power.mean(dim=2, keepdim=True) * torch.empty(n, 1, 1, device=dev).uniform_(0.3, 1.5)
+        gated = torch.istft(spec * (power > floor), 512, 128, window=win, length=s)
+        use = coin(0.15)
+        return use * gated + (1 - use) * audio
 
 
 # ── Оценка ──────────────────────────────────────────────────────────────
@@ -590,6 +640,7 @@ def main() -> None:
     p.add_argument("--eval-only", type=Path, help="только замер готовых весов (.pt) на том же разбиении")
     p.add_argument("--real-wake-test", type=float, default=0.15, help="доля дикторов GLOBE в тест")
     p.add_argument("--real-wake-repeat", type=int, default=3, help="во сколько раз чаще брать живые клипы")
+    p.add_argument("--aug-extra", action="store_true", help="дальний голос, фон речи, перегруз, сжатие, шумодав")
     p.add_argument("--save-every", type=int, default=1000, help="шагов между сохранениями <output>.ckpt")
     p.add_argument("--resume", action="store_true", help="продолжить с <output>.ckpt, если он есть")
     args = p.parse_args()
@@ -633,7 +684,7 @@ def main() -> None:
     mine_steps = {int(x) for x in args.mine_at.split(",") if x}
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mel, augment = LogMel().to(device), Augment().to(device)
+    mel, augment = LogMel().to(device), Augment(args.aug_extra).to(device)
     model = CausalTcn(args.channels, dilations=tuple(int(d) for d in args.dilations.split(","))).to(device)
     print(f"параметров {sum(p.numel() for p in model.parameters())}, контекст {model.receptive_field()} кадров")
     if args.eval_only:
@@ -676,7 +727,8 @@ def main() -> None:
         target = torch.from_numpy(np.stack(tgt)).to(device)
         mask = torch.from_numpy(np.stack(msk)).to(device)
         with torch.no_grad():
-            feats = mel(augment(audio))
+            # Отрицательные примеры батча — нечётные (compose: positive=i % 2 == 0).
+            feats = mel(augment(audio, background=audio[1::2]))
         logits = model(feats)
         loss = (F.binary_cross_entropy_with_logits(logits, target, reduction="none", pos_weight=torch.tensor(4.0, device=device)) * mask).sum() / mask.sum()
         optim.zero_grad(); loss.backward(); optim.step(); sched.step()
