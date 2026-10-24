@@ -320,6 +320,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut recent_samples = 0usize;
     let mut last_chunk = std::time::Instant::now();
     let mut stalled = false;
+    let mut voice_recording = false;
+    let mut voice_progress = std::time::Instant::now();
     loop {
         if shared.reload.load(Ordering::Relaxed) {
             loading_audio.fill(0);
@@ -447,6 +449,20 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         if let Some(saved) = worker.blackbox.as_mut().and_then(|bb| bb.push(&chunk)) {
             ui_log(app, format!("blackbox: saved {}", saved.display()));
         }
+        // Подстройка под голос: «ривер» подряд — запись, а не команды.
+        if let Some(words) = record_voice(shared, &chunk, &mut voice_progress) {
+            if !voice_recording {
+                voice_recording = true;
+                engine.reset();
+                set_state(app, "idle");
+            }
+            if let Some(words) = words {
+                let _ = app.emit("reever://voice-adapt", json!({ "words": words }));
+            }
+            chunk.fill(0);
+            continue;
+        }
+        voice_recording = false;
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
         let model_ready = asr.is_loaded();
@@ -645,11 +661,14 @@ where
     if !s.wake_spotter || s.activation_mode == "hotkey" {
         return;
     }
-    let mut name = crate::wake::weights_for(&cfg.models.languages());
-    let mut weights = crate::config::resource(app, name);
-    if !weights.is_file() {
-        name = "wake/river.bin";
-        weights = crate::config::resource(app, name);
+    let (name, mut weights) = spotter_weights(app, cfg);
+    // Подстройка под голос (voice_adapt.rs) — вместо общих весов, если сделана для них.
+    let personal = tauri::Manager::path(app).app_config_dir().ok().and_then(|dir| {
+        let base = std::fs::read(&weights).ok()?;
+        crate::wake::personal_for(&dir, name, &base)
+    });
+    if let Some((path, _)) = &personal {
+        weights = path.clone();
     }
     // Вторая ступень проверяет кандидатов первой — если её веса есть.
     let verifier = crate::wake::verifier_for(name)
@@ -662,6 +681,7 @@ where
     match spotter {
         Ok(spotter) => {
             let file = name.rsplit('/').next().unwrap_or(name);
+            let file = if personal.is_some() { format!("{file} (personal)") } else { file.to_string() };
             let model = match &verifier {
                 Some((verify, _)) => format!("{file} + {} (RKW2)", verify.rsplit('/').next().unwrap_or(verify)),
                 None => format!("{file} (RKW2)"),
@@ -670,6 +690,32 @@ where
             engine.set_wake_spotter(Some(Box::new(spotter)));
         }
         Err(e) => ui_log(app, crate::msg!("log.spotter.failed", error = format!("{e:#}"))),
+    }
+}
+
+/// Запись для подстройки под голос: `None` — её нет, `Some(Some(слов))` — пора показать,
+/// сколько «ривер» уже слышно (раз в полсекунды).
+fn record_voice(shared: &SharedState, chunk: &[i16], progress: &mut std::time::Instant) -> Option<Option<usize>> {
+    let mut record = shared.voice_record.lock().ok()?;
+    let buffer = record.as_mut()?;
+    if buffer.len() < crate::voice_adapt::MAX_RECORD {
+        buffer.extend(chunk.iter().map(|&v| v as f32 / 32768.0));
+    }
+    if progress.elapsed() < Duration::from_millis(500) {
+        return Some(None);
+    }
+    *progress = std::time::Instant::now();
+    Some(Some(crate::voice_adapt::words(buffer).len()))
+}
+
+/// Общие веса детектора под включённые языки: имя ресурса и путь.
+pub fn spotter_weights(app: &AppHandle, cfg: &ReeverConfig) -> (&'static str, std::path::PathBuf) {
+    let name = crate::wake::weights_for(&cfg.models.languages());
+    let weights = crate::config::resource(app, name);
+    if weights.is_file() {
+        (name, weights)
+    } else {
+        ("wake/river.bin", crate::config::resource(app, "wake/river.bin"))
     }
 }
 

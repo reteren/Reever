@@ -39,6 +39,24 @@ pub fn weights_for(languages: &[&str]) -> &'static str {
     }
 }
 
+/// Личная подстройка весов `weights` (voice_adapt.rs): `<папка настроек>/wake/<имя>.personal.bin`
+/// и рядом `.personal.json` — для каких весов (FNV-1a) и что показала подстройка.
+pub fn personal_paths(config_dir: &Path, weights: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+    let stem = Path::new(weights).file_stem().and_then(|s| s.to_str()).unwrap_or("river");
+    let dir = config_dir.join("wake");
+    (dir.join(format!("{stem}.personal.bin")), dir.join(format!("{stem}.personal.json")))
+}
+
+/// Подстройка есть и сделана для этих весов: веса программы обновились — подстройка
+/// старая, её признаки от других весов, и она молча не берётся.
+pub fn personal_for(config_dir: &Path, weights: &str, base: &[u8]) -> Option<(std::path::PathBuf, serde_json::Value)> {
+    let (bin, meta) = personal_paths(config_dir, weights);
+    let meta: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(meta).ok()?).ok()?;
+    let base = format!("{:016x}", crate::voice_adapt::fnv1a(base));
+    let fits = meta.get("base").and_then(|v| v.as_str()) == Some(base.as_str());
+    (fits && bin.is_file()).then_some((bin, meta))
+}
+
 /// Вторая ступень к весам `weights_for` (пока есть только у русско-английских).
 pub fn verifier_for(weights: &str) -> Option<&'static str> {
     (weights == "wake/river-ru-en.bin").then_some("wake/verify-ru-en.bin")

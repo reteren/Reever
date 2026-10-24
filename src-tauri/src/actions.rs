@@ -391,6 +391,9 @@ pub struct SharedState {
     pub actions: Mutex<Vec<Action>>,
     /// Если Some(id) — воркер в режиме калибровки: следующую фразу пишет в это действие.
     pub calibrate: Mutex<Option<String>>,
+    /// Запись «ривер» для подстройки под голос (voice_adapt.rs): пока Some — звук копится
+    /// здесь, а не идёт в распознавание. Только в памяти.
+    pub voice_record: Mutex<Option<Vec<f32>>>,
     pub actions_path: PathBuf,
     /// Пауза микрофона (из трея / mute-хоткея). При паузе поток cpal закрывается.
     pub paused: AtomicBool,
@@ -440,6 +443,7 @@ impl SharedState {
             picker_closed_session: std::sync::atomic::AtomicU64::new(0),
             actions: Mutex::new(actions),
             calibrate: Mutex::new(None),
+            voice_record: Mutex::new(None),
             actions_path,
             paused: AtomicBool::new(false),
             force_listen: AtomicBool::new(false),

@@ -288,6 +288,97 @@ pub fn cancel_calibration(state: State<'_, Arc<SharedState>>) -> Result<(), Stri
     Ok(())
 }
 
+/// Подстройка под голос (voice_adapt.rs): начать запись «ривер».
+#[tauri::command]
+pub fn start_voice_adapt(state: State<'_, Arc<SharedState>>) -> Result<(), String> {
+    *state.voice_record.lock().map_err(|e| e.to_string())? = Some(Vec::new());
+    Ok(())
+}
+
+/// Бросить запись подстройки, ничего не меняя.
+#[tauri::command]
+pub fn cancel_voice_adapt(state: State<'_, Arc<SharedState>>) -> Result<(), String> {
+    if let Some(mut pcm) = state.voice_record.lock().map_err(|e| e.to_string())?.take() {
+        pcm.fill(0.0);
+    }
+    Ok(())
+}
+
+/// Закончить запись и подстроить детектор под слова в ней. Err `tooFew:<слов>` — «ривер»
+/// мало, остальное — текст ошибки. Подстроено — поток распознавания перезапускается с ней.
+#[tauri::command]
+pub async fn finish_voice_adapt(
+    app: AppHandle,
+    state: State<'_, Arc<SharedState>>,
+    config: State<'_, LiveConfig>,
+) -> Result<crate::voice_adapt::Report, String> {
+    let mut pcm = state.voice_record.lock().map_err(|e| e.to_string())?.take().unwrap_or_default();
+    let config = config.get();
+    let (name, weights) = crate::recognizer::spotter_weights(&app, &config);
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let result = adapt_and_save(&pcm, name, &weights, &dir);
+        pcm.fill(0.0);
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    if result.as_ref().is_ok_and(|report| report.adapted) {
+        state.reload.store(true, Ordering::Relaxed);
+    }
+    result
+}
+
+fn adapt_and_save(
+    pcm: &[f32],
+    name: &str,
+    weights: &std::path::Path,
+    dir: &std::path::Path,
+) -> Result<crate::voice_adapt::Report, String> {
+    let words = crate::voice_adapt::words(pcm).len();
+    if words < crate::voice_adapt::MIN_WORDS {
+        return Err(format!("tooFew:{words}"));
+    }
+    let bytes = std::fs::read(weights).map_err(|e| e.to_string())?;
+    let base = crate::kws::TcnModel::from_bytes(&bytes).map_err(|e| format!("{e:#}"))?;
+    let bank = crate::voice_adapt::Bank::load(&weights.with_extension("bank"), &bytes).map_err(|e| format!("{e:#}"))?;
+    let (model, report) = crate::voice_adapt::adapt(&base, pcm, &bank).map_err(|e| format!("{e:#}"))?;
+    if let Some(model) = model {
+        let (bin, meta) = crate::wake::personal_paths(dir, name);
+        std::fs::create_dir_all(bin.parent().unwrap_or(dir)).map_err(|e| e.to_string())?;
+        std::fs::write(&bin, model.to_bytes()).map_err(|e| e.to_string())?;
+        let at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        let info = json!({ "base": format!("{:016x}", crate::voice_adapt::fnv1a(&bytes)), "report": report, "at": at });
+        std::fs::write(&meta, info.to_string()).map_err(|e| e.to_string())?;
+    }
+    Ok(report)
+}
+
+/// Подстройка для весов, что сейчас работают: `null` — её нет.
+#[tauri::command]
+pub fn voice_adapt_status(app: AppHandle, config: State<'_, LiveConfig>) -> Option<serde_json::Value> {
+    let config = config.get();
+    let (name, weights) = crate::recognizer::spotter_weights(&app, &config);
+    let dir = app.path().app_config_dir().ok()?;
+    let base = std::fs::read(weights).ok()?;
+    crate::wake::personal_for(&dir, name, &base).map(|(_, meta)| meta)
+}
+
+/// Убрать подстройку для всех весов — снова общий детектор.
+#[tauri::command]
+pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> Result<(), String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    for name in ["wake/river.bin", "wake/river-ru-en.bin"] {
+        let (bin, meta) = crate::wake::personal_paths(&dir, name);
+        let _ = std::fs::remove_file(bin);
+        let _ = std::fs::remove_file(meta);
+    }
+    state.reload.store(true, Ordering::Relaxed);
+    Ok(())
+}
+
 /// Прочитать settings.json (для UI).
 #[tauri::command]
 pub fn get_settings(config: State<'_, LiveConfig>) -> Result<serde_json::Value, String> {

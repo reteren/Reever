@@ -47,6 +47,7 @@ pub mod traymenu;
 pub mod typing;
 pub mod uilang;
 pub mod vad;
+pub mod voice_adapt;
 pub mod wake;
 pub mod webchat;
 pub mod winutil;
@@ -471,6 +472,11 @@ pub fn run() {
             commands_api::add_phrase,
             commands_api::remove_phrase,
             commands_api::start_calibration,
+            commands_api::start_voice_adapt,
+            commands_api::cancel_voice_adapt,
+            commands_api::finish_voice_adapt,
+            commands_api::voice_adapt_status,
+            commands_api::reset_voice_adapt,
             commands_api::cancel_calibration,
             commands_api::get_settings,
             commands_api::save_settings,

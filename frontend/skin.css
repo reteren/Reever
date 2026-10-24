@@ -446,7 +446,8 @@ body.shaded #shade { display: block !important; }
 .modal-foot { padding: 0 18px 16px; display: flex; justify-content: flex-end; gap: 8px; }
 .calbig { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .calorb { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 50% 70%, var(--acc) 0%, rgba(39, 230, 170, .2) 60%, transparent 70%); box-shadow: 0 0 30px var(--acc-3); animation: blink 1.2s ease-in-out infinite; }
-#calCount { font: 600 22px/1 var(--f-lcd); color: var(--acc-hot); text-shadow: var(--g3); }
+#calCount, #voiceCount { font: 600 22px/1 var(--f-lcd); color: var(--acc-hot); text-shadow: var(--g3); }
+.voice-adapt-row { display: flex; gap: 8px; margin-top: 4px; }
 #appList { max-height: 44vh; overflow: auto; margin-top: 8px; }
 .appitem { padding: 5px 8px; border-radius: 4px; cursor: pointer; }
 .appitem:hover { background: var(--acc); color: var(--glass); text-shadow: none; }

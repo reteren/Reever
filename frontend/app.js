@@ -650,7 +650,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 const GROUPS=[
   ['interface',[['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
-  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['wake_sound','bool'],['wake_blackbox','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
+  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['wake_sound','bool'],['wake_blackbox','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[
@@ -698,6 +698,73 @@ async function refreshIndexStatus(){
   }
   renderIndexStatus();
 }
+// Подстройка детектора под голос (voice_adapt.rs): строка «как сейчас», «Подстроить…»
+// открывает запись «ривер», «Сбросить» возвращает общий детектор.
+let voiceAdaptStatusNode=null, voiceAdaptResetButton=null;
+function voiceAdaptField(){
+  const box=el('div');
+  const row=el('div',{className:'voice-adapt-row'});
+  const start=el('button',{type:'button',className:'sm',textContent:t('settings.voice_adapt.start')});
+  start.onclick=openVoiceAdapt;
+  voiceAdaptResetButton=el('button',{type:'button',className:'sm',textContent:t('settings.voice_adapt.reset'),disabled:true});
+  voiceAdaptResetButton.onclick=async()=>{
+    try{ await invoke('reset_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); }
+    refreshVoiceAdapt();
+  };
+  voiceAdaptStatusNode=el('div',{className:'hint setting-help'});
+  row.append(start,voiceAdaptResetButton);
+  box.append(row,voiceAdaptStatusNode);
+  refreshVoiceAdapt();
+  return box;
+}
+async function refreshVoiceAdapt(){
+  let status=null;
+  try{ status=await invoke('voice_adapt_status'); }catch(e){ reportError('voiceAdapt',e); }
+  if(!voiceAdaptStatusNode) return;
+  const report=status?.report;
+  voiceAdaptStatusNode.textContent=report
+    ?t('settings.voice_adapt.on',{heard:report.heard_after,words:report.words,before:report.heard_before})
+    :t('settings.voice_adapt.off');
+  voiceAdaptResetButton.disabled=!report;
+}
+const voiceWord=()=>phraseLanguage()==='ru'?'ривер':'river';
+const VOICE_GOAL=10;
+let voiceAdaptOpen=false;
+function renderVoiceCount(words){
+  $('#voiceCount').textContent=t('voiceAdapt.count',{count:words,goal:VOICE_GOAL});
+  $('#voiceDone').disabled=words<5;
+}
+async function openVoiceAdapt(){
+  $('#voiceHint').textContent=t('voiceAdapt.hint',{wake:voiceWord(),goal:VOICE_GOAL});
+  $('#voiceResult').textContent='';
+  $('#voiceCancel').textContent=t('common.cancel');
+  renderVoiceCount(0);
+  try{ await invoke('start_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); return; }
+  voiceAdaptOpen=true;
+  $('#voiceOverlay').classList.add('on');
+}
+subscribe('reever://voice-adapt',event=>{ if(voiceAdaptOpen) renderVoiceCount(Number(event.payload?.words)||0); });
+$('#voiceCancel').onclick=async()=>{
+  voiceAdaptOpen=false;
+  $('#voiceOverlay').classList.remove('on');
+  try{ await invoke('cancel_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); }
+};
+$('#voiceDone').onclick=async()=>{
+  voiceAdaptOpen=false;
+  $('#voiceDone').disabled=true;
+  $('#voiceResult').textContent=t('voiceAdapt.working');
+  try{
+    const report=await invoke('finish_voice_adapt');
+    $('#voiceResult').textContent=report.adapted
+      ?t('voiceAdapt.adapted',{heard:report.heard_after,words:report.words,before:report.heard_before})
+      :t('voiceAdapt.noGain',{heard:report.heard_before,words:report.words});
+  }catch(e){
+    const few=/^tooFew:(\d+)$/.exec(String(e?.message||e));
+    $('#voiceResult').textContent=few?t('voiceAdapt.tooFew',{count:Number(few[1]),min:5,wake:voiceWord()}):t('voiceAdapt.failed',{error:String(e?.message||e)});
+  }
+  $('#voiceCancel').textContent=t('common.close');
+  refreshVoiceAdapt();
+};
 function startIndexStatusPolling(){
   if(indexStatusTimer) clearInterval(indexStatusTimer);
   refreshIndexStatus();
@@ -738,6 +805,11 @@ function fieldEl(key,type,opts,when='save'){
     }
     inp.value=I18N.enabled.includes(current)?current:'auto';
     inp.onchange=()=>changeLanguage(inp.value);
+  }
+  else if(type==='voice_adapt'){
+    wrap.append(voiceAdaptField());
+    if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
+    return wrap;
   }
   else if(type==='ui_languages'){
     wrap.append(uiLanguagesEditor());

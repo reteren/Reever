@@ -389,6 +389,7 @@ const TCN_MAGIC: &[u8; 4] = b"RKW2";
 /// Повторное срабатывание — после стольких кадров ниже 0,6 порога (как `events` в обучении).
 const TCN_RELEASE_FRAMES: usize = 30;
 
+#[derive(Clone)]
 struct TcnBlock {
     dilation: usize,
     depth_weight: Vec<f32>,
@@ -399,6 +400,7 @@ struct TcnBlock {
 
 /// Сеть смотрит только в прошлое: на каждый кадр log-mel — одна оценка, и прошлые кадры
 /// не пересчитываются. BatchNorm вшита в свёртки при экспорте.
+#[derive(Clone)]
 pub struct TcnModel {
     channels: usize,
     kernel: usize,
@@ -484,6 +486,49 @@ impl TcnModel {
     pub fn receptive_field(&self) -> usize {
         1 + (self.kernel - 1) * self.blocks.iter().map(|block| block.dilation).sum::<usize>()
     }
+
+    /// Голова сети: веса по каналам и сдвиг (логит = сдвиг + Σ вес·признак).
+    pub fn head(&self) -> (&[f32], f32) {
+        (&self.head_weight, self.head_bias)
+    }
+
+    /// Та же сеть с другой головой — подстройка под голос (voice_adapt.rs).
+    pub fn with_head(&self, weight: Vec<f32>, bias: f32) -> Self {
+        assert_eq!(weight.len(), self.channels);
+        Self { head_weight: weight, head_bias: bias, ..self.clone() }
+    }
+
+    /// Признаки перед головой на каждый кадр звука (сэмплы 16 кГц, с начала потока).
+    pub fn features(&self, samples: &[f32]) -> Vec<Vec<f32>> {
+        let frontend = MelFrontend::new();
+        let mut state = TcnState::new(self);
+        let mut out = Vec::new();
+        let mut start = 0;
+        while start + WINDOW_SAMPLES <= samples.len() {
+            let frame: [f32; WINDOW_SAMPLES] = std::array::from_fn(|i| samples[start + i].clamp(-1.0, 1.0));
+            out.push(state.forward(self, &frontend.compute(&frame)).to_vec());
+            start += HOP_SAMPLES;
+        }
+        out
+    }
+
+    /// RKW2 — тот же формат, что пишет tools/kws/train_multilang.py (`export`).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = TCN_MAGIC.to_vec();
+        let header = [MEL_BINS, self.channels, self.kernel, self.blocks.len()];
+        let dilations = self.blocks.iter().map(|block| block.dilation);
+        for word in header.into_iter().chain(dilations) {
+            out.extend_from_slice(&(word as u32).to_le_bytes());
+        }
+        let blocks = self.blocks.iter().flat_map(|block| {
+            [&block.depth_weight, &block.depth_bias, &block.point_weight, &block.point_bias]
+        });
+        let tensors = [&self.pre_weight, &self.pre_bias].into_iter().chain(blocks).chain([&self.head_weight]);
+        for value in tensors.flatten().chain([&self.head_bias]) {
+            out.extend_from_slice(&value.to_le_bytes());
+        }
+        out
+    }
 }
 
 /// Состояние сети в потоке: на каждый блок — кольцо его входов за (ядро − 1)·дилатация кадров.
@@ -513,6 +558,13 @@ impl TcnState {
 
     /// Оценка 0..1 для нового кадра.
     fn step(&mut self, model: &TcnModel, mel: &[f32; MEL_BINS]) -> f32 {
+        self.forward(model, mel);
+        let logit = model.head_bias + model.head_weight.iter().zip(&self.x).map(|(w, v)| w * v).sum::<f32>();
+        1.0 / (1.0 + (-logit.clamp(-80.0, 80.0)).exp())
+    }
+
+    /// Новый кадр через все блоки; признаки перед головой.
+    fn forward(&mut self, model: &TcnModel, mel: &[f32; MEL_BINS]) -> &[f32] {
         let c = model.channels;
         for out in 0..c {
             let row = &model.pre_weight[out * MEL_BINS..(out + 1) * MEL_BINS];
@@ -541,8 +593,7 @@ impl TcnState {
             }
         }
         self.cursor = self.cursor.wrapping_add(1);
-        let logit = model.head_bias + model.head_weight.iter().zip(&self.x).map(|(w, v)| w * v).sum::<f32>();
-        1.0 / (1.0 + (-logit.clamp(-80.0, 80.0)).exp())
+        &self.x
     }
 }
 
@@ -635,6 +686,25 @@ impl StreamingTcn {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tcn_weights_round_trip_and_features_match_streaming_scores() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/wake/river.bin");
+        let bytes = std::fs::read(&path).unwrap();
+        let model = TcnModel::from_bytes(&bytes).unwrap();
+        assert_eq!(model.to_bytes(), bytes);
+        // Оценка по признакам и голове — та же, что считает поток.
+        let audio: Vec<f32> = (0..16_000).map(|i| ((i as f32) * 0.05).sin() * 0.3).collect();
+        let mut scores = Vec::new();
+        StreamingTcn::new(model.clone(), 0.9).feed_scores(&audio, &mut scores);
+        let features = model.features(&audio);
+        assert_eq!(features.len(), scores.len());
+        let (weight, bias) = model.head();
+        for (frame, score) in features.iter().zip(&scores) {
+            let logit = bias + weight.iter().zip(frame).map(|(w, v)| w * v).sum::<f32>();
+            assert!((1.0 / (1.0 + (-logit).exp()) - score).abs() < 1e-5);
+        }
+    }
 
     #[test]
     fn exported_model_header_and_shape_are_checked() {

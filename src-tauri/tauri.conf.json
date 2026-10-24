@@ -121,6 +121,8 @@
       "resources/wake/river.bin": "resources/wake/river.bin",
       "resources/wake/river-ru-en.bin": "resources/wake/river-ru-en.bin",
       "resources/wake/verify-ru-en.bin": "resources/wake/verify-ru-en.bin",
+      "resources/wake/river.bank": "resources/wake/river.bank",
+      "resources/wake/river-ru-en.bank": "resources/wake/river-ru-en.bank",
       "resources/actions.json": "resources/actions.json",
       "resources/wallpaper.png": "resources/wallpaper.png"
     },

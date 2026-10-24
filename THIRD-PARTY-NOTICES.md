@@ -29,6 +29,14 @@ Reever распространяется вместе со сторонними �
 - **Авторское право**: Copyright (c) 2020-present Silero Team.
 - **Источник**: https://github.com/snakers4/silero-vad/blob/master/LICENSE
 
+### Банк признаков для подстройки под голос
+
+- **Компонент**: `resources/wake/river.bank`, `resources/wake/river-ru-en.bank` — признаки
+  детектора «ривер» на фразах FLEURS и синтетическом шуме (`tools/kws/make_bank.py`); самих
+  записей в файлах нет.
+- **Данные**: Google FLEURS, Creative Commons Attribution 4.0 International (CC BY 4.0).
+- **Источник**: https://huggingface.co/datasets/google/fleurs
+
 ## Модели, которые скачивает установщик
 
 Эти модели в установщик не входят: установщик скачивает их по галочке с релиза
