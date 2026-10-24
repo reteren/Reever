@@ -169,11 +169,21 @@ def globe_rows(path: Path) -> list[dict]:
 
 class Pools:
     def __init__(self, rows: list[dict]):
+        # Живые клипы повторяются в rows (--real-wake-repeat): один файл — один массив.
+        # int16 как в файле — вдвое меньше памяти; каждый клип идёт в пример через level().
+        cache: dict[str, np.ndarray] = {}
+
+        def audio(r: dict) -> np.ndarray:
+            if r["file"] not in cache:
+                with wave.open(str(DATA / r["file"]), "rb") as wav:
+                    cache[r["file"]] = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2")
+            return cache[r["file"]]
+
         # wake_phrase — «Ривер, открой …» с границами слова (align_phrases.py): живое окно.
-        self.wake = [(r, read_wav(DATA / r["file"])) for r in rows
+        self.wake = [(r, audio(r)) for r in rows
                      if r["kind"] == "wake" or (r["kind"] == "wake_phrase" and r.get("wake_end") is not None)]
-        self.speech = [(r, read_wav(DATA / r["file"])) for r in rows if r["kind"] == "speech"]
-        self.confusable = [(r, read_wav(DATA / r["file"])) for r in rows if r["kind"] == "confusable"]
+        self.speech = [(r, audio(r)) for r in rows if r["kind"] == "speech"]
+        self.confusable = [(r, audio(r)) for r in rows if r["kind"] == "confusable"]
         # Речь того же голоса — чтобы контекст вокруг wake-слова звучал как один человек.
         self.speech_by_voice: dict[tuple, list[np.ndarray]] = defaultdict(list)
         for r, a in self.speech:
@@ -195,6 +205,8 @@ def resample(audio: np.ndarray, factor: float) -> np.ndarray:
 
 
 def level(audio: np.ndarray) -> np.ndarray:
+    """Пик 0,5. Принимает и int16 пулов: масштаб входа неважен."""
+    audio = audio.astype(np.float32, copy=False)
     peak = float(np.abs(audio).max()) if len(audio) else 0.0
     return audio / peak * 0.5 if peak > 1e-4 else audio
 
@@ -227,10 +239,31 @@ def restrict_wake(rows: list[dict], wake_langs: set[str]) -> list[dict]:
 
 def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int,
                 lang_max: dict[str, int] | None = None) -> tuple[list[np.ndarray], list[np.ndarray]]:
-    """Живая речь: (обучение, тест) — int16, чтобы десятки часов поместились в память.
+    """Живая речь: (обучение, тест) — int16 из файла на диске (np.memmap), а не в памяти
+    процесса: ~2 ГБ фраз система подгружает по мере надобности и может вытеснить.
+    Файл (data/cache/) собирается один раз на набор аргументов, дальше — сразу.
     `lang_max` — своя норма фраз для языка (исландский: на нём детектор срабатывал чаще всего)."""
+    key = f"fleurs-{per_lang}-{test_per_lang}-{seed}-" + "_".join(f"{k}{v}" for k, v in sorted((lang_max or {}).items()))
+    raw, index = root.parent / "cache" / f"{key}.i16", root.parent / "cache" / f"{key}.json"
+    if not index.is_file():
+        raw.parent.mkdir(parents=True, exist_ok=True)
+        spans: dict[str, list] = {"train": [], "test": []}
+        offset = 0
+        with raw.open("wb") as f:
+            for part, path in fleurs_paths(root, per_lang, test_per_lang, seed, lang_max):
+                clip = read_wav_i16(path)
+                f.write(clip.tobytes())
+                spans[part].append((offset, len(clip)))
+                offset += len(clip)
+        index.write_text(json.dumps(spans), encoding="utf-8")
+    spans = json.loads(index.read_text(encoding="utf-8"))
+    data = np.memmap(raw, dtype="<i2", mode="r")
+    return ([data[o:o + n] for o, n in spans["train"]], [data[o:o + n] for o, n in spans["test"]])
+
+
+def fleurs_paths(root: Path, per_lang: int, test_per_lang: int, seed: int, lang_max: dict[str, int] | None):
+    """Фразы FLEURS без wake-слова: ("test" | "train", путь) по языкам."""
     rng = random.Random(seed)
-    train, test = [], []
     for lang_dir in sorted(d for d in root.iterdir() if (d / "dev.tsv").is_file()):
         rows = []
         for line in (lang_dir / "dev.tsv").read_text(encoding="utf-8").splitlines():
@@ -244,10 +277,9 @@ def load_fleurs(root: Path, per_lang: int, test_per_lang: int, seed: int,
         rows = sorted(set(rows))
         rng.shuffle(rows)
         for path in rows[:test_per_lang]:
-            test.append(read_wav_i16(path))
+            yield "test", path
         for path in rows[test_per_lang:test_per_lang + (lang_max or {}).get(lang_dir.name, per_lang)]:
-            train.append(read_wav_i16(path))
-    return train, test
+            yield "train", path
 
 
 def read_wav_i16(path: Path) -> np.ndarray:
@@ -463,11 +495,12 @@ def evaluate(model: CausalTcn, mel: LogMel, pools: Pools, device: torch.device, 
 def real_false(model: CausalTcn, mel: LogMel, real: list[np.ndarray], device: torch.device, thresholds) -> dict:
     """Ложные срабатывания в час на сплошном потоке живой речи."""
     model.eval()
-    stream = np.concatenate([np.concatenate([c.astype(np.float32) / 32768.0, np.zeros(int(0.2 * RATE), np.float32)]) for c in real])
+    # int16: поток в часы речи во float32 занял бы лишний гигабайт.
+    stream = np.concatenate([np.concatenate([c, np.zeros(int(0.2 * RATE), "<i2")]) for c in real])
     scores = []
     with torch.no_grad():
         for chunk in range(0, len(stream), RATE * 60):
-            piece = stream[max(0, chunk - RATE):chunk + RATE * 60]
+            piece = stream[max(0, chunk - RATE):chunk + RATE * 60].astype(np.float32) / 32768.0
             sc = torch.sigmoid(model(mel(torch.from_numpy(piece).to(device)[None])))[0].cpu().numpy()
             scores.append(sc[(RATE // HOP if chunk else 0):])
     scores = np.concatenate(scores)
