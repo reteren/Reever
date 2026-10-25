@@ -370,7 +370,6 @@
   shadeOrb.addEventListener('mouseenter', () => { orbHover = true; wakeLoop(); });
   shadeOrb.addEventListener('mouseleave', () => { orbHover = false; wakeLoop(); });
   shadeOrb.addEventListener('click', () => { $('#pauseBtn')?.click(); flash = 0.6; wakeLoop(true); });
-  $('#shadeDrag').addEventListener('mousedown', e => { if (e.button === 0 && win) win.startDragging().catch(() => {}); });
 
   // ── Компактный режим: окно сжимается в хромовую полоску поверх всех окон ──
   async function setShade(on) {
@@ -418,7 +417,6 @@
   document.addEventListener('keydown', () => wakeLoop(true), true);
   document.addEventListener('pointerdown', () => wakeLoop(true), true);
   for (const sel of ['#partial', '#lastCmd', '#micLabel']) new MutationObserver(() => shaded && syncShadeText()).observe($(sel), { childList: true, characterData: true, subtree: true });
-  $('#drag').addEventListener('mousedown', e => { if (e.button === 0 && win) win.startDragging().catch(() => {}); });
 
   // ── События распознавания ─────────────────────────────────────────
   const startupLogs = [];
