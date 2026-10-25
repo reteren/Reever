@@ -27,6 +27,9 @@
 Каждые --save-every шагов состояние пишется в <output>.ckpt; с --resume обучение
 продолжается с него (после обрыва — например, нехватки памяти), а не с нуля.
 
+С --init обучение начинается с готовых весов (дообучение новыми записями): хватает
+--steps 6000 и --lr 5e-4 вместо 24000 и 3e-3.
+
 Признаки совпадают с src-tauri/src/kws.rs: окно Ханна 400, шаг 160, FFT 512, 40 мел, log.
 
     .venv\\Scripts\\python train_multilang.py --steps 30000 --output data/kws-ml.bin
@@ -654,6 +657,8 @@ def main() -> None:
     p.add_argument("--aug-extra", action="store_true", help="дальний голос, фон речи, перегруз, сжатие, шумодав")
     p.add_argument("--save-every", type=int, default=1000, help="шагов между сохранениями <output>.ckpt")
     p.add_argument("--resume", action="store_true", help="продолжить с <output>.ckpt, если он есть")
+    p.add_argument("--init", type=Path, help="дообучение: начать с готовых весов (.pt) той же формы")
+    p.add_argument("--lr", type=float, default=3e-3, help="наибольший шаг обучения (дообучению хватает 5e-4)")
     args = p.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
 
@@ -711,8 +716,10 @@ def main() -> None:
             report.update(real_false(model, mel, real_test, device, (0.85, 0.93, 0.97)))
         print(json.dumps(report, ensure_ascii=False))
         return
-    optim = torch.optim.AdamW(model.parameters(), lr=3e-3, weight_decay=1e-4)
-    sched = torch.optim.lr_scheduler.OneCycleLR(optim, max_lr=3e-3, total_steps=args.steps, pct_start=0.05)
+    if args.init:
+        model.load_state_dict(torch.load(args.init, map_location=device))
+    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    sched = torch.optim.lr_scheduler.OneCycleLR(optim, max_lr=args.lr, total_steps=args.steps, pct_start=0.05)
     frames = (int(SEG * RATE) - WIN) // HOP + 1
     ckpt = args.output.with_suffix(".ckpt")
     # Те же аргументы — то же обучение: продолжать чужой .ckpt нельзя.
