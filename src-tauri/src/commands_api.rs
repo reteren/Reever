@@ -106,7 +106,14 @@ pub async fn scan_apps(
         })
         .unwrap_or_default();
     tauri::async_runtime::spawn_blocking(move || {
-        appscan::scan(apps::list_start_apps(), &languages, &actions, &reserved)
+        let mut found = appscan::scan(apps::list_start_apps(), &languages, &actions, &reserved);
+        // Часто используемые — сверху, по истории запусков Windows.
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        appscan::order_by_usage(&mut found, &appscan::user_assist(), now);
+        found
     })
     .await
     .map_err(|e| e.to_string())

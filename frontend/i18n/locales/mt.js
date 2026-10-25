@@ -196,6 +196,13 @@ I18N.register('mt', {
   "scan.noteTitle.exists": "Diġà hemm azzjoni għal dan il-programm.",
   "scan.noteTitle.generic": "L-isem huwa kelma komuni u jista' jiskatta waqt it-taħdit. Immarkah jekk għandek bżonnu.",
   "scan.noteTitle.system": "Għodda tal-Windows jew għall-iżviluppaturi. Immarkaha jekk għandek bżonnha.",
+  "scan.group.frequent": "Użati spiss",
+  "scan.group.recent": "Imħaddma din il-ġimgħa",
+  "scan.group.other": "Il-bqija — f'ordni alfabetiku",
+  "scan.mark.frequent": "spiss",
+  "scan.mark.recent": "riċenti",
+  "scan.usage": "Fil-fokus {minutes} min · l-aħħar tħaddim {date}",
+  "scan.usage.noDate": "Fil-fokus {minutes} min",
 
   "common.add": "Żid",
   "common.save": "Issejvja",

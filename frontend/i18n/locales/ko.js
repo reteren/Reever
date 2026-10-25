@@ -196,6 +196,13 @@ I18N.register('ko', {
   "scan.noteTitle.exists": "이 프로그램의 동작이 이미 있습니다.",
   "scan.noteTitle.generic": "이름이 일반 단어라 평소 말에도 반응할 수 있습니다. 필요하면 선택하세요.",
   "scan.noteTitle.system": "Windows 또는 개발자 도구입니다. 필요하면 선택하세요.",
+  "scan.group.frequent": "자주 사용",
+  "scan.group.recent": "이번 주에 사용",
+  "scan.group.other": "나머지 — 가나다순",
+  "scan.mark.frequent": "자주",
+  "scan.mark.recent": "최근",
+  "scan.usage": "포커스 {minutes}분 · 마지막 실행 {date}",
+  "scan.usage.noDate": "포커스 {minutes}분",
 
   "common.add": "추가",
   "common.save": "저장",

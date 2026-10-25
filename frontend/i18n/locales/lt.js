@@ -196,6 +196,13 @@ I18N.register('lt', {
   "scan.noteTitle.exists": "Šiai programai veiksmas jau yra.",
   "scan.noteTitle.generic": "Pavadinimas yra įprastas žodis ir gali suveikti kalbant. Pažymėk, jei reikia.",
   "scan.noteTitle.system": "„Windows“ arba kūrėjų įrankis. Pažymėk, jei reikia.",
+  "scan.group.frequent": "Dažnai naudojamos",
+  "scan.group.recent": "Paleistos šią savaitę",
+  "scan.group.other": "Kitos — abėcėlės tvarka",
+  "scan.mark.frequent": "dažnai",
+  "scan.mark.recent": "neseniai",
+  "scan.usage": "Fokuse {minutes} min · paskutinį kartą paleista {date}",
+  "scan.usage.noDate": "Fokuse {minutes} min",
 
   "common.add": "Pridėti",
   "common.save": "Išsaugoti",

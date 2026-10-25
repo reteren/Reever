@@ -196,6 +196,13 @@ I18N.register('hu', {
   "scan.noteTitle.exists": "Ehhez a programhoz már van művelet.",
   "scan.noteTitle.generic": "A név hétköznapi szó, ezért beszéd közben is elindulhat. Jelöld be, ha kell.",
   "scan.noteTitle.system": "Windows- vagy fejlesztői eszköz. Jelöld be, ha kell.",
+  "scan.group.frequent": "Gyakran használt",
+  "scan.group.recent": "Ezen a héten indítva",
+  "scan.group.other": "Minden más — ábécérendben",
+  "scan.mark.frequent": "gyakran",
+  "scan.mark.recent": "nemrég",
+  "scan.usage": "Előtérben {minutes} perc · utoljára indítva {date}",
+  "scan.usage.noDate": "Előtérben {minutes} perc",
 
   "common.add": "Hozzáadás",
   "common.save": "Mentés",

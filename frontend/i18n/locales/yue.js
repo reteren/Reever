@@ -196,6 +196,13 @@ I18N.register('yue', {
   "scan.noteTitle.exists": "呢個程式已經有操作。",
   "scan.noteTitle.generic": "名係普通字，平時講嘢可能會誤觸發。有需要先剔。",
   "scan.noteTitle.system": "Windows 或開發者工具。有需要先剔。",
+  "scan.group.frequent": "常用",
+  "scan.group.recent": "今個禮拜用過",
+  "scan.group.other": "其餘——按字母排",
+  "scan.mark.frequent": "常用",
+  "scan.mark.recent": "最近",
+  "scan.usage": "前台用咗 {minutes} 分鐘 · 上次開 {date}",
+  "scan.usage.noDate": "前台用咗 {minutes} 分鐘",
 
   "common.add": "加",
   "common.save": "儲存",

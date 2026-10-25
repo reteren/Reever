@@ -196,6 +196,13 @@ I18N.register('pl', {
   "scan.noteTitle.exists": "Dla tego programu jest już akcja.",
   "scan.noteTitle.generic": "Nazwa to zwykłe słowo i może zadziałać podczas mówienia. Zaznacz, jeśli potrzebujesz.",
   "scan.noteTitle.system": "Narzędzie Windows lub dla programistów. Zaznacz, jeśli potrzebujesz.",
+  "scan.group.frequent": "Często używane",
+  "scan.group.recent": "Uruchamiane w tym tygodniu",
+  "scan.group.other": "Pozostałe — alfabetycznie",
+  "scan.mark.frequent": "często",
+  "scan.mark.recent": "niedawno",
+  "scan.usage": "Na pierwszym planie {minutes} min · ostatnie uruchomienie {date}",
+  "scan.usage.noDate": "Na pierwszym planie {minutes} min",
 
   "common.add": "Dodaj",
   "common.save": "Zapisz",

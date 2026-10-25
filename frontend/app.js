@@ -89,8 +89,8 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'list_actions': return [];
     case 'list_apps': return [];
     case 'scan_apps': return [
-      {id:'dv',name:'DaVinci Resolve',kind:'uwp',target:'dv',phrases:['davinci resolve','davinci','resolve davinci','давинчи резолв','давинчи'],checked:true,note:null},
-      {id:'dc',name:'Discord',kind:'uwp',target:'dc',phrases:['discord','дискорд'],checked:true,note:null},
+      {id:'dc',name:'Discord',kind:'uwp',target:'dc',phrases:['discord','дискорд'],checked:true,note:null,group:'frequent',focus_minutes:73,last_used:Date.now()/1000-2*86400},
+      {id:'dv',name:'DaVinci Resolve',kind:'uwp',target:'dv',phrases:['davinci resolve','davinci','resolve davinci','давинчи резолв','давинчи'],checked:true,note:null,group:'recent',focus_minutes:0,last_used:Date.now()/1000-86400},
       {id:'cam',name:'Camera',kind:'uwp',target:'cam',phrases:['camera','камера'],checked:false,note:'generic'},
       {id:'sp',name:'Spotify',kind:'shell',target:'sp',phrases:['spotify','спотифай'],checked:false,note:'exists'},
       {id:'cmd',name:'Командная строка',kind:'uwp',target:'cmd',phrases:['командная строка'],checked:false,note:'system'},
@@ -298,17 +298,33 @@ function renderScanCount(){
   $('#scanCount').textContent=scanApps.length?t('scan.count',{checked,total}):'';
   const add=$('#scanAdd'); add.textContent=t('scan.add',{count:checked}); add.disabled=!checked||scanBusy;
 }
+// Подсказка к отметке «часто»/«недавно»: сколько программа была в фокусе и когда запускалась.
+function scanUsageTitle(app){
+  const minutes=app.focus_minutes||0;
+  if(!app.last_used) return t('scan.usage.noDate',{minutes});
+  const date=new Date(app.last_used*1000).toLocaleDateString(I18N.locale,{day:'numeric',month:'long'});
+  return t('scan.usage',{minutes,date});
+}
 function renderScanList(){
   const list=$('#scanList'); list.replaceChildren();
   const shown=scanApps.filter(scanVisible);
   if(!shown.length) list.append(el('div',{className:'hint',textContent:t(scanApps.length?'common.nothingFound':'scan.empty')}));
+  // Разделы по истории запусков Windows (appscan::order_by_usage): часто, недавно, остальное.
+  // Истории нет — все программы «остальные», и заголовков не нужно.
+  const grouped=shown.some(app=>app.group&&app.group!=='other');
+  let group=null;
   for(const app of shown){
+    if(grouped&&(app.group||'other')!==group){
+      group=app.group||'other';
+      list.append(el('div',{className:'scangroup',textContent:t('scan.group.'+group)}));
+    }
     const off=!scanSelectable(app);
     const box=el('input',{type:'checkbox',checked:app.checked,disabled:off});
     box.onchange=()=>{ app.checked=box.checked; renderScanCount(); };
     const iconBox=el('span',{className:'sicon'},[app.icon?el('img',{src:app.icon,alt:''}):icon(app.target.includes('://')?'play':'grid')]);
     iconBox.dataset.id=app.id;
     const name=el('span',{className:'sname'},[el('span',{textContent:app.name})]);
+    if(app.group==='frequent'||app.group==='recent') name.append(el('em',{className:'smark '+app.group,textContent:t('scan.mark.'+app.group),title:scanUsageTitle(app)}));
     if(app.note) name.append(el('em',{className:'snote',textContent:t('scan.note.'+app.note),title:t('scan.noteTitle.'+app.note)}));
     const phrases=app.phrases.join(' · ');
     const row=el('label',{className:'scanrow'+(off?' off':'')},[box,iconBox,el('span',{className:'sbody'},[name,el('span',{className:'sphr',textContent:phrases||'—',title:phrases})])]);

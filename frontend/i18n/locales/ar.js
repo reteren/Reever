@@ -195,6 +195,13 @@ I18N.register('ar', {
   "scan.noteTitle.exists": "يوجد إجراء لهذا البرنامج بالفعل.",
   "scan.noteTitle.generic": "الاسم كلمة عادية وقد يتفعّل أثناء الكلام. حدده إن احتجت إليه.",
   "scan.noteTitle.system": "أداة من Windows أو للمطورين. حددها إن احتجت إليها.",
+  "scan.group.frequent": "الأكثر استخدامًا",
+  "scan.group.recent": "استُخدمت هذا الأسبوع",
+  "scan.group.other": "البقية — أبجديًا",
+  "scan.mark.frequent": "كثيرًا",
+  "scan.mark.recent": "مؤخرًا",
+  "scan.usage": "في الواجهة {minutes} دقيقة · آخر تشغيل {date}",
+  "scan.usage.noDate": "في الواجهة {minutes} دقيقة",
 
   "common.add": "إضافة",
   "common.save": "حفظ",

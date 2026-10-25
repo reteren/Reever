@@ -74,6 +74,8 @@ features = [
   # micwatch.rs: какой микрофон сейчас по умолчанию и его имя — переход на новый
   "Win32_UI_Shell_PropertiesSystem",
   "Win32_Devices_FunctionDiscovery",
+  # appscan.rs: как часто запускаются программы (UserAssist в реестре)
+  "Win32_System_Registry",
 ]
 
 [profile.release]

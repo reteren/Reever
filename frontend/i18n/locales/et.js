@@ -196,6 +196,13 @@ I18N.register('et', {
   "scan.noteTitle.exists": "Sellel programmil on juba toiming.",
   "scan.noteTitle.generic": "Nimi on tavaline sõna ja võib tavakõnes käivituda. Märgi, kui vajad.",
   "scan.noteTitle.system": "Windowsi või arendaja tööriist. Märgi, kui vajad.",
+  "scan.group.frequent": "Sageli kasutatud",
+  "scan.group.recent": "Sel nädalal käivitatud",
+  "scan.group.other": "Ülejäänud — tähestiku järgi",
+  "scan.mark.frequent": "sageli",
+  "scan.mark.recent": "hiljuti",
+  "scan.usage": "Fookuses {minutes} min · viimati käivitatud {date}",
+  "scan.usage.noDate": "Fookuses {minutes} min",
 
   "common.add": "Lisa",
   "common.save": "Salvesta",

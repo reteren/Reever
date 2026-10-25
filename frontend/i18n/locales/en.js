@@ -197,6 +197,13 @@ I18N.register('en', {
   "scan.noteTitle.exists": "There is already an action for this program.",
   "scan.noteTitle.generic": "The name is an ordinary word, so it may fire in normal speech. Check it if you need it.",
   "scan.noteTitle.system": "A Windows or developer tool. Check it if you need it.",
+  "scan.group.frequent": "Frequently used",
+  "scan.group.recent": "Used this week",
+  "scan.group.other": "Everything else — A to Z",
+  "scan.mark.frequent": "often",
+  "scan.mark.recent": "recent",
+  "scan.usage": "In focus {minutes} min · last run {date}",
+  "scan.usage.noDate": "In focus {minutes} min",
 
   "common.add": "Add",
   "common.save": "Save",

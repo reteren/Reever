@@ -195,6 +195,13 @@ I18N.register('ja', {
   "scan.noteTitle.exists": "このプログラムのアクションは既にあります。",
   "scan.noteTitle.generic": "名前が一般的な単語なので、普段の会話で反応することがあります。必要ならチェックしてください。",
   "scan.noteTitle.system": "Windows または開発者向けのツールです。必要ならチェックしてください。",
+  "scan.group.frequent": "よく使う",
+  "scan.group.recent": "今週使用",
+  "scan.group.other": "その他（アルファベット順）",
+  "scan.mark.frequent": "よく使う",
+  "scan.mark.recent": "最近",
+  "scan.usage": "前面表示 {minutes} 分 · 最終起動 {date}",
+  "scan.usage.noDate": "前面表示 {minutes} 分",
 
   "common.add": "追加",
   "common.save": "保存",

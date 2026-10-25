@@ -195,6 +195,13 @@ I18N.register('ru', {
   "scan.noteTitle.exists": "Для этой программы уже есть действие.",
   "scan.noteTitle.generic": "Название — обычное слово, может срабатывать в речи. Отметь, если нужно.",
   "scan.noteTitle.system": "Утилита Windows или инструмент разработчика. Отметь, если нужно.",
+  "scan.group.frequent": "Часто используемые",
+  "scan.group.recent": "Запускались на этой неделе",
+  "scan.group.other": "Остальные — по алфавиту",
+  "scan.mark.frequent": "часто",
+  "scan.mark.recent": "недавно",
+  "scan.usage": "В фокусе {minutes} мин · последний запуск {date}",
+  "scan.usage.noDate": "В фокусе {minutes} мин",
 
   "common.add": "Добавить",
   "common.save": "Сохранить",

@@ -196,6 +196,13 @@ I18N.register('sv', {
   "scan.noteTitle.exists": "Det finns redan en åtgärd för det här programmet.",
   "scan.noteTitle.generic": "Namnet är ett vanligt ord och kan utlösas i vanligt tal. Markera det om du behöver det.",
   "scan.noteTitle.system": "Ett Windows- eller utvecklarverktyg. Markera det om du behöver det.",
+  "scan.group.frequent": "Används ofta",
+  "scan.group.recent": "Startade den här veckan",
+  "scan.group.other": "Allt annat — A till Ö",
+  "scan.mark.frequent": "ofta",
+  "scan.mark.recent": "nyligen",
+  "scan.usage": "I fokus {minutes} min · senast startad {date}",
+  "scan.usage.noDate": "I fokus {minutes} min",
 
   "common.add": "Lägg till",
   "common.save": "Spara",

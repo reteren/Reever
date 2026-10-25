@@ -196,6 +196,13 @@ I18N.register('bg', {
   "scan.noteTitle.exists": "За тази програма вече има действие.",
   "scan.noteTitle.generic": "Името е обикновена дума и може да се задейства в речта. Отбележи я, ако ти трябва.",
   "scan.noteTitle.system": "Инструмент на Windows или за разработчици. Отбележи го, ако ти трябва.",
+  "scan.group.frequent": "Често използвани",
+  "scan.group.recent": "Стартирани тази седмица",
+  "scan.group.other": "Останалите — по азбучен ред",
+  "scan.mark.frequent": "често",
+  "scan.mark.recent": "скоро",
+  "scan.usage": "На фокус {minutes} мин · последно стартиране {date}",
+  "scan.usage.noDate": "На фокус {minutes} мин",
 
   "common.add": "Добавяне",
   "common.save": "Запазване",

@@ -196,6 +196,13 @@ I18N.register('uk', {
   "scan.noteTitle.exists": "Для цієї програми вже є дія.",
   "scan.noteTitle.generic": "Назва — звичайне слово, може спрацьовувати в мові. Познач, якщо потрібно.",
   "scan.noteTitle.system": "Утиліта Windows або інструмент розробника. Познач, якщо потрібно.",
+  "scan.group.frequent": "Часто використовувані",
+  "scan.group.recent": "Запускалися цього тижня",
+  "scan.group.other": "Решта — за абеткою",
+  "scan.mark.frequent": "часто",
+  "scan.mark.recent": "нещодавно",
+  "scan.usage": "У фокусі {minutes} хв · останній запуск {date}",
+  "scan.usage.noDate": "У фокусі {minutes} хв",
 
   "common.add": "Додати",
   "common.save": "Зберегти",

@@ -473,6 +473,16 @@ body.shaded #shade { display: block !important; }
 .scanrow .snote { flex: none; font: 500 13px/1 var(--f-lcd); letter-spacing: .06em; text-transform: uppercase; color: var(--acc-3); border: 1px dashed var(--acc-4); border-radius: 3px; padding: 1px 5px; }
 .scanrow .sphr { font: 500 14px/1.15 var(--f-lcd); letter-spacing: .04em; color: var(--acc-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scanrow:has(input:checked) .sphr { color: var(--acc-2); }
+/* Разделы списка сканера по истории запусков: часто / недавно / остальное */
+.scangroup {
+  position: sticky; top: 0; z-index: 1; margin: 6px 0 2px; padding: 6px 6px 5px;
+  font: 500 14px/1 var(--f-lcd); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--acc-3); background: var(--glass); border-bottom: 1px dotted var(--acc-4);
+}
+.scangroup:first-child { margin-top: 0; }
+.scanrow .smark { flex: none; font: 500 13px/1 var(--f-lcd); letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 5px; }
+.scanrow .smark.frequent { color: var(--glass); background: var(--acc-2); text-shadow: none; }
+.scanrow .smark.recent { color: var(--acc-2); border: 1px solid var(--acc-4); }
 .scan-tip { margin: 2px 4px 8px; padding: 8px; border: 1px dashed var(--acc-4); border-radius: 5px; display: flex; flex-direction: column; gap: 7px; }
 .scan-tip .key { align-self: flex-start; }
 

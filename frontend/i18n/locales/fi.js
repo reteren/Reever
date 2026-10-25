@@ -196,6 +196,13 @@ I18N.register('fi', {
   "scan.noteTitle.exists": "Tälle ohjelmalle on jo toiminto.",
   "scan.noteTitle.generic": "Nimi on tavallinen sana, joten se voi laueta puheessa. Valitse se, jos tarvitset sitä.",
   "scan.noteTitle.system": "Windowsin tai kehittäjien työkalu. Valitse se, jos tarvitset sitä.",
+  "scan.group.frequent": "Usein käytetyt",
+  "scan.group.recent": "Käynnistetty tällä viikolla",
+  "scan.group.other": "Muut — aakkosjärjestyksessä",
+  "scan.mark.frequent": "usein",
+  "scan.mark.recent": "äskettäin",
+  "scan.usage": "Etualalla {minutes} min · viimeksi käynnistetty {date}",
+  "scan.usage.noDate": "Etualalla {minutes} min",
 
   "common.add": "Lisää",
   "common.save": "Tallenna",

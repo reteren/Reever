@@ -196,6 +196,13 @@ I18N.register('hr', {
   "scan.noteTitle.exists": "Za ovaj program već postoji radnja.",
   "scan.noteTitle.generic": "Naziv je obična riječ i može se aktivirati u govoru. Označi ga ako ti treba.",
   "scan.noteTitle.system": "Alat sustava Windows ili za razvojne programere. Označi ga ako ti treba.",
+  "scan.group.frequent": "Često korišteni",
+  "scan.group.recent": "Pokrenuti ovaj tjedan",
+  "scan.group.other": "Ostalo — abecedno",
+  "scan.mark.frequent": "često",
+  "scan.mark.recent": "nedavno",
+  "scan.usage": "U fokusu {minutes} min · zadnje pokretanje {date}",
+  "scan.usage.noDate": "U fokusu {minutes} min",
 
   "common.add": "Dodaj",
   "common.save": "Spremi",

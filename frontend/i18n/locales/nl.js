@@ -196,6 +196,13 @@ I18N.register('nl', {
   "scan.noteTitle.exists": "Voor dit programma bestaat al een actie.",
   "scan.noteTitle.generic": "De naam is een gewoon woord en kan bij normaal praten afgaan. Vink het aan als je het nodig hebt.",
   "scan.noteTitle.system": "Een Windows- of ontwikkelaarstool. Vink het aan als je het nodig hebt.",
+  "scan.group.frequent": "Vaak gebruikt",
+  "scan.group.recent": "Deze week gestart",
+  "scan.group.other": "De rest — van A tot Z",
+  "scan.mark.frequent": "vaak",
+  "scan.mark.recent": "recent",
+  "scan.usage": "Op de voorgrond {minutes} min · laatst gestart {date}",
+  "scan.usage.noDate": "Op de voorgrond {minutes} min",
 
   "common.add": "Toevoegen",
   "common.save": "Opslaan",

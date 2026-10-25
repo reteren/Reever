@@ -196,6 +196,13 @@ I18N.register('ro', {
   "scan.noteTitle.exists": "Există deja o acțiune pentru acest program.",
   "scan.noteTitle.generic": "Numele e un cuvânt obișnuit și se poate declanșa în vorbire. Bifează-l dacă ai nevoie.",
   "scan.noteTitle.system": "Un instrument Windows sau pentru dezvoltatori. Bifează-l dacă ai nevoie.",
+  "scan.group.frequent": "Folosite des",
+  "scan.group.recent": "Pornite săptămâna aceasta",
+  "scan.group.other": "Restul — în ordine alfabetică",
+  "scan.mark.frequent": "des",
+  "scan.mark.recent": "recent",
+  "scan.usage": "În prim-plan {minutes} min · ultima pornire {date}",
+  "scan.usage.noDate": "În prim-plan {minutes} min",
 
   "common.add": "Adaugă",
   "common.save": "Salvează",

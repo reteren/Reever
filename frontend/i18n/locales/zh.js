@@ -195,6 +195,13 @@ I18N.register('zh', {
   "scan.noteTitle.exists": "这个程序已经有操作了。",
   "scan.noteTitle.generic": "名称是普通词语，日常说话时可能误触发。需要时再勾选。",
   "scan.noteTitle.system": "Windows 或开发者工具。需要时再勾选。",
+  "scan.group.frequent": "常用",
+  "scan.group.recent": "本周使用过",
+  "scan.group.other": "其余——按字母顺序",
+  "scan.mark.frequent": "常用",
+  "scan.mark.recent": "最近",
+  "scan.usage": "前台使用 {minutes} 分钟 · 上次启动 {date}",
+  "scan.usage.noDate": "前台使用 {minutes} 分钟",
 
   "common.add": "添加",
   "common.save": "保存",

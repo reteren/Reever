@@ -196,6 +196,13 @@ I18N.register('lv', {
   "scan.noteTitle.exists": "Šai programmai jau ir darbība.",
   "scan.noteTitle.generic": "Nosaukums ir parasts vārds un var nostrādāt runā. Atzīmē, ja vajag.",
   "scan.noteTitle.system": "Windows vai izstrādātāju rīks. Atzīmē, ja vajag.",
+  "scan.group.frequent": "Bieži lietotās",
+  "scan.group.recent": "Palaistas šonedēļ",
+  "scan.group.other": "Pārējās — alfabētiski",
+  "scan.mark.frequent": "bieži",
+  "scan.mark.recent": "nesen",
+  "scan.usage": "Fokusā {minutes} min · pēdējoreiz palaista {date}",
+  "scan.usage.noDate": "Fokusā {minutes} min",
 
   "common.add": "Pievienot",
   "common.save": "Saglabāt",

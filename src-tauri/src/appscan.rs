@@ -11,6 +11,9 @@
 //! формы («davinci», «resolve davinci») и, если среди языков распознавания есть кириллический,
 //! то же кириллицей — по словарю произношений, а для незнакомых слов по правилам английского
 //! чтения («давинчи резолв»).
+//!
+//! Порядок: сверху часто используемые, затем запускавшиеся на этой неделе, затем остальные
+//! по алфавиту — по истории запусков, которую ведёт сама Windows (UserAssist, `order_by_usage`).
 
 use std::collections::{HashMap, HashSet};
 
@@ -41,6 +44,20 @@ pub struct ScannedApp {
     pub phrases: Vec<String>,
     pub checked: bool,
     pub note: Option<Note>,
+    /// Раздел списка по тому, как часто программой пользуются (`order_by_usage`).
+    pub group: Group,
+    /// Сколько минут программа была в фокусе и когда запускалась (Unix, секунды) — для подсказки.
+    pub focus_minutes: u32,
+    pub last_used: Option<u64>,
+}
+
+/// Раздел списка сканера: часто используемые сверху, затем недавние, затем по алфавиту.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Group {
+    Frequent,
+    Recent,
+    Other,
 }
 
 /// Выбранная в списке программа — из неё делается действие.
@@ -106,11 +123,170 @@ pub fn scan(entries: Vec<AppEntry>, languages: &[&str], actions: &[Action], rese
                 checked: note.is_none() && !phrases.is_empty(),
                 note,
                 phrases,
+                group: Group::Other,
+                focus_minutes: 0,
+                last_used: None,
             }
         })
         .collect();
     drop_shared_phrases(&mut apps);
     apps
+}
+
+// ── Как часто пользуются ─────────────────────────────────────────────────
+
+/// Что Windows помнит о запусках программы (UserAssist).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct AppUsage {
+    pub runs: u32,
+    pub focus_count: u32,
+    pub focus_ms: u32,
+    /// Последний запуск, Unix-время в секундах.
+    pub last: Option<u64>,
+}
+
+/// Недавним считается запуск не старше этого.
+const RECENT_DAYS: f64 = 7.0;
+
+/// Часто: долго в фокусе или открывали несколько раз. Счётчик запусков в Windows 10/11
+/// почти всегда 0 — опора на фокус, он ведётся.
+fn is_frequent(usage: &AppUsage) -> bool {
+    usage.focus_ms >= 5 * 60_000 || usage.focus_count >= 3 || usage.runs >= 3
+}
+
+/// Ранг внутри «часто»: время в фокусе, число открытий, свежесть.
+fn usage_score(usage: &AppUsage, now: u64) -> f64 {
+    let minutes = f64::from(usage.focus_ms) / 60_000.0;
+    let recency = usage
+        .last
+        .map(|last| 1.0 / (1.0 + now.saturating_sub(last) as f64 / 86_400.0 / RECENT_DAYS))
+        .unwrap_or(0.0);
+    minutes.ln_1p() + 0.6 * f64::from(usage.focus_count).ln_1p() + 0.6 * f64::from(usage.runs).ln_1p() + recency
+}
+
+/// Разложить список по разделам: часто используемые (по `usage_score`), недавние (свежие
+/// выше), остальные — по алфавиту, как пришли из `scan`. `usage` — по AppID в нижнем регистре.
+pub fn order_by_usage(apps: &mut [ScannedApp], usage: &HashMap<String, AppUsage>, now: u64) {
+    let mut scores = HashMap::new();
+    for app in apps.iter_mut() {
+        let Some(found) = usage.get(&app.id.to_lowercase()) else { continue };
+        app.focus_minutes = found.focus_ms / 60_000;
+        app.last_used = found.last;
+        let recent = found
+            .last
+            .is_some_and(|last| (now.saturating_sub(last) as f64) < RECENT_DAYS * 86_400.0);
+        app.group = if is_frequent(found) {
+            Group::Frequent
+        } else if recent {
+            Group::Recent
+        } else {
+            Group::Other
+        };
+        scores.insert(app.id.clone(), usage_score(found, now));
+    }
+    // Сортировка устойчивая: внутри «остальных» сохраняется алфавит.
+    apps.sort_by(|a, b| {
+        a.group.cmp(&b.group).then_with(|| match a.group {
+            Group::Frequent => scores[&b.id].total_cmp(&scores[&a.id]),
+            Group::Recent => b.last_used.cmp(&a.last_used),
+            Group::Other => std::cmp::Ordering::Equal,
+        })
+    });
+}
+
+/// UserAssist: Windows ведёт его для каждого пользователя — что запускали из «Пуска»,
+/// Проводника и панели задач. Имена записей — AppID меню «Пуск» (или путь с GUID известной
+/// папки) в ROT13, данные — 72 байта: запуски (4), фокус: раз (8) и мс (12), последний
+/// запуск FILETIME (60). Без прав администратора; данных нет (Windows не ведёт историю
+/// запусков) — пустой ответ, список остаётся по алфавиту.
+pub fn user_assist() -> HashMap<String, AppUsage> {
+    use windows::core::{PCWSTR, PWSTR};
+    use windows::Win32::Foundation::{ERROR_MORE_DATA, ERROR_SUCCESS};
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegEnumKeyExW, RegEnumValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, KEY_READ,
+    };
+    const ROOT: &str = r"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist";
+    let wide = |text: &str| text.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+    let mut out: HashMap<String, AppUsage> = HashMap::new();
+    unsafe {
+        let mut root = HKEY::default();
+        if RegOpenKeyExW(HKEY_CURRENT_USER, PCWSTR(wide(ROOT).as_ptr()), 0, KEY_READ, &mut root) != ERROR_SUCCESS {
+            return out;
+        }
+        let mut guid = [0u16; 256];
+        for index in 0.. {
+            let mut len = guid.len() as u32;
+            if RegEnumKeyExW(root, index, PWSTR(guid.as_mut_ptr()), &mut len, None, PWSTR::null(), None, None)
+                != ERROR_SUCCESS
+            {
+                break;
+            }
+            let path = format!(r"{}\Count", String::from_utf16_lossy(&guid[..len as usize]));
+            let mut count = HKEY::default();
+            if RegOpenKeyExW(root, PCWSTR(wide(&path).as_ptr()), 0, KEY_READ, &mut count) != ERROR_SUCCESS {
+                continue;
+            }
+            let mut name = vec![0u16; 2048];
+            let mut data = [0u8; 128];
+            for value in 0.. {
+                let mut name_len = name.len() as u32;
+                let mut data_len = data.len() as u32;
+                let status = RegEnumValueW(
+                    count,
+                    value,
+                    PWSTR(name.as_mut_ptr()),
+                    &mut name_len,
+                    None,
+                    None,
+                    Some(data.as_mut_ptr()),
+                    Some(&mut data_len),
+                );
+                // Чужое длинное значение — пропустить его, а не бросать раздел.
+                if status == ERROR_MORE_DATA {
+                    continue;
+                }
+                if status != ERROR_SUCCESS {
+                    break;
+                }
+                let Some(usage) = parse_user_assist(&data[..data_len as usize]) else { continue };
+                let key = rot13(&String::from_utf16_lossy(&name[..name_len as usize])).to_lowercase();
+                // Одна программа бывает в двух разделах (exe и ярлык) — берём больший фокус.
+                let slot = out.entry(key).or_default();
+                let last = slot.last.max(usage.last);
+                if usage.focus_ms >= slot.focus_ms {
+                    *slot = usage;
+                }
+                slot.last = last;
+            }
+            let _ = RegCloseKey(count);
+        }
+        let _ = RegCloseKey(root);
+    }
+    out
+}
+
+fn parse_user_assist(data: &[u8]) -> Option<AppUsage> {
+    if data.len() < 68 {
+        return None;
+    }
+    let u32_at = |at: usize| u32::from_le_bytes(data[at..at + 4].try_into().unwrap());
+    let filetime = u64::from_le_bytes(data[60..68].try_into().unwrap());
+    // FILETIME — сотни наносекунд с 1601 года; до 1970 (ноль и мусор) — даты нет.
+    const UNIX_EPOCH_SECS_SINCE_1601: u64 = 11_644_473_600;
+    let last = (filetime / 10_000_000)
+        .checked_sub(UNIX_EPOCH_SECS_SINCE_1601)
+        .filter(|&secs| secs > 0);
+    Some(AppUsage { runs: u32_at(4), focus_count: u32_at(8), focus_ms: u32_at(12), last })
+}
+
+fn rot13(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            'a'..='z' => (((c as u8 - b'a' + 13) % 26) + b'a') as char,
+            'A'..='Z' => (((c as u8 - b'A' + 13) % 26) + b'A') as char,
+            _ => c,
+        })
+        .collect()
 }
 
 /// Выбранные программы → новые действия. Программу, для которой действие уже есть
@@ -845,5 +1021,58 @@ mod tests {
         assert_eq!(actions.len(), 1);
         assert_eq!(actions[0].phrases, vec!["discord", "дискорд"]);
         assert!(actions[0].id.starts_with("app_"));
+    }
+
+    #[test]
+    fn frequently_used_apps_go_first_then_recent_then_alphabet() {
+        const DAY: u64 = 86_400;
+        let now = 100 * DAY;
+        let mut apps = scan_names(
+            &[("Alpha", "a.app"), ("Beta", "b.app"), ("Discord", "d.app"), ("Opera", "o.app"), ("Zeta", "z.app")],
+            &["en"],
+        );
+        let used = |focus_min: u32, focus_count: u32, days_ago: u64| AppUsage {
+            runs: 0,
+            focus_count,
+            focus_ms: focus_min * 60_000,
+            last: Some(now - days_ago * DAY),
+        };
+        let usage: HashMap<String, AppUsage> = [
+            ("o.app".to_string(), used(155, 18, 2)),
+            ("d.app".to_string(), used(73, 16, 7)),
+            ("z.app".to_string(), used(0, 1, 1)),
+            ("b.app".to_string(), used(0, 0, 30)),
+        ]
+        .into();
+        order_by_usage(&mut apps, &usage, now);
+        let order: Vec<(&str, Group)> = apps.iter().map(|app| (app.name.as_str(), app.group)).collect();
+        assert_eq!(
+            order,
+            vec![
+                ("Opera", Group::Frequent),
+                ("Discord", Group::Frequent),
+                ("Zeta", Group::Recent),
+                ("Alpha", Group::Other),
+                ("Beta", Group::Other),
+            ]
+        );
+        assert_eq!(apps[0].focus_minutes, 155);
+        assert_eq!(apps[0].last_used, Some(now - 2 * DAY));
+    }
+
+    #[test]
+    fn user_assist_records_are_decoded() {
+        assert_eq!(rot13("pbz.fdhveery.Qvfpbeq.Qvfpbeq"), "com.squirrel.Discord.Discord");
+        let mut data = vec![0u8; 72];
+        data[8..12].copy_from_slice(&16u32.to_le_bytes());
+        data[12..16].copy_from_slice(&(73u32 * 60_000).to_le_bytes());
+        // 2026-10-18 11:03:01 UTC в FILETIME
+        let filetime: u64 = (1_792_234_981 + 11_644_473_600) * 10_000_000;
+        data[60..68].copy_from_slice(&filetime.to_le_bytes());
+        let usage = parse_user_assist(&data).unwrap();
+        assert_eq!((usage.focus_count, usage.focus_ms / 60_000, usage.last), (16, 73, Some(1_792_234_981)));
+        // Нулевая дата (записи без запусков) — без даты, короткие данные — не запись.
+        assert_eq!(parse_user_assist(&[0u8; 72]).unwrap().last, None);
+        assert_eq!(parse_user_assist(&[0u8; 16]), None);
     }
 }

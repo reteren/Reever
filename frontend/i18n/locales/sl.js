@@ -196,6 +196,13 @@ I18N.register('sl', {
   "scan.noteTitle.exists": "Za ta program dejanje že obstaja.",
   "scan.noteTitle.generic": "Ime je navadna beseda in se lahko sproži med govorom. Označi ga, če ga potrebuješ.",
   "scan.noteTitle.system": "Orodje sistema Windows ali za razvijalce. Označi ga, če ga potrebuješ.",
+  "scan.group.frequent": "Pogosto uporabljeni",
+  "scan.group.recent": "Zagnani ta teden",
+  "scan.group.other": "Vse drugo — po abecedi",
+  "scan.mark.frequent": "pogosto",
+  "scan.mark.recent": "nedavno",
+  "scan.usage": "V ospredju {minutes} min · zadnji zagon {date}",
+  "scan.usage.noDate": "V ospredju {minutes} min",
 
   "common.add": "Dodaj",
   "common.save": "Shrani",

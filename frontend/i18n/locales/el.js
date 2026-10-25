@@ -196,6 +196,13 @@ I18N.register('el', {
   "scan.noteTitle.exists": "Υπάρχει ήδη ενέργεια για αυτό το πρόγραμμα.",
   "scan.noteTitle.generic": "Το όνομα είναι κοινή λέξη και μπορεί να ενεργοποιηθεί στην ομιλία. Επίλεξέ το αν το χρειάζεσαι.",
   "scan.noteTitle.system": "Εργαλείο των Windows ή για προγραμματιστές. Επίλεξέ το αν το χρειάζεσαι.",
+  "scan.group.frequent": "Συχνά χρησιμοποιούμενα",
+  "scan.group.recent": "Ανοίχτηκαν αυτή την εβδομάδα",
+  "scan.group.other": "Τα υπόλοιπα — αλφαβητικά",
+  "scan.mark.frequent": "συχνά",
+  "scan.mark.recent": "πρόσφατα",
+  "scan.usage": "Στο προσκήνιο {minutes} λεπ. · τελευταία εκκίνηση {date}",
+  "scan.usage.noDate": "Στο προσκήνιο {minutes} λεπ.",
 
   "common.add": "Προσθήκη",
   "common.save": "Αποθήκευση",

@@ -196,6 +196,13 @@ I18N.register('sk', {
   "scan.noteTitle.exists": "Pre tento program už akcia existuje.",
   "scan.noteTitle.generic": "Názov je bežné slovo a môže sa spustiť pri rozprávaní. Označ ho, ak ho potrebuješ.",
   "scan.noteTitle.system": "Nástroj Windows alebo pre vývojárov. Označ ho, ak ho potrebuješ.",
+  "scan.group.frequent": "Často používané",
+  "scan.group.recent": "Spustené tento týždeň",
+  "scan.group.other": "Ostatné — podľa abecedy",
+  "scan.mark.frequent": "často",
+  "scan.mark.recent": "nedávno",
+  "scan.usage": "V popredí {minutes} min · naposledy spustené {date}",
+  "scan.usage.noDate": "V popredí {minutes} min",
 
   "common.add": "Pridať",
   "common.save": "Uložiť",

@@ -196,6 +196,13 @@ I18N.register('da', {
   "scan.noteTitle.exists": "Der findes allerede en handling for dette program.",
   "scan.noteTitle.generic": "Navnet er et almindeligt ord og kan udløses i normal tale. Markér det, hvis du har brug for det.",
   "scan.noteTitle.system": "Et Windows- eller udviklerværktøj. Markér det, hvis du har brug for det.",
+  "scan.group.frequent": "Bruges ofte",
+  "scan.group.recent": "Startet i denne uge",
+  "scan.group.other": "Alt andet — fra A til Å",
+  "scan.mark.frequent": "ofte",
+  "scan.mark.recent": "for nylig",
+  "scan.usage": "I fokus {minutes} min · sidst startet {date}",
+  "scan.usage.noDate": "I fokus {minutes} min",
 
   "common.add": "Tilføj",
   "common.save": "Gem",
