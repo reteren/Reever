@@ -61,12 +61,7 @@ Var ReeverBtnTheme
       ${If} $1 == "Button"
         System::Call 'uxtheme::SetWindowTheme(p r0, w "DarkMode_Explorer", p 0)'
       ${ElseIf} $1 == "Static"
-        IntOp $3 $2 & 0x1F
-        ${If} $3 = 0x10
-          ShowWindow $0 ${SW_HIDE}
-        ${Else}
-          SetCtlColors $0 ${REEVER_C_DIM} ${REEVER_C_BG}
-        ${EndIf}
+        SetCtlColors $0 ${REEVER_C_DIM} ${REEVER_C_BG}
       ${EndIf}
     ${Loop}
     ; шапка MUI: фон и текст — из MUI_BGCOLOR/MUI_TEXTCOLOR, подзаголовок приглушён
@@ -76,7 +71,31 @@ Var ReeverBtnTheme
     SetCtlColors $0 ${REEVER_C_TEXT} ${REEVER_C_BG}
     GetDlgItem $0 $HWNDPARENT 1034
     SetCtlColors $0 ${REEVER_C_TEXT} ${REEVER_C_BG}
+    Call ${UN}ReeverHideLines
     Pop $3
+    Pop $2
+    Pop $1
+    Pop $0
+  FunctionEnd
+
+  ; Гравированные линии окна (под шапкой и над кнопками). Страницы приветствия и финиша
+  ; MUI показывает свою линию заново, поэтому вызывается и при каждой странице.
+  Function ${UN}ReeverHideLines
+    Push $0
+    Push $1
+    Push $2
+    StrCpy $0 0
+    ${Do}
+      FindWindow $0 "Static" "" $HWNDPARENT $0
+      ${If} $0 = 0
+        ${Break}
+      ${EndIf}
+      System::Call 'user32::GetWindowLongW(p r0, i -16) i .r1'
+      IntOp $2 $1 & 0x1F
+      ${If} $2 = 0x10
+        ShowWindow $0 ${SW_HIDE}
+      ${EndIf}
+    ${Loop}
     Pop $2
     Pop $1
     Pop $0
@@ -97,6 +116,7 @@ Var ReeverBtnTheme
   ; Страница MUI: внутреннее окно — первое диалоговое окно-потомок (для SHOW-функций).
   Function ${UN}ReeverDarkPage
     Push $0
+    Call ${UN}ReeverHideLines
     FindWindow $0 "#32770" "" $HWNDPARENT
     Push $0
     Call ${UN}ReeverDarkDialog
