@@ -111,13 +111,16 @@ html.lite #orbHit {
 /* жидкость: волна — две полупрозрачные гребёнки, плывущие навстречу */
 html.lite #orbHit::before {
   content: ''; position: absolute; left: -50%; right: -50%; bottom: 0; z-index: -1;
-  height: calc((var(--fill) + var(--lv) * .22) * 100%);
+  /* уровень — сдвигом вниз (translate), а не высотой: без пересчёта раскладки;
+     transform занят волной */
+  height: 100%;
+  translate: 0 calc((1 - var(--fill) - var(--lv) * .22) * 100%);
   background:
     radial-gradient(60px 14px at 25% 0, rgba(200, 255, 236, .5), transparent 70%) 0 0 / 50% 100% repeat-x,
     linear-gradient(180deg, rgba(39, 230, 170, .85) 0, rgba(39, 230, 170, .4) 14px, rgba(4, 60, 44, .9) 100%);
   border-radius: 40% 46% 0 0 / 14px 18px 0 0;
   box-shadow: 0 -2px 14px rgba(39, 230, 170, .55);
-  transition: height .7s var(--e-out);
+  transition: translate .7s var(--e-out);
   animation: liteWave 5s linear infinite;
 }
 /* бегущее кольцо — слушает или выполняет */
