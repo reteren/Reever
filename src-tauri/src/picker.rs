@@ -84,6 +84,7 @@ fn ensure_picker(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let window = WebviewWindowBuilder::from_config(&app, &window_config)
+            .map(|builder| builder.initialization_script(crate::lite_script(&app)))
             .and_then(|builder| builder.build());
         let window = match window {
             Ok(window) => window,

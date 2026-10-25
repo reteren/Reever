@@ -143,7 +143,7 @@ fn command_active() -> bool {
 /// Первый показ при запуске — по сохранённым настройкам.
 pub fn spawn(app: &AppHandle) {
     let settings = app.state::<LiveConfig>().get().settings.clone();
-    apply(app, &settings.mascot_mode, settings.mascot_scale);
+    apply(app, settings.effective_mascot_mode(), settings.mascot_scale);
     bubble::configure(app, settings.mascot_bubble);
 }
 

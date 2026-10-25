@@ -93,7 +93,10 @@ fn ensure_window(app: &AppHandle) {
     };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let window = match WebviewWindowBuilder::from_config(&app, &window_config).and_then(|builder| builder.build()) {
+        let window = WebviewWindowBuilder::from_config(&app, &window_config)
+            .map(|builder| builder.initialization_script(crate::lite_script(&app)))
+            .and_then(|builder| builder.build());
+        let window = match window {
             Ok(window) => window,
             Err(error) => {
                 CREATE_PENDING.store(false, Ordering::SeqCst);

@@ -159,6 +159,10 @@ pub struct Settings {
     /// Пузырь-терминал над маскотом со сказанным по ходу речи.
     #[serde(default = "default_true")]
     pub mascot_bubble: bool,
+    /// Лёгкий интерфейс: плоская панель без 3D-рамки, жидкой линзы и маскота. Пока он
+    /// включён, маскота нет при любом `mascot_mode` (сам выбор сохраняется на потом).
+    #[serde(default)]
+    pub lite_ui: bool,
 }
 
 fn default_dictation_english_level() -> u8 {
@@ -198,6 +202,15 @@ fn default_languages() -> Vec<String> {
 impl Settings {
     /// Включённые языки распознавания в порядке `RECOGNITION_LANGUAGES`: английский
     /// всегда, неизвестные коды отброшены.
+    /// Режим маскота с учётом лёгкого интерфейса: в нём маскота нет.
+    pub fn effective_mascot_mode(&self) -> &str {
+        if self.lite_ui {
+            "never"
+        } else {
+            &self.mascot_mode
+        }
+    }
+
     pub fn recognition_languages(&self) -> Vec<&'static str> {
         RECOGNITION_LANGUAGES
             .iter()
@@ -283,6 +296,45 @@ fn sync_installer_ui_languages(settings: &mut Settings, settings_path: &std::pat
     }
 }
 
+
+/// Галочка «лёгкий интерфейс» из установщика: `ui-style-pending.txt` (`lite` или `full`)
+/// переносится в settings.json и удаляется; текущий вид — в `ui-style.txt`, чтобы
+/// установщик при повторном запуске показал галочку как есть.
+fn sync_installer_ui_style(settings: &mut Settings, settings_path: &std::path::Path) {
+    let Some(dir) = installer_dir() else { return };
+    let pending = dir.join("ui-style-pending.txt");
+    if let Ok(text) = std::fs::read_to_string(&pending) {
+        let _ = std::fs::remove_file(&pending);
+        let lite = match text.trim() {
+            "lite" => Some(true),
+            "full" => Some(false),
+            _ => None,
+        };
+        if let Some(lite) = lite.filter(|lite| *lite != settings.lite_ui) {
+            settings.lite_ui = lite;
+            let mut value = std::fs::read_to_string(settings_path)
+                .ok()
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+                .filter(serde_json::Value::is_object)
+                .unwrap_or_else(|| serde_json::json!({}));
+            if let Some(object) = value.as_object_mut() {
+                object.insert("lite_ui".into(), serde_json::json!(lite));
+                if let Ok(text) = serde_json::to_string_pretty(&value) {
+                    let _ = std::fs::write(settings_path, text);
+                }
+            }
+        }
+    }
+    write_installer_ui_style(settings.lite_ui);
+}
+
+/// Текущий вид интерфейса — для галочки в установщике.
+pub fn write_installer_ui_style(lite: bool) {
+    if let Some(dir) = installer_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(dir.join("ui-style.txt"), if lite { "lite" } else { "full" });
+    }
+}
 
 fn default_dictation_pause_ms() -> u32 {
     800
@@ -411,6 +463,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("mascot_mode", mascot_mode, String);
     restore!("mascot_scale", mascot_scale, u32);
     restore!("mascot_bubble", mascot_bubble, bool);
+    restore!("lite_ui", lite_ui, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -462,6 +515,7 @@ impl Default for Settings {
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),
             mascot_bubble: true,
+            lite_ui: false,
         }
     }
 }
@@ -512,6 +566,7 @@ impl ReeverConfig {
             .map(|s| parse_settings(&s))
             .unwrap_or_default();
         sync_installer_ui_languages(&mut settings, &settings_path);
+        sync_installer_ui_style(&mut settings, &settings_path);
 
         let model_dirs = crate::models::ModelDirs::new(resource(app, "model"));
         let models = crate::models::plan(&settings.recognition_languages(), &model_dirs);

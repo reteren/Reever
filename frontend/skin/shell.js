@@ -10,6 +10,8 @@
   // Предпросмотр в браузере для снимков: ?shot — масштаб 1, без сцены включения.
   const params = new URLSearchParams(location.search);
   const SHOT = !tauri && params.has('shot');
+  // Лёгкий интерфейс (lite.css): плоская панель, линза на CSS, без WebGL и маскота.
+  const LITE = document.documentElement.classList.contains('lite');
 
   // Геометрия — та же, что в design/reever-frame.blend (CSS-пиксели скина).
   const SKIN = {
@@ -28,15 +30,20 @@
     core: { size: 66 }, fx: { size: 220 },
     lunki: [[510, 85], [548, 85], [-999, -999]],
   };
+  // Лёгкий вид: панель и полоска — скруглённые прямоугольники во всё окно.
+  const LITE_SKIN = { w: 980, h: 640, r: 18 };
+  const LITE_SHADE = { w: 520, h: 64, r: 16 };
+  const MAIN = LITE ? LITE_SKIN : SKIN;
 
   // ── Масштаб: скин целиком помещается в рабочую область экрана ───────
   let scale = 1;
   function fitScale() {
-    const aw = (screen.availWidth || SKIN.w) - 24, ah = (screen.availHeight || SKIN.h) - 24;
-    scale = SHOT ? 1 : Math.min(1, aw / SKIN.w, ah / SKIN.h);
+    const aw = (screen.availWidth || MAIN.w) - 24, ah = (screen.availHeight || MAIN.h) - 24;
+    scale = SHOT ? 1 : Math.min(1, aw / MAIN.w, ah / MAIN.h);
     document.documentElement.style.setProperty('--s', scale);
     const Size = tauri?.dpi?.LogicalSize;
-    if (win && Size && scale < 1) win.setSize(new Size(Math.round(SKIN.w * scale), Math.round(SKIN.h * scale))).catch(() => {});
+    // окно в конфиге — под полный скин; лёгкое меньше и задаётся всегда
+    if (win && Size && (scale < 1 || LITE)) win.setSize(new Size(Math.round(MAIN.w * scale), Math.round(MAIN.h * scale))).catch(() => {});
   }
 
   // ── Маска окна по альфе рамки: пустоты между шипами пропускают клики ─
@@ -78,9 +85,20 @@
     }
     return rects;
   }
+  // Лёгкий вид: скруглённый прямоугольник — по строке на пиксель в углах, середина целиком.
+  function roundRects(G) {
+    const rects = [], r = G.r;
+    for (let y = 0; y < r; y++) {
+      const dy = r - y - 0.5, inset = Math.ceil(r - Math.sqrt(r * r - dy * dy));
+      rects.push([inset * scale, y * scale, (G.w - inset) * scale, (y + 1) * scale]);
+      rects.push([inset * scale, (G.h - y - 1) * scale, (G.w - inset) * scale, (G.h - y) * scale]);
+    }
+    rects.push([0, r * scale, G.w * scale, (G.h - r) * scale]);
+    return rects;
+  }
   async function applyShape(img, G) {
-    if (!invoke || !img) return;
-    try { await invoke('set_window_shape', { rects: windowRects(img, G) }); }
+    if (!invoke || (!img && !G.r)) return;
+    try { await invoke('set_window_shape', { rects: img ? windowRects(img, G) : roundRects(G) }); }
     catch (e) { console.error('window shape', e); }
   }
 
@@ -121,7 +139,8 @@
   // ── Эквалайзер: лента громкости голоса, справа — сейчас ─────────────
   function createEq(canvas) {
     const g = canvas.getContext('2d');
-    const W = 924, H = 46, pitch = 9, cols = Math.floor((W - 16) / pitch), rows = 7;
+    // размер — из раскладки: в полном скине экран 924×46, в лёгком — по ширине панели
+    const W = canvas.clientWidth || 924, H = canvas.clientHeight || 46, pitch = 9, cols = Math.floor((W - 16) / pitch), rows = Math.max(4, Math.min(7, Math.round((H - 4) / 6)));
     const hist = new Float32Array(cols);
     let acc = 0;
     function resize() { const dpr = Math.min(devicePixelRatio || 1, 2); canvas.width = W * scale * dpr; canvas.height = H * scale * dpr; g.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0); }
@@ -202,6 +221,7 @@
   const mainView = { frame: null, core: null, fx: null };
   const shadeView = { frame: null, core: null, fx: null };
   let shaded = false;
+  let orbLevel = -1;
   let reveal = 0, revealTarget = 0, booted = false, running = false, last = 0, t0 = performance.now(), nextSweep = 6;
   let loopFrame = 0, loopTimer = 0, sweepTimer = 0, inputActiveUntil = 0;
   let idleEmbersUntil = performance.now() + 1100;
@@ -292,6 +312,7 @@
     const fxMode = !booted ? 'none' : state === 'idle' && now >= idleEmbersUntil ? 'none' : T.mode;
     if (V.fx) V.fx.render({ mode: fxMode, level: lv, energy: Math.max(0, S.energy.v), threads: T.threads && !shaded, burst }, dt);
     if (eq && !shaded) eq.render(dt, Math.min(1, level * 1.15), state === 'paused');
+    if (LITE) { const v = Math.round(lv * 50) / 50; if (v !== orbLevel) { orbLevel = v; orbHit.style.setProperty('--lv', v); } }
     const moving = springMoving() || sweep.active || flash > 0.01 || burst > 0.01
       || Math.abs(levelRaw - level) > 0.005 || (V.fx?.active?.() ?? (V.fx?.count?.() > 0));
     if (moving || activeAt(now)) scheduleLoop(now);
@@ -355,7 +376,7 @@
   async function setShade(on) {
     if (on === shaded) return;
     const Size = tauri?.dpi?.LogicalSize;
-    if (on && !shadeView.frame) {
+    if (on && !shadeView.frame && !LITE) {
       try {
         shadeView.core = window.SkinOrb.createCore($('#shadeCore'), SHADE.core.size); shadeView.core.resize(scale);
         shadeView.fx = window.SkinOrb.createFx($('#shadeFx'), SHADE.fx.size, SHADE.orb.r); shadeView.fx.resize(scale);
@@ -364,11 +385,11 @@
       } catch (e) { console.error('shade', e); return; }
     }
     shaded = on;
-    const G = on ? SHADE : SKIN;
+    const G = on ? (LITE ? LITE_SHADE : SHADE) : MAIN;
     // сначала регион, потом размер: иначе на кадр мелькнёт старая форма в новом размере
-    if (on) await applyShape(shadeView.frame?.imgColor, SHADE);
+    if (on) await applyShape(shadeView.frame?.imgColor, G);
     if (win && Size) await win.setSize(new Size(Math.round(G.w * scale), Math.round(G.h * scale))).catch(() => {});
-    if (!on) await applyShape(mainView.frame?.imgColor, SKIN);
+    if (!on) await applyShape(mainView.frame?.imgColor, G);
     win?.setAlwaysOnTop(on).catch(() => {});
     document.body.classList.toggle('shaded', on);
     syncShadeText();
@@ -409,7 +430,11 @@
     levelRaw = state === 'listening' || state === 'busy' ? Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-6) + 54) / 40)) : 0;
     if (state === 'listening' || state === 'busy') wakeLoop();
   });
-  listen('reever://heard', e => { if (String(e.payload || '').trim()) { flash = 1; burst = 1; invertFlash(); sweepNow(0.8, 1.2); wakeLoop(true); } });
+  listen('reever://heard', e => {
+    if (!String(e.payload || '').trim()) return;
+    flash = 1; burst = 1; invertFlash(); sweepNow(0.8, 1.2); wakeLoop(true);
+    if (LITE && !reduced) { orbHit.classList.remove('flash'); void orbHit.offsetWidth; orbHit.classList.add('flash'); }
+  });
   listen('reever://partial', () => fitTicker());
   listen('reever://status', e => {
     let s = e.payload; if (typeof s === 'string') { try { s = JSON.parse(s); } catch { return; } }
@@ -508,14 +533,17 @@
     fitScale();
     setState('idle');
     try { $('#ver').textContent = invoke ? 'v' + await tauri.app.getVersion() : 'preview'; } catch { }
-    try {
-      core = mainView.core = window.SkinOrb.createCore($('#orbCore'), SKIN.core.size); core.resize(scale);
-      fx = mainView.fx = window.SkinOrb.createFx($('#orbFx'), SKIN.fx.size, SKIN.orb.r); fx.resize(scale);
-    } catch (e) { console.error('orb', e); }
-    startOrbMascot();
+    if (!LITE) {
+      try {
+        core = mainView.core = window.SkinOrb.createCore($('#orbCore'), SKIN.core.size); core.resize(scale);
+        fx = mainView.fx = window.SkinOrb.createFx($('#orbFx'), SKIN.fx.size, SKIN.orb.r); fx.resize(scale);
+      } catch (e) { console.error('orb', e); }
+      startOrbMascot();
+    }
     eq = createEq($('#eqCanvas')); eq.resize();
     start();
-    try {
+    if (LITE) await applyShape(null, LITE_SKIN);
+    else try {
       frame = mainView.frame = await window.SkinFrame.create($('#frame'), { color: 'skin/frame_color.webp', normal: 'skin/frame_normal.webp', skin: SKIN });
       frame.resize(scale);
       await applyShape(frame.imgColor, SKIN);

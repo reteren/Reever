@@ -66,6 +66,10 @@ Var ReeverWantLid
 Var ReeverFailed
 Var ReeverUiBoxes
 Var ReeverUiChosen
+; Галочка «лёгкий интерфейс» на странице языков интерфейса: `lite` / `full` уходит программе
+; файлом ui-style-pending.txt, текущий вид программа пишет в ui-style.txt (config.rs).
+Var ReeverLiteBox
+Var ReeverLiteChosen
 
 ; Языки интерфейса — как uilang::SUPPORTED и I18N.SUPPORTED; названия на самих языках.
 ; Английский отмечен всегда. Выбор передаётся программе файлом
@@ -151,6 +155,16 @@ FunctionEnd
       ${EndIf}
       StrCpy $ReeverUiChosen ",$ReeverUiChosen,"
     ${EndIf}
+    ${If} $ReeverLiteChosen == ""
+      StrCpy $ReeverLiteChosen "full"
+      ReadEnvStr $0 LOCALAPPDATA
+      ClearErrors
+      FileOpen $1 "$0\com.troid.reever\ui-style.txt" r
+      ${IfNot} ${Errors}
+        FileRead $1 $ReeverLiteChosen
+        FileClose $1
+      ${EndIf}
+    ${EndIf}
     !insertmacro MUI_HEADER_TEXT "$(reeverUiTitle)" "$(reeverUiSubtitle)"
     nsDialogs::Create 1018
     Pop $0
@@ -169,8 +183,8 @@ FunctionEnd
       IntOp $6 $2 / 10
       IntOp $7 $2 % 10
       IntOp $6 $6 * 33
-      IntOp $7 $7 * 11
-      IntOp $7 $7 + 24
+      IntOp $7 $7 * 10
+      IntOp $7 $7 + 22
       ${NSD_CreateCheckbox} $6% $7u 32% 11u "$5"
       Pop $8
       ${If} $ReeverUiBoxes == ""
@@ -189,6 +203,11 @@ FunctionEnd
       ${EndIf}
       IntOp $2 $2 + 1
     ${LoopUntil} $2 >= 30
+    ${NSD_CreateCheckbox} 0 127u 100% 11u "$(reeverLiteUi)"
+    Pop $ReeverLiteBox
+    ${If} $ReeverLiteChosen == "lite"
+      ${NSD_Check} $ReeverLiteBox
+    ${EndIf}
     nsDialogs::Show
   FunctionEnd
 
@@ -205,6 +224,12 @@ FunctionEnd
       ${EndIf}
       IntOp $2 $2 + 1
     ${LoopUntil} $2 >= 30
+    ${NSD_GetState} $ReeverLiteBox $9
+    ${If} $9 == ${BST_CHECKED}
+      StrCpy $ReeverLiteChosen "lite"
+    ${Else}
+      StrCpy $ReeverLiteChosen "full"
+    ${EndIf}
   FunctionEnd
 
   Function ReeverModelsShow
@@ -484,6 +509,9 @@ FunctionEnd
     CreateDirectory "$0\com.troid.reever"
     FileOpen $1 "$0\com.troid.reever\ui-languages-pending.txt" w
     FileWrite $1 $ReeverUiChosen
+    FileClose $1
+    FileOpen $1 "$0\com.troid.reever\ui-style-pending.txt" w
+    FileWrite $1 $ReeverLiteChosen
     FileClose $1
   ${EndIf}
   StrCpy $ReeverFailed ""

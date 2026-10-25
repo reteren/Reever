@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reever</title>
     <!-- Всё локально: шрифты в fonts/, рамка в skin/. Ни одного сетевого запроса. -->
+    <!-- Лёгкий интерфейс (настройка lite_ui): Rust задаёт флаг до загрузки страницы,
+         в предпросмотре — ?lite. Класс ставится до первого кадра. -->
+    <script>if (window.__REEVER_LITE__ || /[?&]lite\b/.test(location.search)) document.documentElement.classList.add('lite');</script>
     <link rel="stylesheet" href="skin.css" />
+    <link rel="stylesheet" href="lite.css" />
     <script src="i18n/i18n.js"></script>
     <script src="i18n/locales/en.js"></script>
   </head>

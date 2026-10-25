@@ -7,7 +7,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'classic',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:false,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,wake_blackbox:false,mascot_mode:'always',mascot_scale:100,mascot_bubble:true
+  dictation_clipboard:true,dictation_live:true,dictation_english:false,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,wake_blackbox:false,mascot_mode:'always',mascot_scale:100,mascot_bubble:true,lite_ui:document.documentElement.classList.contains('lite')
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -664,7 +664,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // [ключ настройки, тип, варианты, когда применяется]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
-  ['interface',[['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
+  ['interface',[['lite_ui','lite_ui',null,'instant'],['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['wake_sound','bool'],['wake_blackbox','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
@@ -801,6 +801,20 @@ function fieldEl(key,type,opts,when='save'){
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
     if(key==='dictation_english'&&!recognitionLanguages().some(code=>CYRILLIC_LANGS.includes(code)))
       wrap.append(el('div',{className:'hint setting-help lang-missing',textContent:t('settings.dictation_english.inactive')}));
+    return wrap;
+  }
+  if(type==='lite_ui'){
+    // Сразу: Rust сохраняет выбор и пересоздаёт окно уже в другом виде.
+    const wrap=el('div',{className:'setting-with-help'});
+    const row=el('div',{className:'cbrow'});
+    const inp=el('input',{type:'checkbox',id:'cbLite'}); inp.checked=!!settingsObj.lite_ui;
+    inp.onchange=async()=>{
+      inp.disabled=true;
+      try{ await invoke('set_lite_ui',{lite:inp.checked}); settingsObj.lite_ui=inp.checked; }
+      catch(e){ inp.checked=!inp.checked; inp.disabled=false; $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('liteUi',e); }
+    };
+    row.append(inp,el('label',{htmlFor:'cbLite',textContent:lbl})); wrap.append(row);
+    if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
     return wrap;
   }
   const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
@@ -1045,6 +1059,9 @@ function renderSettings(){
   // управления семёрки.
   for(const [title,fields] of GROUPS){
     const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:t('settings.group.'+title)}));
+    // В лёгком интерфейсе маскота нет: группа видна, но серая и недоступна.
+    const locked=title==='mascot'&&!!settingsObj.lite_ui;
+    if(locked){ g.disabled=true; g.classList.add('locked'); g.append(el('div',{className:'hint setting-help',textContent:t('settings.mascot.liteLocked')})); }
     for(const f of fields){
       const [key,type,opts,when]=f;
       g.append(fieldEl(key,type,opts,when));

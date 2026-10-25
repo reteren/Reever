@@ -131,7 +131,9 @@ fn show_main(app: &tauri::AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         // Создание WebView не блокирует обработчик tray/hotkey/IPC.
+        // Вид окна (полный скин или лёгкий) страница узнаёт до первого кадра.
         let window = WebviewWindowBuilder::from_config(&app, &window_config)
+            .map(|builder| builder.initialization_script(lite_script(&app)))
             .and_then(|builder| builder.build());
         let window = match window {
             Ok(window) => window,
@@ -190,6 +192,23 @@ fn destroy_main(app: &tauri::AppHandle) {
     WINDOW_SHOWN.store(false, Ordering::SeqCst);
     events::set_main_visible(false);
     if let Some(window) = app.get_webview_window("main") {
+        let _ = window.destroy();
+    }
+}
+
+/// Флаг лёгкого интерфейса для страницы окна: index.html, picker.html и confirm.html
+/// читают его до первого кадра и подключают lite.css.
+pub(crate) fn lite_script(app: &tauri::AppHandle) -> String {
+    let lite = app.state::<LiveConfig>().get().settings.lite_ui;
+    format!("window.__REEVER_LITE__ = {lite};")
+}
+
+/// Пересоздать открытое главное окно (сменился вид интерфейса). Закрытое — не трогаем:
+/// новый вид появится при следующем открытии.
+pub(crate) fn rebuild_main(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        // Destroyed увидит SHOW_REQUESTED и создаст окно заново.
+        SHOW_REQUESTED.store(true, Ordering::SeqCst);
         let _ = window.destroy();
     }
 }
@@ -499,6 +518,7 @@ pub fn run() {
             mascot::mascot_orb,
             bubble::bubble_layout,
             commands_api::set_mascot,
+            commands_api::set_lite_ui,
             picker::picker_choose,
             picker::picker_close,
             picker::picker_search,

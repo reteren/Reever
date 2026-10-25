@@ -478,9 +478,26 @@ pub fn set_mascot(
     fresh.settings.mascot_mode = mode.clone();
     fresh.settings.mascot_scale = scale;
     fresh.settings.mascot_bubble = bubble;
+    let effective = fresh.settings.effective_mascot_mode().to_string();
     config.set(Arc::new(fresh));
-    crate::mascot::apply(&app, &mode, scale);
+    crate::mascot::apply(&app, &effective, scale);
     crate::bubble::configure(&app, bubble);
+    Ok(())
+}
+
+/// Лёгкий интерфейс вкл/выкл: сохраняет выбор, убирает или возвращает маскота и
+/// пересоздаёт главное окно в другом виде (вид задаётся при создании окна).
+#[tauri::command]
+pub fn set_lite_ui(app: AppHandle, config: State<'_, LiveConfig>, lite: bool) -> Result<(), String> {
+    let current = config.get();
+    persist_value(&current, "lite_ui", serde_json::Value::Bool(lite))?;
+    let mut fresh = (*current).clone();
+    fresh.settings.lite_ui = lite;
+    let (mode, scale) = (fresh.settings.effective_mascot_mode().to_string(), fresh.settings.mascot_scale);
+    config.set(Arc::new(fresh));
+    crate::config::write_installer_ui_style(lite);
+    crate::mascot::apply(&app, &mode, scale);
+    crate::rebuild_main(&app);
     Ok(())
 }
 
