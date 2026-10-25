@@ -1,6 +1,9 @@
 {
   "tray.show": "显示设置",
-  "tray.pause": "暂停 / 恢复麦克风",
+  "tray.mic.pause": "暂停麦克风",
+  "tray.mic.resume": "恢复麦克风",
+  "tray.status.listening": "正在聆听",
+  "tray.status.paused": "已暂停",
   "tray.quit": "退出",
 
   "activation.both": "唤醒词和快捷键",

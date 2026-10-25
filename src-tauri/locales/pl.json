@@ -1,6 +1,9 @@
 {
   "tray.show": "Pokaż ustawienia",
-  "tray.pause": "Wstrzymaj / wznów mikrofon",
+  "tray.mic.pause": "Wstrzymaj mikrofon",
+  "tray.mic.resume": "Wznów mikrofon",
+  "tray.status.listening": "słucha",
+  "tray.status.paused": "wstrzymano",
   "tray.quit": "Zakończ",
 
   "activation.both": "słowo aktywacji i skrót",

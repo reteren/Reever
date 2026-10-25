@@ -1,6 +1,9 @@
 {
   "tray.show": "Prikaži postavke",
-  "tray.pause": "Pauziraj / nastavi mikrofon",
+  "tray.mic.pause": "Pauziraj mikrofon",
+  "tray.mic.resume": "Nastavi mikrofon",
+  "tray.status.listening": "sluša",
+  "tray.status.paused": "pauzirano",
   "tray.quit": "Izlaz",
 
   "activation.both": "riječ za aktivaciju i prečac",

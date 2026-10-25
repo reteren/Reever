@@ -1,6 +1,9 @@
 {
   "tray.show": "설정 보기",
-  "tray.pause": "마이크 일시 중지 / 다시 시작",
+  "tray.mic.pause": "마이크 일시 정지",
+  "tray.mic.resume": "마이크 다시 켜기",
+  "tray.status.listening": "듣는 중",
+  "tray.status.paused": "일시 정지됨",
   "tray.quit": "종료",
 
   "activation.both": "호출어와 단축키",

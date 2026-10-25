@@ -1,6 +1,9 @@
 {
   "tray.show": "Zobraziť nastavenia",
-  "tray.pause": "Pozastaviť / obnoviť mikrofón",
+  "tray.mic.pause": "Pozastaviť mikrofón",
+  "tray.mic.resume": "Obnoviť mikrofón",
+  "tray.status.listening": "počúva",
+  "tray.status.paused": "pozastavené",
   "tray.quit": "Ukončiť",
 
   "activation.both": "aktivačné slovo a skratka",

@@ -1,6 +1,9 @@
 {
   "tray.show": "Instellingen tonen",
-  "tray.pause": "Microfoon pauzeren / hervatten",
+  "tray.mic.pause": "Microfoon pauzeren",
+  "tray.mic.resume": "Microfoon hervatten",
+  "tray.status.listening": "luistert",
+  "tray.status.paused": "gepauzeerd",
   "tray.quit": "Afsluiten",
 
   "activation.both": "activeringswoord en sneltoets",

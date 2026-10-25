@@ -1,6 +1,9 @@
 {
   "tray.show": "設定を表示",
-  "tray.pause": "マイクを一時停止 / 再開",
+  "tray.mic.pause": "マイクを一時停止",
+  "tray.mic.resume": "マイクを再開",
+  "tray.status.listening": "聞き取り中",
+  "tray.status.paused": "一時停止中",
   "tray.quit": "終了",
 
   "activation.both": "ウェイクワードとホットキー",

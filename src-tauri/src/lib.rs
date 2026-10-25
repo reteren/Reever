@@ -366,13 +366,11 @@ pub fn run() {
                 &cfg.settings.interface_languages(),
             );
             *uilang::CURRENT.lock().unwrap() = locale;
-            // Меню по правому клику — системное меню Windows (traymenu.rs).
+            // Меню по правому клику — системное меню Windows, нарисованное в стиле Reever (traymenu.rs).
+            traymenu::init(app.handle());
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Reever")
-                .menu(&traymenu::build(app.handle())?)
-                .show_menu_on_left_click(false)
-                .on_menu_event(traymenu::on_event)
                 .on_tray_icon_event(|tray, event| match event {
                     TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -381,9 +379,9 @@ pub fn run() {
                     } => show_main(tray.app_handle()),
                     TrayIconEvent::Click {
                         button: MouseButton::Right,
-                        button_state: MouseButtonState::Down,
+                        button_state: MouseButtonState::Up,
                         ..
-                    } => traymenu::refresh(tray.app_handle()),
+                    } => traymenu::show(),
                     _ => {}
                 })
                 .build(app)?;

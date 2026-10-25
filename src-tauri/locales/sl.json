@@ -1,6 +1,9 @@
 {
   "tray.show": "Prikaži nastavitve",
-  "tray.pause": "Premor / nadaljuj mikrofon",
+  "tray.mic.pause": "Začasno ustavi mikrofon",
+  "tray.mic.resume": "Nadaljuj mikrofon",
+  "tray.status.listening": "posluša",
+  "tray.status.paused": "ustavljeno",
   "tray.quit": "Izhod",
 
   "activation.both": "beseda za aktivacijo in bližnjica",

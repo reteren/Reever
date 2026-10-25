@@ -76,6 +76,9 @@ features = [
   "Win32_Devices_FunctionDiscovery",
   # appscan.rs: как часто запускаются программы (UserAssist в реестре)
   "Win32_System_Registry",
+  # traymenu.rs: меню трея рисуется само (owner-draw) под DPI монитора
+  "Win32_UI_Controls",
+  "Win32_UI_HiDpi",
 ]
 
 [profile.release]

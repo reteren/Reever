@@ -1,6 +1,9 @@
 {
   "tray.show": "Näytä asetukset",
-  "tray.pause": "Tauota / jatka mikrofonia",
+  "tray.mic.pause": "Keskeytä mikrofoni",
+  "tray.mic.resume": "Jatka mikrofonia",
+  "tray.status.listening": "kuuntelee",
+  "tray.status.paused": "tauolla",
   "tray.quit": "Lopeta",
 
   "activation.both": "herätyssana ja pikanäppäin",

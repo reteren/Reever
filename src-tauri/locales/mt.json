@@ -1,6 +1,9 @@
 {
   "tray.show": "Uri s-settings",
-  "tray.pause": "Pawża / kompli l-mikrofonu",
+  "tray.mic.pause": "Waqqaf il-mikrofonu",
+  "tray.mic.resume": "Kompli l-mikrofonu",
+  "tray.status.listening": "qed jisma'",
+  "tray.status.paused": "fil-waqfa",
   "tray.quit": "Oħroġ",
 
   "activation.both": "kelma ta' attivazzjoni u shortcut",

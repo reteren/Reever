@@ -1,6 +1,9 @@
 {
   "tray.show": "Visa inställningar",
-  "tray.pause": "Pausa / fortsätt mikrofonen",
+  "tray.mic.pause": "Pausa mikrofonen",
+  "tray.mic.resume": "Återuppta mikrofonen",
+  "tray.status.listening": "lyssnar",
+  "tray.status.paused": "pausad",
   "tray.quit": "Avsluta",
 
   "activation.both": "väckningsord och kortkommando",

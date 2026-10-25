@@ -1,6 +1,9 @@
 {
   "tray.show": "Vis indstillinger",
-  "tray.pause": "Pause / fortsæt mikrofonen",
+  "tray.mic.pause": "Sæt mikrofonen på pause",
+  "tray.mic.resume": "Genoptag mikrofonen",
+  "tray.status.listening": "lytter",
+  "tray.status.paused": "på pause",
   "tray.quit": "Afslut",
 
   "activation.both": "vækkeord og genvejstast",

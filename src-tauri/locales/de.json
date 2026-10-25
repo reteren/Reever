@@ -1,6 +1,9 @@
 {
   "tray.show": "Einstellungen anzeigen",
-  "tray.pause": "Mikrofon pausieren / fortsetzen",
+  "tray.mic.pause": "Mikrofon pausieren",
+  "tray.mic.resume": "Mikrofon fortsetzen",
+  "tray.status.listening": "hört zu",
+  "tray.status.paused": "pausiert",
   "tray.quit": "Beenden",
 
   "activation.both": "Aktivierungswort und Tastenkürzel",

@@ -1,6 +1,9 @@
 {
   "tray.show": "Εμφάνιση ρυθμίσεων",
-  "tray.pause": "Παύση / συνέχεια μικροφώνου",
+  "tray.mic.pause": "Παύση μικροφώνου",
+  "tray.mic.resume": "Συνέχιση μικροφώνου",
+  "tray.status.listening": "ακούει",
+  "tray.status.paused": "σε παύση",
   "tray.quit": "Έξοδος",
 
   "activation.both": "λέξη αφύπνισης και συντόμευση",

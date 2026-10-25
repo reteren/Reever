@@ -1,6 +1,9 @@
 {
   "tray.show": "Afișează setările",
-  "tray.pause": "Pauză / reluare microfon",
+  "tray.mic.pause": "Pune microfonul pe pauză",
+  "tray.mic.resume": "Reia microfonul",
+  "tray.status.listening": "ascultă",
+  "tray.status.paused": "în pauză",
   "tray.quit": "Ieșire",
 
   "activation.both": "cuvânt de activare și tastă rapidă",

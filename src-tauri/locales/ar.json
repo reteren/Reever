@@ -1,6 +1,9 @@
 {
   "tray.show": "عرض الإعدادات",
-  "tray.pause": "إيقاف الميكروفون مؤقتًا / استئنافه",
+  "tray.mic.pause": "إيقاف الميكروفون مؤقتًا",
+  "tray.mic.resume": "استئناف الميكروفون",
+  "tray.status.listening": "يستمع",
+  "tray.status.paused": "متوقف مؤقتًا",
   "tray.quit": "خروج",
 
   "activation.both": "كلمة التنبيه واختصار لوحة المفاتيح",

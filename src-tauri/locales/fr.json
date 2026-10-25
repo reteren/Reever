@@ -1,6 +1,9 @@
 {
   "tray.show": "Afficher les paramètres",
-  "tray.pause": "Suspendre / reprendre le micro",
+  "tray.mic.pause": "Mettre le micro en pause",
+  "tray.mic.resume": "Réactiver le micro",
+  "tray.status.listening": "à l'écoute",
+  "tray.status.paused": "en pause",
   "tray.quit": "Quitter",
 
   "activation.both": "mot d'activation et raccourci",

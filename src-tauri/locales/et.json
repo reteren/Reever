@@ -1,6 +1,9 @@
 {
   "tray.show": "Näita sätteid",
-  "tray.pause": "Peata / jätka mikrofoni",
+  "tray.mic.pause": "Peata mikrofon",
+  "tray.mic.resume": "Jätka mikrofoniga",
+  "tray.status.listening": "kuulab",
+  "tray.status.paused": "peatatud",
   "tray.quit": "Välju",
 
   "activation.both": "äratussõna ja kiirklahv",

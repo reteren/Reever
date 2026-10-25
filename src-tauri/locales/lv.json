@@ -1,6 +1,9 @@
 {
   "tray.show": "Rādīt iestatījumus",
-  "tray.pause": "Pauzēt / turpināt mikrofonu",
+  "tray.mic.pause": "Pauzēt mikrofonu",
+  "tray.mic.resume": "Atsākt mikrofonu",
+  "tray.status.listening": "klausās",
+  "tray.status.paused": "pauzēts",
   "tray.quit": "Iziet",
 
   "activation.both": "aktivizēšanas vārds un īsinājumtaustiņš",

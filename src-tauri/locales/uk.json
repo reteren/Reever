@@ -1,6 +1,9 @@
 {
   "tray.show": "Показати налаштування",
-  "tray.pause": "Пауза / продовжити мікрофон",
+  "tray.mic.pause": "Призупинити мікрофон",
+  "tray.mic.resume": "Увімкнути мікрофон",
+  "tray.status.listening": "слухає",
+  "tray.status.paused": "на паузі",
   "tray.quit": "Вийти",
 
   "activation.both": "слово активації й гаряча клавіша",

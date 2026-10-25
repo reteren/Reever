@@ -1,6 +1,9 @@
 {
   "tray.show": "Rodyti nustatymus",
-  "tray.pause": "Pristabdyti / tęsti mikrofoną",
+  "tray.mic.pause": "Pristabdyti mikrofoną",
+  "tray.mic.resume": "Tęsti mikrofoną",
+  "tray.status.listening": "klausosi",
+  "tray.status.paused": "pristabdyta",
   "tray.quit": "Išeiti",
 
   "activation.both": "aktyvinimo žodis ir spartusis klavišas",

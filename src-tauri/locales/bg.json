@@ -1,6 +1,9 @@
 {
   "tray.show": "Показване на настройките",
-  "tray.pause": "Пауза / продължаване на микрофона",
+  "tray.mic.pause": "Пауза на микрофона",
+  "tray.mic.resume": "Включи микрофона",
+  "tray.status.listening": "слуша",
+  "tray.status.paused": "на пауза",
   "tray.quit": "Изход",
 
   "activation.both": "дума за активиране и клавиш",

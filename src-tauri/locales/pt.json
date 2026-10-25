@@ -1,6 +1,9 @@
 {
   "tray.show": "Mostrar configurações",
-  "tray.pause": "Pausar / retomar microfone",
+  "tray.mic.pause": "Pausar microfone",
+  "tray.mic.resume": "Retomar microfone",
+  "tray.status.listening": "ouvindo",
+  "tray.status.paused": "em pausa",
   "tray.quit": "Sair",
 
   "activation.both": "palavra de ativação e atalho",

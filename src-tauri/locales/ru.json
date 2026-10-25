@@ -1,6 +1,9 @@
 {
   "tray.show": "Показать настройки",
-  "tray.pause": "Пауза / Продолжить микрофон",
+  "tray.mic.pause": "Поставить микрофон на паузу",
+  "tray.mic.resume": "Включить микрофон",
+  "tray.status.listening": "слушает",
+  "tray.status.paused": "на паузе",
   "tray.quit": "Выход",
 
   "activation.both": "wake-слово и хоткей",

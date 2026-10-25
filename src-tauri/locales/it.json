@@ -1,6 +1,9 @@
 {
   "tray.show": "Mostra impostazioni",
-  "tray.pause": "Metti in pausa / riprendi microfono",
+  "tray.mic.pause": "Metti in pausa il microfono",
+  "tray.mic.resume": "Riprendi il microfono",
+  "tray.status.listening": "in ascolto",
+  "tray.status.paused": "in pausa",
   "tray.quit": "Esci",
 
   "activation.both": "parola di attivazione e scorciatoia",

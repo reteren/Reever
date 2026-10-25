@@ -1,6 +1,9 @@
 {
   "tray.show": "Show settings",
-  "tray.pause": "Pause / resume microphone",
+  "tray.mic.pause": "Pause microphone",
+  "tray.mic.resume": "Resume microphone",
+  "tray.status.listening": "listening",
+  "tray.status.paused": "paused",
   "tray.quit": "Quit",
 
   "activation.both": "wake word and hotkey",

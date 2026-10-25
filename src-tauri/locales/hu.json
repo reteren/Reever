@@ -1,6 +1,9 @@
 {
   "tray.show": "Beállítások megjelenítése",
-  "tray.pause": "Mikrofon szüneteltetése / folytatása",
+  "tray.mic.pause": "Mikrofon szüneteltetése",
+  "tray.mic.resume": "Mikrofon folytatása",
+  "tray.status.listening": "figyel",
+  "tray.status.paused": "szünetel",
   "tray.quit": "Kilépés",
 
   "activation.both": "ébresztőszó és billentyűparancs",

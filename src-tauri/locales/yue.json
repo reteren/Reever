@@ -1,6 +1,9 @@
 {
   "tray.show": "顯示設定",
-  "tray.pause": "暫停 / 繼續咪",
+  "tray.mic.pause": "暫停麥克風",
+  "tray.mic.resume": "恢復麥克風",
+  "tray.status.listening": "聆聽中",
+  "tray.status.paused": "已暫停",
   "tray.quit": "離開",
 
   "activation.both": "喚醒詞同快捷鍵",
