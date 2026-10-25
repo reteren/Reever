@@ -360,7 +360,6 @@ I18N.register('ko', {
   "picker.found": "찾은 항목",
   "picker.foundFor": "찾은 항목: «{title}»",
   "picker.closeTitle": "닫기 (Esc)",
-  "picker.voice": "<strong>음성으로:</strong> 번호를 영어로 말하세요. 예: «third» (세 번째).",
   "picker.keyboard": "키보드 조작",
   "picker.move": "이동",
   "picker.open": "열기",

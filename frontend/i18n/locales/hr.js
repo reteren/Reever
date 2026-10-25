@@ -360,7 +360,6 @@ I18N.register('hr', {
   "picker.found": "Pronađeno",
   "picker.foundFor": "Pronađeno: «{title}»",
   "picker.closeTitle": "Zatvori (Esc)",
-  "picker.voice": "<strong>Glasom:</strong> recite broj na engleskom, npr. «third» (treći).",
   "picker.keyboard": "Upravljanje tipkovnicom",
   "picker.move": "pomak",
   "picker.open": "otvori",

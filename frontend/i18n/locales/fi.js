@@ -360,7 +360,6 @@ I18N.register('fi', {
   "picker.found": "Löydetyt",
   "picker.foundFor": "Löydetyt: «{title}»",
   "picker.closeTitle": "Sulje (Esc)",
-  "picker.voice": "<strong>Äänellä:</strong> sano numero englanniksi, esim. «third» (kolmas).",
   "picker.keyboard": "Näppäimistöohjaus",
   "picker.move": "siirrä",
   "picker.open": "avaa",

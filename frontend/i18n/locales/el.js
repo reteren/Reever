@@ -360,7 +360,6 @@ I18N.register('el', {
   "picker.found": "Βρέθηκαν",
   "picker.foundFor": "Βρέθηκαν: «{title}»",
   "picker.closeTitle": "Κλείσιμο (Esc)",
-  "picker.voice": "<strong>Με τη φωνή:</strong> πείτε τον αριθμό στα αγγλικά, π.χ. «third» (τρίτο).",
   "picker.keyboard": "Χειρισμός με πληκτρολόγιο",
   "picker.move": "μετακίνηση",
   "picker.open": "άνοιγμα",

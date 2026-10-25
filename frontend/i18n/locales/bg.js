@@ -360,7 +360,6 @@ I18N.register('bg', {
   "picker.found": "Намерено",
   "picker.foundFor": "Намерено: «{title}»",
   "picker.closeTitle": "Затваряне (Esc)",
-  "picker.voice": "<strong>С глас:</strong> кажете номера на английски, напр. «third» (трети).",
   "picker.keyboard": "Управление с клавиатура",
   "picker.move": "преместване",
   "picker.open": "отваряне",

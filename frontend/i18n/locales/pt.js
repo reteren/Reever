@@ -359,7 +359,6 @@ I18N.register('pt', {
   "picker.found": "Encontrados",
   "picker.foundFor": "Encontrados: “{title}”",
   "picker.closeTitle": "Fechar (Esc)",
-  "picker.voice": "<strong>Por voz:</strong> diga o número em inglês, por exemplo «third» (terceiro).",
   "picker.keyboard": "Controles do teclado",
   "picker.move": "mover",
   "picker.open": "abrir",

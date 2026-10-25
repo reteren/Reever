@@ -360,7 +360,6 @@ I18N.register('uk', {
   "picker.found": "Знайдено",
   "picker.foundFor": "Знайдено: «{title}»",
   "picker.closeTitle": "Закрити (Esc)",
-  "picker.voice": "<strong>Голосом:</strong> назвіть номер англійською, наприклад «third» (третій).",
   "picker.keyboard": "Керування з клавіатури",
   "picker.move": "переміщення",
   "picker.open": "відкрити",

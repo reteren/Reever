@@ -360,7 +360,6 @@ I18N.register('yue', {
   "picker.found": "搵到嘅項目",
   "picker.foundFor": "搵到：«{title}»",
   "picker.closeTitle": "閂（Esc）",
-  "picker.voice": "<strong>用聲音：</strong>用英文講號碼，例如 «third»（第三個）。",
   "picker.keyboard": "鍵盤操作",
   "picker.move": "移動",
   "picker.open": "開",

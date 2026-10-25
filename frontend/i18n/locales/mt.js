@@ -360,7 +360,6 @@ I18N.register('mt', {
   "picker.found": "Instab",
   "picker.foundFor": "Instab: «{title}»",
   "picker.closeTitle": "Agħlaq (Esc)",
-  "picker.voice": "<strong>Bil-vuċi:</strong> għid in-numru bl-Ingliż, eż. «third» (it-tielet).",
   "picker.keyboard": "Kontroll bit-tastiera",
   "picker.move": "ċaqlaq",
   "picker.open": "iftaħ",

@@ -359,7 +359,6 @@ I18N.register('ar', {
   "picker.found": "العناصر التي عُثر عليها",
   "picker.foundFor": "النتائج عن “{title}”",
   "picker.closeTitle": "إغلاق (Esc)",
-  "picker.voice": "<strong>بالصوت:</strong> قل الرقم بالإنجليزية، مثلًا «third» (الثالث).",
   "picker.keyboard": "التحكم بلوحة المفاتيح",
   "picker.move": "تحريك",
   "picker.open": "فتح",

@@ -360,7 +360,6 @@ I18N.register('lv', {
   "picker.found": "Atrasts",
   "picker.foundFor": "Atrasts: «{title}»",
   "picker.closeTitle": "Aizvērt (Esc)",
-  "picker.voice": "<strong>Ar balsi:</strong> nosauciet numuru angliski, piem., «third» (trešais).",
   "picker.keyboard": "Vadība ar tastatūru",
   "picker.move": "pārvietot",
   "picker.open": "atvērt",

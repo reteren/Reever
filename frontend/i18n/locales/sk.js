@@ -360,7 +360,6 @@ I18N.register('sk', {
   "picker.found": "Nájdené",
   "picker.foundFor": "Nájdené: «{title}»",
   "picker.closeTitle": "Zavrieť (Esc)",
-  "picker.voice": "<strong>Hlasom:</strong> povedzte číslo po anglicky, napr. «third» (tretí).",
   "picker.keyboard": "Ovládanie klávesnicou",
   "picker.move": "posun",
   "picker.open": "otvoriť",

@@ -1174,17 +1174,17 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                 ListenKind::Confirm => {
                                     let text = self.strip_repeated_wake(&timed.text);
                                     let yes = is_yes(&text) || self.second_says_yes(&audio);
-                                    // Ни «да», ни «нет»: это эхо сигнала подтверждения или шум
-                                    // (английская модель выдумывает на нём «mm hmm»). Отказом это
-                                    // не считаем — ждём настоящий ответ, но не бесконечно.
+                                    // Ни «да», ни «нет»: эхо сигнала, шум (английская модель
+                                    // выдумывает на нём «mm hmm») или разговор рядом. Пока висит
+                                    // вопрос, слушаем только ответ: остальное пропускаем, не отменяя.
+                                    // Окно ожидания не продлеваем — тишина всё равно кончится отказом.
                                     let no = is_no(&text);
-                                    if !yes && !no && state.empty_segments < MAX_EMPTY_SEGMENTS {
+                                    if !yes && !no {
                                         out.push(EngineEvent::Log(
                                             crate::msg!("log.confirm.unclearWaiting").into(),
                                         ));
                                         self.prepare_segmenter(self.cfg.command_pause_ms);
                                         self.mode = Mode::Listening(ListenState {
-                                            wait_remaining: samples(self.wait_ms(state.kind)),
                                             speech_started: false,
                                             partial_elapsed: 0,
                                             empty_segments: state.empty_segments + 1,
@@ -1194,12 +1194,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                                     } else {
                                         if !yes {
                                             out.push(EngineEvent::Log(
-                                                if no {
-                                                    crate::msg!("log.confirm.no")
-                                                } else {
-                                                    crate::msg!("log.confirm.unclear")
-                                                }
-                                                .into(),
+                                                crate::msg!("log.confirm.no").into(),
                                             ));
                                         }
                                         out.push(EngineEvent::Confirm(yes));
@@ -3137,6 +3132,26 @@ mod tests {
             .any(|event| matches!(event, EngineEvent::Confirm(_))));
         events.extend(engine.push_audio(&phrase(123, 120)));
         assert!(contains(&events, &EngineEvent::Confirm(true)));
+    }
+
+    #[test]
+    fn confirm_hears_only_the_answer() {
+        // Разговор рядом и новое «ривер …» под вопросом — не ответ и не команда.
+        let (mut engine, _, _, _) = engine(
+            test_config(),
+            &["ну и что там", "ривер открой загрузки", "а потом", "нет"],
+        );
+        engine.listen_confirm();
+        let mut events = Vec::new();
+        for _ in 0..3 {
+            events.extend(engine.push_audio(&phrase(123, 120)));
+        }
+        assert!(!events.iter().any(|event| matches!(
+            event,
+            EngineEvent::Confirm(_) | EngineEvent::Command { .. }
+        )));
+        events.extend(engine.push_audio(&phrase(123, 120)));
+        assert!(contains(&events, &EngineEvent::Confirm(false)));
     }
 
     struct ScriptedSpotter(VecDeque<bool>);

@@ -360,7 +360,6 @@ I18N.register('ro', {
   "picker.found": "Găsite",
   "picker.foundFor": "Găsite: «{title}»",
   "picker.closeTitle": "Închide (Esc)",
-  "picker.voice": "<strong>Cu vocea:</strong> spune numărul în engleză, de ex. «third» (al treilea).",
   "picker.keyboard": "Control din tastatură",
   "picker.move": "mută",
   "picker.open": "deschide",

@@ -124,6 +124,11 @@ fn attach_picker_window(app: &AppHandle, window: &WebviewWindow) {
     });
 }
 
+/// Окно выбора на экране: пока оно открыто, аудио-поток не слушает голос.
+pub fn is_open() -> bool {
+    PENDING_PICKER.lock().map(|pending| pending.is_some()).unwrap_or(false)
+}
+
 /// Вызывается из picker.html после загрузки страницы и завершения подписки на событие.
 #[tauri::command]
 pub fn picker_ready(app: AppHandle) {

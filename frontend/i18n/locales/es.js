@@ -359,7 +359,6 @@ I18N.register('es', {
   "picker.found": "Resultados",
   "picker.foundFor": "Resultados para: “{title}”",
   "picker.closeTitle": "Cerrar (Esc)",
-  "picker.voice": "<strong>Por voz:</strong> di el número en inglés, por ejemplo «third» (tercero).",
   "picker.keyboard": "Controles del teclado",
   "picker.move": "mover",
   "picker.open": "abrir",

@@ -360,7 +360,6 @@ I18N.register('lt', {
   "picker.found": "Rasta",
   "picker.foundFor": "Rasta: «{title}»",
   "picker.closeTitle": "Uždaryti (Esc)",
-  "picker.voice": "<strong>Balsu:</strong> pasakykite numerį angliškai, pvz., «third» (trečias).",
   "picker.keyboard": "Valdymas klaviatūra",
   "picker.move": "judėti",
   "picker.open": "atidaryti",

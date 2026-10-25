@@ -359,7 +359,6 @@ I18N.register('ja', {
   "picker.found": "検索結果",
   "picker.foundFor": "検索結果：「{title}」",
   "picker.closeTitle": "閉じる（Esc）",
-  "picker.voice": "<strong>音声：</strong>英語で番号を言います。例：«third»（3番目）。",
   "picker.keyboard": "キーボード操作",
   "picker.move": "移動",
   "picker.open": "開く",

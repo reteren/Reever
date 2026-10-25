@@ -360,7 +360,6 @@ I18N.register('sl', {
   "picker.found": "Najdeno",
   "picker.foundFor": "Najdeno: «{title}»",
   "picker.closeTitle": "Zapri (Esc)",
-  "picker.voice": "<strong>Z glasom:</strong> povejte številko v angleščini, npr. «third» (tretji).",
   "picker.keyboard": "Upravljanje s tipkovnico",
   "picker.move": "premik",
   "picker.open": "odpri",

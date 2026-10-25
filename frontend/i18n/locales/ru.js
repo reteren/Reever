@@ -359,7 +359,6 @@ I18N.register('ru', {
   "picker.found": "Найдено",
   "picker.foundFor": "Найдено: «{title}»",
   "picker.closeTitle": "Закрыть (Esc)",
-  "picker.voice": "<strong>Голосом:</strong> скажи номер, например «третий».",
   "picker.keyboard": "Управление с клавиатуры",
   "picker.move": "переместить",
   "picker.open": "открыть",

@@ -321,6 +321,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut last_chunk = std::time::Instant::now();
     let mut stalled = false;
     let mut voice_recording = false;
+    let mut picker_muted = false;
     let mut voice_progress = std::time::Instant::now();
     loop {
         if shared.reload.load(Ordering::Relaxed) {
@@ -463,6 +464,19 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             continue;
         }
         voice_recording = false;
+        // Окно выбора («найди папку …») открыто — голос не слушаем: в нём печатают и
+        // выбирают мышью, а разговор рядом не должен стать командой.
+        if crate::picker::is_open() {
+            if !picker_muted {
+                picker_muted = true;
+                worker.choice_session = None;
+                engine.reset();
+                set_state(app, "idle");
+            }
+            chunk.fill(0);
+            continue;
+        }
+        picker_muted = false;
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
         let model_ready = asr.is_loaded();

@@ -360,7 +360,6 @@ I18N.register('hu', {
   "picker.found": "Találatok",
   "picker.foundFor": "Találatok: «{title}»",
   "picker.closeTitle": "Bezárás (Esc)",
-  "picker.voice": "<strong>Hanggal:</strong> mondd ki a számot angolul, pl. «third» (harmadik).",
   "picker.keyboard": "Billentyűzetes vezérlés",
   "picker.move": "mozgás",
   "picker.open": "megnyitás",

@@ -360,7 +360,6 @@ I18N.register('nl', {
   "picker.found": "Gevonden",
   "picker.foundFor": "Gevonden: «{title}»",
   "picker.closeTitle": "Sluiten (Esc)",
-  "picker.voice": "<strong>Met je stem:</strong> zeg het nummer in het Engels, bijv. «third» (derde).",
   "picker.keyboard": "Bediening met het toetsenbord",
   "picker.move": "verplaatsen",
   "picker.open": "openen",

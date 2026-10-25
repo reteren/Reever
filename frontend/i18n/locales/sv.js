@@ -360,7 +360,6 @@ I18N.register('sv', {
   "picker.found": "Hittat",
   "picker.foundFor": "Hittat: «{title}»",
   "picker.closeTitle": "Stäng (Esc)",
-  "picker.voice": "<strong>Med rösten:</strong> säg numret på engelska, t.ex. «third» (tredje).",
   "picker.keyboard": "Styrning med tangentbordet",
   "picker.move": "flytta",
   "picker.open": "öppna",

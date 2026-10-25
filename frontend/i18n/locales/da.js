@@ -360,7 +360,6 @@ I18N.register('da', {
   "picker.found": "Fundet",
   "picker.foundFor": "Fundet: «{title}»",
   "picker.closeTitle": "Luk (Esc)",
-  "picker.voice": "<strong>Med stemmen:</strong> sig nummeret på engelsk, f.eks. «third» (tredje).",
   "picker.keyboard": "Betjening med tastaturet",
   "picker.move": "flyt",
   "picker.open": "åbn",

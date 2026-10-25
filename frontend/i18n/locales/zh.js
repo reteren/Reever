@@ -359,7 +359,6 @@ I18N.register('zh', {
   "picker.found": "搜索结果",
   "picker.foundFor": "搜索结果：“{title}”",
   "picker.closeTitle": "关闭（Esc）",
-  "picker.voice": "<strong>语音操作：</strong>用英语说出序号，例如 «third»（第三个）。",
   "picker.keyboard": "键盘操作",
   "picker.move": "移动",
   "picker.open": "打开",

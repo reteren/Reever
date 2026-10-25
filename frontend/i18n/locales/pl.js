@@ -360,7 +360,6 @@ I18N.register('pl', {
   "picker.found": "Znaleziono",
   "picker.foundFor": "Znaleziono: «{title}»",
   "picker.closeTitle": "Zamknij (Esc)",
-  "picker.voice": "<strong>Głosem:</strong> powiedz numer po angielsku, np. «third» (trzeci).",
   "picker.keyboard": "Sterowanie klawiaturą",
   "picker.move": "przesuń",
   "picker.open": "otwórz",

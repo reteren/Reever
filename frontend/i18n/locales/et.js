@@ -360,7 +360,6 @@ I18N.register('et', {
   "picker.found": "Leitud",
   "picker.foundFor": "Leitud: «{title}»",
   "picker.closeTitle": "Sulge (Esc)",
-  "picker.voice": "<strong>Häälega:</strong> ütle number inglise keeles, nt «third» (kolmas).",
   "picker.keyboard": "Klaviatuuriga juhtimine",
   "picker.move": "liigu",
   "picker.open": "ava",
