@@ -171,6 +171,7 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 ; Installer pages, must be ordered as they appear
 ; 1. Welcome Page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ReeverDarkPage
 !insertmacro MUI_PAGE_WELCOME
 
 ; 2. License Page (if defined)
@@ -300,6 +301,8 @@ Function PageReinstall
     ${EndIf}
 
     ${NSD_SetFocus} $R2
+    Push $R4
+    Call ReeverDarkDialog
     nsDialogs::Show
   ${EndIf}
 FunctionEnd
@@ -390,6 +393,7 @@ FunctionEnd
 
 ; 5. Choose install directory page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ReeverDarkPage
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; Reever: языковые модели — галочки, скачивание после копирования файлов (models.nsh).
@@ -406,6 +410,7 @@ Var AppStartMenuFolder
 !insertmacro MUI_PAGE_STARTMENU Application $AppStartMenuFolder
 
 ; 7. Installation page
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ReeverDarkPage
 !insertmacro MUI_PAGE_INSTFILES
 
 ; 8. Finish page
@@ -421,6 +426,7 @@ Var AppStartMenuFolder
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION RunMainBinary
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ReeverDarkPage
 !insertmacro MUI_PAGE_FINISH
 
 Function RunMainBinary
@@ -461,6 +467,7 @@ Function un.ConfirmShow ; Add add a `Delete app data` check box
   Pop $DeleteAppDataCheckbox
   SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $1
   SendMessage $DeleteAppDataCheckbox ${WM_SETFONT} $1 1
+  Call un.ReeverDarkPage
 FunctionEnd
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.ConfirmLeave
 Function un.ConfirmLeave
@@ -470,6 +477,7 @@ FunctionEnd
 !insertmacro MUI_UNPAGE_CONFIRM
 
 ; 2. Uninstalling Page
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW un.ReeverDarkPage
 !insertmacro MUI_UNPAGE_INSTFILES
 
 ;Languages

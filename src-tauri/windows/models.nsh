@@ -51,13 +51,34 @@
 !define /ifndef REEVER_WAIT_TIMEOUT 0x102
 ; Папка этого файла: шаблон подключает строки уже из target, где __FILEDIR__ другой.
 !define REEVER_HOOKS_DIR "${__FILEDIR__}"
+!include "${__FILEDIR__}\theme.nsh"
 
 Var ReeverModelsRoot
-Var ReeverEuAccBox
-Var ReeverEuLightBox
-Var ReeverAsAccBox
-Var ReeverAsLightBox
+; Выбор в семье: 0 — ничего, 1 — точная, 2 — лёгкая; пусто — страница ещё не открывалась.
+Var ReeverEuPick
+Var ReeverAsPick
+Var ReeverEuAccInst
+Var ReeverEuLightInst
+Var ReeverAsAccInst
+Var ReeverAsLightInst
 Var ReeverLidBox
+Var ReeverFontHead
+Var ReeverFontTitle
+Var ReeverFontSmall
+; Карточки 1–4 (Parakeet точная/лёгкая, SenseVoice точная/лёгкая): элементы, которые
+; меняются при выборе, — полоска слева, метка ●/○ и название.
+Var ReeverCard1Stripe
+Var ReeverCard1Mark
+Var ReeverCard1Title
+Var ReeverCard2Stripe
+Var ReeverCard2Mark
+Var ReeverCard2Title
+Var ReeverCard3Stripe
+Var ReeverCard3Mark
+Var ReeverCard3Title
+Var ReeverCard4Stripe
+Var ReeverCard4Mark
+Var ReeverCard4Title
 Var ReeverWantEuAcc
 Var ReeverWantEuLight
 Var ReeverWantAsAcc
@@ -107,31 +128,118 @@ Function ReeverResolveRoot
   StrCpy $ReeverModelsRoot "$ReeverModelsRoot\com.troid.reever\models"
 FunctionEnd
 
-; Отмечает уже скачанный пакет: галочка стоит и не снимается.
-!macro REEVER_MARK_INSTALLED BOX DIR FILES TEXT
+; ── Карточки моделей ─────────────────────────────────────────────────────
+; Карточка — тёмная плашка 112×46u: метка выбора и название, подпись, три строки замеров
+; (ошибки, память, размер) с полосой. Полосы сравнивают два варианта семьи: длина —
+; доля от большего, яркая — лучшее (меньшее) значение. Числа — docs/languages.md
+; («Варианты моделей в установщике»): FLEURS, память в работе, размер архива.
+; Перекрывающиеся надписи рисуются в порядке создания: подложка — первой, полоса трека —
+; раньше заливки.
+
+!macro REEVER_LABEL X Y W H TEXT FONT FG BG FN
+  ${NSD_CreateLabel} ${X} ${Y} ${W} ${H} "${TEXT}"
+  Pop $0
+  SendMessage $0 ${WM_SETFONT} ${FONT} 0
+  SetCtlColors $0 ${FG} ${BG}
+  ${NSD_OnClick} $0 ${FN}
+!macroend
+
+; Строка замера: название, значение справа, полоса длиной W (из 44u) цвета COLOR.
+!macro REEVER_METRIC X Y NAME VALUE W COLOR FN
+  !define /redef /math _rmx ${X} + 5
+  !define /redef /math _rvx ${X} + 80
+  !define /redef /math _rbx ${X} + 34
+  !define /redef /math _rby ${Y} + 3
+  !insertmacro REEVER_LABEL ${_rmx}u ${Y}u 29u 8u "${NAME}" $ReeverFontSmall ${REEVER_C_DIM} ${REEVER_C_CARD} ${FN}
+  !insertmacro REEVER_LABEL ${_rvx}u ${Y}u 28u 8u "${VALUE}" $ReeverFontSmall ${REEVER_C_TEXT} ${REEVER_C_CARD} ${FN}
+  ${NSD_AddStyle} $0 ${SS_RIGHT}
+  !insertmacro REEVER_LABEL ${_rbx}u ${_rby}u 44u 3u "" $ReeverFontSmall ${REEVER_C_TRACK} ${REEVER_C_TRACK} ${FN}
+  !insertmacro REEVER_LABEL ${_rbx}u ${_rby}u ${W}u 3u "" $ReeverFontSmall ${COLOR} ${COLOR} ${FN}
+!macroend
+
+!macro REEVER_CARD N X Y FN TITLE TAG INST E EW EC M MW MC Z ZW ZC
+  !define /redef /math _cx5 ${X} + 5
+  !define /redef /math _cx13 ${X} + 13
+  !define /redef /math _cx60 ${X} + 58
+  !define /redef /math _cy2 ${Y} + 2
+  !define /redef /math _cy4 ${Y} + 4
+  !define /redef /math _cy12 ${Y} + 12
+  !define /redef /math _cy21 ${Y} + 21
+  !define /redef /math _cy29 ${Y} + 29
+  !define /redef /math _cy37 ${Y} + 37
+  !insertmacro REEVER_LABEL ${X}u ${Y}u 112u 46u "" $ReeverFontSmall ${REEVER_C_CARD} ${REEVER_C_CARD} ${FN}
+  !insertmacro REEVER_LABEL ${X}u ${Y}u 2u 46u "" $ReeverFontSmall ${REEVER_C_ACC} ${REEVER_C_ACC} ${FN}
+  StrCpy $ReeverCard${N}Stripe $0
+  !insertmacro REEVER_LABEL ${_cx5}u ${_cy2}u 8u 10u "○" $ReeverFontTitle ${REEVER_C_DIM} ${REEVER_C_CARD} ${FN}
+  StrCpy $ReeverCard${N}Mark $0
+  !insertmacro REEVER_LABEL ${_cx13}u ${_cy2}u 46u 10u "${TITLE}" $ReeverFontTitle ${REEVER_C_TEXT} ${REEVER_C_CARD} ${FN}
+  StrCpy $ReeverCard${N}Title $0
+  !insertmacro REEVER_LABEL ${_cx60}u ${_cy4}u 50u 8u "" $ReeverFontSmall ${REEVER_C_ACC} ${REEVER_C_CARD} ${FN}
+  ${NSD_AddStyle} $0 ${SS_RIGHT}
+  ${If} ${INST} = 1
+    ${NSD_SetText} $0 "$(reeverInstalled)"
+  ${EndIf}
+  !insertmacro REEVER_LABEL ${_cx5}u ${_cy12}u 104u 8u "${TAG}" $ReeverFontSmall ${REEVER_C_DIM} ${REEVER_C_CARD} ${FN}
+  !insertmacro REEVER_METRIC ${X} ${_cy21} "$(reeverMetErrors)" "${E}" ${EW} ${EC} ${FN}
+  !insertmacro REEVER_METRIC ${X} ${_cy29} "$(reeverMetMemory)" "${M}" ${MW} ${MC} ${FN}
+  !insertmacro REEVER_METRIC ${X} ${_cy37} "$(reeverMetSize)" "${Z}" ${ZW} ${ZC} ${FN}
+!macroend
+
+; Шапка семьи слева от карточек: название и коды языков (у азиатской семьи языки уже
+; названы в заголовке — кодов нет, заголовку нужно место на четыре строки).
+!macro REEVER_FAMILY Y TITLE CODES
+  !define /redef /math _fy ${Y} + 30
+  ${NSD_CreateLabel} 0 ${Y}u 64u 46u "${TITLE}"
+  Pop $0
+  SendMessage $0 ${WM_SETFONT} $ReeverFontHead 0
+  SetCtlColors $0 ${REEVER_C_TEXT} ${REEVER_C_BG}
+  !if "${CODES}" != ""
+    ${NSD_CreateLabel} 0 ${_fy}u 62u 16u "${CODES}"
+    Pop $0
+    SendMessage $0 ${WM_SETFONT} $ReeverFontSmall 0
+    SetCtlColors $0 ${REEVER_C_DIM} ${REEVER_C_BG}
+  !endif
+!macroend
+
+!macro REEVER_PAINT_CARD N ON
+  ${If} ${ON}
+    SetCtlColors $ReeverCard${N}Stripe ${REEVER_C_ACC} ${REEVER_C_ACC}
+    SetCtlColors $ReeverCard${N}Title ${REEVER_C_ACC} ${REEVER_C_CARD}
+    SetCtlColors $ReeverCard${N}Mark ${REEVER_C_ACC} ${REEVER_C_CARD}
+    ${NSD_SetText} $ReeverCard${N}Mark "●"
+  ${Else}
+    SetCtlColors $ReeverCard${N}Stripe ${REEVER_C_CARD} ${REEVER_C_CARD}
+    SetCtlColors $ReeverCard${N}Title ${REEVER_C_TEXT} ${REEVER_C_CARD}
+    SetCtlColors $ReeverCard${N}Mark ${REEVER_C_DIM} ${REEVER_C_CARD}
+    ${NSD_SetText} $ReeverCard${N}Mark "○"
+  ${EndIf}
+  System::Call 'user32::InvalidateRect(p $ReeverCard${N}Title, p 0, i 1)'
+  System::Call 'user32::InvalidateRect(p $ReeverCard${N}Stripe, p 0, i 1)'
+!macroend
+
+; Щелчок по карточке: выбрать её или, если уже выбрана, снять (скачанную снять нельзя —
+; она и так на месте).
+!macro REEVER_PICK NAME VAR VALUE INST
+  Function ${NAME}
+    Pop $0
+    ${If} ${VAR} = ${VALUE}
+      ${If} ${INST} <> 1
+        StrCpy ${VAR} 0
+      ${EndIf}
+    ${Else}
+      StrCpy ${VAR} ${VALUE}
+    ${EndIf}
+    Call ReeverCardsPaint
+    Call ReeverPackToggled
+  FunctionEnd
+!macroend
+
+; Флаг «пакет уже скачан» в переменную VAR (1/0).
+!macro REEVER_INSTALLED_FLAG VAR DIR FILES
   StrCpy $0 "${DIR}"
   StrCpy $1 "${FILES}"
   Call ReeverPackInstalled
-  ${If} $2 = 1
-    ${NSD_Check} ${BOX}
-    EnableWindow ${BOX} 0
-    SendMessage ${BOX} ${WM_SETTEXT} 0 "STR:${TEXT} $(reeverInstalled)"
-  ${EndIf}
-!macroend
-
-; Внутри семьи моделей — один вариант (см. REEVER_MODELS_PAGE).
-!macro REEVER_EXCLUSIVE NAME THIS OTHER
-  Function ${NAME}
-    Pop $0
-    ${NSD_GetState} ${THIS} $1
-    ${If} $1 == ${BST_CHECKED}
-      System::Call "user32::IsWindowEnabled(p ${OTHER}) i .r2"
-      ${If} $2 <> 0
-        ${NSD_Uncheck} ${OTHER}
-      ${EndIf}
-    ${EndIf}
-    Call ReeverPackToggled
-  FunctionEnd
+  StrCpy ${VAR} $2
 !macroend
 
 !macro REEVER_MODELS_PAGE
@@ -171,6 +279,7 @@ FunctionEnd
     ${If} $0 == error
       Abort
     ${EndIf}
+    Push $0
     ${NSD_CreateLabel} 0 0 100% 20u "$(reeverUiNote)"
     Pop $0
 
@@ -208,6 +317,7 @@ FunctionEnd
     ${If} $ReeverLiteChosen == "lite"
       ${NSD_Check} $ReeverLiteBox
     ${EndIf}
+    Call ReeverDarkDialog
     nsDialogs::Show
   FunctionEnd
 
@@ -244,95 +354,120 @@ FunctionEnd
     ${If} $0 == error
       Abort
     ${EndIf}
+    SetCtlColors $0 ${REEVER_C_TEXT} ${REEVER_C_BG}
+    ${If} $ReeverFontSmall == ""
+      CreateFont $ReeverFontHead "Segoe UI Semibold" 9 600
+      CreateFont $ReeverFontTitle "Segoe UI Semibold" 10 600
+      CreateFont $ReeverFontSmall "Segoe UI" 7 400
+    ${EndIf}
 
-    ; Два блока: шапка семьи и два варианта (выбрать можно один), ниже — определитель языка.
-    ${NSD_CreateLabel} 0 0u 100% 10u "$(reeverEuropean)"
-    Pop $0
-    ${NSD_CreateCheckbox} 8u 10u -8u 11u "$(reeverEuAccurate)"
-    Pop $ReeverEuAccBox
-    ${NSD_CreateCheckbox} 8u 21u -8u 11u "$(reeverEuLight)"
-    Pop $ReeverEuLightBox
-    ${NSD_CreateLabel} 20u 33u -20u 17u "$(reeverEuropeanInfo)"
-    Pop $0
+    !insertmacro REEVER_INSTALLED_FLAG $ReeverEuAccInst "${REEVER_EU_ACC_DIR}" "${REEVER_EU_ACC_FILES}"
+    !insertmacro REEVER_INSTALLED_FLAG $ReeverEuLightInst "${REEVER_EU_LIGHT_DIR}" "${REEVER_EU_LIGHT_FILES}"
+    !insertmacro REEVER_INSTALLED_FLAG $ReeverAsAccInst "${REEVER_AS_ACC_DIR}" "${REEVER_AS_ACC_FILES}"
+    !insertmacro REEVER_INSTALLED_FLAG $ReeverAsLightInst "${REEVER_AS_LIGHT_DIR}" "${REEVER_AS_LIGHT_FILES}"
+    ; Первый показ: выбран уже скачанный вариант (точный важнее), иначе ничего.
+    ${If} $ReeverEuPick == ""
+      StrCpy $ReeverEuPick 0
+      ${If} $ReeverEuLightInst = 1
+        StrCpy $ReeverEuPick 2
+      ${EndIf}
+      ${If} $ReeverEuAccInst = 1
+        StrCpy $ReeverEuPick 1
+      ${EndIf}
+      StrCpy $ReeverAsPick 0
+      ${If} $ReeverAsLightInst = 1
+        StrCpy $ReeverAsPick 2
+      ${EndIf}
+      ${If} $ReeverAsAccInst = 1
+        StrCpy $ReeverAsPick 1
+      ${EndIf}
+    ${EndIf}
 
-    ${NSD_CreateLabel} 0 52u 100% 10u "$(reeverAsian)"
-    Pop $0
-    ${NSD_CreateCheckbox} 8u 62u -8u 11u "$(reeverAsAccurate)"
-    Pop $ReeverAsAccBox
-    ${NSD_CreateCheckbox} 8u 73u -8u 11u "$(reeverAsLight)"
-    Pop $ReeverAsLightBox
+    ; Две семьи по строке: шапка слева, две карточки справа; ниже — пояснение к замерам
+    ; и определитель языка.
+    !insertmacro REEVER_FAMILY 0 "$(reeverEuropean)" "RU UK DE FR ES IT PL PT NL CS SV EL +12"
+    !insertmacro REEVER_CARD 1 68 0 ReeverPickEuAcc "$(reeverAccurate)" "$(reeverTagAccurate)" $ReeverEuAccInst \
+      "5$(reeverDec)9%" 29 ${REEVER_C_ACC} "1$(reeverDec)2 $(reeverGB)" 44 ${REEVER_C_WEAK} "573 $(reeverMB)" 44 ${REEVER_C_WEAK}
+    !insertmacro REEVER_CARD 2 186 0 ReeverPickEuLight "$(reeverLight)" "$(reeverTagLight)" $ReeverEuLightInst \
+      "9$(reeverDec)0%" 44 ${REEVER_C_WEAK} "1$(reeverDec)0 $(reeverGB)" 37 ${REEVER_C_ACC} "350 $(reeverMB)" 27 ${REEVER_C_ACC}
 
-    ${NSD_CreateCheckbox} 0 88u 100% 11u "$(reeverLid)"
+    !insertmacro REEVER_FAMILY 51 "$(reeverAsian)" ""
+    !insertmacro REEVER_CARD 3 68 51 ReeverPickAsAcc "$(reeverAccurate)" "$(reeverTagAccurate)" $ReeverAsAccInst \
+      "9$(reeverDec)4%" 35 ${REEVER_C_ACC} "340 $(reeverMB)" 44 ${REEVER_C_WEAK} "139 $(reeverMB)" 44 ${REEVER_C_WEAK}
+    !insertmacro REEVER_CARD 4 186 51 ReeverPickAsLight "$(reeverLight)" "$(reeverTagLight)" $ReeverAsLightInst \
+      "11$(reeverDec)9%" 44 ${REEVER_C_WEAK} "320 $(reeverMB)" 41 ${REEVER_C_ACC} "113 $(reeverMB)" 36 ${REEVER_C_ACC}
+
+    ${NSD_CreateLabel} 0 99u 100% 15u "$(reeverBenchNote)"
+    Pop $0
+    SendMessage $0 ${WM_SETFONT} $ReeverFontSmall 0
+    SetCtlColors $0 ${REEVER_C_DIM} ${REEVER_C_BG}
+
+    ${NSD_CreateCheckbox} 0 115u 100% 10u "$(reeverLid)"
     Pop $ReeverLidBox
-    ${NSD_CreateLabel} 12u 99u -12u 14u "$(reeverLidInfo)"
+    Push $ReeverLidBox
+    Call ReeverDarkToggle
+    ${NSD_CreateLabel} 12u 125u -12u 15u "$(reeverLidInfo)"
     Pop $0
+    SendMessage $0 ${WM_SETFONT} $ReeverFontSmall 0
+    SetCtlColors $0 ${REEVER_C_DIM} ${REEVER_C_BG}
 
-    ${NSD_CreateLabel} 0 114u 100% 26u "$(reeverModelsNote)"
-    Pop $0
-
-    ${If} $ReeverWantEuAcc = 1
-      ${NSD_Check} $ReeverEuAccBox
-    ${EndIf}
-    ${If} $ReeverWantEuLight = 1
-      ${NSD_Check} $ReeverEuLightBox
-    ${EndIf}
-    ${If} $ReeverWantAsAcc = 1
-      ${NSD_Check} $ReeverAsAccBox
-    ${EndIf}
-    ${If} $ReeverWantAsLight = 1
-      ${NSD_Check} $ReeverAsLightBox
-    ${EndIf}
     ${If} $ReeverWantLid = 1
       ${NSD_Check} $ReeverLidBox
     ${EndIf}
-    !insertmacro REEVER_MARK_INSTALLED $ReeverEuAccBox "${REEVER_EU_ACC_DIR}" "${REEVER_EU_ACC_FILES}" "$(reeverEuAccurate)"
-    !insertmacro REEVER_MARK_INSTALLED $ReeverEuLightBox "${REEVER_EU_LIGHT_DIR}" "${REEVER_EU_LIGHT_FILES}" "$(reeverEuLight)"
-    !insertmacro REEVER_MARK_INSTALLED $ReeverAsAccBox "${REEVER_AS_ACC_DIR}" "${REEVER_AS_ACC_FILES}" "$(reeverAsAccurate)"
-    !insertmacro REEVER_MARK_INSTALLED $ReeverAsLightBox "${REEVER_AS_LIGHT_DIR}" "${REEVER_AS_LIGHT_FILES}" "$(reeverAsLight)"
-    !insertmacro REEVER_MARK_INSTALLED $ReeverLidBox "${REEVER_LID_DIR}" "${REEVER_LID_FILES}" "$(reeverLid)"
+    StrCpy $0 "${REEVER_LID_DIR}"
+    StrCpy $1 "${REEVER_LID_FILES}"
+    Call ReeverPackInstalled
+    ${If} $2 = 1
+      ${NSD_Check} $ReeverLidBox
+      EnableWindow $ReeverLidBox 0
+      SendMessage $ReeverLidBox ${WM_SETTEXT} 0 "STR:$(reeverLid) $(reeverInstalled)"
+    ${EndIf}
 
-    ${NSD_OnClick} $ReeverEuAccBox ReeverEuAccToggled
-    ${NSD_OnClick} $ReeverEuLightBox ReeverEuLightToggled
-    ${NSD_OnClick} $ReeverAsAccBox ReeverAsAccToggled
-    ${NSD_OnClick} $ReeverAsLightBox ReeverAsLightToggled
+    Call ReeverCardsPaint
     nsDialogs::Show
   FunctionEnd
 
-  ; Внутри семьи — один вариант: отмеченный снимает соседний (если тот не скачан и не
-  ; заблокирован). Затем — общая проверка определителя языка.
-  !insertmacro REEVER_EXCLUSIVE ReeverEuAccToggled $ReeverEuAccBox $ReeverEuLightBox
-  !insertmacro REEVER_EXCLUSIVE ReeverEuLightToggled $ReeverEuLightBox $ReeverEuAccBox
-  !insertmacro REEVER_EXCLUSIVE ReeverAsAccToggled $ReeverAsAccBox $ReeverAsLightBox
-  !insertmacro REEVER_EXCLUSIVE ReeverAsLightToggled $ReeverAsLightBox $ReeverAsAccBox
+  Function ReeverCardsPaint
+    !insertmacro REEVER_PAINT_CARD 1 "$ReeverEuPick = 1"
+    !insertmacro REEVER_PAINT_CARD 2 "$ReeverEuPick = 2"
+    !insertmacro REEVER_PAINT_CARD 3 "$ReeverAsPick = 1"
+    !insertmacro REEVER_PAINT_CARD 4 "$ReeverAsPick = 2"
+  FunctionEnd
 
-  ; Отмечены обе семьи — без определителя языка вторая работать не будет: ставим
+  !insertmacro REEVER_PICK ReeverPickEuAcc $ReeverEuPick 1 $ReeverEuAccInst
+  !insertmacro REEVER_PICK ReeverPickEuLight $ReeverEuPick 2 $ReeverEuLightInst
+  !insertmacro REEVER_PICK ReeverPickAsAcc $ReeverAsPick 1 $ReeverAsAccInst
+  !insertmacro REEVER_PICK ReeverPickAsLight $ReeverAsPick 2 $ReeverAsLightInst
+
+  ; Выбраны обе семьи — без определителя языка вторая работать не будет: ставим
   ; галочку за пользователя, снять её можно.
   Function ReeverPackToggled
-    ${NSD_GetState} $ReeverEuAccBox $1
-    ${NSD_GetState} $ReeverEuLightBox $2
-    ${NSD_GetState} $ReeverAsAccBox $3
-    ${NSD_GetState} $ReeverAsLightBox $4
-    ${If} $1 == ${BST_CHECKED}
-    ${OrIf} $2 == ${BST_CHECKED}
-      ${If} $3 == ${BST_CHECKED}
-      ${OrIf} $4 == ${BST_CHECKED}
-        ${NSD_Check} $ReeverLidBox
-      ${EndIf}
+    ${If} $ReeverEuPick > 0
+    ${AndIf} $ReeverAsPick > 0
+      ${NSD_Check} $ReeverLidBox
     ${EndIf}
   FunctionEnd
 
   ; Без языкового пакета дальше нельзя: Reever ставится ради распознавания речи.
-  ; Уже скачанный пакет отмечен и тоже считается.
+  ; Уже скачанный пакет выбран заранее и тоже считается.
   Function ReeverModelsLeave
-    ${NSD_GetState} $ReeverEuAccBox $ReeverWantEuAcc
-    ${NSD_GetState} $ReeverEuLightBox $ReeverWantEuLight
-    ${NSD_GetState} $ReeverAsAccBox $ReeverWantAsAcc
-    ${NSD_GetState} $ReeverAsLightBox $ReeverWantAsLight
+    StrCpy $ReeverWantEuAcc 0
+    StrCpy $ReeverWantEuLight 0
+    StrCpy $ReeverWantAsAcc 0
+    StrCpy $ReeverWantAsLight 0
+    ${If} $ReeverEuPick = 1
+      StrCpy $ReeverWantEuAcc 1
+    ${ElseIf} $ReeverEuPick = 2
+      StrCpy $ReeverWantEuLight 1
+    ${EndIf}
+    ${If} $ReeverAsPick = 1
+      StrCpy $ReeverWantAsAcc 1
+    ${ElseIf} $ReeverAsPick = 2
+      StrCpy $ReeverWantAsLight 1
+    ${EndIf}
     ${NSD_GetState} $ReeverLidBox $ReeverWantLid
-    ${If} $ReeverWantEuAcc == ${BST_CHECKED}
-    ${OrIf} $ReeverWantEuLight == ${BST_CHECKED}
-    ${OrIf} $ReeverWantAsAcc == ${BST_CHECKED}
-    ${OrIf} $ReeverWantAsLight == ${BST_CHECKED}
+    ${If} $ReeverEuPick > 0
+    ${OrIf} $ReeverAsPick > 0
       Return
     ${EndIf}
     ; Прежний int8-пакет, уже скачанный, тоже годится.
