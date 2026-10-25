@@ -1,7 +1,7 @@
 """Картинки установщика: боковая панель приветствия/финиша и шапка страниц.
 
 Тот же язык, что у лёгкого интерфейса (frontend/lite.css): воронёная сталь, иконка
-программы (src-tauri/icons/icon.png) с люминофорным ореолом и шкалой-насечками, логотип Handjet.
+программы (src-tauri/icons/icon.png) с люминофорным ореолом, логотип Handjet.
 Пишет 24-битные BMP (NSIS другого не понимает) вдвое крупнее места на странице —
 MUI ужимает их по размеру элемента, и на 200% масштабе картинка остаётся чёткой.
 
@@ -56,9 +56,9 @@ def glow_text(img, xy, text, f, anchor="mm", blur=6):
     d2.text(xy, text, font=f, fill=HOT + (255,), anchor=anchor)
 
 
-def icon(size, ticks=True):
-    """Иконка программы с мягким ореолом; вокруг — шкала, как у сферы в лёгком интерфейсе."""
-    pad = round(size * 0.14) if ticks else round(size * 0.08)
+def icon(size):
+    """Иконка программы с мягким люминофорным ореолом."""
+    pad = round(size * 0.08)
     s = size + 2 * pad
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     c = s / 2
@@ -66,13 +66,6 @@ def icon(size, ticks=True):
     r = size * 0.5
     ImageDraw.Draw(halo).ellipse([c - r, c - r, c + r, c + r], fill=ACC + (90,))
     img.alpha_composite(halo.filter(ImageFilter.GaussianBlur(size * 0.06)))
-    if ticks:
-        d = ImageDraw.Draw(img)
-        r_dial = s * 0.48
-        for i in range(36):
-            a = math.radians(i * 10 - 90)
-            r0, r1 = r_dial - s * 0.03, r_dial
-            d.line([(c + r0 * math.cos(a), c + r0 * math.sin(a)), (c + r1 * math.cos(a), c + r1 * math.sin(a))], fill=ACC + (110,), width=max(1, round(s * 0.008)))
     ico = Image.open(ICON).convert("RGBA").resize((size, size), Image.LANCZOS)
     img.alpha_composite(ico, (pad, pad))
     return img
@@ -98,7 +91,7 @@ def sidebar():
 def header():
     w, h = 300, 114
     img = Image.new("RGBA", (w, h), BG + (255,))
-    o = icon(88, ticks=False)
+    o = icon(88)
     img.alpha_composite(o, (w - o.width - 2, (h - o.height) // 2))
     glow_text(img, (w - 116, h // 2 + 2), "REEVER", font(50, 600), anchor="rm", blur=5)
     return img.convert("RGB")
