@@ -126,4 +126,4 @@ Tauri 2 · Rust · sherpa-onnx: Parakeet TDT (110m английский, v3 ев
 
 ## Кредиты
 
-Reever — **AstroDryxx Studio**.
+Reever — **46psy4**.

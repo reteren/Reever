@@ -49,6 +49,9 @@
 !define REEVER_LID_MB 198
 
 !define /ifndef REEVER_WAIT_TIMEOUT 0x102
+; Ключ реестра прежнего издателя (до 0.5.6): installer.nsi читает из него папку установки,
+; после установки он удаляется — папка уже записана под новым издателем.
+!define REEVER_LEGACY_PRODUCTKEY "Software\AstroDryxx Studio\Reever"
 ; Папка этого файла: шаблон подключает строки уже из target, где __FILEDIR__ другой.
 !define REEVER_HOOKS_DIR "${__FILEDIR__}"
 !include "${__FILEDIR__}\theme.nsh"
@@ -87,8 +90,9 @@ Var ReeverWantLid
 Var ReeverFailed
 Var ReeverUiBoxes
 Var ReeverUiChosen
-; Галочка «лёгкий интерфейс» на странице языков интерфейса: `lite` / `full` уходит программе
-; файлом ui-style-pending.txt, текущий вид программа пишет в ui-style.txt (config.rs).
+; Галочка «лёгкий интерфейс» на странице языков интерфейса, по умолчанию снята. Отмеченная
+; уходит программе файлом ui-style-pending.txt (`lite`, config.rs); снятая ничего не меняет —
+; при обновлении остаётся тот вид, что выбран в Настройках.
 Var ReeverLiteBox
 Var ReeverLiteChosen
 
@@ -132,7 +136,8 @@ FunctionEnd
 ; Карточка — тёмная плашка 112×46u: метка выбора и название, подпись, три строки замеров
 ; (ошибки, память, размер) с полосой. Полосы сравнивают два варианта семьи: длина —
 ; доля от большего, яркая — лучшее (меньшее) значение. Числа — docs/languages.md
-; («Варианты моделей в установщике»): FLEURS, память в работе, размер архива.
+; («Варианты моделей в установщике»): FLEURS, память в работе, размер распакованной
+; модели на диске в МиБ — то, что покажет Проводник (архив при скачивании меньше).
 ; Перекрывающиеся надписи рисуются в порядке создания: подложка — первой, полоса трека —
 ; раньше заливки.
 
@@ -263,16 +268,6 @@ FunctionEnd
       ${EndIf}
       StrCpy $ReeverUiChosen ",$ReeverUiChosen,"
     ${EndIf}
-    ${If} $ReeverLiteChosen == ""
-      StrCpy $ReeverLiteChosen "full"
-      ReadEnvStr $0 LOCALAPPDATA
-      ClearErrors
-      FileOpen $1 "$0\com.troid.reever\ui-style.txt" r
-      ${IfNot} ${Errors}
-        FileRead $1 $ReeverLiteChosen
-        FileClose $1
-      ${EndIf}
-    ${EndIf}
     !insertmacro MUI_HEADER_TEXT "$(reeverUiTitle)" "$(reeverUiSubtitle)"
     nsDialogs::Create 1018
     Pop $0
@@ -293,7 +288,7 @@ FunctionEnd
       IntOp $7 $2 % 10
       IntOp $6 $6 * 33
       IntOp $7 $7 * 10
-      IntOp $7 $7 + 22
+      IntOp $7 $7 + 20
       ${NSD_CreateCheckbox} $6% $7u 32% 11u "$5"
       Pop $8
       ${If} $ReeverUiBoxes == ""
@@ -312,12 +307,19 @@ FunctionEnd
       ${EndIf}
       IntOp $2 $2 + 1
     ${LoopUntil} $2 >= 30
-    ${NSD_CreateCheckbox} 0 127u 100% 11u "$(reeverLiteUi)"
+    ${NSD_CreateCheckbox} 0 121u 100% 10u "$(reeverLiteUi)"
     Pop $ReeverLiteBox
     ${If} $ReeverLiteChosen == "lite"
       ${NSD_Check} $ReeverLiteBox
     ${EndIf}
+    ${NSD_CreateLabel} 12u 131u -12u 9u "$(reeverLiteUiHint)"
+    Pop $1
     Call ReeverDarkDialog
+    ${If} $ReeverFontSmall == ""
+      CreateFont $ReeverFontSmall "Segoe UI" 7 400
+    ${EndIf}
+    SendMessage $1 ${WM_SETFONT} $ReeverFontSmall 0
+    SetCtlColors $1 ${REEVER_C_DIM} ${REEVER_C_BG}
     nsDialogs::Show
   FunctionEnd
 
@@ -387,15 +389,15 @@ FunctionEnd
     ; и определитель языка.
     !insertmacro REEVER_FAMILY 0 "$(reeverEuropean)" "RU UK DE FR ES IT PL PT NL CS SV EL +12"
     !insertmacro REEVER_CARD 1 68 0 ReeverPickEuAcc "$(reeverAccurate)" "$(reeverTagAccurate)" $ReeverEuAccInst \
-      "5$(reeverDec)9%" 29 ${REEVER_C_ACC} "1$(reeverDec)2 $(reeverGB)" 44 ${REEVER_C_WEAK} "573 $(reeverMB)" 44 ${REEVER_C_WEAK}
+      "5$(reeverDec)9%" 29 ${REEVER_C_ACC} "1$(reeverDec)2 $(reeverGB)" 44 ${REEVER_C_WEAK} "618 $(reeverMB)" 44 ${REEVER_C_WEAK}
     !insertmacro REEVER_CARD 2 186 0 ReeverPickEuLight "$(reeverLight)" "$(reeverTagLight)" $ReeverEuLightInst \
-      "9$(reeverDec)0%" 44 ${REEVER_C_WEAK} "1$(reeverDec)0 $(reeverGB)" 37 ${REEVER_C_ACC} "350 $(reeverMB)" 27 ${REEVER_C_ACC}
+      "9$(reeverDec)0%" 44 ${REEVER_C_WEAK} "1$(reeverDec)0 $(reeverGB)" 37 ${REEVER_C_ACC} "401 $(reeverMB)" 29 ${REEVER_C_ACC}
 
     !insertmacro REEVER_FAMILY 51 "$(reeverAsian)" ""
     !insertmacro REEVER_CARD 3 68 51 ReeverPickAsAcc "$(reeverAccurate)" "$(reeverTagAccurate)" $ReeverAsAccInst \
-      "9$(reeverDec)4%" 35 ${REEVER_C_ACC} "340 $(reeverMB)" 44 ${REEVER_C_WEAK} "139 $(reeverMB)" 44 ${REEVER_C_WEAK}
+      "9$(reeverDec)4%" 35 ${REEVER_C_ACC} "340 $(reeverMB)" 44 ${REEVER_C_WEAK} "144 $(reeverMB)" 44 ${REEVER_C_WEAK}
     !insertmacro REEVER_CARD 4 186 51 ReeverPickAsLight "$(reeverLight)" "$(reeverTagLight)" $ReeverAsLightInst \
-      "11$(reeverDec)9%" 44 ${REEVER_C_WEAK} "320 $(reeverMB)" 41 ${REEVER_C_ACC} "113 $(reeverMB)" 36 ${REEVER_C_ACC}
+      "11$(reeverDec)9%" 44 ${REEVER_C_WEAK} "320 $(reeverMB)" 41 ${REEVER_C_ACC} "124 $(reeverMB)" 38 ${REEVER_C_ACC}
 
     ${NSD_CreateLabel} 0 99u 100% 15u "$(reeverBenchNote)"
     Pop $0
@@ -637,6 +639,11 @@ FunctionEnd
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
+  DeleteRegKey SHCTX "${REEVER_LEGACY_PRODUCTKEY}"
+  DeleteRegKey /ifempty SHCTX "Software\AstroDryxx Studio"
+  DeleteRegValue HKCU "${REEVER_LEGACY_PRODUCTKEY}" "Installer Language"
+  DeleteRegKey /ifempty HKCU "${REEVER_LEGACY_PRODUCTKEY}"
+  DeleteRegKey /ifempty HKCU "Software\AstroDryxx Studio"
   Call ReeverResolveRoot
   ; Языки интерфейса — программе при следующем запуске (страница пропущена — ничего).
   ${If} $ReeverUiChosen != ""
@@ -645,9 +652,11 @@ FunctionEnd
     FileOpen $1 "$0\com.troid.reever\ui-languages-pending.txt" w
     FileWrite $1 $ReeverUiChosen
     FileClose $1
-    FileOpen $1 "$0\com.troid.reever\ui-style-pending.txt" w
-    FileWrite $1 $ReeverLiteChosen
-    FileClose $1
+    ${If} $ReeverLiteChosen == "lite"
+      FileOpen $1 "$0\com.troid.reever\ui-style-pending.txt" w
+      FileWrite $1 $ReeverLiteChosen
+      FileClose $1
+    ${EndIf}
   ${EndIf}
   StrCpy $ReeverFailed ""
   ${If} $ReeverWantEuAcc = ${BST_CHECKED}

@@ -1,7 +1,7 @@
 """Картинки установщика: боковая панель приветствия/финиша и шапка страниц.
 
-Тот же язык, что у лёгкого интерфейса (frontend/lite.css): воронёная сталь, сфера с
-люминофорной жидкостью в стальном ободе, шкала-насечки, логотип Handjet.
+Тот же язык, что у лёгкого интерфейса (frontend/lite.css): воронёная сталь, иконка
+программы (src-tauri/icons/icon.png) с люминофорным ореолом и шкалой-насечками, логотип Handjet.
 Пишет 24-битные BMP (NSIS другого не понимает) вдвое крупнее места на странице —
 MUI ужимает их по размеру элемента, и на 200% масштабе картинка остаётся чёткой.
 
@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "src-tauri" / "windows" / "art"
 FONT = ROOT / "frontend" / "fonts" / "Handjet.ttf"
+ICON = ROOT / "src-tauri" / "icons" / "icon.png"
 
 # Цвета — как в models.nsh (REEVER_C_*): фон страниц совпадает с фоном картинок.
 BG = (12, 19, 18)
@@ -55,66 +56,25 @@ def glow_text(img, xy, text, f, anchor="mm", blur=6):
     d2.text(xy, text, font=f, fill=HOT + (255,), anchor=anchor)
 
 
-def orb(size, lit=True, ticks=True):
-    """Сфера лёгкого интерфейса: стальной обод, жидкость на две трети, шкала вокруг."""
-    s = size
+def icon(size, ticks=True):
+    """Иконка программы с мягким ореолом; вокруг — шкала, как у сферы в лёгком интерфейсе."""
+    pad = round(size * 0.14) if ticks else round(size * 0.08)
+    s = size + 2 * pad
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     c = s / 2
-    r_dial = s * 0.48
-    r_ring = s * 0.38
-    r_glass = s * 0.33
-    d = ImageDraw.Draw(img)
-    if lit:
-        halo = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-        ImageDraw.Draw(halo).ellipse([c - r_ring - s * .04, c - r_ring - s * .04, c + r_ring + s * .04, c + r_ring + s * .04], fill=ACC + (120,))
-        img.alpha_composite(halo.filter(ImageFilter.GaussianBlur(s * 0.06)))
+    halo = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    r = size * 0.5
+    ImageDraw.Draw(halo).ellipse([c - r, c - r, c + r, c + r], fill=ACC + (90,))
+    img.alpha_composite(halo.filter(ImageFilter.GaussianBlur(size * 0.06)))
     if ticks:
+        d = ImageDraw.Draw(img)
+        r_dial = s * 0.48
         for i in range(36):
             a = math.radians(i * 10 - 90)
-            r0, r1 = r_dial - s * 0.035, r_dial
+            r0, r1 = r_dial - s * 0.03, r_dial
             d.line([(c + r0 * math.cos(a), c + r0 * math.sin(a)), (c + r1 * math.cos(a), c + r1 * math.sin(a))], fill=ACC + (110,), width=max(1, round(s * 0.008)))
-    # стальной обод: коническая заливка по углу — блики сверху-слева и снизу-справа
-    ring = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    rp = ring.load()
-    stops = [(0, (154, 168, 164)), (.18, (46, 56, 54)), (.34, (201, 214, 210)), (.52, (58, 69, 66)), (.70, (127, 141, 137)), (.86, (38, 47, 45)), (1, (154, 168, 164))]
-    for y in range(s):
-        for x in range(s):
-            dx, dy = x + .5 - c, y + .5 - c
-            rr = math.hypot(dx, dy)
-            if r_glass <= rr <= r_ring:
-                t = ((math.atan2(dy, dx) + math.pi) / (2 * math.pi) + 210 / 360) % 1
-                for (t0, c0), (t1, c1) in zip(stops, stops[1:]):
-                    if t0 <= t <= t1:
-                        k = (t - t0) / (t1 - t0)
-                        col = tuple(round(c0[i] + (c1[i] - c0[i]) * k) for i in range(3))
-                        break
-                edge = min(rr - r_glass, r_ring - rr)
-                rp[x, y] = col + (round(255 * min(1, edge + .5)),)
-    img.alpha_composite(ring)
-    # стекло и жидкость
-    glass = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    gp = glass.load()
-    level = c - r_glass + 2 * r_glass * 0.34
-    for y in range(s):
-        for x in range(s):
-            rr = math.hypot(x + .5 - c, y + .5 - c)
-            if rr <= r_glass:
-                a = round(255 * min(1, r_glass - rr + .5))
-                if lit and y >= level:
-                    t = (y - level) / (c + r_glass - level)
-                    if y - level < s * 0.012:
-                        col = HOT
-                    else:
-                        col = tuple(round(ACC[i] * (1 - t) * .9 + (4, 70, 50)[i] * t) for i in range(3))
-                else:
-                    t = rr / r_glass
-                    col = tuple(round((6, 25, 15)[i] * (1 - t) + (2, 10, 8)[i] * t) for i in range(3))
-                gp[x, y] = col + (a,)
-    img.alpha_composite(glass)
-    # блик стекла
-    hl = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    ImageDraw.Draw(hl).ellipse([c - r_glass * .62, c - r_glass * .78, c - r_glass * .05, c - r_glass * .38], fill=(220, 255, 240, 40))
-    img.alpha_composite(hl.filter(ImageFilter.GaussianBlur(s * 0.02)))
+    ico = Image.open(ICON).convert("RGBA").resize((size, size), Image.LANCZOS)
+    img.alpha_composite(ico, (pad, pad))
     return img
 
 
@@ -125,8 +85,8 @@ def sidebar():
     d = ImageDraw.Draw(img)
     d.line([(w - 2, 0), (w - 2, h)], fill=(70, 84, 80, 255), width=1)
     d.line([(w - 1, 0), (w - 1, h)], fill=(5, 8, 8, 255), width=1)
-    o = orb(236)
-    img.alpha_composite(o, ((w - 236) // 2, 150))
+    o = icon(196)
+    img.alpha_composite(o, ((w - o.width) // 2, 268 - o.height // 2))
     glow_text(img, (w // 2, 440), "REEVER", font(74, 600), blur=7)
     d = ImageDraw.Draw(img)
     for i in range(23):
@@ -138,7 +98,8 @@ def sidebar():
 def header():
     w, h = 300, 114
     img = Image.new("RGBA", (w, h), BG + (255,))
-    img.alpha_composite(orb(92, ticks=False), (w - 104, 11))
+    o = icon(88, ticks=False)
+    img.alpha_composite(o, (w - o.width - 2, (h - o.height) // 2))
     glow_text(img, (w - 116, h // 2 + 2), "REEVER", font(50, 600), anchor="rm", blur=5)
     return img.convert("RGB")
 

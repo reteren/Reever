@@ -360,6 +360,7 @@ Function PageLeaveReinstall
       ExecWait '$R1' $0
     ${Else}
       ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
+      ${IfThen} $4 == "" ${|} ReadRegStr $4 SHCTX "${REEVER_LEGACY_PRODUCTKEY}" "" ${|}
       ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
       ${IfThen} $UpdateMode = 1 ${|} StrCpy $R1 "$R1 /UPDATE" ${|} ; append /UPDATE
       ${IfThen} $PassiveMode = 1 ${|} StrCpy $R1 "$R1 /P" ${|} ; append /P
@@ -913,6 +914,8 @@ SectionEnd
 
 Function RestorePreviousInstallLocation
   ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
+  ; Reever: до 0.5.6 издатель назывался иначе — папка записана под старым ключом.
+  ${IfThen} $4 == "" ${|} ReadRegStr $4 SHCTX "${REEVER_LEGACY_PRODUCTKEY}" "" ${|}
   StrCmp $4 "" +2 0
     StrCpy $INSTDIR $4
 FunctionEnd
