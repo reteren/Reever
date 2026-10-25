@@ -41,10 +41,10 @@ def load(path: Path) -> np.ndarray:
     return audio
 
 
-def words(audio: np.ndarray) -> list[tuple[int, int]]:
-    """Куски речи, кадры по 10 мс."""
+def words(audio: np.ndarray, floor: float = -55) -> list[tuple[int, int]]:
+    """Куски речи, кадры по 10 мс; `floor` — громкость тишины, дБ."""
     frames = audio[: len(audio) // 160 * 160].reshape(-1, 160)
-    loud = 10 * np.log10((frames**2).mean(axis=1) + 1e-12) > -55
+    loud = 10 * np.log10((frames**2).mean(axis=1) + 1e-12) > floor
     out, i = [], 0
     while i < len(loud):
         if loud[i]:
@@ -85,6 +85,7 @@ def main() -> None:
     p.add_argument("--source", type=Path, default=SOURCE, help="папка с записями <язык>-river.wav / <язык>-cmd.wav")
     p.add_argument("--out", type=Path, default=OUT, help="куда положить клипы, clips.jsonl и test.json")
     p.add_argument("--speaker", default="user", help="имя диктора: у каждого свой голос в обучении")
+    p.add_argument("--floor", type=float, default=-55, help="порог тишины, дБ: выше для записи с шумом фона")
     args = p.parse_args()
     out = args.out
     (out / "clips").mkdir(parents=True, exist_ok=True)
@@ -94,7 +95,7 @@ def main() -> None:
         lang, kind = path.stem.split("-", 1)
         audio = load(path)
         border = int(len(audio) / 160 * args.split)
-        for n, (a, b) in enumerate(words(audio)):
+        for n, (a, b) in enumerate(words(audio, args.floor)):
             if a >= border:
                 test.append({"file": path.name, "start_ms": a * 10, "end_ms": b * 10})
                 continue

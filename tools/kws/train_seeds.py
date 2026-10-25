@@ -28,6 +28,7 @@ VOICES = {
     "user": [],
     "friend-ru-uk": ["--data", "data/friend-ru-uk", "--source", "../../testdata/wake/friend/ru-uk"],
     "friend-fr": ["--data", "data/friend-fr", "--source", "../../testdata/wake/friend/fr"],
+    "friend-ru2": ["--data", "data/friend-ru2", "--source", "../../testdata/wake/friend/ru2"],
 }
 
 
