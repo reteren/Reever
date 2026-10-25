@@ -11,6 +11,14 @@ html.lite {
   --g3: 0 0 1px var(--acc-hot), 0 0 9px rgba(39, 230, 170, .5);
   --edge: rgba(39, 230, 170, .26);
   --panel: #030D0A;
+  /* Металл корпуса: воронёная сталь с зелёным отливом, шлифовка — тонкие штрихи.
+     Свет сверху: верхняя кромка блестит, нижняя уходит в тень. */
+  --brush: repeating-linear-gradient(0deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 2px, rgba(0, 0, 0, .05) 2px 3px);
+  --metal: var(--brush), linear-gradient(180deg, #3B4643 0%, #262F2D 9%, #1B2221 46%, #141A19 100%);
+  --metal-key: linear-gradient(180deg, #56625F 0%, #343E3C 48%, #262E2C 52%, #1E2524 100%);
+  --bevel: inset 0 1px 0 rgba(235, 255, 248, .26), inset 0 -1px 0 rgba(0, 0, 0, .55), inset 1px 0 0 rgba(235, 255, 248, .06), inset -1px 0 0 rgba(0, 0, 0, .3);
+  /* утопленное гнездо: тёмный шов по краю и блик на нижней губе выреза */
+  --recess: 0 0 0 1px rgba(0, 0, 0, .75), 0 1px 0 1px rgba(235, 255, 248, .1), inset 0 2px 6px rgba(0, 0, 0, .8);
 }
 
 /* ── Панель ───────────────────────────────────────────────────────────── */
@@ -25,16 +33,14 @@ html.lite #skin {
     "status screen rail"
     "eq     eq     eq";
   border-radius: 18px;
-  background:
-    radial-gradient(90% 70% at 18% 0%, rgba(39, 230, 170, .07), transparent 60%),
-    linear-gradient(180deg, #06140F, var(--panel) 40%, #020806);
-  box-shadow: inset 0 0 0 1px var(--edge), inset 0 1px 0 rgba(200, 255, 236, .08);
+  background: var(--metal);
+  box-shadow: inset 0 0 0 1px #070A0A, var(--bevel), inset 0 0 0 3px rgba(235, 255, 248, .03);
 }
 /* карточка под линзой — псевдоэлемент сетки, отдельного узла в разметке нет */
 html.lite #skin::before {
   content: ''; grid-area: orb; border-radius: 14px;
   background: radial-gradient(70% 70% at 50% 45%, var(--glass-2), var(--glass) 75%);
-  box-shadow: inset 0 0 0 1px var(--acc-5);
+  box-shadow: var(--recess);
 }
 /* шкала вокруг линзы — насечки, как на циферблате прибора */
 html.lite #skin::after {
@@ -46,7 +52,7 @@ html.lite #skin::after {
 html.lite #frame, html.lite #orbCore, html.lite #orbMascot, html.lite #orbFx,
 html.lite #shadeFrame, html.lite #shadeCore, html.lite #shadeFx { display: none; }
 
-html.lite .lcd { box-shadow: inset 0 0 0 1px var(--acc-5); }
+html.lite .lcd { box-shadow: var(--recess), inset 0 0 0 1px var(--acc-5); }
 html.lite #skin .lcd, html.lite #shade .lcd { position: relative; }
 /* координаты полного скина заданы по id — снимаются тоже по id */
 html.lite #lcdTitle, html.lite #lcdStatus, html.lite #rail, html.lite #screen, html.lite #eq {
@@ -64,88 +70,63 @@ html.lite #rail { grid-area: rail; width: auto; }
 html.lite #screen { grid-area: screen; }
 html.lite #eq { grid-area: eq; height: auto; }
 
-/* Верхняя полоса: за неё окно перетаскивается; насечки — как решётки на отливке. */
+/* Верхняя полоса — фрезерованная решётка в металле (тащить окно можно за любое пустое
+   место, skin/drag.js). Прорези — тёмные щели с бликом на нижней кромке. */
 html.lite #drag {
   grid-area: bar; position: relative; left: auto; top: auto; width: auto; height: auto;
   border-radius: 9px; margin-right: 128px;
   background:
-    repeating-linear-gradient(90deg, rgba(39, 230, 170, .14) 0 2px, transparent 2px 7px) center / 100% 12px no-repeat,
-    var(--glass);
-  box-shadow: inset 0 0 0 1px var(--acc-5);
+    repeating-linear-gradient(90deg, #050807 0 3px, transparent 3px 8px) center / 100% 14px no-repeat,
+    linear-gradient(180deg, transparent calc(50% + 7px), rgba(235, 255, 248, .09) calc(50% + 7px) calc(50% + 8px), transparent 0);
   -webkit-mask-image: linear-gradient(90deg, #000 0, #000 30%, transparent 30.5%, transparent 69.5%, #000 70%);
 }
 
-/* ── Кнопки окна: стеклянные клавиши вместо куполов ──────────────────── */
+/* ── Кнопки окна: точёные стальные клавиши вместо куполов ───────────── */
 html.lite .lunka {
   margin: 0; width: 36px; height: 32px; border-radius: 9px;
-  background: var(--glass); box-shadow: inset 0 0 0 1px var(--acc-4);
+  background: var(--metal-key);
+  box-shadow: 0 0 0 1px #070A0A, 0 2px 3px rgba(0, 0, 0, .45), var(--bevel);
   color: var(--acc-2);
-  transition: color .15s, background-color .15s, box-shadow .2s, transform .08s;
+  transition: color .15s, box-shadow .2s, transform .08s;
 }
 html.lite .lunka::before, html.lite .lunka::after { display: none; }
 html.lite .lunka .ico { width: 17px; height: 17px; stroke-width: 2; filter: drop-shadow(0 0 3px rgba(39, 230, 170, .45)); }
-html.lite .lunka:hover { color: var(--acc-hot); background: var(--acc-5); box-shadow: inset 0 0 0 1px var(--acc-3), 0 0 14px rgba(39, 230, 170, .2); }
-html.lite .lunka:active { transform: translateY(1px); filter: none; background: var(--acc); color: var(--glass); }
-html.lite .lunka:active .ico { filter: none; }
+html.lite .lunka:hover { color: var(--acc-hot); box-shadow: 0 0 0 1px #070A0A, 0 2px 3px rgba(0, 0, 0, .45), var(--bevel), 0 0 12px rgba(39, 230, 170, .25); }
+html.lite .lunka:active { transform: translateY(1px); filter: none; box-shadow: 0 0 0 1px #070A0A, inset 0 2px 4px rgba(0, 0, 0, .6); }
 html.lite #skin .lunka { grid-area: bar; justify-self: end; align-self: center; position: relative; }
 html.lite #winMin { margin-right: 84px; }
 html.lite #winShade { margin-right: 42px; }
 
-/* ── Линза: сфера с жидкостью ─────────────────────────────────────────
-   --fill — уровень по состоянию, --lv — громкость голоса (shell.js). */
+/* ── Линза: стеклянная сфера в стальном ободе ─────────────────────────
+   Пока не активирован — пустая. Услышал wake-слово (listening/busy) — сразу, без
+   перетекания, наливается светом. Громкость голоса (--lv, shell.js) лишь чуть
+   подкачивает ореол. */
 html.lite #orbHit {
   grid-area: orb; place-self: center; position: relative; left: auto; top: auto;
   width: 172px; height: 172px; overflow: hidden; isolation: isolate;
-  --fill: .17; --lv: 0; --glow: .35;
+  --lv: 0;
+  border: 7px solid transparent;
   background:
-    radial-gradient(circle at 34% 26%, rgba(200, 255, 236, .16), transparent 26%),
-    radial-gradient(circle at 50% 55%, #072219, #020A08 72%);
-  box-shadow:
-    inset 0 0 0 1px var(--acc-3),
-    inset 0 -18px 36px rgba(0, 0, 0, .6),
-    0 0 0 7px var(--glass-2),
-    0 0 0 8px var(--acc-4),
-    0 0 calc(12px + 34px * var(--lv)) calc(1px + 4px * var(--lv)) rgba(39, 230, 170, calc(var(--glow) * .45 + var(--lv) * .35));
-  transition: box-shadow .35s var(--e-out);
+    radial-gradient(circle at 34% 26%, rgba(200, 255, 236, .14), transparent 26%) padding-box,
+    radial-gradient(circle at 50% 55%, #06190F, #020A08 72%) padding-box,
+    conic-gradient(from 210deg, #9AA8A4, #2E3836 18%, #C9D6D2 34%, #3A4542 52%, #7F8D89 70%, #262F2D 86%, #9AA8A4) border-box;
+  box-shadow: 0 0 0 1px #070A0A, 0 0 0 2px rgba(235, 255, 248, .08), inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -16px 30px rgba(0, 0, 0, .55);
 }
-/* жидкость: волна — две полупрозрачные гребёнки, плывущие навстречу */
+/* жидкость: ровный налив с бликом по поверхности */
 html.lite #orbHit::before {
-  content: ''; position: absolute; left: -50%; right: -50%; bottom: 0; z-index: -1;
-  /* уровень — сдвигом вниз (translate), а не высотой: без пересчёта раскладки;
-     transform занят волной */
-  height: 100%;
-  translate: 0 calc((1 - var(--fill) - var(--lv) * .22) * 100%);
+  content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0;
   background:
-    radial-gradient(60px 14px at 25% 0, rgba(200, 255, 236, .5), transparent 70%) 0 0 / 50% 100% repeat-x,
-    linear-gradient(180deg, rgba(39, 230, 170, .85) 0, rgba(39, 230, 170, .4) 14px, rgba(4, 60, 44, .9) 100%);
-  border-radius: 40% 46% 0 0 / 14px 18px 0 0;
-  box-shadow: 0 -2px 14px rgba(39, 230, 170, .55);
-  transition: translate .7s var(--e-out);
-  animation: liteWave 5s linear infinite;
+    linear-gradient(180deg, transparent 34%, var(--acc-hot) 34%, rgba(39, 230, 170, .9) 36%, rgba(39, 230, 170, .55) 52%, rgba(4, 70, 50, .95) 100%);
 }
-/* бегущее кольцо — слушает или выполняет */
-html.lite #orbHit::after {
-  content: ''; position: absolute; inset: 7px; border-radius: 50%; opacity: 0;
-  background: conic-gradient(from 0deg, transparent 0 55%, rgba(39, 230, 170, .9) 88%, var(--acc-hot) 90%, transparent 90.5%);
-  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  mask: radial-gradient(closest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  filter: drop-shadow(0 0 4px var(--acc));
-  transition: opacity .3s;
-}
-@keyframes liteWave { to { transform: translateX(-25%); } }
-@keyframes liteSpin { to { transform: rotate(1turn); } }
-html.lite #orbHit:hover { --glow: .75; }
+html.lite #orbHit:hover { box-shadow: 0 0 0 1px #070A0A, 0 0 0 2px rgba(235, 255, 248, .08), inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -16px 30px rgba(0, 0, 0, .55), 0 0 16px rgba(39, 230, 170, .3); }
 html.lite #orbHit:focus-visible { outline-offset: 6px; }
-html.lite body[data-state="listening"] #orbHit { --fill: .62; --glow: 1; }
-html.lite body[data-state="listening"] #orbHit::after { opacity: 1; animation: liteSpin 2.4s linear infinite; }
-html.lite body[data-state="busy"] #orbHit { --fill: .8; --glow: 1.1; }
-html.lite body[data-state="busy"] #orbHit::after { opacity: 1; animation: liteSpin .8s linear infinite; }
-html.lite body[data-state="loading"] #orbHit { --fill: .3; }
-html.lite body[data-state="loading"] #orbHit::before { animation: liteWave 5s linear infinite, blink 1.6s ease-in-out infinite; }
-html.lite body[data-state="paused"] #orbHit { --fill: 0; --glow: 0; }
-html.lite body[data-state="paused"] #orbHit::before { animation-play-state: paused; }
-html.lite body[data-state="error"] #orbHit { --fill: .22; }
-html.lite body[data-state="error"] #orbHit::before { animation: liteWave 5s linear infinite, blink .4s steps(2, jump-none) infinite; }
+html.lite body:is([data-state="listening"], [data-state="busy"]) #orbHit {
+  box-shadow: 0 0 0 1px #070A0A, inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -16px 30px rgba(0, 0, 0, .35),
+    0 0 calc(18px + 26px * var(--lv)) calc(2px + 4px * var(--lv)) rgba(39, 230, 170, .55);
+}
+html.lite body:is([data-state="listening"], [data-state="busy"]) #orbHit::before { opacity: 1; }
+html.lite body[data-state="paused"] #orbHit { filter: grayscale(1) brightness(.6); }
+html.lite body[data-state="error"] #orbHit::before { opacity: 1; filter: hue-rotate(-150deg) saturate(1.4); animation: blink .4s steps(2, jump-none) infinite; }
 /* «команда принята» — вспышка сферы (класс ставит shell.js) */
 html.lite #orbHit.flash { animation: liteFlash .5s var(--e-out); }
 @keyframes liteFlash { 0% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
@@ -168,8 +149,8 @@ html.lite #shade {
   width: 520px; height: 64px; padding: 10px 12px 10px 10px;
   display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 8px; align-items: center;
   border-radius: 16px;
-  background: linear-gradient(180deg, #06140F, var(--panel));
-  box-shadow: inset 0 0 0 1px var(--edge);
+  background: var(--metal);
+  box-shadow: inset 0 0 0 1px #070A0A, var(--bevel);
 }
 html.lite body.shaded #shade { display: grid !important; }
 /* орб в разметке идёт после строки — без явной строки сетка унесла бы его вниз */
@@ -177,15 +158,23 @@ html.lite #shade > * { grid-row: 1; }
 html.lite #shadeDrag { left: 0; top: 0; width: 100%; height: 100%; border-radius: 16px; z-index: 0; }
 html.lite #shadeTicker { position: relative; left: auto; top: auto; width: auto; height: 44px; z-index: 1; grid-column: 2; }
 html.lite #shadeText { font-size: 22px; }
+/* мини-линза: та же логика — пустая, пока не активирован, и сразу горит */
 html.lite #shadeOrb {
   position: relative; left: auto; top: auto; width: 44px; height: 44px; z-index: 1; grid-column: 1;
-  background: radial-gradient(circle at 50% 70%, var(--acc) 0, rgba(39, 230, 170, .25) 45%, transparent 66%), var(--glass);
-  box-shadow: inset 0 0 0 1px var(--acc-3), 0 0 12px rgba(39, 230, 170, .3);
-  transition: box-shadow .2s, filter .2s;
+  border: 3px solid transparent;
+  background:
+    radial-gradient(circle at 50% 55%, #06190F, #020A08 72%) padding-box,
+    conic-gradient(from 210deg, #9AA8A4, #2E3836 18%, #C9D6D2 34%, #3A4542 52%, #7F8D89 70%, #262F2D 86%, #9AA8A4) border-box;
+  box-shadow: 0 0 0 1px #070A0A, inset 0 0 0 1px rgba(0, 0, 0, .8);
 }
-html.lite #shadeOrb:hover { box-shadow: inset 0 0 0 1px var(--acc-2), 0 0 18px rgba(39, 230, 170, .5); }
-html.lite body[data-state="listening"] #shadeOrb, html.lite body[data-state="busy"] #shadeOrb { animation: blink 1.2s ease-in-out infinite; }
-html.lite body[data-state="paused"] #shadeOrb { filter: grayscale(1) brightness(.5); box-shadow: inset 0 0 0 1px var(--acc-4); }
+html.lite #shadeOrb:hover { box-shadow: 0 0 0 1px #070A0A, inset 0 0 0 1px rgba(0, 0, 0, .8), 0 0 12px rgba(39, 230, 170, .35); }
+html.lite body:is([data-state="listening"], [data-state="busy"]) #shadeOrb {
+  background:
+    linear-gradient(180deg, transparent 34%, var(--acc-hot) 34%, rgba(39, 230, 170, .9) 38%, rgba(4, 70, 50, .95) 100%) padding-box,
+    conic-gradient(from 210deg, #9AA8A4, #2E3836 18%, #C9D6D2 34%, #3A4542 52%, #7F8D89 70%, #262F2D 86%, #9AA8A4) border-box;
+  box-shadow: 0 0 0 1px #070A0A, 0 0 14px rgba(39, 230, 170, .55);
+}
+html.lite body[data-state="paused"] #shadeOrb { filter: grayscale(1) brightness(.6); }
 html.lite #shade .lunka { position: relative; z-index: 1; width: 34px; height: 34px; }
 html.lite #shadeOpen { grid-column: 3; }
 html.lite #shadeTray { grid-column: 4; }
@@ -201,10 +190,8 @@ html.lite #pkFrame, html.lite #cfFrame { display: none; }
 html.lite #pk::before, html.lite #cf::before {
   content: ''; position: absolute; left: 24px; top: 22px; right: 24px; bottom: 22px; z-index: 0; pointer-events: none;
   border-radius: 18px;
-  background:
-    radial-gradient(90% 70% at 18% 0%, rgba(39, 230, 170, .07), transparent 60%),
-    linear-gradient(180deg, #06140F, var(--panel) 40%, #020806);
-  box-shadow: inset 0 0 0 1px var(--edge), inset 0 1px 0 rgba(200, 255, 236, .08);
+  background: var(--metal);
+  box-shadow: inset 0 0 0 1px #070A0A, var(--bevel);
 }
 html.lite #pkDrag, html.lite #cfDrag { left: 24px; top: 22px; right: 24px; bottom: 22px; border-radius: 18px; }
 html.lite #pkTitle, html.lite #cfTitle { width: 488px; }
