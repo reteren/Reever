@@ -16,6 +16,34 @@ use anyhow::{bail, Context};
 use crate::kws::{TcnModel, HOP_SAMPLES};
 use crate::wake::THRESHOLD;
 
+/// Каким независимым каналом подтверждено обращение.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WakeSource {
+    Kws,
+    AsrOnly,
+    Enrollment,
+}
+
+/// Короткий подтверждённый фрагмент: PCM mono 16 кГц, конец примерно через
+/// 300 мс после wake-слова. Буфер передаётся во владение фоновой подстройке.
+pub struct WakeClip {
+    pub samples: Vec<i16>,
+    pub kws_score: f32,
+    pub source: WakeSource,
+}
+
+/// Неблокирующий вход для подтверждённого wake. Реализация очереди следует
+/// отдельным изменением; конвейер может подключиться к этому API уже сейчас.
+pub fn offer_wake_clip(_clip: WakeClip) {}
+
+/// Активен ли сбор примеров через шарик.
+pub fn enrollment_active() -> bool {
+    false
+}
+
+/// Неблокирующий вход для очередной VAD-фразы во время обучения.
+pub fn offer_enrollment_segment(_samples: Vec<i16>) {}
+
 const RATE: usize = 16_000;
 /// Дольше запись не копится (настройки забыли закрыть).
 pub const MAX_RECORD: usize = 60 * RATE;
