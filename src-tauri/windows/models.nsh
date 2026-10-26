@@ -136,7 +136,8 @@ FunctionEnd
 ; Карточка — тёмная плашка 112×46u: метка выбора и название, подпись, три строки замеров
 ; (ошибки, память, размер) с полосой. Полосы сравнивают два варианта семьи: длина —
 ; доля от большего, яркая — лучшее (меньшее) значение. Числа — docs/languages.md
-; («Варианты моделей в установщике»): FLEURS, память в работе, размер распакованной
+; («Варианты моделей в установщике»): FLEURS, память после загрузки модели (в покое
+; Reever её выгружает — models_unload_after_s), размер распакованной
 ; модели на диске в МиБ — то, что покажет Проводник (архив при скачивании меньше).
 ; Перекрывающиеся надписи рисуются в порядке создания: подложка — первой, полоса трека —
 ; раньше заливки.
@@ -389,15 +390,15 @@ FunctionEnd
     ; и определитель языка.
     !insertmacro REEVER_FAMILY 0 "$(reeverEuropean)" "RU UK DE FR ES IT PL PT NL CS SV EL +12"
     !insertmacro REEVER_CARD 1 68 0 ReeverPickEuAcc "$(reeverAccurate)" "$(reeverTagAccurate)" $ReeverEuAccInst \
-      "5$(reeverDec)9%" 29 ${REEVER_C_ACC} "1$(reeverDec)2 $(reeverGB)" 44 ${REEVER_C_WEAK} "618 $(reeverMB)" 44 ${REEVER_C_WEAK}
+      "5$(reeverDec)9%" 29 ${REEVER_C_ACC} "~643 $(reeverMB)" 44 ${REEVER_C_WEAK} "618 $(reeverMB)" 44 ${REEVER_C_WEAK}
     !insertmacro REEVER_CARD 2 186 0 ReeverPickEuLight "$(reeverLight)" "$(reeverTagLight)" $ReeverEuLightInst \
-      "9$(reeverDec)0%" 44 ${REEVER_C_WEAK} "1$(reeverDec)0 $(reeverGB)" 37 ${REEVER_C_ACC} "401 $(reeverMB)" 29 ${REEVER_C_ACC}
+      "9$(reeverDec)0%" 44 ${REEVER_C_WEAK} "~431 $(reeverMB)" 29 ${REEVER_C_ACC} "401 $(reeverMB)" 29 ${REEVER_C_ACC}
 
     !insertmacro REEVER_FAMILY 51 "$(reeverAsian)" ""
     !insertmacro REEVER_CARD 3 68 51 ReeverPickAsAcc "$(reeverAccurate)" "$(reeverTagAccurate)" $ReeverAsAccInst \
-      "9$(reeverDec)4%" 35 ${REEVER_C_ACC} "340 $(reeverMB)" 44 ${REEVER_C_WEAK} "144 $(reeverMB)" 44 ${REEVER_C_WEAK}
+      "9$(reeverDec)4%" 35 ${REEVER_C_ACC} "~197 $(reeverMB)" 44 ${REEVER_C_WEAK} "144 $(reeverMB)" 44 ${REEVER_C_WEAK}
     !insertmacro REEVER_CARD 4 186 51 ReeverPickAsLight "$(reeverLight)" "$(reeverTagLight)" $ReeverAsLightInst \
-      "11$(reeverDec)9%" 44 ${REEVER_C_WEAK} "320 $(reeverMB)" 41 ${REEVER_C_ACC} "124 $(reeverMB)" 38 ${REEVER_C_ACC}
+      "11$(reeverDec)9%" 44 ${REEVER_C_WEAK} "~177 $(reeverMB)" 40 ${REEVER_C_ACC} "124 $(reeverMB)" 38 ${REEVER_C_ACC}
 
     ${NSD_CreateLabel} 0 99u 100% 15u "$(reeverBenchNote)"
     Pop $0

@@ -18,7 +18,7 @@ FONT = ROOT / "frontend" / "fonts" / "Handjet.ttf"
 ICON = ROOT / "src-tauri" / "icons" / "icon.png"
 
 # Цвета — как в models.nsh (REEVER_C_*): фон страниц совпадает с фоном картинок.
-BG = (12, 19, 18)
+BG = (71, 82, 79)
 ACC = (39, 230, 170)
 HOT = (200, 255, 236)
 
@@ -73,7 +73,7 @@ def icon(size):
 
 def sidebar():
     w, h = 328, 628
-    img = brushed(w, h, (44, 54, 51), (14, 19, 18)).convert("RGBA")
+    img = brushed(w, h, (116, 129, 125), (60, 70, 67)).convert("RGBA")
     # правая кромка — стык металла с тёмной страницей: блик и тень
     d = ImageDraw.Draw(img)
     d.line([(w - 2, 0), (w - 2, h)], fill=(70, 84, 80, 255), width=1)

@@ -1,24 +1,24 @@
-; Reever: тёмное оформление установщика — те же цвета, что у программы (frontend/lite.css):
-; воронёная сталь, люминофорный акцент #27E6AA. Минимально: фон, текст, тёмные кнопки и
+; Reever: оформление установщика — те же цвета, что у программы (frontend/lite.css):
+; корпус — светлая сталь, карточки и поля — тёмные экраны, люминофорный акцент #27E6AA. Минимально: фон, текст, тёмные кнопки и
 ; галочки системной тёмной темы (DarkMode_Explorer), тёмный заголовок окна (DWM).
 ; Картинки страниц приветствия и шапки — src-tauri/windows/art (tools/installer_art.py).
 ;
 ; Подключается из models.nsh — до первой страницы MUI, поэтому цвета MUI задаются здесь.
 
-!define REEVER_C_BG 0C1312
-!define REEVER_C_CARD 141D1B
+!define REEVER_C_BG 47524F
+!define REEVER_C_CARD 0E1715
 !define REEVER_C_TRACK 223430
-!define REEVER_C_TEXT D5EDE5
-!define REEVER_C_DIM 7E9A92
+!define REEVER_C_TEXT EAF5F1
+!define REEVER_C_DIM B3C6C0
 !define REEVER_C_ACC 27E6AA
 !define REEVER_C_WEAK 2C7A62
 !define REEVER_C_FIELD 070C0B
 ; COLORREF (0x00BBGGRR) для сообщений Win32
-!define REEVER_CR_BG 0x0012130C
+!define REEVER_CR_BG 0x004F5247
 !define REEVER_CR_ACC 0x00AAE627
 !define REEVER_CR_FIELD 0x000B0C07
-!define REEVER_CR_TEXT 0x00E5EDD5
-!define REEVER_CR_BORDER 0x00304A44
+!define REEVER_CR_TEXT 0x00F1F5EA
+!define REEVER_CR_BORDER 0x00626E6B
 
 !define MUI_BGCOLOR ${REEVER_C_BG}
 !define MUI_TEXTCOLOR ${REEVER_C_TEXT}
