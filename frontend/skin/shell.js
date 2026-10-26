@@ -234,7 +234,7 @@
   let shaded = false;
   let orbLevel = -1;
   let reveal = 0, revealTarget = 0, booted = false, running = false, last = 0, t0 = performance.now(), nextSweep = 6;
-  let loopFrame = 0, loopTimer = 0, sweepTimer = 0, inputActiveUntil = 0;
+  let loopFrame = 0, sweepTimer = 0, inputActiveUntil = 0;
   let idleEmbersUntil = performance.now() + 1100;
   const lunkiHover = [0, 0, 0];
 
@@ -252,17 +252,11 @@
     return moving;
   }
 
-  function scheduleLoop(now = performance.now()) {
-    if (!running || loopFrame || loopTimer) return;
-    if (activeAt(now)) {
-      loopFrame = requestAnimationFrame(loop);
-      return;
-    }
-    const delay = Math.max(0, 50 - (now - last));
-    loopTimer = setTimeout(() => {
-      loopTimer = 0;
-      if (running && !loopFrame) loopFrame = requestAnimationFrame(loop);
-    }, delay);
+  // Пока что-то движется — каждый кадр монитора (на 144–180 Гц урезанные 20 кадров дёргались);
+  // всё замерло — петля стоит до следующего события, простой ничего не стоит.
+  function scheduleLoop() {
+    if (!running || loopFrame) return;
+    loopFrame = requestAnimationFrame(loop);
   }
 
   function armNextSweep() {
@@ -285,8 +279,7 @@
       last = now - 50;
     }
     if (sweepTimer && activeAt(now)) { clearTimeout(sweepTimer); sweepTimer = 0; }
-    if (activeAt(now) && loopTimer) { clearTimeout(loopTimer); loopTimer = 0; }
-    scheduleLoop(now);
+    scheduleLoop();
   }
 
   function loop(now) {
@@ -294,8 +287,8 @@
     if (!running) return;
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
     const time = (now - t0) / 1000;
-    // уровень: быстрая атака, медленный спад
-    level += (levelRaw - level) * (levelRaw > level ? 0.55 : 0.12);
+    // уровень: быстрая атака, медленный спад; доли — за кадр 60 Гц, пересчёт на любую частоту
+    level += (levelRaw - level) * (1 - Math.pow(levelRaw > level ? 0.45 : 0.88, dt * 60));
     const T = STATES[state];
     const lv = state === 'listening' ? level : state === 'busy' ? level * 0.4 : 0;
     S.fill.t = T.fill + lv * 0.2 + (state === 'loading' ? Math.sin(time * 2.2) * 0.08 : 0);
@@ -326,16 +319,15 @@
     if (LITE) { const v = Math.round(lv * 50) / 50; if (v !== orbLevel) { orbLevel = v; orbHit.style.setProperty('--lv', v); } }
     const moving = springMoving() || sweep.active || flash > 0.01 || burst > 0.01
       || Math.abs(levelRaw - level) > 0.005 || (V.fx?.active?.() ?? (V.fx?.count?.() > 0));
-    if (moving || activeAt(now)) scheduleLoop(now);
+    if (moving || activeAt(now)) scheduleLoop();
     else armNextSweep();
   }
   function start() { wakeLoop(); }
   function stop() {
     running = false;
     if (loopFrame) cancelAnimationFrame(loopFrame);
-    if (loopTimer) clearTimeout(loopTimer);
     if (sweepTimer) clearTimeout(sweepTimer);
-    loopFrame = loopTimer = sweepTimer = 0;
+    loopFrame = sweepTimer = 0;
   }
 
   // ── Включение ──────────────────────────────────────────────────────
