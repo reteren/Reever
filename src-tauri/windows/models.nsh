@@ -13,25 +13,25 @@
 
 ; Варианты моделей — архивы Reever (tools/asr_quant/pack_models.py): «точный» и «лёгкий».
 !define REEVER_EU_ACC_DIR "reever-parakeet-v3-int4-accurate"
-!define REEVER_EU_ACC_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-accurate.tar.bz2"
+!define REEVER_EU_ACC_URL "https://github.com/reteren/reever-models/releases/download/v1/reever-parakeet-v3-int4-accurate.tar.bz2"
 !define REEVER_EU_ACC_SHA "98e063dad3d03b0b06ecea86010bda232b62b767e5807a8d0e7254d05de274bf"
 !define REEVER_EU_ACC_FILES "encoder.onnx decoder.onnx joiner.onnx tokens.txt"
 !define REEVER_EU_ACC_MB 573
 
 !define REEVER_EU_LIGHT_DIR "reever-parakeet-v3-int4-light"
-!define REEVER_EU_LIGHT_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-light.tar.bz2"
+!define REEVER_EU_LIGHT_URL "https://github.com/reteren/reever-models/releases/download/v1/reever-parakeet-v3-int4-light.tar.bz2"
 !define REEVER_EU_LIGHT_SHA "0df11cfd2d039caa66a5327e16ac0130128f8a979142e8abe7b970412b18d83b"
 !define REEVER_EU_LIGHT_FILES "encoder.onnx decoder.onnx joiner.onnx tokens.txt"
 !define REEVER_EU_LIGHT_MB 350
 
 !define REEVER_AS_ACC_DIR "reever-sense-voice-int4-accurate"
-!define REEVER_AS_ACC_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-accurate.tar.bz2"
+!define REEVER_AS_ACC_URL "https://github.com/reteren/reever-models/releases/download/v1/reever-sense-voice-int4-accurate.tar.bz2"
 !define REEVER_AS_ACC_SHA "afc9018d5d658ed946921cdb9fef95c3be25dcd16a027d7575bf3b0e0edeaf3a"
 !define REEVER_AS_ACC_FILES "model.onnx tokens.txt"
 !define REEVER_AS_ACC_MB 139
 
 !define REEVER_AS_LIGHT_DIR "reever-sense-voice-int4-light"
-!define REEVER_AS_LIGHT_URL "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-light.tar.bz2"
+!define REEVER_AS_LIGHT_URL "https://github.com/reteren/reever-models/releases/download/v1/reever-sense-voice-int4-light.tar.bz2"
 !define REEVER_AS_LIGHT_SHA "f7b83c8bbe50db2e12412502a9e41765358203b24b1a9e6d2946057a6c3d0c57"
 !define REEVER_AS_LIGHT_FILES "model.onnx tokens.txt"
 !define REEVER_AS_LIGHT_MB 113

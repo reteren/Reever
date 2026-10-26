@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"
 RELEASE = DATA / "release"
 # Открытое хранилище архивов; меняется в одном месте вместе с models.rs/models.nsh.
-BASE_URL = "https://huggingface.co/Nikenmar/reever-models/resolve/main"
+BASE_URL = "https://github.com/reteren/reever-models/releases/download/v1"
 
 # Папка в архиве → (источник, {имя в архиве: имя в источнике}).
 MODELS = {

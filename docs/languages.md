@@ -158,7 +158,7 @@ SenseVoice 2025-09-09 (и int8, и полная версия, sherpa-onnx 1.13.8
 
 Установщик предлагает в каждой семье «точный» или «лёгкий» вариант — архивы Reever, собранные
 из полных версий (tools/asr_quant: quantize_v3.py, quantize_sensevoice.py, pack_models.py) и
-выложенные по адресу `BASE_URL` (Hugging Face, upload_models.py):
+выложенные по адресу `BASE_URL` (релиз v1 открытого репозитория github.com/reteren/reever-models, upload_models.py):
 
 | вариант | архив | на диске (МиБ, как в Проводнике) | память после загрузки (МиБ) | память в работе | точность (FLEURS) |
 |---|---:|---:|---:|---:|---|

@@ -39,8 +39,10 @@ Reever распространяется вместе со сторонними �
 
 ## Модели, которые скачивает установщик
 
-Эти модели в установщик не входят: установщик скачивает их по галочке с релиза
-sherpa-onnx (`src-tauri/windows/models.nsh`) в `%LOCALAPPDATA%\com.troid.reever\models`.
+Эти модели в установщик не входят: установщик скачивает их по галочке в
+`%LOCALAPPDATA%\com.troid.reever\models` (`src-tauri/windows/models.nsh`). Parakeet v3 и
+SenseVoice — 4-битные архивы Reever из релиза https://github.com/reteren/reever-models;
+Whisper base — с релиза sherpa-onnx.
 
 ### NVIDIA Parakeet TDT 0.6B v3 (европейские языки)
 

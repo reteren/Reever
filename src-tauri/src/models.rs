@@ -52,7 +52,7 @@ pub const EUROPEAN: Pack = Pack {
         "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv", "lt",
         "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
     ],
-    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-accurate.tar.bz2",
+    url: "https://github.com/reteren/reever-models/releases/download/v1/reever-parakeet-v3-int4-accurate.tar.bz2",
     sha256: "98e063dad3d03b0b06ecea86010bda232b62b767e5807a8d0e7254d05de274bf",
     files: &["encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"],
 };
@@ -70,7 +70,7 @@ pub const EUROPEAN_LIGHT: Pack = Pack {
         "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it", "lv", "lt",
         "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
     ],
-    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-parakeet-v3-int4-light.tar.bz2",
+    url: "https://github.com/reteren/reever-models/releases/download/v1/reever-parakeet-v3-int4-light.tar.bz2",
     sha256: "0df11cfd2d039caa66a5327e16ac0130128f8a979142e8abe7b970412b18d83b",
     files: &["encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"],
 };
@@ -104,7 +104,7 @@ pub const ASIAN: Pack = Pack {
     dir: "reever-sense-voice-int4-accurate",
     languages: &["zh", "yue", "ja", "ko"],
     covers: &["zh", "yue", "ja", "ko", "en"],
-    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-accurate.tar.bz2",
+    url: "https://github.com/reteren/reever-models/releases/download/v1/reever-sense-voice-int4-accurate.tar.bz2",
     sha256: "afc9018d5d658ed946921cdb9fef95c3be25dcd16a027d7575bf3b0e0edeaf3a",
     files: &["model.onnx", "tokens.txt"],
 };
@@ -117,7 +117,7 @@ pub const ASIAN_LIGHT: Pack = Pack {
     dir: "reever-sense-voice-int4-light",
     languages: &["zh", "yue", "ja", "ko"],
     covers: &["zh", "yue", "ja", "ko", "en"],
-    url: "https://huggingface.co/Nikenmar/reever-models/resolve/main/reever-sense-voice-int4-light.tar.bz2",
+    url: "https://github.com/reteren/reever-models/releases/download/v1/reever-sense-voice-int4-light.tar.bz2",
     sha256: "f7b83c8bbe50db2e12412502a9e41765358203b24b1a9e6d2946057a6c3d0c57",
     files: &["model.onnx", "tokens.txt"],
 };
