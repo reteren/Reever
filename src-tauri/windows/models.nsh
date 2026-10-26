@@ -276,7 +276,7 @@ FunctionEnd
       Abort
     ${EndIf}
     Push $0
-    ${NSD_CreateLabel} 0 0 100% 20u "$(reeverUiNote)"
+    ${NSD_CreateLabel} 0 0 100% 18u "$(reeverUiNote)"
     Pop $0
 
     StrCpy $ReeverUiBoxes ""
@@ -289,8 +289,8 @@ FunctionEnd
       IntOp $7 $2 % 10
       IntOp $6 $6 * 33
       IntOp $7 $7 * 10
-      IntOp $7 $7 + 20
-      ${NSD_CreateCheckbox} $6% $7u 32% 11u "$5"
+      IntOp $7 $7 + 18
+      ${NSD_CreateCheckbox} $6% $7u 32% 10u "$5"
       Pop $8
       ${If} $ReeverUiBoxes == ""
         StrCpy $ReeverUiBoxes $8
@@ -308,12 +308,17 @@ FunctionEnd
       ${EndIf}
       IntOp $2 $2 + 1
     ${LoopUntil} $2 >= 30
-    ${NSD_CreateCheckbox} 0 121u 100% 10u "$(reeverLiteUi)"
+    ; Тонкая гравировка между языками и видом интерфейса: тёмная риска над светлой.
+    ${NSD_CreateLabel} 0 121u 100% 2 ""
+    Pop $2
+    ${NSD_CreateLabel} 0 121u 100% 1 ""
+    Pop $3
+    ${NSD_CreateCheckbox} 0 124u 100% 9u "$(reeverLiteUi)"
     Pop $ReeverLiteBox
     ${If} $ReeverLiteChosen == "lite"
       ${NSD_Check} $ReeverLiteBox
     ${EndIf}
-    ${NSD_CreateLabel} 12u 131u -12u 9u "$(reeverLiteUiHint)"
+    ${NSD_CreateLabel} 12u 133u -12u 8u "$(reeverLiteUiHint)"
     Pop $1
     Call ReeverDarkDialog
     ${If} $ReeverFontSmall == ""
@@ -321,6 +326,8 @@ FunctionEnd
     ${EndIf}
     SendMessage $1 ${WM_SETFONT} $ReeverFontSmall 0
     SetCtlColors $1 ${REEVER_C_DIM} ${REEVER_C_BG}
+    SetCtlColors $2 ${REEVER_C_GROOVE_LIT} ${REEVER_C_GROOVE_LIT}
+    SetCtlColors $3 ${REEVER_C_GROOVE} ${REEVER_C_GROOVE}
     nsDialogs::Show
   FunctionEnd
 
@@ -407,8 +414,6 @@ FunctionEnd
 
     ${NSD_CreateCheckbox} 0 115u 100% 10u "$(reeverLid)"
     Pop $ReeverLidBox
-    Push $ReeverLidBox
-    Call ReeverDarkToggle
     ${NSD_CreateLabel} 12u 125u -12u 15u "$(reeverLidInfo)"
     Pop $0
     SendMessage $0 ${WM_SETFONT} $ReeverFontSmall 0
@@ -425,6 +430,8 @@ FunctionEnd
       EnableWindow $ReeverLidBox 0
       SendMessage $ReeverLidBox ${WM_SETTEXT} 0 "STR:$(reeverLid) $(reeverInstalled)"
     ${EndIf}
+    Push $ReeverLidBox
+    Call ReeverSkinToggle
 
     Call ReeverCardsPaint
     nsDialogs::Show
@@ -448,6 +455,8 @@ FunctionEnd
     ${If} $ReeverEuPick > 0
     ${AndIf} $ReeverAsPick > 0
       ${NSD_Check} $ReeverLidBox
+      System::Call 'user32::GetParent(p $ReeverLidBox) p .s'
+      Call ReeverSkinSync
     ${EndIf}
   FunctionEnd
 
