@@ -1193,9 +1193,14 @@ impl Worker<'_> {
                 self.wake_sound();
                 self.last_spot_sound = Some(std::time::Instant::now());
                 crate::mascot::on_wake(self.app);
+                // линза лёгкого интерфейса наливается сразу по детектору (frontend/skin/shell.js)
+                let _ = self.app.emit_to("main", "reever://wake", ());
                 self.prefetch_index();
             }
-            EngineEvent::WakeRejected => crate::mascot::on_wake_rejected(self.app),
+            EngineEvent::WakeRejected => {
+                crate::mascot::on_wake_rejected(self.app);
+                let _ = self.app.emit_to("main", "reever://wake-rejected", ());
+            }
             EngineEvent::Partial(t) => {
                 if !self.private() {
                     let _ = self.app.emit("reever://partial", t);

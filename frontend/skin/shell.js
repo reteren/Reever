@@ -126,8 +126,19 @@
     error:     { fill: .22, energy: .5, wave: .1, swirl: 0, dark: .3, glitch: 1, orbLight: .3, mode: 'ember', threads: false },
   };
   let state = 'idle', level = 0, levelRaw = 0, flash = 0, burst = 0;
+  // Лёгкая линза наливается уже по детектору «ривер» (reever://wake), не дожидаясь большой
+  // модели; сливается, когда команда закончилась, детектор ошибся или подтверждения нет.
+  let woke = 0;
+  function setWoke(on) {
+    clearTimeout(woke);
+    woke = on ? setTimeout(() => setWoke(false), 8000) : 0;
+    document.body.classList.toggle('woke', on);
+  }
   function setState(name) {
+    const was = state;
     state = STATES[name] ? name : 'idle';
+    if (state === 'listening' || state === 'busy') clearTimeout(woke);
+    else if (state === 'paused' || was === 'listening' || was === 'busy') setWoke(false);
     if (state === 'idle' || state === 'paused') idleEmbersUntil = 0;
     const T = STATES[state];
     for (const k of ['fill', 'energy', 'wave', 'swirl', 'dark', 'glitch', 'orbLight']) S[k].t = T[k];
@@ -423,6 +434,8 @@
   let snapshotRestored = false;
   listen('reever://log', e => { if (!snapshotRestored) startupLogs.push(String(e.payload ?? '')); });
   listen('reever://state', e => setState(String(e.payload)));
+  listen('reever://wake', () => setWoke(true));
+  listen('reever://wake-rejected', () => setWoke(false));
   listen('reever://level', e => {
     const rms = Number(e.payload) || 0;
     levelRaw = state === 'listening' || state === 'busy' ? Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-6) + 54) / 40)) : 0;
