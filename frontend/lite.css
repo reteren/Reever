@@ -11,12 +11,13 @@ html.lite {
   --g3: 0 0 1px var(--acc-hot), 0 0 9px rgba(39, 230, 170, .5);
   --edge: rgba(39, 230, 170, .26);
   --panel: #030D0A;
-  /* Металл корпуса: воронёная сталь с зелёным отливом, шлифовка — тонкие штрихи.
+  /* Металл корпуса: шлифованная сталь с зелёным отливом — светлее экранов, чтобы рамка
+     читалась железом, а не ещё одним чёрным монитором; шлифовка — тонкие штрихи.
      Свет сверху: верхняя кромка блестит, нижняя уходит в тень. */
-  --brush: repeating-linear-gradient(0deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 2px, rgba(0, 0, 0, .05) 2px 3px);
-  --metal: var(--brush), linear-gradient(180deg, #3B4643 0%, #262F2D 9%, #1B2221 46%, #141A19 100%);
+  --brush: repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 2px, rgba(0, 0, 0, .05) 2px 3px);
+  --metal: var(--brush), linear-gradient(180deg, #74817D 0%, #5A6662 8%, #4A5551 45%, #3C4643 100%);
   --metal-key: linear-gradient(180deg, #56625F 0%, #343E3C 48%, #262E2C 52%, #1E2524 100%);
-  --bevel: inset 0 1px 0 rgba(235, 255, 248, .26), inset 0 -1px 0 rgba(0, 0, 0, .55), inset 1px 0 0 rgba(235, 255, 248, .06), inset -1px 0 0 rgba(0, 0, 0, .3);
+  --bevel: inset 0 1px 0 rgba(235, 255, 248, .38), inset 0 -1px 0 rgba(0, 0, 0, .55), inset 1px 0 0 rgba(235, 255, 248, .06), inset -1px 0 0 rgba(0, 0, 0, .3);
   /* утопленное гнездо: тёмный шов по краю и блик на нижней губе выреза */
   --recess: 0 0 0 1px rgba(0, 0, 0, .75), 0 1px 0 1px rgba(235, 255, 248, .1), inset 0 2px 6px rgba(0, 0, 0, .8);
 }
@@ -100,9 +101,9 @@ html.lite #winMin { margin-right: 84px; }
 html.lite #winShade { margin-right: 42px; }
 
 /* ── Линза: стеклянная сфера в стальном ободе ─────────────────────────
-   Пока не активирован — пустая. Услышал wake-слово (listening/busy) — сразу, без
-   перетекания, наливается светом. Громкость голоса (--lv, shell.js) лишь чуть
-   подкачивает ореол. */
+   Пока не активирован — пустая. Детектор услышал «ривер» (body.woke, shell.js) — жидкость
+   плавно поднимается до краёв и держится, пока идёт команда (listening/busy); потом
+   сливается. Громкость голоса (--lv, shell.js) лишь чуть подкачивает ореол. */
 html.lite #orbHit {
   grid-area: orb; place-self: center; position: relative; left: auto; top: auto;
   width: 172px; height: 172px; overflow: hidden; isolation: isolate;
@@ -113,22 +114,28 @@ html.lite #orbHit {
     radial-gradient(circle at 50% 55%, #06190F, #020A08 72%) padding-box,
     conic-gradient(from 210deg, #9AA8A4, #2E3836 18%, #C9D6D2 34%, #3A4542 52%, #7F8D89 70%, #262F2D 86%, #9AA8A4) border-box;
   box-shadow: 0 0 0 1px #070A0A, 0 0 0 2px rgba(235, 255, 248, .08), inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -16px 30px rgba(0, 0, 0, .55);
+  transition: box-shadow .4s var(--e-out);
 }
-/* жидкость: ровный налив с бликом по поверхности */
+/* жидкость: светлая кромка поверхности и толща; уровень — сдвигом слоя (translate) */
 html.lite #orbHit::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0;
-  background:
-    linear-gradient(180deg, transparent 34%, var(--acc-hot) 34%, rgba(39, 230, 170, .9) 36%, rgba(39, 230, 170, .55) 52%, rgba(4, 70, 50, .95) 100%);
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, var(--acc-hot) 0 2px, rgba(39, 230, 170, .9) 3px, rgba(39, 230, 170, .6) 30%, rgba(4, 70, 50, .95) 100%);
+  translate: 0 101%;
+  transition: translate .45s cubic-bezier(.4, 0, .6, 1);
+}
+html.lite body:is(.woke, [data-state="listening"], [data-state="busy"]) #orbHit::before {
+  translate: 0 0;
+  transition: translate .9s cubic-bezier(.22, 1, .36, 1);
 }
 html.lite #orbHit:hover { box-shadow: 0 0 0 1px #070A0A, 0 0 0 2px rgba(235, 255, 248, .08), inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -16px 30px rgba(0, 0, 0, .55), 0 0 16px rgba(39, 230, 170, .3); }
 html.lite #orbHit:focus-visible { outline-offset: 6px; }
-html.lite body:is([data-state="listening"], [data-state="busy"]) #orbHit {
+html.lite body:is(.woke, [data-state="listening"], [data-state="busy"]) #orbHit {
   box-shadow: 0 0 0 1px #070A0A, inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -16px 30px rgba(0, 0, 0, .35),
     0 0 calc(18px + 26px * var(--lv)) calc(2px + 4px * var(--lv)) rgba(39, 230, 170, .55);
 }
-html.lite body:is([data-state="listening"], [data-state="busy"]) #orbHit::before { opacity: 1; }
 html.lite body[data-state="paused"] #orbHit { filter: grayscale(1) brightness(.6); }
-html.lite body[data-state="error"] #orbHit::before { opacity: 1; filter: hue-rotate(-150deg) saturate(1.4); animation: blink .4s steps(2, jump-none) infinite; }
+html.lite body[data-state="error"] #orbHit::before { translate: 0 0; filter: hue-rotate(-150deg) saturate(1.4); animation: blink .4s steps(2, jump-none) infinite; }
+@media (prefers-reduced-motion: reduce) { html.lite :is(#orbHit, #shadeOrb)::before { transition: none !important; } }
 /* «команда принята» — вспышка сферы (класс ставит shell.js) */
 html.lite #orbHit.flash { animation: liteFlash .5s var(--e-out); }
 @keyframes liteFlash { 0% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
@@ -160,22 +167,29 @@ html.lite #shade > * { grid-row: 1; }
 html.lite #shadeDrag { left: 0; top: 0; width: 100%; height: 100%; border-radius: 16px; z-index: 0; }
 html.lite #shadeTicker { position: relative; left: auto; top: auto; width: auto; height: 44px; z-index: 1; grid-column: 2; }
 html.lite #shadeText { font-size: 22px; }
-/* мини-линза: та же логика — пустая, пока не активирован, и сразу горит */
+/* мини-линза: та же логика — пустая в покое, по «ривер» наливается до краёв */
 html.lite #shadeOrb {
   position: relative; left: auto; top: auto; width: 44px; height: 44px; z-index: 1; grid-column: 1;
+  overflow: hidden; isolation: isolate;
   border: 3px solid transparent;
   background:
     radial-gradient(circle at 50% 55%, #06190F, #020A08 72%) padding-box,
     conic-gradient(from 210deg, #9AA8A4, #2E3836 18%, #C9D6D2 34%, #3A4542 52%, #7F8D89 70%, #262F2D 86%, #9AA8A4) border-box;
   box-shadow: 0 0 0 1px #070A0A, inset 0 0 0 1px rgba(0, 0, 0, .8);
+  transition: box-shadow .4s var(--e-out);
+}
+html.lite #shadeOrb::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, var(--acc-hot) 0 1px, rgba(39, 230, 170, .9) 2px, rgba(4, 70, 50, .95) 100%);
+  translate: 0 101%;
+  transition: translate .45s cubic-bezier(.4, 0, .6, 1);
+}
+html.lite body:is(.woke, [data-state="listening"], [data-state="busy"]) #shadeOrb::before {
+  translate: 0 0;
+  transition: translate .9s cubic-bezier(.22, 1, .36, 1);
 }
 html.lite #shadeOrb:hover { box-shadow: 0 0 0 1px #070A0A, inset 0 0 0 1px rgba(0, 0, 0, .8), 0 0 12px rgba(39, 230, 170, .35); }
-html.lite body:is([data-state="listening"], [data-state="busy"]) #shadeOrb {
-  background:
-    linear-gradient(180deg, transparent 34%, var(--acc-hot) 34%, rgba(39, 230, 170, .9) 38%, rgba(4, 70, 50, .95) 100%) padding-box,
-    conic-gradient(from 210deg, #9AA8A4, #2E3836 18%, #C9D6D2 34%, #3A4542 52%, #7F8D89 70%, #262F2D 86%, #9AA8A4) border-box;
-  box-shadow: 0 0 0 1px #070A0A, 0 0 14px rgba(39, 230, 170, .55);
-}
+html.lite body:is(.woke, [data-state="listening"], [data-state="busy"]) #shadeOrb { box-shadow: 0 0 0 1px #070A0A, 0 0 14px rgba(39, 230, 170, .55); }
 html.lite body[data-state="paused"] #shadeOrb { filter: grayscale(1) brightness(.6); }
 html.lite #shade .lunka { position: relative; z-index: 1; width: 34px; height: 34px; }
 html.lite #shadeOpen { grid-column: 3; }
