@@ -397,18 +397,20 @@ function recognitionLanguages(settings=settingsObj){
 // Фразы на главной — на языке интерфейса: русские, если интерфейс русский и русский
 // распознаётся; иначе английские (английский включён всегда).
 const isCyrillic=value=>/[а-яё]/i.test(value);
+// Английская фраза — только латиница ASCII: «не кириллица» ловит и «リバー», и «öffne».
+const isEnglish=value=>/[a-z]/i.test(value)&&/^[\x20-\x7e]+$/.test(value);
 function phraseLanguage(){ return I18N.locale==='ru'&&recognitionLanguages().includes('ru')?'ru':'en'; }
 function pickPhrase(values,fallback=''){
   const list=(values||[]).map(value=>String(value).trim()).filter(Boolean);
-  const russian=phraseLanguage()==='ru';
-  return list.find(value=>isCyrillic(value)===russian)||list[0]||fallback;
+  const fits=phraseLanguage()==='ru'?isCyrillic:isEnglish;
+  return list.find(fits)||list[0]||fallback;
 }
 function grammarWake(){ return (grammar?.wake_words||[]).find(word=>String(word).trim())||'ривер'; }
 // Wake-слово в английских примерах: «ривер» английская модель слышит как «river».
 function displayWake(){
   const words=(grammar?.wake_words||[]).map(word=>String(word).trim()).filter(Boolean);
   if(phraseLanguage()==='ru') return words[0]||'ривер';
-  const latin=words.find(word=>!isCyrillic(word));
+  const latin=words.find(isEnglish);
   if(latin) return latin;
   return !words.length||words[0].toLowerCase()==='ривер'?'river':words[0];
 }
