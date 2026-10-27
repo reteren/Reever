@@ -349,6 +349,9 @@ fn main() -> anyhow::Result<()> {
             let mut warm_asr = Vec::new();
             if let Some(engine) = engine.as_mut() {
                 engine.reset();
+                // Модель держится в памяти (keep_asr_loaded по умолчанию): recognizer.rs
+                // выключает строгое подтверждение, «ривер» ищется в тексте каждой фразы.
+                engine.set_strict_spotted_wake(false);
                 let mut spotter = AcousticWakeSpotter::new(&weights)?;
                 if let Some(verify) = verify.as_deref() {
                     spotter = spotter.with_verifier(verify)?;
@@ -367,6 +370,7 @@ fn main() -> anyhow::Result<()> {
                     }
                 }
                 warm_asr = heard.lock().unwrap().clone();
+                engine.set_strict_spotted_wake(true);
             }
             let text = json!({
                 "speaker":case.speaker, "file":format!("{folder}/{}",case.file), "reference":case.text,
