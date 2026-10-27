@@ -252,7 +252,7 @@ I18N.register('hu', {
   "settings.wake_spotter.help": "Folyamatosan figyel, és azonnal elkapja az ébresztőszót, akár beszéd közben is; biztosítja a nagy modellt, ha az elszalasztja.",
   "settings.voice_adapt": "Az érzékelő hangolása a hangomra",
   "settings.voice_adapt.help": "Mondja ki körülbelül tízszer: „river” — a háttérdetektor alkalmazkodik a hangjához és a mikrofonjához. A felvétel ezen a gépen marad, és a csendes hangolás végén törlődik.",
-  "settings.voice_adapt.start": "Hangolás…",
+  "settings.voice_adapt.start": "Hangolás",
   "settings.voice_adapt.reset": "Visszaállítás",
   "settings.voice_adapt.on": "A hangjára hangolva: {words} felvett szóból {heard}-t hall (korábban: {before}).",
   "settings.voice_adapt.off": "Nincs hangolva — az általános érzékelő működik.",
@@ -400,7 +400,6 @@ I18N.register('hu', {
   "settings.voice_passive.help": "Az első 40 megszólítás ezen a gépen marad, megtanítja a detektornak a hangját, majd törlődik. Semmi nem hagyja el a gépet.",
   "settings.voice_passive.progress": "Csendes hangolás: {count} / {goal} hallva.",
   "settings.voice_passive.done": "A csendes hangolás kész ({goal} / {goal}), a felvételek törölve.",
-  "voiceAdapt.introHint": "Hangoljuk a Reevert a hangjához. Mondja ki 5–{goal} alkalommal: „{wake}”, mindegyik után rövid szünettel — csak a szót. Kihagyhatja.",
-  "voiceAdapt.skip": "Kihagyás",
+  "voiceAdapt.introHint": "Hangoljuk a Reevert a hangjához. Mondja ki {goal} alkalommal: „{wake}”, mindegyik után rövid szünettel — csak a szót. Egy percig tart, és csak egyszer kell.",
   "home.packMissing": "{languages}: a(z) {pack} nyelvi csomag nincs letöltve, ezért a Reever alig érti ezt a beszédet. Futtassa újra a telepítőt, és jelölje be a csomagot."
 });

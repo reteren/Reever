@@ -252,7 +252,7 @@ I18N.register('sl', {
   "settings.wake_spotter.help": "Posluša neprekinjeno in besedo za aktivacijo ujame takoj, tudi sredi govora; varuje veliki model, ko jo ta preslišal.",
   "settings.voice_adapt": "Prilagodi detektor mojemu glasu",
   "settings.voice_adapt.help": "Recite »river« približno desetkrat: detektor v ozadju se prilagodi vašemu glasu in mikrofonu. Posnetek ostane na tem računalniku in se izbriše, ko se tiha prilagoditev konča.",
-  "settings.voice_adapt.start": "Prilagodi…",
+  "settings.voice_adapt.start": "Prilagodi",
   "settings.voice_adapt.reset": "Ponastavi",
   "settings.voice_adapt.on": "Prilagojeno vašemu glasu: sliši {heard} od {words} posnetih besed (prej: {before}).",
   "settings.voice_adapt.off": "Ni prilagojeno — uporablja se skupni detektor.",
@@ -400,7 +400,6 @@ I18N.register('sl', {
   "settings.voice_passive.help": "Prvih 40 nagovorov se shrani na tem računalniku, nauči detektor vašega glasu in se nato izbriše. Nič ne zapusti računalnika.",
   "settings.voice_passive.progress": "Tiha prilagoditev: slišano {count} od {goal}.",
   "settings.voice_passive.done": "Tiha prilagoditev končana ({goal} od {goal}), posnetki izbrisani.",
-  "voiceAdapt.introHint": "Prilagodimo Reever vašemu glasu. Recite »{wake}« 5–{goal}-krat s kratkim premorom po vsakem — samo besedo. Lahko preskočite.",
-  "voiceAdapt.skip": "Preskoči",
+  "voiceAdapt.introHint": "Prilagodimo Reever vašemu glasu. Recite »{wake}« {goal}-krat s kratkim premorom po vsakem — samo besedo. Traja minuto in je potrebno le enkrat.",
   "home.packMissing": "{languages}: jezikovni paket {pack} ni prenesen, zato Reever tega govora skoraj ne razume. Znova zaženite namestitveni program in označite paket."
 });

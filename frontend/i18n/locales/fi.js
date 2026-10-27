@@ -252,7 +252,7 @@ I18N.register('fi', {
   "settings.wake_spotter.help": "Kuuntelee jatkuvasti ja tunnistaa herätyssanan heti, myös kesken puheen; varmistaa suuren mallin, kun se ohittaa sanan.",
   "settings.voice_adapt": "Sovita tunnistin ääneeni",
   "settings.voice_adapt.help": "Sano ”river” noin kymmenen kertaa: taustatunnistin mukautuu ääneesi ja mikrofoniisi. Tallenne pysyy tällä tietokoneella ja poistetaan, kun hiljainen mukautus on valmis.",
-  "settings.voice_adapt.start": "Sovita…",
+  "settings.voice_adapt.start": "Sovita",
   "settings.voice_adapt.reset": "Palauta",
   "settings.voice_adapt.on": "Sovitettu ääneesi: kuulee {heard}/{words} tallennettua sanaa (ennen: {before}).",
   "settings.voice_adapt.off": "Ei sovitettu — käytössä on yleinen tunnistin.",
@@ -400,7 +400,6 @@ I18N.register('fi', {
   "settings.voice_passive.help": "Ensimmäiset 40 kutsua tallennetaan tälle tietokoneelle, opettavat tunnistimelle äänesi ja poistetaan sitten. Mikään ei poistu tietokoneelta.",
   "settings.voice_passive.progress": "Hiljainen mukautus: {count}/{goal} kuultu.",
   "settings.voice_passive.done": "Hiljainen mukautus valmis ({goal}/{goal}), tallenteet poistettu.",
-  "voiceAdapt.introHint": "Viritetään Reever äänellesi. Sano ”{wake}” 5–{goal} kertaa, lyhyt tauko jokaisen jälkeen — pelkkä sana. Voit ohittaa tämän.",
-  "voiceAdapt.skip": "Ohita",
+  "voiceAdapt.introHint": "Viritetään Reever äänellesi. Sano ”{wake}” {goal} kertaa, lyhyt tauko jokaisen jälkeen — pelkkä sana. Se vie minuutin ja tehdään vain kerran.",
   "home.packMissing": "{languages}: kielipakettia {pack} ei ole ladattu, joten Reever tuskin ymmärtää tätä puhetta. Suorita asennusohjelma uudelleen ja valitse paketti."
 });

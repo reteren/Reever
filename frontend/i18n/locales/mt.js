@@ -252,7 +252,7 @@ I18N.register('mt', {
   "settings.wake_spotter.help": "Jisma' l-ħin kollu u jaqbad il-kelma ta' attivazzjoni minnufih, anke f'nofs it-taħdit; jassigura l-mudell il-kbir meta dan jitlifha.",
   "settings.voice_adapt": "Adatta d-ditekter għal leħni",
   "settings.voice_adapt.help": "Għid “river” madwar għaxar darbiet: id-ditekter fl-isfond jadatta ruħu għal leħnek u l-mikrofonu. Ir-reġistrazzjoni tibqa’ fuq dan il-kompjuter u titħassar meta jintemm l-adattament siekta.",
-  "settings.voice_adapt.start": "Adatta…",
+  "settings.voice_adapt.start": "Adatta",
   "settings.voice_adapt.reset": "Irrisettja",
   "settings.voice_adapt.on": "Adattat għal leħnek: jisma’ {heard} minn {words} kliem irreġistrat (qabel: {before}).",
   "settings.voice_adapt.off": "Mhux adattat — qed jintuża d-ditekter komuni.",
@@ -400,7 +400,6 @@ I18N.register('mt', {
   "settings.voice_passive.help": "L-ewwel 40 sejħa jinżammu fuq dan il-kompjuter, jgħallmu lid-ditekter leħnek u mbagħad jitħassru. Xejn ma joħroġ mill-kompjuter.",
   "settings.voice_passive.progress": "Adattament siekta: {count} minn {goal} instemgħu.",
   "settings.voice_passive.done": "L-adattament siekta tlesta ({goal} minn {goal}), ir-reġistrazzjonijiet tħassru.",
-  "voiceAdapt.introHint": "Ejja nadattaw lil Reever għal leħnek. Għid “{wake}” 5–{goal} darbiet b’waqfa qasira wara kull waħda — il-kelma biss. Tista’ taqbeż.",
-  "voiceAdapt.skip": "Aqbeż",
+  "voiceAdapt.introHint": "Ejja nadattaw lil Reever għal leħnek. Għid “{wake}” {goal} darbiet b’waqfa qasira wara kull waħda — il-kelma biss. Tieħu minuta u hija meħtieġa darba biss.",
   "home.packMissing": "{languages}: il-pakkett tal-lingwa {pack} mhuwiex imniżżel, għalhekk Reever bilkemm jifhem dan id-diskors. Erġa’ ħaddem l-installatur u immarka l-pakkett."
 });

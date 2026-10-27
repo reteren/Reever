@@ -750,32 +750,31 @@ async function refreshVoiceAdapt(){
 }
 const voiceWord=()=>phraseLanguage()==='ru'?'ривер':'river';
 const VOICE_GOAL=10;
-let voiceAdaptOpen=false, voiceWords=0, voiceIntroTimer=0;
+let voiceAdaptOpen=false, voiceWords=0, voiceIntro=false;
 function renderVoiceCount(words){
   // Каждое новое услышанное «ривер» — вспышка шарика: видно, что слово засчитано.
   if(voiceAdaptOpen&&words>voiceWords) window.Skin?.pulse?.();
   voiceWords=words;
   $('#voiceCount').textContent=t('voiceAdapt.count',{count:words,goal:VOICE_GOAL});
-  $('#voiceDone').disabled=words<5;
+  $('#voiceDone').disabled=words<(voiceIntro?VOICE_GOAL:5);
 }
-// intro — первый запуск: тот же диалог, но «Пропустить» вместо «Отмена», шарик слушает,
-// и через две минуты запись сама закрывается (пока она открыта, команды не выполняются).
+// intro — обязательная калибровка первого запуска: ни отмены, ни пропуска, «Готово» — только
+// после всех десяти слов; пока окно открыто, шарик слушает, а команды не выполняются.
 async function openVoiceAdapt(intro=false){
+  voiceIntro=intro;
   $('#voiceHint').textContent=t(intro?'voiceAdapt.introHint':'voiceAdapt.hint',{wake:voiceWord(),goal:VOICE_GOAL});
   $('#voiceResult').textContent='';
-  $('#voiceCancel').textContent=t(intro?'voiceAdapt.skip':'common.cancel');
+  $('#voiceCancel').textContent=t('common.cancel');
+  $('#voiceCancel').hidden=intro;
   voiceWords=0;
   renderVoiceCount(0);
   try{ await invoke('start_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); return; }
   voiceAdaptOpen=true;
   $('#voiceOverlay').classList.add('on');
   window.Skin?.setState?.('listening');
-  clearTimeout(voiceIntroTimer);
-  if(intro) voiceIntroTimer=setTimeout(()=>{ if(voiceAdaptOpen) (voiceWords>=5?$('#voiceDone'):$('#voiceCancel')).click(); },120000);
 }
 function closeVoiceRecording(){
   voiceAdaptOpen=false;
-  clearTimeout(voiceIntroTimer);
   window.Skin?.setState?.('idle');
 }
 subscribe('reever://voice-adapt',event=>{ if(voiceAdaptOpen) renderVoiceCount(Number(event.payload?.words)||0); });
@@ -785,37 +784,55 @@ $('#voiceCancel').onclick=async()=>{
   $('#voiceOverlay').classList.remove('on');
   if(recording) try{ await invoke('cancel_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); }
 };
-// Первый запуск: попросить сказать «ривер» 5–10 раз, если подстройки ещё нет. Один раз —
-// пропуск тоже считается; окно должно быть на экране, иначе запись перехватила бы команды
-// невидимо.
+// Обязательная калибровка сразу при первом открытии программы: подстройки ещё нет и она не
+// пройдена в этом окне — или установщик требует её заново (voice_intro_pending, ВРЕМЕННО до
+// финального релиза: каждая переустановка). Отметка ставится только по окончании, так что
+// закрытая посреди калибровки программа спросит снова. Окно должно быть на экране, иначе
+// запись перехватила бы команды невидимо.
 const VOICE_INTRO_KEY='reever.voiceIntroShown';
 async function maybeVoiceIntro(){
-  if(!tauri||settingsObj.activation_mode==='hotkey') return;
-  try{ if(localStorage.getItem(VOICE_INTRO_KEY)) return; }catch{ return; }
-  let status=null;
-  try{ status=await invoke('voice_adapt_status'); }catch{ return; }
-  if(status?.report||status?.passive?.collected) return;
-  const open=()=>{
-    try{ localStorage.setItem(VOICE_INTRO_KEY,'1'); }catch{}
-    openVoiceAdapt(true);
-  };
+  if(!tauri) return;
+  let pending=false, status=null;
+  try{ pending=await invoke('voice_intro_pending'); }catch(e){ reportError('voiceAdapt',e); }
+  if(!pending){
+    try{ if(localStorage.getItem(VOICE_INTRO_KEY)) return; }catch{ return; }
+    try{ status=await invoke('voice_adapt_status'); }catch{ return; }
+    if(status?.report) return;
+  }
+  const open=()=>openVoiceAdapt(true);
   if(!document.hidden) open();
   else document.addEventListener('visibilitychange',function once(){ if(document.hidden) return; document.removeEventListener('visibilitychange',once); open(); });
+}
+async function voiceIntroFinished(){
+  voiceIntro=false;
+  try{ localStorage.setItem(VOICE_INTRO_KEY,'1'); }catch{}
+  try{ await invoke('voice_intro_done'); }catch(e){ reportError('voiceAdapt',e); }
 }
 $('#voiceDone').onclick=async()=>{
   closeVoiceRecording();
   $('#voiceDone').disabled=true;
   $('#voiceResult').textContent=t('voiceAdapt.working');
+  let result;
   try{
     const report=await invoke('finish_voice_adapt');
-    $('#voiceResult').textContent=report.adapted
+    result=report.adapted
       ?t('voiceAdapt.adapted',{heard:report.heard_after,words:report.words,before:report.heard_before})
       :t('voiceAdapt.noGain',{heard:report.heard_before,words:report.words});
   }catch(e){
     const few=/^tooFew:(\d+)$/.exec(String(e?.message||e));
-    $('#voiceResult').textContent=few?t('voiceAdapt.tooFew',{count:Number(few[1]),min:5,wake:voiceWord()}):t('voiceAdapt.failed',{error:String(e?.message||e)});
+    // Обязательная калибровка не кончается, пока слова не разобраны: запись — заново.
+    if(few&&voiceIntro){
+      await openVoiceAdapt(true);
+      $('#voiceResult').textContent=t('voiceAdapt.tooFew',{count:Number(few[1]),min:5,wake:voiceWord()});
+      return;
+    }
+    result=few?t('voiceAdapt.tooFew',{count:Number(few[1]),min:5,wake:voiceWord()}):t('voiceAdapt.failed',{error:String(e?.message||e)});
   }
+  // Подстройка не применилась из-за ошибки — всё равно отпускаем: иначе программа заперта.
+  if(voiceIntro) await voiceIntroFinished();
+  $('#voiceResult').textContent=result;
   $('#voiceCancel').textContent=t('common.close');
+  $('#voiceCancel').hidden=false;
   refreshVoiceAdapt();
 };
 function startIndexStatusPolling(){

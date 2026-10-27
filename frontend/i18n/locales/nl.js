@@ -252,7 +252,7 @@ I18N.register('nl', {
   "settings.wake_spotter.help": "Luistert continu en vangt het activeringswoord meteen op, ook midden in een zin; vangt het grote model op als dat het mist.",
   "settings.voice_adapt": "Detector aan mijn stem aanpassen",
   "settings.voice_adapt.help": "Zeg ongeveer tien keer „river”: de achtergronddetector past zich aan uw stem en microfoon aan. De opname blijft op deze computer en wordt verwijderd als de stille aanpassing klaar is.",
-  "settings.voice_adapt.start": "Aanpassen…",
+  "settings.voice_adapt.start": "Aanpassen",
   "settings.voice_adapt.reset": "Herstellen",
   "settings.voice_adapt.on": "Aangepast aan uw stem: hoort {heard} van {words} opgenomen woorden (eerst: {before}).",
   "settings.voice_adapt.off": "Niet aangepast — de algemene detector wordt gebruikt.",
@@ -400,7 +400,6 @@ I18N.register('nl', {
   "settings.voice_passive.help": "De eerste 40 aanroepen worden op deze computer bewaard, leren de detector uw stem en worden daarna verwijderd. Niets verlaat de computer.",
   "settings.voice_passive.progress": "Stille aanpassing: {count} van {goal} gehoord.",
   "settings.voice_passive.done": "Stille aanpassing voltooid ({goal} van {goal}), opnamen verwijderd.",
-  "voiceAdapt.introHint": "Laten we Reever op uw stem afstemmen. Zeg 5–{goal} keer „{wake}” met een korte pauze na elke keer — alleen het woord. U kunt dit overslaan.",
-  "voiceAdapt.skip": "Overslaan",
+  "voiceAdapt.introHint": "Laten we Reever op uw stem afstemmen. Zeg {goal} keer „{wake}” met een korte pauze na elke keer — alleen het woord. Dit duurt een minuut en is maar één keer nodig.",
   "home.packMissing": "{languages}: het taalpakket {pack} is niet gedownload, dus Reever verstaat deze spraak nauwelijks. Start het installatieprogramma opnieuw en vink het pakket aan."
 });

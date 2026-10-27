@@ -668,6 +668,13 @@ FunctionEnd
       FileClose $1
     ${EndIf}
   ${EndIf}
+  ; ВРЕМЕННО, ДО ФИНАЛЬНОГО РЕЛИЗА (docs/release-todo.md): каждая установка заново требует
+  ; 10 «ривер» на шарике, даже если данные не чистили (config.rs, voice_intro_pending).
+  ReadEnvStr $0 LOCALAPPDATA
+  CreateDirectory "$0\com.troid.reever"
+  FileOpen $1 "$0\com.troid.reever\voice-intro-pending.txt" w
+  FileWrite $1 "1"
+  FileClose $1
   StrCpy $ReeverFailed ""
   ${If} $ReeverWantEuAcc = ${BST_CHECKED}
     !insertmacro REEVER_FETCH "Parakeet v3" "${REEVER_EU_ACC_DIR}" "${REEVER_EU_ACC_URL}" "${REEVER_EU_ACC_SHA}" "${REEVER_EU_ACC_MB}" "${REEVER_EU_ACC_FILES}"

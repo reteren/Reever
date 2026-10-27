@@ -252,7 +252,7 @@ I18N.register('lv', {
   "settings.wake_spotter.help": "Klausās nepārtraukti un aktivizēšanas vārdu uztver uzreiz, pat runas vidū; apdrošina lielo modeli, kad tas to palaiž garām.",
   "settings.voice_adapt": "Pielāgot detektoru manai balsij",
   "settings.voice_adapt.help": "Sakiet “river” apmēram desmit reizes: fona detektors pielāgosies jūsu balsij un mikrofonam. Ieraksts paliek šajā datorā un tiek dzēsts, kad klusā pielāgošana beidzas.",
-  "settings.voice_adapt.start": "Pielāgot…",
+  "settings.voice_adapt.start": "Pielāgot",
   "settings.voice_adapt.reset": "Atiestatīt",
   "settings.voice_adapt.on": "Pielāgots jūsu balsij: dzird {heard} no {words} ierakstītajiem vārdiem (iepriekš: {before}).",
   "settings.voice_adapt.off": "Nav pielāgots — tiek izmantots kopējais detektors.",
@@ -400,7 +400,6 @@ I18N.register('lv', {
   "settings.voice_passive.help": "Pirmās 40 uzrunas tiek saglabātas šajā datorā, iemāca detektoram jūsu balsi un pēc tam tiek dzēstas. Nekas neatstāj datoru.",
   "settings.voice_passive.progress": "Klusā pielāgošana: dzirdētas {count} no {goal}.",
   "settings.voice_passive.done": "Klusā pielāgošana pabeigta ({goal} no {goal}), ieraksti dzēsti.",
-  "voiceAdapt.introHint": "Pielāgosim Reever jūsu balsij. Sakiet “{wake}” 5–{goal} reizes ar īsu pauzi pēc katras — tikai vārdu. Varat izlaist.",
-  "voiceAdapt.skip": "Izlaist",
+  "voiceAdapt.introHint": "Pielāgosim Reever jūsu balsij. Sakiet “{wake}” {goal} reizes ar īsu pauzi pēc katras — tikai vārdu. Tas aizņem minūti un vajadzīgs tikai vienreiz.",
   "home.packMissing": "{languages}: valodas pakotne {pack} nav lejupielādēta, tāpēc Reever šo runu gandrīz nesaprot. Palaidiet instalēšanas programmu vēlreiz un atzīmējiet pakotni."
 });

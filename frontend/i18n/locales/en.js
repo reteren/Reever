@@ -253,7 +253,7 @@ I18N.register('en', {
   "settings.wake_spotter.help": "Listens continuously and catches the wake word right away, mid-speech; backs up the large model when it misses it.",
   "settings.voice_adapt": "Fit the detector to my voice",
   "settings.voice_adapt.help": "Say “river” about ten times: the background detector adapts to your voice and microphone. The recording stays on this computer and is deleted when quiet adaptation finishes.",
-  "settings.voice_adapt.start": "Fit…",
+  "settings.voice_adapt.start": "Fit",
   "settings.voice_adapt.reset": "Reset",
   "settings.voice_adapt.on": "Fitted to your voice: hears {heard} of {words} recorded words (before: {before}).",
   "settings.voice_adapt.off": "Not fitted — the common detector is used.",
@@ -401,7 +401,6 @@ I18N.register('en', {
   "settings.voice_passive.help": "The first 40 times you say the wake word are kept on this computer, teach the detector your voice and are then deleted. Nothing leaves the computer.",
   "settings.voice_passive.progress": "Quiet adaptation: {count} of {goal} heard.",
   "settings.voice_passive.done": "Quiet adaptation finished ({goal} of {goal}), recordings deleted.",
-  "voiceAdapt.introHint": "Let’s tune Reever to your voice. Say “{wake}” 5–{goal} times with a short pause after each — just the word. You can skip this.",
-  "voiceAdapt.skip": "Skip",
+  "voiceAdapt.introHint": "Let’s tune Reever to your voice. Say “{wake}” {goal} times with a short pause after each — just the word. This takes a minute and is needed once.",
   "home.packMissing": "{languages}: the {pack} language pack is not downloaded, so Reever barely understands this speech. Run the installer again and tick the pack."
 });

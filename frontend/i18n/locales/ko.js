@@ -252,7 +252,7 @@ I18N.register('ko', {
   "settings.wake_spotter.help": "계속 들으면서 말하는 도중에도 호출어를 바로 잡아냅니다. 큰 모델이 놓쳤을 때 보완합니다.",
   "settings.voice_adapt": "감지기를 내 목소리에 맞추기",
   "settings.voice_adapt.help": "“river”를 열 번쯤 말하세요. 백그라운드 감지기가 내 목소리와 마이크에 맞춰집니다. 녹음은 이 컴퓨터에만 남고 조용한 맞춤이 끝나면 삭제됩니다.",
-  "settings.voice_adapt.start": "맞추기…",
+  "settings.voice_adapt.start": "맞추기",
   "settings.voice_adapt.reset": "초기화",
   "settings.voice_adapt.on": "목소리에 맞춤: 녹음한 {words}개 단어 중 {heard}개를 알아들음 (이전 {before}개).",
   "settings.voice_adapt.off": "맞추지 않음 — 공용 감지기를 사용합니다.",
@@ -400,7 +400,6 @@ I18N.register('ko', {
   "settings.voice_passive.help": "처음 40번의 호출은 이 컴퓨터에 저장되어 감지기가 내 목소리를 학습한 뒤 삭제됩니다. 어떤 것도 컴퓨터 밖으로 나가지 않습니다.",
   "settings.voice_passive.progress": "조용한 맞춤: {goal}번 중 {count}번 들음.",
   "settings.voice_passive.done": "조용한 맞춤 완료({goal}/{goal}), 녹음 삭제됨.",
-  "voiceAdapt.introHint": "Reever를 내 목소리에 맞춰 봅시다. “{wake}”를 5~{goal}번, 매번 잠깐 쉬고 말해 주세요 — 단어만. 건너뛸 수 있습니다.",
-  "voiceAdapt.skip": "건너뛰기",
+  "voiceAdapt.introHint": "Reever를 내 목소리에 맞춰 봅시다. “{wake}”를 {goal}번, 매번 잠깐 쉬고 말해 주세요 — 단어만. 1분이면 되고 한 번만 하면 됩니다.",
   "home.packMissing": "{languages}: {pack} 언어 팩이 다운로드되지 않아 Reever가 이 말을 거의 알아듣지 못합니다. 설치 프로그램을 다시 실행하고 팩을 선택하세요."
 });

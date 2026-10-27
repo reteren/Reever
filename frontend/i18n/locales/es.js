@@ -251,7 +251,7 @@ I18N.register('es', {
   "settings.wake_spotter.help": "Escucha continuamente y detecta la palabra de activación en cuanto la oye, incluso a mitad de una frase; ayuda al modelo grande si no la detecta.",
   "settings.voice_adapt": "Ajustar el detector a mi voz",
   "settings.voice_adapt.help": "Di «river» unas diez veces: el detector en segundo plano se adapta a tu voz y micrófono. La grabación se queda en este equipo y se borra cuando termina la adaptación silenciosa.",
-  "settings.voice_adapt.start": "Ajustar…",
+  "settings.voice_adapt.start": "Ajustar",
   "settings.voice_adapt.reset": "Restablecer",
   "settings.voice_adapt.on": "Ajustado a su voz: oye {heard} de {words} palabras grabadas (antes: {before}).",
   "settings.voice_adapt.off": "Sin ajustar: se usa el detector general.",
@@ -399,7 +399,6 @@ I18N.register('es', {
   "settings.voice_passive.help": "Las primeras 40 activaciones se guardan en este equipo, enseñan tu voz al detector y luego se borran. Nada sale del equipo.",
   "settings.voice_passive.progress": "Adaptación silenciosa: {count} de {goal} oídas.",
   "settings.voice_passive.done": "Adaptación silenciosa terminada ({goal} de {goal}), grabaciones borradas.",
-  "voiceAdapt.introHint": "Ajustemos Reever a tu voz. Di «{wake}» de 5 a {goal} veces con una breve pausa tras cada una, solo la palabra. Puedes omitirlo.",
-  "voiceAdapt.skip": "Omitir",
+  "voiceAdapt.introHint": "Ajustemos Reever a tu voz. Di «{wake}» {goal} veces con una breve pausa tras cada una, solo la palabra. Lleva un minuto y solo se hace una vez.",
   "home.packMissing": "{languages}: el paquete de idioma {pack} no está descargado, así que Reever apenas entiende este idioma. Vuelve a ejecutar el instalador y marca el paquete."
 });

@@ -252,7 +252,7 @@ I18N.register('lt', {
   "settings.wake_spotter.help": "Klausosi nuolat ir aktyvinimo žodį pagauna iš karto, net kalbos viduryje; apdraudžia didįjį modelį, kai šis jį praleidžia.",
   "settings.voice_adapt": "Pritaikyti detektorių mano balsui",
   "settings.voice_adapt.help": "Pasakykite „river“ maždaug dešimt kartų: foninis detektorius prisitaikys prie jūsų balso ir mikrofono. Įrašas lieka šiame kompiuteryje ir ištrinamas, kai baigiasi tylusis prisitaikymas.",
-  "settings.voice_adapt.start": "Pritaikyti…",
+  "settings.voice_adapt.start": "Pritaikyti",
   "settings.voice_adapt.reset": "Atstatyti",
   "settings.voice_adapt.on": "Pritaikyta jūsų balsui: girdi {heard} iš {words} įrašytų žodžių (anksčiau: {before}).",
   "settings.voice_adapt.off": "Nepritaikyta — naudojamas bendras detektorius.",
@@ -400,7 +400,6 @@ I18N.register('lt', {
   "settings.voice_passive.help": "Pirmieji 40 kreipinių išsaugomi šiame kompiuteryje, išmoko detektorių jūsų balso ir tada ištrinami. Niekas nepalieka kompiuterio.",
   "settings.voice_passive.progress": "Tylusis prisitaikymas: išgirsta {count} iš {goal}.",
   "settings.voice_passive.done": "Tylusis prisitaikymas baigtas ({goal} iš {goal}), įrašai ištrinti.",
-  "voiceAdapt.introHint": "Pritaikykime Reever jūsų balsui. Pasakykite „{wake}“ 5–{goal} kartus su trumpa pauze po kiekvieno — tik žodį. Galite praleisti.",
-  "voiceAdapt.skip": "Praleisti",
+  "voiceAdapt.introHint": "Pritaikykime Reever jūsų balsui. Pasakykite „{wake}“ {goal} kartų su trumpa pauze po kiekvieno — tik žodį. Tai užtruks minutę ir reikia tik kartą.",
   "home.packMissing": "{languages}: kalbos paketas {pack} neatsisiųstas, todėl Reever šios kalbos beveik nesupranta. Paleiskite diegimo programą dar kartą ir pažymėkite paketą."
 });

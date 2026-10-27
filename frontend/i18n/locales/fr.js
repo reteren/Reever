@@ -251,7 +251,7 @@ I18N.register('fr', {
   "settings.wake_spotter.help": "Écoute en continu et détecte immédiatement le mot de réveil, même au milieu d’une phrase ; le grand modèle prend le relais s’il ne le détecte pas.",
   "settings.voice_adapt": "Adapter le détecteur à ma voix",
   "settings.voice_adapt.help": "Dites « river » une dizaine de fois : le détecteur d’arrière-plan s’adapte à votre voix et à votre micro. L’enregistrement reste sur cet ordinateur et est supprimé à la fin de l’adaptation discrète.",
-  "settings.voice_adapt.start": "Adapter…",
+  "settings.voice_adapt.start": "Adapter",
   "settings.voice_adapt.reset": "Réinitialiser",
   "settings.voice_adapt.on": "Adapté à votre voix : entend {heard} mots enregistrés sur {words} (avant : {before}).",
   "settings.voice_adapt.off": "Non adapté — le détecteur commun est utilisé.",
@@ -399,7 +399,6 @@ I18N.register('fr', {
   "settings.voice_passive.help": "Les 40 premiers appels sont conservés sur cet ordinateur, entraînent le détecteur à votre voix puis sont supprimés. Rien ne quitte l’ordinateur.",
   "settings.voice_passive.progress": "Adaptation discrète : {count} sur {goal} entendus.",
   "settings.voice_passive.done": "Adaptation discrète terminée ({goal} sur {goal}), enregistrements supprimés.",
-  "voiceAdapt.introHint": "Adaptons Reever à votre voix. Dites « {wake} » 5 à {goal} fois avec une courte pause après chaque fois — seulement le mot. Vous pouvez passer.",
-  "voiceAdapt.skip": "Passer",
+  "voiceAdapt.introHint": "Adaptons Reever à votre voix. Dites « {wake} » {goal} fois avec une courte pause après chaque fois — seulement le mot. Cela prend une minute et ne se fait qu’une fois.",
   "home.packMissing": "{languages} : le pack de langue {pack} n’est pas téléchargé, Reever comprend donc à peine cette langue. Relancez l’installateur et cochez le pack."
 });

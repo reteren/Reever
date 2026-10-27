@@ -251,7 +251,7 @@ I18N.register('zh', {
   "settings.wake_spotter.help": "持续监听，可在说话过程中立即捕捉唤醒词；大型模型漏听时，它会提供补充检测。",
   "settings.voice_adapt": "让检测器适应我的声音",
   "settings.voice_adapt.help": "说“river”大约十次：后台检测器会适应你的声音和麦克风。录音只保存在这台电脑上，静默适应完成后删除。",
-  "settings.voice_adapt.start": "适应…",
+  "settings.voice_adapt.start": "适应",
   "settings.voice_adapt.reset": "重置",
   "settings.voice_adapt.on": "已适应你的声音：录下的 {words} 个词能听出 {heard} 个（之前 {before} 个）。",
   "settings.voice_adapt.off": "未适应——使用通用检测器。",
@@ -399,7 +399,6 @@ I18N.register('zh', {
   "settings.voice_passive.help": "前 40 次唤醒会保存在这台电脑上，用来让检测器学习你的声音，之后删除。任何数据都不会离开电脑。",
   "settings.voice_passive.progress": "静默适应：已听到 {count}/{goal}。",
   "settings.voice_passive.done": "静默适应已完成（{goal}/{goal}），录音已删除。",
-  "voiceAdapt.introHint": "让 Reever 适应你的声音。请说“{wake}”5–{goal} 次，每次后稍作停顿——只说这个词。可以跳过。",
-  "voiceAdapt.skip": "跳过",
+  "voiceAdapt.introHint": "让 Reever 适应你的声音。请说“{wake}”{goal} 次，每次后稍作停顿——只说这个词。只需一分钟，只做一次。",
   "home.packMissing": "{languages}：未下载 {pack} 语言包，Reever 几乎听不懂这种语言。请重新运行安装程序并勾选该语言包。"
 });

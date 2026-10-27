@@ -251,7 +251,7 @@ I18N.register('ja', {
   "settings.wake_spotter.help": "常時聴き取り、会話の途中でも起動ワードをすぐに検出します。大型モデルが聞き逃した場合の補助にもなります。",
   "settings.voice_adapt": "検出器を自分の声に合わせる",
   "settings.voice_adapt.help": "「river」と 10 回ほど言ってください。バックグラウンドの検出器があなたの声とマイクに合わせます。録音はこのコンピューターにのみ保存され、さりげない調整が終わると削除されます。",
-  "settings.voice_adapt.start": "調整…",
+  "settings.voice_adapt.start": "調整",
   "settings.voice_adapt.reset": "リセット",
   "settings.voice_adapt.on": "あなたの声に調整済み：録音した {words} 語のうち {heard} 語を認識（調整前 {before} 語）。",
   "settings.voice_adapt.off": "未調整 — 共通の検出器を使用中。",
@@ -399,7 +399,6 @@ I18N.register('ja', {
   "settings.voice_passive.help": "最初の 40 回の呼びかけはこのコンピューターに保存され、検出器にあなたの声を学習させた後で削除されます。データがコンピューターの外に出ることはありません。",
   "settings.voice_passive.progress": "さりげない調整：{count}/{goal} 回を聞き取りました。",
   "settings.voice_passive.done": "さりげない調整が完了しました（{goal}/{goal}）。録音は削除されました。",
-  "voiceAdapt.introHint": "Reever をあなたの声に合わせましょう。「{wake}」と 5～{goal} 回、毎回少し間を空けて言ってください（言葉だけ）。スキップもできます。",
-  "voiceAdapt.skip": "スキップ",
+  "voiceAdapt.introHint": "Reever をあなたの声に合わせましょう。「{wake}」と {goal} 回、毎回少し間を空けて言ってください（言葉だけ）。1 分ほどで終わり、一度だけ必要です。",
   "home.packMissing": "{languages}：{pack} 言語パックがダウンロードされていないため、Reever はこの言語をほとんど理解できません。インストーラーを再実行してパックを選択してください。"
 });

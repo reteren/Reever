@@ -251,7 +251,7 @@ I18N.register('ar', {
   "settings.wake_spotter.help": "يستمع باستمرار ويلتقط كلمة التنبيه فورًا، حتى أثناء الكلام؛ ويساعد النموذج الكبير إذا لم يلتقطها.",
   "settings.voice_adapt": "مواءمة الكاشف مع صوتي",
   "settings.voice_adapt.help": "قل «river» نحو عشر مرات: يتكيّف الكاشف الخلفي مع صوتك وميكروفونك. يبقى التسجيل على هذا الحاسوب ويُحذف عند انتهاء التكيّف الهادئ.",
-  "settings.voice_adapt.start": "مواءمة…",
+  "settings.voice_adapt.start": "مواءمة",
   "settings.voice_adapt.reset": "إعادة تعيين",
   "settings.voice_adapt.on": "مُوائم مع صوتك: يلتقط {heard} من {words} كلمات مسجّلة (قبل: {before}).",
   "settings.voice_adapt.off": "غير مُوائم — يُستخدم الكاشف العام.",
@@ -399,7 +399,6 @@ I18N.register('ar', {
   "settings.voice_passive.help": "تُحفظ أول 40 مناداة على هذا الحاسوب لتعليم الكاشف صوتك ثم تُحذف. لا يغادر شيء الحاسوب.",
   "settings.voice_passive.progress": "التكيّف الهادئ: سُمع {count} من {goal}.",
   "settings.voice_passive.done": "اكتمل التكيّف الهادئ ({goal} من {goal}) وحُذفت التسجيلات.",
-  "voiceAdapt.introHint": "لنضبط Reever على صوتك. قل «{wake}» من 5 إلى {goal} مرات مع توقف قصير بعد كل مرة — الكلمة فقط. يمكنك التخطي.",
-  "voiceAdapt.skip": "تخطٍّ",
+  "voiceAdapt.introHint": "لنضبط Reever على صوتك. قل «{wake}» {goal} مرات مع توقف قصير بعد كل مرة — الكلمة فقط. يستغرق ذلك دقيقة ويلزم مرة واحدة.",
   "home.packMissing": "{languages}: حزمة اللغة {pack} غير منزّلة، لذا لا يكاد Reever يفهم هذا الكلام. شغّل المثبّت مجددًا وحدّد الحزمة."
 });

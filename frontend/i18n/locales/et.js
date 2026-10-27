@@ -252,7 +252,7 @@ I18N.register('et', {
   "settings.wake_spotter.help": "Kuulab pidevalt ja püüab äratussõna kohe kinni, ka keset kõnet; kindlustab suurt mudelit, kui see sõna maha magab.",
   "settings.voice_adapt": "Kohanda tuvastaja minu häälega",
   "settings.voice_adapt.help": "Öelge umbes kümme korda „river”: taustatuvastaja kohandub teie hääle ja mikrofoniga. Salvestis jääb sellesse arvutisse ja kustutatakse, kui vaikne kohandamine lõpeb.",
-  "settings.voice_adapt.start": "Kohanda…",
+  "settings.voice_adapt.start": "Kohanda",
   "settings.voice_adapt.reset": "Lähtesta",
   "settings.voice_adapt.on": "Kohandatud teie häälega: kuuleb {heard} sõna {words} salvestatust (enne: {before}).",
   "settings.voice_adapt.off": "Kohandamata — kasutusel on üldine tuvastaja.",
@@ -400,7 +400,6 @@ I18N.register('et', {
   "settings.voice_passive.help": "Esimesed 40 pöördumist salvestatakse sellesse arvutisse, õpetavad tuvastajale teie häält ja kustutatakse siis. Midagi ei lahku arvutist.",
   "settings.voice_passive.progress": "Vaikne kohandamine: kuuldud {count}/{goal}.",
   "settings.voice_passive.done": "Vaikne kohandamine lõpetatud ({goal}/{goal}), salvestised kustutatud.",
-  "voiceAdapt.introHint": "Häälestame Reeveri teie häälele. Öelge „{wake}” 5–{goal} korda, iga järel lühike paus — ainult see sõna. Võite vahele jätta.",
-  "voiceAdapt.skip": "Jäta vahele",
+  "voiceAdapt.introHint": "Häälestame Reeveri teie häälele. Öelge „{wake}” {goal} korda, iga järel lühike paus — ainult see sõna. See võtab minuti ja on vaja vaid korra.",
   "home.packMissing": "{languages}: keelepakett {pack} pole alla laaditud, seega Reever seda kõnet peaaegu ei mõista. Käivitage paigaldusprogramm uuesti ja märkige pakett."
 });

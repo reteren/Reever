@@ -252,7 +252,7 @@ I18N.register('sk', {
   "settings.wake_spotter.help": "Počúva nepretržite a aktivačné slovo zachytí hneď, aj uprostred reči; istí veľký model, keď ho prepočuje.",
   "settings.voice_adapt": "Prispôsobiť detektor môjmu hlasu",
   "settings.voice_adapt.help": "Povedzte asi desaťkrát „river“: detektor na pozadí sa prispôsobí vášmu hlasu a mikrofónu. Nahrávka zostáva v tomto počítači a zmaže sa po dokončení tichého prispôsobenia.",
-  "settings.voice_adapt.start": "Prispôsobiť…",
+  "settings.voice_adapt.start": "Prispôsobiť",
   "settings.voice_adapt.reset": "Obnoviť",
   "settings.voice_adapt.on": "Prispôsobené vášmu hlasu: počuje {heard} z {words} nahraných slov (predtým: {before}).",
   "settings.voice_adapt.off": "Neprispôsobené — používa sa spoločný detektor.",
@@ -400,7 +400,6 @@ I18N.register('sk', {
   "settings.voice_passive.help": "Prvých 40 oslovení sa uloží v tomto počítači, naučí detektor váš hlas a potom sa zmaže. Nič neopustí počítač.",
   "settings.voice_passive.progress": "Tiché prispôsobenie: počuté {count} z {goal}.",
   "settings.voice_passive.done": "Tiché prispôsobenie dokončené ({goal} z {goal}), nahrávky zmazané.",
-  "voiceAdapt.introHint": "Prispôsobme Reever vášmu hlasu. Povedzte „{wake}“ 5–{goal}-krát s krátkou pauzou po každom — len samotné slovo. Môžete preskočiť.",
-  "voiceAdapt.skip": "Preskočiť",
+  "voiceAdapt.introHint": "Prispôsobme Reever vášmu hlasu. Povedzte „{wake}“ {goal}-krát s krátkou pauzou po každom — len samotné slovo. Zaberie to minútu a stačí raz.",
   "home.packMissing": "{languages}: jazykový balík {pack} nie je stiahnutý, takže Reever tejto reči takmer nerozumie. Spustite inštalátor znova a balík označte."
 });

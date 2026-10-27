@@ -252,7 +252,7 @@ I18N.register('cs', {
   "settings.wake_spotter.help": "Poslouchá nepřetržitě a zachytí aktivační slovo hned, i uprostřed řeči; jistí velký model, když ho přeslechne.",
   "settings.voice_adapt": "Přizpůsobit detektor mému hlasu",
   "settings.voice_adapt.help": "Řekněte asi desetkrát „river“: detektor na pozadí se přizpůsobí vašemu hlasu a mikrofonu. Nahrávka zůstává v tomto počítači a smaže se po dokončení tichého přizpůsobení.",
-  "settings.voice_adapt.start": "Přizpůsobit…",
+  "settings.voice_adapt.start": "Přizpůsobit",
   "settings.voice_adapt.reset": "Obnovit",
   "settings.voice_adapt.on": "Přizpůsobeno vašemu hlasu: slyší {heard} z {words} nahraných slov (předtím: {before}).",
   "settings.voice_adapt.off": "Nepřizpůsobeno — používá se společný detektor.",
@@ -400,7 +400,6 @@ I18N.register('cs', {
   "settings.voice_passive.help": "Prvních 40 oslovení se uloží v tomto počítači, naučí detektor váš hlas a pak se smažou. Nic neopustí počítač.",
   "settings.voice_passive.progress": "Tiché přizpůsobení: slyšeno {count} z {goal}.",
   "settings.voice_passive.done": "Tiché přizpůsobení dokončeno ({goal} z {goal}), nahrávky smazány.",
-  "voiceAdapt.introHint": "Přizpůsobme Reever vašemu hlasu. Řekněte „{wake}“ 5–{goal}krát s krátkou pauzou po každém — jen samotné slovo. Můžete přeskočit.",
-  "voiceAdapt.skip": "Přeskočit",
+  "voiceAdapt.introHint": "Přizpůsobme Reever vašemu hlasu. Řekněte „{wake}“ {goal}krát s krátkou pauzou po každém — jen samotné slovo. Zabere to minutu a stačí jednou.",
   "home.packMissing": "{languages}: jazykový balíček {pack} není stažen, takže Reever této řeči skoro nerozumí. Spusťte instalátor znovu a balíček zaškrtněte."
 });

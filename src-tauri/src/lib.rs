@@ -498,6 +498,8 @@ pub fn run() {
             commands_api::finish_voice_adapt,
             commands_api::voice_adapt_status,
             commands_api::reset_voice_adapt,
+            commands_api::voice_intro_pending,
+            commands_api::voice_intro_done,
             commands_api::cancel_calibration,
             commands_api::get_settings,
             commands_api::save_settings,

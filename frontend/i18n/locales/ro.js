@@ -252,7 +252,7 @@ I18N.register('ro', {
   "settings.wake_spotter.help": "Ascultă continuu și prinde imediat cuvântul de activare, chiar în mijlocul vorbirii; asigură modelul mare când acesta îl ratează.",
   "settings.voice_adapt": "Adaptează detectorul la vocea mea",
   "settings.voice_adapt.help": "Spune „river” de vreo zece ori: detectorul din fundal se adaptează la vocea și microfonul tău. Înregistrarea rămâne pe acest computer și se șterge când se încheie adaptarea discretă.",
-  "settings.voice_adapt.start": "Adaptează…",
+  "settings.voice_adapt.start": "Adaptează",
   "settings.voice_adapt.reset": "Resetează",
   "settings.voice_adapt.on": "Adaptat la vocea dvs.: aude {heard} din {words} cuvinte înregistrate (înainte: {before}).",
   "settings.voice_adapt.off": "Neadaptat — se folosește detectorul comun.",
@@ -400,7 +400,6 @@ I18N.register('ro', {
   "settings.voice_passive.help": "Primele 40 de apelări sunt păstrate pe acest computer, învață detectorul vocea ta și apoi sunt șterse. Nimic nu părăsește computerul.",
   "settings.voice_passive.progress": "Adaptare discretă: {count} din {goal} auzite.",
   "settings.voice_passive.done": "Adaptarea discretă s-a încheiat ({goal} din {goal}), înregistrările au fost șterse.",
-  "voiceAdapt.introHint": "Să potrivim Reever pe vocea ta. Spune „{wake}” de 5–{goal} ori, cu o pauză scurtă după fiecare — doar cuvântul. Poți sări peste.",
-  "voiceAdapt.skip": "Sari peste",
+  "voiceAdapt.introHint": "Să potrivim Reever pe vocea ta. Spune „{wake}” de {goal} ori, cu o pauză scurtă după fiecare — doar cuvântul. Durează un minut și e nevoie o singură dată.",
   "home.packMissing": "{languages}: pachetul de limbă {pack} nu este descărcat, așa că Reever abia înțelege această vorbire. Rulează din nou programul de instalare și bifează pachetul."
 });
