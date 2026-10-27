@@ -279,7 +279,6 @@ I18N.register('mt', {
   "settings.languages.alwaysTitle": "L-Ingliż ma jistax jintefa: kmandi u ismijiet bl-Ingliż jinftiehmu dejjem",
   "settings.languages.remove": "Neħħi {language}",
   "settings.languages.add": "Żid lingwa",
-  "settings.languages.offerUi": "Iżżid ukoll {language} bħala lingwa tal-interfaċċa? Imbagħad l-interfaċċa ta' Reever tista' tinbidel għaliha f'Settings → Interfaċċa.",
   "settings.languages.noMore": "Għadx hemm lingwi oħra",
   "settings.languages.notDownloaded": "il-pakkett mhux imniżżel",
   "settings.languages.needLid": "Lingwi minn żewġ pakketti jaħdmu flimkien biss mad-detettur tal-lingwa. Erġa' ħaddem l-installatur ta' Reever u immarkah; sa dakinhar jintuża biss il-pakkett tal-ewwel lingwa.",

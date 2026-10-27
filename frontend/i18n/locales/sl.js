@@ -279,7 +279,6 @@ I18N.register('sl', {
   "settings.languages.alwaysTitle": "Angleščine ni mogoče izklopiti: angleški ukazi in imena so vedno razumljeni",
   "settings.languages.remove": "Odstrani: {language}",
   "settings.languages.add": "Dodaj jezik",
-  "settings.languages.offerUi": "Dodam {language} tudi kot jezik vmesnika? Takrat lahko vmesnik Reever preklopite nanj v Nastavitve → Vmesnik.",
   "settings.languages.noMore": "Drugih jezikov še ni",
   "settings.languages.notDownloaded": "paket ni prenesen",
   "settings.languages.needLid": "Jeziki iz dveh paketov delujejo skupaj le z detektorjem jezika. Znova zaženite namestitveni program Reever in ga označite; do takrat se uporablja le paket prvega jezika.",

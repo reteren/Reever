@@ -279,7 +279,6 @@ I18N.register('fi', {
   "settings.languages.alwaysTitle": "Englantia ei voi poistaa käytöstä: englanninkieliset komennot ja nimet ymmärretään aina",
   "settings.languages.remove": "Poista: {language}",
   "settings.languages.add": "Lisää kieli",
-  "settings.languages.offerUi": "Lisätäänkö {language} myös käyttöliittymän kieleksi? Silloin Reeverin käyttöliittymän voi vaihtaa siihen kohdassa Asetukset → Käyttöliittymä.",
   "settings.languages.noMore": "Muita kieliä ei vielä ole",
   "settings.languages.notDownloaded": "pakettia ei ole ladattu",
   "settings.languages.needLid": "Kahden paketin kielet toimivat yhdessä vain kielentunnistimen kanssa. Käynnistä Reeverin asennusohjelma uudelleen ja valitse se; siihen asti käytetään vain ensimmäisen kielen pakettia.",

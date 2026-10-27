@@ -279,7 +279,6 @@ I18N.register('da', {
   "settings.languages.alwaysTitle": "Engelsk kan ikke slås fra: engelske kommandoer og navne forstås altid",
   "settings.languages.remove": "Fjern {language}",
   "settings.languages.add": "Tilføj sprog",
-  "settings.languages.offerUi": "Vil du også tilføje {language} som brugerfladesprog? Så kan Reevers brugerflade skiftes til det under Indstillinger → Brugerflade.",
   "settings.languages.noMore": "Ingen flere sprog endnu",
   "settings.languages.notDownloaded": "pakken er ikke hentet",
   "settings.languages.needLid": "Sprog fra to pakker virker kun sammen med sprogdetektoren. Kør Reevers installationsprogram igen, og markér den; indtil da bruges kun det første sprogs pakke.",

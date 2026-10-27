@@ -279,7 +279,6 @@ I18N.register('nl', {
   "settings.languages.alwaysTitle": "Engels kan niet uit: Engelse opdrachten en namen worden altijd begrepen",
   "settings.languages.remove": "{language} verwijderen",
   "settings.languages.add": "Taal toevoegen",
-  "settings.languages.offerUi": "{language} ook als interfacetaal toevoegen? Dan kun je de interface van Reever erop overschakelen in Instellingen → Interface.",
   "settings.languages.noMore": "Nog geen andere talen",
   "settings.languages.notDownloaded": "pakket niet gedownload",
   "settings.languages.needLid": "Talen uit twee pakketten werken alleen samen met de taaldetector. Start het installatieprogramma van Reever opnieuw en vink hem aan; tot die tijd wordt alleen het pakket van de eerste taal gebruikt.",

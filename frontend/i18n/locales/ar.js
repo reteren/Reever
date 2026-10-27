@@ -278,7 +278,6 @@ I18N.register('ar', {
   "settings.languages.alwaysTitle": "لا يمكن إيقاف الإنجليزية: الأوامر والأسماء الإنجليزية مفهومة دائمًا",
   "settings.languages.remove": "إزالة: {language}",
   "settings.languages.add": "إضافة لغة",
-  "settings.languages.offerUi": "هل تريد إضافة {language} أيضًا كلغة للواجهة؟ يمكنك عندها تبديل واجهة Reever إليها من الإعدادات ← الواجهة.",
   "settings.languages.noMore": "لا توجد لغات أخرى بعد",
   "settings.languages.notDownloaded": "الحزمة غير منزّلة",
   "settings.languages.needLid": "تعمل لغات حزمتين معًا فقط مع كاشف اللغة. شغّل برنامج تثبيت Reever مرة أخرى وحدده؛ حتى ذلك الحين تُستخدم حزمة اللغة الأولى فقط.",

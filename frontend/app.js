@@ -1111,16 +1111,8 @@ function languagesEditor(models){
     const item=el('button',{type:'button',className:'sm',role:'menuitem',
       textContent:ready?name(code):`${name(code)} — ${t('settings.languages.notDownloaded')}`});
     item.disabled=!ready;
-    // Сначала язык интерфейса, потом язык распознавания: французу французская модель
-    // нужна вместе с французским интерфейсом.
-    item.onclick=async()=>{
-      if(code!=='en'&&I18N.SUPPORTED.includes(code)&&!I18N.enabled.includes(code)
-        &&await ask(t('settings.languages.offerUi',{language:name(code)}))){
-        const ui=[...I18N.enabled,code];
-        settingsObj.ui_languages=ui; I18N.setEnabled(ui);
-      }
-      setLanguages([...enabled,code]);
-    };
+    // Язык распознавания не связан с языками интерфейса: добавляется молча, интерфейс не трогаем.
+    item.onclick=()=>setLanguages([...enabled,code]);
     menu.append(item);
   }
   if(addable.length) add.onclick=()=>{ menu.hidden=!menu.hidden; };

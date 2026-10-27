@@ -279,7 +279,6 @@ I18N.register('et', {
   "settings.languages.alwaysTitle": "Inglise keelt ei saa välja lülitada: ingliskeelseid käske ja nimesid mõistetakse alati",
   "settings.languages.remove": "Eemalda: {language}",
   "settings.languages.add": "Lisa keel",
-  "settings.languages.offerUi": "Kas lisada {language} ka liidese keeleks? Siis saab Reeveri liidese sellele ümber lülitada jaotises Sätted → Liides.",
   "settings.languages.noMore": "Rohkem keeli veel pole",
   "settings.languages.notDownloaded": "pakett pole alla laaditud",
   "settings.languages.needLid": "Kahe paketi keeled töötavad koos ainult keeletuvastiga. Käivita Reeveri installer uuesti ja märgi see; seni kasutatakse ainult esimese keele paketti.",

@@ -279,7 +279,6 @@ I18N.register('lt', {
   "settings.languages.alwaysTitle": "Anglų kalbos išjungti negalima: angliškos komandos ir pavadinimai suprantami visada",
   "settings.languages.remove": "Pašalinti: {language}",
   "settings.languages.add": "Pridėti kalbą",
-  "settings.languages.offerUi": "Pridėti {language} ir kaip sąsajos kalbą? Tada Reever sąsają bus galima perjungti į ją skyriuje Nustatymai → Sąsaja.",
   "settings.languages.noMore": "Kitų kalbų kol kas nėra",
   "settings.languages.notDownloaded": "paketas neatsisiųstas",
   "settings.languages.needLid": "Dviejų paketų kalbos veikia kartu tik su kalbos detektoriumi. Paleiskite Reever diegimo programą dar kartą ir pažymėkite jį; iki tol naudojamas tik pirmosios kalbos paketas.",

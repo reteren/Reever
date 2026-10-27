@@ -279,7 +279,6 @@ I18N.register('hr', {
   "settings.languages.alwaysTitle": "Engleski se ne može isključiti: engleske naredbe i nazivi uvijek se razumiju",
   "settings.languages.remove": "Ukloni: {language}",
   "settings.languages.add": "Dodaj jezik",
-  "settings.languages.offerUi": "Dodati {language} i kao jezik sučelja? Tada se sučelje Reevera može prebaciti na njega u Postavke → Sučelje.",
   "settings.languages.noMore": "Drugih jezika zasad nema",
   "settings.languages.notDownloaded": "paket nije preuzet",
   "settings.languages.needLid": "Jezici iz dva paketa rade zajedno samo s detektorom jezika. Ponovno pokrenite instalacijski program Reevera i označite ga; do tada se koristi samo paket prvog jezika.",
