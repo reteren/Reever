@@ -250,7 +250,7 @@ I18N.register('ja', {
   "settings.wake_spotter": "バックグラウンドの «river» 検出器（小型モデル）",
   "settings.wake_spotter.help": "常時聴き取り、会話の途中でも起動ワードをすぐに検出します。大型モデルが聞き逃した場合の補助にもなります。",
   "settings.voice_adapt": "検出器を自分の声に合わせる",
-  "settings.voice_adapt.help": "「river」と10回ほど言ってください。バックグラウンドの検出器があなたの声とマイクに合わせて調整されます。録音はメモリ内だけに残り、保存されません。",
+  "settings.voice_adapt.help": "「river」と 10 回ほど言ってください。バックグラウンドの検出器があなたの声とマイクに合わせます。録音はこのコンピューターにのみ保存され、さりげない調整が終わると削除されます。",
   "settings.voice_adapt.start": "調整…",
   "settings.voice_adapt.reset": "リセット",
   "settings.voice_adapt.on": "あなたの声に調整済み：録音した {words} 語のうち {heard} 語を認識（調整前 {before} 語）。",
@@ -392,5 +392,14 @@ I18N.register('ja', {
   "confirm.yes": "はい",
   "confirm.no": "いいえ",
   "confirm.noTitle": "いいえ（Esc）",
-  "confirm.left": "{seconds} 秒後にキャンセル"
+  "confirm.left": "{seconds} 秒後にキャンセル",
+  "settings.keep_asr_loaded": "音声モデルをメモリに保持する",
+  "settings.keep_asr_loaded.help": "小さな検出器が聞き逃しても、Reever は最初の一回で「river」を聞き取れます。メモリを約 0.8 GB 使います。オフにするとアイドル後にモデルが解放され、最初のコマンドは検出器だけが頼りになります。",
+  "settings.voice_passive": "さりげなく自分の声に合わせる",
+  "settings.voice_passive.help": "最初の 40 回の呼びかけはこのコンピューターに保存され、検出器にあなたの声を学習させた後で削除されます。データがコンピューターの外に出ることはありません。",
+  "settings.voice_passive.progress": "さりげない調整：{count}/{goal} 回を聞き取りました。",
+  "settings.voice_passive.done": "さりげない調整が完了しました（{goal}/{goal}）。録音は削除されました。",
+  "voiceAdapt.introHint": "Reever をあなたの声に合わせましょう。「{wake}」と 5～{goal} 回、毎回少し間を空けて言ってください（言葉だけ）。スキップもできます。",
+  "voiceAdapt.skip": "スキップ",
+  "home.packMissing": "{languages}：{pack} 言語パックがダウンロードされていないため、Reever はこの言語をほとんど理解できません。インストーラーを再実行してパックを選択してください。"
 });

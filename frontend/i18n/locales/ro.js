@@ -251,7 +251,7 @@ I18N.register('ro', {
   "settings.wake_spotter": "Detector «river» în fundal (model mic)",
   "settings.wake_spotter.help": "Ascultă continuu și prinde imediat cuvântul de activare, chiar în mijlocul vorbirii; asigură modelul mare când acesta îl ratează.",
   "settings.voice_adapt": "Adaptează detectorul la vocea mea",
-  "settings.voice_adapt.help": "Spuneți «river» de vreo zece ori: detectorul de fundal se va adapta la vocea și microfonul dvs. Înregistrarea rămâne în memorie și nu se salvează.",
+  "settings.voice_adapt.help": "Spune „river” de vreo zece ori: detectorul din fundal se adaptează la vocea și microfonul tău. Înregistrarea rămâne pe acest computer și se șterge când se încheie adaptarea discretă.",
   "settings.voice_adapt.start": "Adaptează…",
   "settings.voice_adapt.reset": "Resetează",
   "settings.voice_adapt.on": "Adaptat la vocea dvs.: aude {heard} din {words} cuvinte înregistrate (înainte: {before}).",
@@ -393,5 +393,14 @@ I18N.register('ro', {
   "confirm.yes": "Da",
   "confirm.no": "Nu",
   "confirm.noTitle": "Nu (Esc)",
-  "confirm.left": "Anulare în {seconds} s"
+  "confirm.left": "Anulare în {seconds} s",
+  "settings.keep_asr_loaded": "Păstrează modelul vocal în memorie",
+  "settings.keep_asr_loaded.help": "Astfel Reever aude „river” din prima, chiar dacă detectorul mic îl ratează. Costă aproximativ 0,8 GB de memorie; dezactivat, modelul se descarcă după inactivitate, iar prima comandă depinde doar de detector.",
+  "settings.voice_passive": "Adaptează-te discret la vocea mea",
+  "settings.voice_passive.help": "Primele 40 de apelări sunt păstrate pe acest computer, învață detectorul vocea ta și apoi sunt șterse. Nimic nu părăsește computerul.",
+  "settings.voice_passive.progress": "Adaptare discretă: {count} din {goal} auzite.",
+  "settings.voice_passive.done": "Adaptarea discretă s-a încheiat ({goal} din {goal}), înregistrările au fost șterse.",
+  "voiceAdapt.introHint": "Să potrivim Reever pe vocea ta. Spune „{wake}” de 5–{goal} ori, cu o pauză scurtă după fiecare — doar cuvântul. Poți sări peste.",
+  "voiceAdapt.skip": "Sari peste",
+  "home.packMissing": "{languages}: pachetul de limbă {pack} nu este descărcat, așa că Reever abia înțelege această vorbire. Rulează din nou programul de instalare și bifează pachetul."
 });

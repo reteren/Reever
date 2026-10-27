@@ -251,7 +251,7 @@ I18N.register('fi', {
   "settings.wake_spotter": "«river»-tunnistin taustalla (pieni malli)",
   "settings.wake_spotter.help": "Kuuntelee jatkuvasti ja tunnistaa herätyssanan heti, myös kesken puheen; varmistaa suuren mallin, kun se ohittaa sanan.",
   "settings.voice_adapt": "Sovita tunnistin ääneeni",
-  "settings.voice_adapt.help": "Sano «river» noin kymmenen kertaa: taustatunnistin sovittuu ääneesi ja mikrofoniisi. Tallenne pysyy muistissa eikä sitä tallenneta.",
+  "settings.voice_adapt.help": "Sano ”river” noin kymmenen kertaa: taustatunnistin mukautuu ääneesi ja mikrofoniisi. Tallenne pysyy tällä tietokoneella ja poistetaan, kun hiljainen mukautus on valmis.",
   "settings.voice_adapt.start": "Sovita…",
   "settings.voice_adapt.reset": "Palauta",
   "settings.voice_adapt.on": "Sovitettu ääneesi: kuulee {heard}/{words} tallennettua sanaa (ennen: {before}).",
@@ -393,5 +393,14 @@ I18N.register('fi', {
   "confirm.yes": "Kyllä",
   "confirm.no": "Ei",
   "confirm.noTitle": "Ei (Esc)",
-  "confirm.left": "Peruutus {seconds} s kuluttua"
+  "confirm.left": "Peruutus {seconds} s kuluttua",
+  "settings.keep_asr_loaded": "Pidä puhemalli muistissa",
+  "settings.keep_asr_loaded.help": "Silloin Reever kuulee ”river” heti ensimmäisellä kerralla, vaikka pieni tunnistin ohittaisi sen. Vie noin 0,8 Gt muistia; pois päältä malli poistetaan muistista joutoajan jälkeen ja ensimmäinen komento riippuu vain tunnistimesta.",
+  "settings.voice_passive": "Mukaudu ääneeni huomaamatta",
+  "settings.voice_passive.help": "Ensimmäiset 40 kutsua tallennetaan tälle tietokoneelle, opettavat tunnistimelle äänesi ja poistetaan sitten. Mikään ei poistu tietokoneelta.",
+  "settings.voice_passive.progress": "Hiljainen mukautus: {count}/{goal} kuultu.",
+  "settings.voice_passive.done": "Hiljainen mukautus valmis ({goal}/{goal}), tallenteet poistettu.",
+  "voiceAdapt.introHint": "Viritetään Reever äänellesi. Sano ”{wake}” 5–{goal} kertaa, lyhyt tauko jokaisen jälkeen — pelkkä sana. Voit ohittaa tämän.",
+  "voiceAdapt.skip": "Ohita",
+  "home.packMissing": "{languages}: kielipakettia {pack} ei ole ladattu, joten Reever tuskin ymmärtää tätä puhetta. Suorita asennusohjelma uudelleen ja valitse paketti."
 });

@@ -251,7 +251,7 @@ I18N.register('yue', {
   "settings.wake_spotter": "背景 «river» 偵測器（細模型）",
   "settings.wake_spotter.help": "一直聽住，講緊嘢都即刻捉到喚醒詞；大模型漏咗就幫手補。",
   "settings.voice_adapt": "等偵測器適應我把聲",
-  "settings.voice_adapt.help": "講大約十次「river」：背景偵測器會適應你把聲同咪高峰。錄音只會留喺記憶體，唔會儲存。",
+  "settings.voice_adapt.help": "講「river」大約十次：背景檢測器會適應你把聲同咪高峰。錄音只會留喺呢部電腦，靜默適應完成後刪除。",
   "settings.voice_adapt.start": "適應…",
   "settings.voice_adapt.reset": "重設",
   "settings.voice_adapt.on": "已適應你把聲：錄低嘅 {words} 個字聽到 {heard} 個（之前 {before} 個）。",
@@ -393,5 +393,14 @@ I18N.register('yue', {
   "confirm.yes": "係",
   "confirm.no": "唔係",
   "confirm.noTitle": "唔係（Esc）",
-  "confirm.left": "{seconds} 秒後取消"
+  "confirm.left": "{seconds} 秒後取消",
+  "settings.keep_asr_loaded": "將語音模型保留喺記憶體",
+  "settings.keep_asr_loaded.help": "咁就算細檢測器聽漏，Reever 都可以第一次就聽到「river」。大約用 0.8 GB 記憶體；關咗之後模型閒置後會卸載，第一個指令就只靠檢測器。",
+  "settings.voice_passive": "靜靜雞適應我把聲",
+  "settings.voice_passive.help": "頭 40 次喚醒會儲存喺呢部電腦，用嚟教檢測器認你把聲，之後刪除。任何資料都唔會離開電腦。",
+  "settings.voice_passive.progress": "靜默適應：聽到 {count}/{goal}。",
+  "settings.voice_passive.done": "靜默適應完成（{goal}/{goal}），錄音已刪除。",
+  "voiceAdapt.introHint": "等 Reever 適應你把聲。講「{wake}」5–{goal} 次，每次之後停一停——淨係講呢個字。可以跳過。",
+  "voiceAdapt.skip": "跳過",
+  "home.packMissing": "{languages}：未下載 {pack} 語言包，Reever 差唔多聽唔明呢種語言。請再執行安裝程式並剔選語言包。"
 });

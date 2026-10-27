@@ -251,7 +251,7 @@ I18N.register('da', {
   "settings.wake_spotter": "«river»-detektor i baggrunden (lille model)",
   "settings.wake_spotter.help": "Lytter hele tiden og fanger vækkeordet med det samme, også midt i talen; sikrer den store model, når den overhører det.",
   "settings.voice_adapt": "Tilpas detektoren til min stemme",
-  "settings.voice_adapt.help": "Sig «river» cirka ti gange: baggrundsdetektoren tilpasser sig din stemme og mikrofon. Optagelsen bliver i hukommelsen og gemmes ikke.",
+  "settings.voice_adapt.help": "Sig „river“ omkring ti gange: baggrundsdetektoren tilpasser sig din stemme og mikrofon. Optagelsen bliver på denne computer og slettes, når den diskrete tilpasning er færdig.",
   "settings.voice_adapt.start": "Tilpas…",
   "settings.voice_adapt.reset": "Nulstil",
   "settings.voice_adapt.on": "Tilpasset din stemme: hører {heard} af {words} optagede ord (før: {before}).",
@@ -393,5 +393,14 @@ I18N.register('da', {
   "confirm.yes": "Ja",
   "confirm.no": "Nej",
   "confirm.noTitle": "Nej (Esc)",
-  "confirm.left": "Annulleres om {seconds} s"
+  "confirm.left": "Annulleres om {seconds} s",
+  "settings.keep_asr_loaded": "Hold talemodellen i hukommelsen",
+  "settings.keep_asr_loaded.help": "Så hører Reever „river“ første gang, også når den lille detektor misser det. Koster omkring 0,8 GB hukommelse; slået fra fjernes modellen efter inaktivitet, og den første kommando afhænger kun af detektoren.",
+  "settings.voice_passive": "Tilpas mig diskret til min stemme",
+  "settings.voice_passive.help": "De første 40 tiltaler gemmes på denne computer, lærer detektoren din stemme og slettes derefter. Intet forlader computeren.",
+  "settings.voice_passive.progress": "Diskret tilpasning: {count} af {goal} hørt.",
+  "settings.voice_passive.done": "Diskret tilpasning færdig ({goal} af {goal}), optagelser slettet.",
+  "voiceAdapt.introHint": "Lad os tilpasse Reever til din stemme. Sig „{wake}“ 5–{goal} gange med en kort pause efter hver — kun ordet. Du kan springe over.",
+  "voiceAdapt.skip": "Spring over",
+  "home.packMissing": "{languages}: sprogpakken {pack} er ikke hentet, så Reever forstår næsten ikke denne tale. Kør installationsprogrammet igen, og markér pakken."
 });

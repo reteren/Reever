@@ -530,7 +530,7 @@
   }
 
   // ── Старт ─────────────────────────────────────────────────────────
-  window.Skin = { channel, setState, sweep: sweepNow, shade: setShade };
+  window.Skin = { channel, setState, sweep: sweepNow, shade: setShade, pulse: () => { flash = 0.7; burst = 0.5; wakeLoop(true); } };
   (async () => {
     const snapshotPromise = invoke ? invoke('get_ui_snapshot').catch(() => null) : Promise.resolve(null);
     fitScale();

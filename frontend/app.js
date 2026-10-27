@@ -2,7 +2,7 @@ const tauri = window.__TAURI__;
 const previewSettings={
   wake_words:['ривер','ревер','ривьер'],
   match_threshold:0.7,
-  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_after_s:10,local_index:true,
+  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_after_s:10,keep_asr_loaded:true,voice_passive:true,local_index:true,
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
@@ -668,11 +668,11 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 const GROUPS=[
   ['interface',[['lite_ui','lite_ui',null,'instant'],['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
-  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['wake_sound','bool'],['wake_blackbox','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
+  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['voice_passive','bool'],['wake_sound','bool'],['wake_blackbox','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[
-    ['asr_threads','number'],['models_unload_after_s','unload'],['vad_threshold','number'],['wake_pause_ms','number'],
+    ['asr_threads','number'],['keep_asr_loaded','bool'],['models_unload_after_s','unload'],['vad_threshold','number'],['wake_pause_ms','number'],
     ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number']]],
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_english_level','strength'],
@@ -739,36 +739,71 @@ async function refreshVoiceAdapt(){
   let status=null;
   try{ status=await invoke('voice_adapt_status'); }catch(e){ reportError('voiceAdapt',e); }
   if(!voiceAdaptStatusNode) return;
-  const report=status?.report;
-  voiceAdaptStatusNode.textContent=report
+  const report=status?.report, passive=status?.passive;
+  voiceAdaptStatusNode.textContent=(report
     ?t('settings.voice_adapt.on',{heard:report.heard_after,words:report.words,before:report.heard_before})
-    :t('settings.voice_adapt.off');
-  voiceAdaptResetButton.disabled=!report;
+    :t('settings.voice_adapt.off'))
+    +(passive&&settingsObj.voice_passive!==false?' '+(passive.collected>=passive.goal
+      ?t('settings.voice_passive.done',{goal:passive.goal})
+      :t('settings.voice_passive.progress',{count:passive.collected,goal:passive.goal})):'');
+  voiceAdaptResetButton.disabled=!report&&!passive?.collected;
 }
 const voiceWord=()=>phraseLanguage()==='ru'?'ривер':'river';
 const VOICE_GOAL=10;
-let voiceAdaptOpen=false;
+let voiceAdaptOpen=false, voiceWords=0, voiceIntroTimer=0;
 function renderVoiceCount(words){
+  // Каждое новое услышанное «ривер» — вспышка шарика: видно, что слово засчитано.
+  if(voiceAdaptOpen&&words>voiceWords) window.Skin?.pulse?.();
+  voiceWords=words;
   $('#voiceCount').textContent=t('voiceAdapt.count',{count:words,goal:VOICE_GOAL});
   $('#voiceDone').disabled=words<5;
 }
-async function openVoiceAdapt(){
-  $('#voiceHint').textContent=t('voiceAdapt.hint',{wake:voiceWord(),goal:VOICE_GOAL});
+// intro — первый запуск: тот же диалог, но «Пропустить» вместо «Отмена», шарик слушает,
+// и через две минуты запись сама закрывается (пока она открыта, команды не выполняются).
+async function openVoiceAdapt(intro=false){
+  $('#voiceHint').textContent=t(intro?'voiceAdapt.introHint':'voiceAdapt.hint',{wake:voiceWord(),goal:VOICE_GOAL});
   $('#voiceResult').textContent='';
-  $('#voiceCancel').textContent=t('common.cancel');
+  $('#voiceCancel').textContent=t(intro?'voiceAdapt.skip':'common.cancel');
+  voiceWords=0;
   renderVoiceCount(0);
   try{ await invoke('start_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); return; }
   voiceAdaptOpen=true;
   $('#voiceOverlay').classList.add('on');
+  window.Skin?.setState?.('listening');
+  clearTimeout(voiceIntroTimer);
+  if(intro) voiceIntroTimer=setTimeout(()=>{ if(voiceAdaptOpen) (voiceWords>=5?$('#voiceDone'):$('#voiceCancel')).click(); },120000);
+}
+function closeVoiceRecording(){
+  voiceAdaptOpen=false;
+  clearTimeout(voiceIntroTimer);
+  window.Skin?.setState?.('idle');
 }
 subscribe('reever://voice-adapt',event=>{ if(voiceAdaptOpen) renderVoiceCount(Number(event.payload?.words)||0); });
 $('#voiceCancel').onclick=async()=>{
-  voiceAdaptOpen=false;
+  const recording=voiceAdaptOpen;
+  closeVoiceRecording();
   $('#voiceOverlay').classList.remove('on');
-  try{ await invoke('cancel_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); }
+  if(recording) try{ await invoke('cancel_voice_adapt'); }catch(e){ reportError('voiceAdapt',e); }
 };
+// Первый запуск: попросить сказать «ривер» 5–10 раз, если подстройки ещё нет. Один раз —
+// пропуск тоже считается; окно должно быть на экране, иначе запись перехватила бы команды
+// невидимо.
+const VOICE_INTRO_KEY='reever.voiceIntroShown';
+async function maybeVoiceIntro(){
+  if(!tauri||settingsObj.activation_mode==='hotkey') return;
+  try{ if(localStorage.getItem(VOICE_INTRO_KEY)) return; }catch{ return; }
+  let status=null;
+  try{ status=await invoke('voice_adapt_status'); }catch{ return; }
+  if(status?.report||status?.passive?.collected) return;
+  const open=()=>{
+    try{ localStorage.setItem(VOICE_INTRO_KEY,'1'); }catch{}
+    openVoiceAdapt(true);
+  };
+  if(!document.hidden) open();
+  else document.addEventListener('visibilitychange',function once(){ if(document.hidden) return; document.removeEventListener('visibilitychange',once); open(); });
+}
 $('#voiceDone').onclick=async()=>{
-  voiceAdaptOpen=false;
+  closeVoiceRecording();
   $('#voiceDone').disabled=true;
   $('#voiceResult').textContent=t('voiceAdapt.working');
   try{
@@ -984,6 +1019,18 @@ function uiLanguagesEditor(){
 // × и «+ Добавить язык». Язык без скачанного пакета добавить нельзя: пакет ставит
 // установщик (src-tauri/windows/models.nsh).
 const PACK_NAMES={european:'Parakeet v3',asian:'SenseVoice'};
+// Главная: включён язык, для которого не скачан пакет, — Reever такую речь почти не понимает
+// (русское «открой папку» базовая английская модель пишет «at croy papua»).
+function renderPackWarning(){
+  const box=$('#packWarn'); if(!box) return;
+  const packs=languageModels?.languages||{}, installed=languageModels?.installed||[];
+  const missing=(settingsObj?.languages||[]).filter(code=>packs[code]&&!installed.includes(packs[code]));
+  box.hidden=!languageModels||!missing.length;
+  if(box.hidden) return;
+  const names=new Intl.DisplayNames([I18N.locale],{type:'language'});
+  const pack=packs[missing[0]];
+  box.textContent=t('home.packMissing',{languages:missing.map(code=>{ try{ return names.of(code); }catch{ return code; } }).join(', '),pack:PACK_NAMES[pack]||pack});
+}
 function languagesEditor(models){
   const box=el('div',{className:'lang-editor'});
   const enabled=recognitionLanguages();
@@ -991,7 +1038,7 @@ function languagesEditor(models){
   const packOf=code=>models?.languages?.[code];
   const installed=pack=>(models?.installed||[]).includes(pack);
   const setLanguages=codes=>{
-    settingsObj.languages=codes; renderSettings(); renderGrammarExamples();
+    settingsObj.languages=codes; renderSettings(); renderGrammarExamples(); renderPackWarning();
     if(grammarDraft) renderGrammarEditor();
     $('#settingsMsg').textContent=t('settings.languages.changed');
   };
@@ -1053,7 +1100,7 @@ async function loadSettings(){
   catch(e){ reportError('loadModels',e); }
   try{ autostart=await invoke('get_autostart'); }catch(e){ reportError('readAutostart',e); }
   try{ soundPacks=await invoke('list_sound_packs'); }catch(e){ reportError('loadSoundPacks',e); }
-  renderSettings(); renderGrammarExamples(); startIndexStatusPolling();
+  renderSettings(); renderGrammarExamples(); startIndexStatusPolling(); renderPackWarning();
 }
 function renderSettings(){
   const F=$('#settingsForm'); F.innerHTML='';
@@ -1094,7 +1141,7 @@ function rerender(){
   setDot(micState); renderPause(); if(lastStatus) applyStatus(lastStatus); renderIndexStatus();
   renderRows(); renderEditor(); renderGrammarExamples();
   if(grammarDraft) renderGrammarEditor();
-  setGrammarButton(); renderCalCount(); renderSettings();
+  setGrammarButton(); renderCalCount(); renderSettings(); renderPackWarning();
   $('#settingsMsg').textContent='';
 }
 async function applyMascot(){
@@ -1123,5 +1170,7 @@ async function changeLanguage(preference){
   }catch{}
   await I18N.setLanguage(preference);
   startIndexStatusPolling();
-  loadActions().catch(e=>reportError('loadActions',e)); loadSettings(); loadGrammar(); refreshPause();
+  loadActions().catch(e=>reportError('loadActions',e)); loadGrammar(); refreshPause();
+  await loadSettings();
+  maybeVoiceIntro();
 })();

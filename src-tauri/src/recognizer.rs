@@ -781,20 +781,6 @@ fn log_languages(app: &AppHandle, cfg: &ReeverConfig) {
             app,
             crate::msg!("log.languages.missing", languages = names(&cfg.models.missing)),
         );
-        let pack = if cfg
-            .models
-            .missing
-            .iter()
-            .any(|code| matches!(*code, "zh" | "yue" | "ja" | "ko"))
-        {
-            "asian"
-        } else {
-            "european"
-        };
-        let _ = app.emit(
-            "reever://language-pack-missing",
-            json!({ "languages": cfg.models.missing, "pack": pack }),
-        );
     }
     if !cfg.models.need_lid.is_empty() {
         ui_log(

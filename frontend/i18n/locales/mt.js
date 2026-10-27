@@ -251,7 +251,7 @@ I18N.register('mt', {
   "settings.wake_spotter": "Detettur ta' «river» fl-isfond (mudell żgħir)",
   "settings.wake_spotter.help": "Jisma' l-ħin kollu u jaqbad il-kelma ta' attivazzjoni minnufih, anke f'nofs it-taħdit; jassigura l-mudell il-kbir meta dan jitlifha.",
   "settings.voice_adapt": "Adatta d-ditekter għal leħni",
-  "settings.voice_adapt.help": "Għid «river» madwar għaxar darbiet: id-ditekter fl-isfond jadatta ruħu għal leħnek u l-mikrofonu tiegħek. Ir-reġistrazzjoni tibqa’ fil-memorja u ma tiġix issejvjata.",
+  "settings.voice_adapt.help": "Għid “river” madwar għaxar darbiet: id-ditekter fl-isfond jadatta ruħu għal leħnek u l-mikrofonu. Ir-reġistrazzjoni tibqa’ fuq dan il-kompjuter u titħassar meta jintemm l-adattament siekta.",
   "settings.voice_adapt.start": "Adatta…",
   "settings.voice_adapt.reset": "Irrisettja",
   "settings.voice_adapt.on": "Adattat għal leħnek: jisma’ {heard} minn {words} kliem irreġistrat (qabel: {before}).",
@@ -393,5 +393,14 @@ I18N.register('mt', {
   "confirm.yes": "Iva",
   "confirm.no": "Le",
   "confirm.noTitle": "Le (Esc)",
-  "confirm.left": "Jitħassar f'{seconds} s"
+  "confirm.left": "Jitħassar f'{seconds} s",
+  "settings.keep_asr_loaded": "Żomm il-mudell tad-diskors fil-memorja",
+  "settings.keep_asr_loaded.help": "Hekk Reever jisma’ “river” mill-ewwel darba, anke jekk id-ditekter iż-żgħir jitilfu. Jiswa madwar 0.8 GB memorja; jekk jintefa, il-mudell jinħatt wara inattività u l-ewwel kmand jiddependi biss fuq id-ditekter.",
+  "settings.voice_passive": "Adatta ruħek bil-moħbi għal leħni",
+  "settings.voice_passive.help": "L-ewwel 40 sejħa jinżammu fuq dan il-kompjuter, jgħallmu lid-ditekter leħnek u mbagħad jitħassru. Xejn ma joħroġ mill-kompjuter.",
+  "settings.voice_passive.progress": "Adattament siekta: {count} minn {goal} instemgħu.",
+  "settings.voice_passive.done": "L-adattament siekta tlesta ({goal} minn {goal}), ir-reġistrazzjonijiet tħassru.",
+  "voiceAdapt.introHint": "Ejja nadattaw lil Reever għal leħnek. Għid “{wake}” 5–{goal} darbiet b’waqfa qasira wara kull waħda — il-kelma biss. Tista’ taqbeż.",
+  "voiceAdapt.skip": "Aqbeż",
+  "home.packMissing": "{languages}: il-pakkett tal-lingwa {pack} mhuwiex imniżżel, għalhekk Reever bilkemm jifhem dan id-diskors. Erġa’ ħaddem l-installatur u immarka l-pakkett."
 });

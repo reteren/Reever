@@ -251,7 +251,7 @@ I18N.register('lt', {
   "settings.wake_spotter": "Foninis «river» detektorius (mažas modelis)",
   "settings.wake_spotter.help": "Klausosi nuolat ir aktyvinimo žodį pagauna iš karto, net kalbos viduryje; apdraudžia didįjį modelį, kai šis jį praleidžia.",
   "settings.voice_adapt": "Pritaikyti detektorių mano balsui",
-  "settings.voice_adapt.help": "Pasakykite «river» maždaug dešimt kartų: foninis detektorius prisitaikys prie jūsų balso ir mikrofono. Įrašas lieka atmintyje ir neišsaugomas.",
+  "settings.voice_adapt.help": "Pasakykite „river“ maždaug dešimt kartų: foninis detektorius prisitaikys prie jūsų balso ir mikrofono. Įrašas lieka šiame kompiuteryje ir ištrinamas, kai baigiasi tylusis prisitaikymas.",
   "settings.voice_adapt.start": "Pritaikyti…",
   "settings.voice_adapt.reset": "Atstatyti",
   "settings.voice_adapt.on": "Pritaikyta jūsų balsui: girdi {heard} iš {words} įrašytų žodžių (anksčiau: {before}).",
@@ -393,5 +393,14 @@ I18N.register('lt', {
   "confirm.yes": "Taip",
   "confirm.no": "Ne",
   "confirm.noTitle": "Ne (Esc)",
-  "confirm.left": "Atšaukiama po {seconds} s"
+  "confirm.left": "Atšaukiama po {seconds} s",
+  "settings.keep_asr_loaded": "Laikyti kalbos modelį atmintyje",
+  "settings.keep_asr_loaded.help": "Tada Reever išgirsta „river“ iš pirmo karto, net jei mažasis detektorius jį praleidžia. Užima apie 0,8 GB atminties; išjungus modelis po neveiklos iškraunamas, o pirmoji komanda priklauso tik nuo detektoriaus.",
+  "settings.voice_passive": "Nepastebimai prisitaikyti prie mano balso",
+  "settings.voice_passive.help": "Pirmieji 40 kreipinių išsaugomi šiame kompiuteryje, išmoko detektorių jūsų balso ir tada ištrinami. Niekas nepalieka kompiuterio.",
+  "settings.voice_passive.progress": "Tylusis prisitaikymas: išgirsta {count} iš {goal}.",
+  "settings.voice_passive.done": "Tylusis prisitaikymas baigtas ({goal} iš {goal}), įrašai ištrinti.",
+  "voiceAdapt.introHint": "Pritaikykime Reever jūsų balsui. Pasakykite „{wake}“ 5–{goal} kartus su trumpa pauze po kiekvieno — tik žodį. Galite praleisti.",
+  "voiceAdapt.skip": "Praleisti",
+  "home.packMissing": "{languages}: kalbos paketas {pack} neatsisiųstas, todėl Reever šios kalbos beveik nesupranta. Paleiskite diegimo programą dar kartą ir pažymėkite paketą."
 });

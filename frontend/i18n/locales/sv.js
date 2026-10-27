@@ -251,7 +251,7 @@ I18N.register('sv', {
   "settings.wake_spotter": "«river»-detektor i bakgrunden (liten modell)",
   "settings.wake_spotter.help": "Lyssnar hela tiden och fångar väckningsordet direkt, även mitt i talet; säkrar upp den stora modellen när den missar det.",
   "settings.voice_adapt": "Anpassa detektorn till min röst",
-  "settings.voice_adapt.help": "Säg «river» ungefär tio gånger: bakgrundsdetektorn anpassar sig till din röst och mikrofon. Inspelningen stannar i minnet och sparas inte.",
+  "settings.voice_adapt.help": "Säg ”river” ungefär tio gånger: bakgrundsdetektorn anpassar sig till din röst och mikrofon. Inspelningen stannar på den här datorn och raderas när den tysta anpassningen är klar.",
   "settings.voice_adapt.start": "Anpassa…",
   "settings.voice_adapt.reset": "Återställ",
   "settings.voice_adapt.on": "Anpassad till din röst: hör {heard} av {words} inspelade ord (före: {before}).",
@@ -393,5 +393,14 @@ I18N.register('sv', {
   "confirm.yes": "Ja",
   "confirm.no": "Nej",
   "confirm.noTitle": "Nej (Esc)",
-  "confirm.left": "Avbryts om {seconds} s"
+  "confirm.left": "Avbryts om {seconds} s",
+  "settings.keep_asr_loaded": "Behåll talmodellen i minnet",
+  "settings.keep_asr_loaded.help": "Då hör Reever ”river” redan första gången, även när den lilla detektorn missar det. Kostar ungefär 0,8 GB minne; avstängt laddas modellen ur efter inaktivitet och det första kommandot beror bara på detektorn.",
+  "settings.voice_passive": "Anpassa mig diskret till min röst",
+  "settings.voice_passive.help": "De första 40 tilltalen sparas på den här datorn, lär detektorn din röst och raderas sedan. Inget lämnar datorn.",
+  "settings.voice_passive.progress": "Tyst anpassning: {count} av {goal} hörda.",
+  "settings.voice_passive.done": "Tyst anpassning klar ({goal} av {goal}), inspelningar raderade.",
+  "voiceAdapt.introHint": "Låt oss anpassa Reever till din röst. Säg ”{wake}” 5–{goal} gånger med en kort paus efter varje — bara ordet. Du kan hoppa över.",
+  "voiceAdapt.skip": "Hoppa över",
+  "home.packMissing": "{languages}: språkpaketet {pack} är inte hämtat, så Reever förstår knappt det här talet. Kör installationsprogrammet igen och markera paketet."
 });

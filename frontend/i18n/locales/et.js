@@ -251,7 +251,7 @@ I18N.register('et', {
   "settings.wake_spotter": "«river»-tuvasti taustal (väike mudel)",
   "settings.wake_spotter.help": "Kuulab pidevalt ja püüab äratussõna kohe kinni, ka keset kõnet; kindlustab suurt mudelit, kui see sõna maha magab.",
   "settings.voice_adapt": "Kohanda tuvastaja minu häälega",
-  "settings.voice_adapt.help": "Öelge umbes kümme korda «river»: taustatuvastaja kohandub teie hääle ja mikrofoniga. Salvestis jääb mällu ega salvestata.",
+  "settings.voice_adapt.help": "Öelge umbes kümme korda „river”: taustatuvastaja kohandub teie hääle ja mikrofoniga. Salvestis jääb sellesse arvutisse ja kustutatakse, kui vaikne kohandamine lõpeb.",
   "settings.voice_adapt.start": "Kohanda…",
   "settings.voice_adapt.reset": "Lähtesta",
   "settings.voice_adapt.on": "Kohandatud teie häälega: kuuleb {heard} sõna {words} salvestatust (enne: {before}).",
@@ -393,5 +393,14 @@ I18N.register('et', {
   "confirm.yes": "Jah",
   "confirm.no": "Ei",
   "confirm.noTitle": "Ei (Esc)",
-  "confirm.left": "Tühistub {seconds} s pärast"
+  "confirm.left": "Tühistub {seconds} s pärast",
+  "settings.keep_asr_loaded": "Hoia kõnemudel mälus",
+  "settings.keep_asr_loaded.help": "Siis kuuleb Reever sõna „river” esimesel korral, isegi kui väike tuvastaja sellest mööda laseb. Võtab umbes 0,8 GB mälu; väljalülitatult laaditakse mudel pärast jõudeolekut mälust välja ja esimene käsk sõltub ainult tuvastajast.",
+  "settings.voice_passive": "Kohandu märkamatult minu häälega",
+  "settings.voice_passive.help": "Esimesed 40 pöördumist salvestatakse sellesse arvutisse, õpetavad tuvastajale teie häält ja kustutatakse siis. Midagi ei lahku arvutist.",
+  "settings.voice_passive.progress": "Vaikne kohandamine: kuuldud {count}/{goal}.",
+  "settings.voice_passive.done": "Vaikne kohandamine lõpetatud ({goal}/{goal}), salvestised kustutatud.",
+  "voiceAdapt.introHint": "Häälestame Reeveri teie häälele. Öelge „{wake}” 5–{goal} korda, iga järel lühike paus — ainult see sõna. Võite vahele jätta.",
+  "voiceAdapt.skip": "Jäta vahele",
+  "home.packMissing": "{languages}: keelepakett {pack} pole alla laaditud, seega Reever seda kõnet peaaegu ei mõista. Käivitage paigaldusprogramm uuesti ja märkige pakett."
 });

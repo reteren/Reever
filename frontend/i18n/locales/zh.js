@@ -250,7 +250,7 @@ I18N.register('zh', {
   "settings.wake_spotter": "后台 «river» 检测器（小型模型）",
   "settings.wake_spotter.help": "持续监听，可在说话过程中立即捕捉唤醒词；大型模型漏听时，它会提供补充检测。",
   "settings.voice_adapt": "让检测器适应我的声音",
-  "settings.voice_adapt.help": "说约十次「river」：后台检测器会适应你的声音和麦克风。录音只保存在内存中，不会写入磁盘。",
+  "settings.voice_adapt.help": "说“river”大约十次：后台检测器会适应你的声音和麦克风。录音只保存在这台电脑上，静默适应完成后删除。",
   "settings.voice_adapt.start": "适应…",
   "settings.voice_adapt.reset": "重置",
   "settings.voice_adapt.on": "已适应你的声音：录下的 {words} 个词能听出 {heard} 个（之前 {before} 个）。",
@@ -392,5 +392,14 @@ I18N.register('zh', {
   "confirm.yes": "是",
   "confirm.no": "否",
   "confirm.noTitle": "否（Esc）",
-  "confirm.left": "{seconds} 秒后取消"
+  "confirm.left": "{seconds} 秒后取消",
+  "settings.keep_asr_loaded": "将语音模型保留在内存中",
+  "settings.keep_asr_loaded.help": "这样即使小型检测器漏听，Reever 也能第一次就听到“river”。约占 0.8 GB 内存；关闭后模型会在空闲后卸载，第一条命令只能依赖检测器。",
+  "settings.voice_passive": "悄悄适应我的声音",
+  "settings.voice_passive.help": "前 40 次唤醒会保存在这台电脑上，用来让检测器学习你的声音，之后删除。任何数据都不会离开电脑。",
+  "settings.voice_passive.progress": "静默适应：已听到 {count}/{goal}。",
+  "settings.voice_passive.done": "静默适应已完成（{goal}/{goal}），录音已删除。",
+  "voiceAdapt.introHint": "让 Reever 适应你的声音。请说“{wake}”5–{goal} 次，每次后稍作停顿——只说这个词。可以跳过。",
+  "voiceAdapt.skip": "跳过",
+  "home.packMissing": "{languages}：未下载 {pack} 语言包，Reever 几乎听不懂这种语言。请重新运行安装程序并勾选该语言包。"
 });

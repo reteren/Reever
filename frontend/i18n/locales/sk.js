@@ -251,7 +251,7 @@ I18N.register('sk', {
   "settings.wake_spotter": "Detektor «river» na pozadí (malý model)",
   "settings.wake_spotter.help": "Počúva nepretržite a aktivačné slovo zachytí hneď, aj uprostred reči; istí veľký model, keď ho prepočuje.",
   "settings.voice_adapt": "Prispôsobiť detektor môjmu hlasu",
-  "settings.voice_adapt.help": "Povedzte asi desaťkrát «river»: detektor na pozadí sa prispôsobí vášmu hlasu a mikrofónu. Nahrávka zostáva v pamäti a neukladá sa.",
+  "settings.voice_adapt.help": "Povedzte asi desaťkrát „river“: detektor na pozadí sa prispôsobí vášmu hlasu a mikrofónu. Nahrávka zostáva v tomto počítači a zmaže sa po dokončení tichého prispôsobenia.",
   "settings.voice_adapt.start": "Prispôsobiť…",
   "settings.voice_adapt.reset": "Obnoviť",
   "settings.voice_adapt.on": "Prispôsobené vášmu hlasu: počuje {heard} z {words} nahraných slov (predtým: {before}).",
@@ -393,5 +393,14 @@ I18N.register('sk', {
   "confirm.yes": "Áno",
   "confirm.no": "Nie",
   "confirm.noTitle": "Nie (Esc)",
-  "confirm.left": "Zrušenie o {seconds} s"
+  "confirm.left": "Zrušenie o {seconds} s",
+  "settings.keep_asr_loaded": "Držať model reči v pamäti",
+  "settings.keep_asr_loaded.help": "Reever potom počuje „river“ na prvýkrát, aj keď ho malý detektor prepočuje. Stojí asi 0,8 GB pamäte; po vypnutí sa model po nečinnosti uvoľní a prvý príkaz závisí len od detektora.",
+  "settings.voice_passive": "Nenápadne sa prispôsobovať môjmu hlasu",
+  "settings.voice_passive.help": "Prvých 40 oslovení sa uloží v tomto počítači, naučí detektor váš hlas a potom sa zmaže. Nič neopustí počítač.",
+  "settings.voice_passive.progress": "Tiché prispôsobenie: počuté {count} z {goal}.",
+  "settings.voice_passive.done": "Tiché prispôsobenie dokončené ({goal} z {goal}), nahrávky zmazané.",
+  "voiceAdapt.introHint": "Prispôsobme Reever vášmu hlasu. Povedzte „{wake}“ 5–{goal}-krát s krátkou pauzou po každom — len samotné slovo. Môžete preskočiť.",
+  "voiceAdapt.skip": "Preskočiť",
+  "home.packMissing": "{languages}: jazykový balík {pack} nie je stiahnutý, takže Reever tejto reči takmer nerozumie. Spustite inštalátor znova a balík označte."
 });

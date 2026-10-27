@@ -250,7 +250,7 @@ I18N.register('ar', {
   "settings.wake_spotter": "كاشف «river» في الخلفية (نموذج صغير)",
   "settings.wake_spotter.help": "يستمع باستمرار ويلتقط كلمة التنبيه فورًا، حتى أثناء الكلام؛ ويساعد النموذج الكبير إذا لم يلتقطها.",
   "settings.voice_adapt": "مواءمة الكاشف مع صوتي",
-  "settings.voice_adapt.help": "قل «river» نحو عشر مرات: سيتكيّف الكاشف الخلفي مع صوتك والميكروفون. يبقى التسجيل في الذاكرة ولا يُحفظ.",
+  "settings.voice_adapt.help": "قل «river» نحو عشر مرات: يتكيّف الكاشف الخلفي مع صوتك وميكروفونك. يبقى التسجيل على هذا الحاسوب ويُحذف عند انتهاء التكيّف الهادئ.",
   "settings.voice_adapt.start": "مواءمة…",
   "settings.voice_adapt.reset": "إعادة تعيين",
   "settings.voice_adapt.on": "مُوائم مع صوتك: يلتقط {heard} من {words} كلمات مسجّلة (قبل: {before}).",
@@ -392,5 +392,14 @@ I18N.register('ar', {
   "confirm.yes": "نعم",
   "confirm.no": "لا",
   "confirm.noTitle": "لا (Esc)",
-  "confirm.left": "إلغاء خلال {seconds} ث"
+  "confirm.left": "إلغاء خلال {seconds} ث",
+  "settings.keep_asr_loaded": "إبقاء نموذج الكلام في الذاكرة",
+  "settings.keep_asr_loaded.help": "عندها يسمع Reever كلمة «river» من المرة الأولى حتى لو فاتت الكاشف الصغير. يستهلك نحو 0.8 غيغابايت من الذاكرة؛ وعند إيقافه يُفرَّغ النموذج بعد الخمول ويعتمد الأمر الأول على الكاشف وحده.",
+  "settings.voice_passive": "التكيّف مع صوتي بهدوء",
+  "settings.voice_passive.help": "تُحفظ أول 40 مناداة على هذا الحاسوب لتعليم الكاشف صوتك ثم تُحذف. لا يغادر شيء الحاسوب.",
+  "settings.voice_passive.progress": "التكيّف الهادئ: سُمع {count} من {goal}.",
+  "settings.voice_passive.done": "اكتمل التكيّف الهادئ ({goal} من {goal}) وحُذفت التسجيلات.",
+  "voiceAdapt.introHint": "لنضبط Reever على صوتك. قل «{wake}» من 5 إلى {goal} مرات مع توقف قصير بعد كل مرة — الكلمة فقط. يمكنك التخطي.",
+  "voiceAdapt.skip": "تخطٍّ",
+  "home.packMissing": "{languages}: حزمة اللغة {pack} غير منزّلة، لذا لا يكاد Reever يفهم هذا الكلام. شغّل المثبّت مجددًا وحدّد الحزمة."
 });

@@ -251,7 +251,7 @@ I18N.register('cs', {
   "settings.wake_spotter": "Detektor «river» na pozadí (malý model)",
   "settings.wake_spotter.help": "Poslouchá nepřetržitě a zachytí aktivační slovo hned, i uprostřed řeči; jistí velký model, když ho přeslechne.",
   "settings.voice_adapt": "Přizpůsobit detektor mému hlasu",
-  "settings.voice_adapt.help": "Řekněte asi desetkrát «river»: detektor na pozadí se přizpůsobí vašemu hlasu a mikrofonu. Nahrávka zůstává v paměti a neukládá se.",
+  "settings.voice_adapt.help": "Řekněte asi desetkrát „river“: detektor na pozadí se přizpůsobí vašemu hlasu a mikrofonu. Nahrávka zůstává v tomto počítači a smaže se po dokončení tichého přizpůsobení.",
   "settings.voice_adapt.start": "Přizpůsobit…",
   "settings.voice_adapt.reset": "Obnovit",
   "settings.voice_adapt.on": "Přizpůsobeno vašemu hlasu: slyší {heard} z {words} nahraných slov (předtím: {before}).",
@@ -393,5 +393,14 @@ I18N.register('cs', {
   "confirm.yes": "Ano",
   "confirm.no": "Ne",
   "confirm.noTitle": "Ne (Esc)",
-  "confirm.left": "Zrušení za {seconds} s"
+  "confirm.left": "Zrušení za {seconds} s",
+  "settings.keep_asr_loaded": "Držet model řeči v paměti",
+  "settings.keep_asr_loaded.help": "Reever pak slyší „river“ napoprvé, i když ho malý detektor přeslechne. Stojí asi 0,8 GB paměti; po vypnutí se model po nečinnosti uvolní a první příkaz závisí jen na detektoru.",
+  "settings.voice_passive": "Nenápadně se přizpůsobovat mému hlasu",
+  "settings.voice_passive.help": "Prvních 40 oslovení se uloží v tomto počítači, naučí detektor váš hlas a pak se smažou. Nic neopustí počítač.",
+  "settings.voice_passive.progress": "Tiché přizpůsobení: slyšeno {count} z {goal}.",
+  "settings.voice_passive.done": "Tiché přizpůsobení dokončeno ({goal} z {goal}), nahrávky smazány.",
+  "voiceAdapt.introHint": "Přizpůsobme Reever vašemu hlasu. Řekněte „{wake}“ 5–{goal}krát s krátkou pauzou po každém — jen samotné slovo. Můžete přeskočit.",
+  "voiceAdapt.skip": "Přeskočit",
+  "home.packMissing": "{languages}: jazykový balíček {pack} není stažen, takže Reever této řeči skoro nerozumí. Spusťte instalátor znovu a balíček zaškrtněte."
 });

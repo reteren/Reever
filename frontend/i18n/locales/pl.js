@@ -251,7 +251,7 @@ I18N.register('pl', {
   "settings.wake_spotter": "Detektor «river» w tle (mały model)",
   "settings.wake_spotter.help": "Słucha bez przerwy i od razu wyłapuje słowo aktywacji, nawet w środku wypowiedzi; zabezpiecza duży model, gdy ten je przegapi.",
   "settings.voice_adapt": "Dopasuj detektor do mojego głosu",
-  "settings.voice_adapt.help": "Powiedz «river» około dziesięciu razy: detektor w tle dopasuje się do twojego głosu i mikrofonu. Nagranie zostaje w pamięci i nie jest zapisywane.",
+  "settings.voice_adapt.help": "Powiedz „river” około dziesięciu razy: detektor w tle dopasuje się do Twojego głosu i mikrofonu. Nagranie zostaje na tym komputerze i jest usuwane po zakończeniu cichego dopasowania.",
   "settings.voice_adapt.start": "Dopasuj…",
   "settings.voice_adapt.reset": "Resetuj",
   "settings.voice_adapt.on": "Dopasowany do twojego głosu: słyszy {heard} z {words} nagranych słów (wcześniej: {before}).",
@@ -393,5 +393,14 @@ I18N.register('pl', {
   "confirm.yes": "Tak",
   "confirm.no": "Nie",
   "confirm.noTitle": "Nie (Esc)",
-  "confirm.left": "Anulowanie za {seconds} s"
+  "confirm.left": "Anulowanie za {seconds} s",
+  "settings.keep_asr_loaded": "Trzymaj model mowy w pamięci",
+  "settings.keep_asr_loaded.help": "Wtedy Reever słyszy „river” za pierwszym razem, nawet gdy mały detektor go przeoczy. Kosztuje około 0,8 GB pamięci; po wyłączeniu model jest zwalniany po bezczynności, a pierwsze polecenie zależy tylko od detektora.",
+  "settings.voice_passive": "Dyskretnie dopasowuj się do mojego głosu",
+  "settings.voice_passive.help": "Pierwsze 40 wywołań zostaje na tym komputerze, uczy detektor Twojego głosu, a potem jest usuwanych. Nic nie opuszcza komputera.",
+  "settings.voice_passive.progress": "Ciche dopasowanie: usłyszano {count} z {goal}.",
+  "settings.voice_passive.done": "Ciche dopasowanie zakończone ({goal} z {goal}), nagrania usunięte.",
+  "voiceAdapt.introHint": "Dopasujmy Reever do Twojego głosu. Powiedz „{wake}” 5–{goal} razy z krótką przerwą po każdym — tylko samo słowo. Możesz pominąć.",
+  "voiceAdapt.skip": "Pomiń",
+  "home.packMissing": "{languages}: pakiet językowy {pack} nie jest pobrany, więc Reever prawie nie rozumie tej mowy. Uruchom instalator ponownie i zaznacz pakiet."
 });

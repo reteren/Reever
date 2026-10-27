@@ -251,7 +251,7 @@ I18N.register('sl', {
   "settings.wake_spotter": "Detektor «river» v ozadju (majhen model)",
   "settings.wake_spotter.help": "Posluša neprekinjeno in besedo za aktivacijo ujame takoj, tudi sredi govora; varuje veliki model, ko jo ta preslišal.",
   "settings.voice_adapt": "Prilagodi detektor mojemu glasu",
-  "settings.voice_adapt.help": "Recite približno desetkrat «river»: detektor v ozadju se bo prilagodil vašemu glasu in mikrofonu. Posnetek ostane v pomnilniku in se ne shrani.",
+  "settings.voice_adapt.help": "Recite »river« približno desetkrat: detektor v ozadju se prilagodi vašemu glasu in mikrofonu. Posnetek ostane na tem računalniku in se izbriše, ko se tiha prilagoditev konča.",
   "settings.voice_adapt.start": "Prilagodi…",
   "settings.voice_adapt.reset": "Ponastavi",
   "settings.voice_adapt.on": "Prilagojeno vašemu glasu: sliši {heard} od {words} posnetih besed (prej: {before}).",
@@ -393,5 +393,14 @@ I18N.register('sl', {
   "confirm.yes": "Da",
   "confirm.no": "Ne",
   "confirm.noTitle": "Ne (Esc)",
-  "confirm.left": "Preklic čez {seconds} s"
+  "confirm.left": "Preklic čez {seconds} s",
+  "settings.keep_asr_loaded": "Model govora naj ostane v pomnilniku",
+  "settings.keep_asr_loaded.help": "Tako Reever sliši »river« že prvič, tudi če ga mali detektor zgreši. Stane približno 0,8 GB pomnilnika; ko je izklopljeno, se model po nedejavnosti sprosti in prvi ukaz je odvisen le od detektorja.",
+  "settings.voice_passive": "Neopazno se prilagajaj mojemu glasu",
+  "settings.voice_passive.help": "Prvih 40 nagovorov se shrani na tem računalniku, nauči detektor vašega glasu in se nato izbriše. Nič ne zapusti računalnika.",
+  "settings.voice_passive.progress": "Tiha prilagoditev: slišano {count} od {goal}.",
+  "settings.voice_passive.done": "Tiha prilagoditev končana ({goal} od {goal}), posnetki izbrisani.",
+  "voiceAdapt.introHint": "Prilagodimo Reever vašemu glasu. Recite »{wake}« 5–{goal}-krat s kratkim premorom po vsakem — samo besedo. Lahko preskočite.",
+  "voiceAdapt.skip": "Preskoči",
+  "home.packMissing": "{languages}: jezikovni paket {pack} ni prenesen, zato Reever tega govora skoraj ne razume. Znova zaženite namestitveni program in označite paket."
 });

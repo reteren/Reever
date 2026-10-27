@@ -250,7 +250,7 @@ I18N.register('de', {
   "settings.wake_spotter": "Hintergrunddetektor für «river» (kleines Modell)",
   "settings.wake_spotter.help": "Hört ständig zu und erkennt das Aktivierungswort sofort, auch mitten im Satz; springt ein, wenn das große Modell es überhört.",
   "settings.voice_adapt": "Detektor an meine Stimme anpassen",
-  "settings.voice_adapt.help": "Sagen Sie etwa zehnmal «river»: Der Hintergrunddetektor passt sich an Ihre Stimme und Ihr Mikrofon an. Die Aufnahme bleibt im Speicher und wird nicht gespeichert.",
+  "settings.voice_adapt.help": "Sagen Sie etwa zehnmal „River“: Der Hintergrunddetektor passt sich an Ihre Stimme und Ihr Mikrofon an. Die Aufnahme bleibt auf diesem Computer und wird gelöscht, wenn die stille Anpassung abgeschlossen ist.",
   "settings.voice_adapt.start": "Anpassen…",
   "settings.voice_adapt.reset": "Zurücksetzen",
   "settings.voice_adapt.on": "An Ihre Stimme angepasst: erkennt {heard} von {words} aufgenommenen Wörtern (vorher: {before}).",
@@ -392,5 +392,14 @@ I18N.register('de', {
   "confirm.yes": "Ja",
   "confirm.no": "Nein",
   "confirm.noTitle": "Nein (Esc)",
-  "confirm.left": "Abbruch in {seconds} s"
+  "confirm.left": "Abbruch in {seconds} s",
+  "settings.keep_asr_loaded": "Sprachmodell im Speicher halten",
+  "settings.keep_asr_loaded.help": "Dann hört Reever „River“ schon beim ersten Mal, auch wenn der kleine Detektor es verpasst. Kostet etwa 0,8 GB Speicher; ausgeschaltet wird das Modell nach Leerlauf entladen und der erste Befehl hängt allein vom Detektor ab.",
+  "settings.voice_passive": "Unauffällig an meine Stimme anpassen",
+  "settings.voice_passive.help": "Die ersten 40 Aktivierungen werden auf diesem Computer gespeichert, trainieren den Detektor auf Ihre Stimme und werden dann gelöscht. Nichts verlässt den Computer.",
+  "settings.voice_passive.progress": "Stille Anpassung: {count} von {goal} gehört.",
+  "settings.voice_passive.done": "Stille Anpassung abgeschlossen ({goal} von {goal}), Aufnahmen gelöscht.",
+  "voiceAdapt.introHint": "Stimmen wir Reever auf Ihre Stimme ab. Sagen Sie „{wake}“ 5–{goal} Mal, nach jedem eine kurze Pause – nur das Wort. Sie können das überspringen.",
+  "voiceAdapt.skip": "Überspringen",
+  "home.packMissing": "{languages}: Das Sprachpaket {pack} ist nicht heruntergeladen, daher versteht Reever diese Sprache kaum. Starten Sie das Installationsprogramm erneut und wählen Sie das Paket."
 });

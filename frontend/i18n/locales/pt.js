@@ -250,7 +250,7 @@ I18N.register('pt', {
   "settings.wake_spotter": "Detector de «river» em segundo plano (modelo pequeno)",
   "settings.wake_spotter.help": "Ouve continuamente e detecta a palavra de ativação assim que ela é dita, mesmo no meio da fala; ajuda o modelo grande quando ele não a reconhece.",
   "settings.voice_adapt": "Ajustar o detetor à minha voz",
-  "settings.voice_adapt.help": "Diga «river» cerca de dez vezes: o detetor em segundo plano ajusta-se à sua voz e ao seu microfone. A gravação fica na memória e não é guardada.",
+  "settings.voice_adapt.help": "Diga «river» cerca de dez vezes: o detector em segundo plano adapta-se à sua voz e microfone. A gravação fica neste computador e é apagada quando a adaptação discreta termina.",
   "settings.voice_adapt.start": "Ajustar…",
   "settings.voice_adapt.reset": "Repor",
   "settings.voice_adapt.on": "Ajustado à sua voz: ouve {heard} de {words} palavras gravadas (antes: {before}).",
@@ -392,5 +392,14 @@ I18N.register('pt', {
   "confirm.yes": "Sim",
   "confirm.no": "Não",
   "confirm.noTitle": "Não (Esc)",
-  "confirm.left": "Cancela em {seconds} s"
+  "confirm.left": "Cancela em {seconds} s",
+  "settings.keep_asr_loaded": "Manter o modelo de voz na memória",
+  "settings.keep_asr_loaded.help": "Assim o Reever ouve «river» à primeira, mesmo que o detector pequeno falhe. Custa cerca de 0,8 GB de memória; desligado, o modelo é descarregado após inatividade e o primeiro comando depende só do detector.",
+  "settings.voice_passive": "Adaptar-me discretamente à minha voz",
+  "settings.voice_passive.help": "As primeiras 40 ativações ficam guardadas neste computador, ensinam a sua voz ao detector e depois são apagadas. Nada sai do computador.",
+  "settings.voice_passive.progress": "Adaptação discreta: {count} de {goal} ouvidas.",
+  "settings.voice_passive.done": "Adaptação discreta concluída ({goal} de {goal}), gravações apagadas.",
+  "voiceAdapt.introHint": "Vamos ajustar o Reever à sua voz. Diga «{wake}» 5 a {goal} vezes com uma pausa curta depois de cada uma — só a palavra. Pode saltar.",
+  "voiceAdapt.skip": "Saltar",
+  "home.packMissing": "{languages}: o pacote de idioma {pack} não foi transferido, por isso o Reever quase não entende esta língua. Execute o instalador novamente e marque o pacote."
 });

@@ -250,7 +250,7 @@ I18N.register('it', {
   "settings.wake_spotter": "Rilevatore di «river» in background (modello piccolo)",
   "settings.wake_spotter.help": "Ascolta in modo continuo e rileva subito la parola di attivazione, anche mentre stai parlando; aiuta il modello grande quando non la sente.",
   "settings.voice_adapt": "Adatta il rilevatore alla mia voce",
-  "settings.voice_adapt.help": "Dica «river» una decina di volte: il rilevatore in background si adatterà alla sua voce e al suo microfono. La registrazione resta in memoria e non viene salvata.",
+  "settings.voice_adapt.help": "Di’ «river» una decina di volte: il rilevatore in background si adatta alla tua voce e al microfono. La registrazione resta su questo computer e viene eliminata al termine dell’adattamento silenzioso.",
   "settings.voice_adapt.start": "Adatta…",
   "settings.voice_adapt.reset": "Ripristina",
   "settings.voice_adapt.on": "Adattato alla sua voce: sente {heard} di {words} parole registrate (prima: {before}).",
@@ -392,5 +392,14 @@ I18N.register('it', {
   "confirm.yes": "Sì",
   "confirm.no": "No",
   "confirm.noTitle": "No (Esc)",
-  "confirm.left": "Annullamento tra {seconds} s"
+  "confirm.left": "Annullamento tra {seconds} s",
+  "settings.keep_asr_loaded": "Tieni il modello vocale in memoria",
+  "settings.keep_asr_loaded.help": "Così Reever sente «river» al primo colpo anche se il piccolo rilevatore lo perde. Costa circa 0,8 GB di memoria; se disattivato, il modello viene scaricato dopo l’inattività e il primo comando dipende solo dal rilevatore.",
+  "settings.voice_passive": "Adattati alla mia voce in silenzio",
+  "settings.voice_passive.help": "Le prime 40 attivazioni restano su questo computer, insegnano la tua voce al rilevatore e poi vengono eliminate. Niente lascia il computer.",
+  "settings.voice_passive.progress": "Adattamento silenzioso: {count} su {goal} sentite.",
+  "settings.voice_passive.done": "Adattamento silenzioso completato ({goal} su {goal}), registrazioni eliminate.",
+  "voiceAdapt.introHint": "Regoliamo Reever sulla tua voce. Di’ «{wake}» da 5 a {goal} volte con una breve pausa dopo ognuna, solo la parola. Puoi saltare.",
+  "voiceAdapt.skip": "Salta",
+  "home.packMissing": "{languages}: il pacchetto lingua {pack} non è scaricato, quindi Reever capisce a malapena questa lingua. Riavvia il programma di installazione e seleziona il pacchetto."
 });
