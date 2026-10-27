@@ -208,6 +208,7 @@ I18N.register('cs', {
   "common.save": "Uložit",
   "common.delete": "Smazat",
   "common.cancel": "Zrušit",
+  "common.ok": "OK",
   "common.close": "Zavřít",
   "common.done": "Hotovo",
   "common.loading": "Načítání…",

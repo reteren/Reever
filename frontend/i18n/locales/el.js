@@ -208,6 +208,7 @@ I18N.register('el', {
   "common.save": "Αποθήκευση",
   "common.delete": "Διαγραφή",
   "common.cancel": "Ακύρωση",
+  "common.ok": "OK",
   "common.close": "Κλείσιμο",
   "common.done": "Τέλος",
   "common.loading": "Φόρτωση…",

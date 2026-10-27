@@ -208,6 +208,7 @@ I18N.register('et', {
   "common.save": "Salvesta",
   "common.delete": "Kustuta",
   "common.cancel": "Loobu",
+  "common.ok": "OK",
   "common.close": "Sulge",
   "common.done": "Valmis",
   "common.loading": "Laadin…",

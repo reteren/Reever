@@ -208,6 +208,7 @@ I18N.register('mt', {
   "common.save": "Issejvja",
   "common.delete": "Ħassar",
   "common.cancel": "Ikkanċella",
+  "common.ok": "OK",
   "common.close": "Agħlaq",
   "common.done": "Lest",
   "common.loading": "Qed jillowdja…",

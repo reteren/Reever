@@ -208,6 +208,7 @@ I18N.register('hu', {
   "common.save": "Mentés",
   "common.delete": "Törlés",
   "common.cancel": "Mégse",
+  "common.ok": "OK",
   "common.close": "Bezárás",
   "common.done": "Kész",
   "common.loading": "Betöltés…",

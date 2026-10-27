@@ -208,6 +208,7 @@ I18N.register('ro', {
   "common.save": "Salvează",
   "common.delete": "Șterge",
   "common.cancel": "Anulează",
+  "common.ok": "OK",
   "common.close": "Închide",
   "common.done": "Gata",
   "common.loading": "Se încarcă…",

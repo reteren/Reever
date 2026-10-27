@@ -208,6 +208,7 @@ I18N.register('sv', {
   "common.save": "Spara",
   "common.delete": "Ta bort",
   "common.cancel": "Avbryt",
+  "common.ok": "OK",
   "common.close": "Stäng",
   "common.done": "Klar",
   "common.loading": "Läser in…",

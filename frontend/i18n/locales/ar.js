@@ -207,6 +207,7 @@ I18N.register('ar', {
   "common.save": "حفظ",
   "common.delete": "حذف",
   "common.cancel": "إلغاء",
+  "common.ok": "موافق",
   "common.close": "إغلاق",
   "common.done": "تم",
   "common.loading": "جارٍ التحميل…",

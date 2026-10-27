@@ -208,6 +208,7 @@ I18N.register('ko', {
   "common.save": "저장",
   "common.delete": "삭제",
   "common.cancel": "취소",
+  "common.ok": "확인",
   "common.close": "닫기",
   "common.done": "완료",
   "common.loading": "불러오는 중…",

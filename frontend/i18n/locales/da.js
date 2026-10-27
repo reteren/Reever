@@ -208,6 +208,7 @@ I18N.register('da', {
   "common.save": "Gem",
   "common.delete": "Slet",
   "common.cancel": "Annuller",
+  "common.ok": "OK",
   "common.close": "Luk",
   "common.done": "Færdig",
   "common.loading": "Indlæser…",

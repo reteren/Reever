@@ -208,6 +208,7 @@ I18N.register('hr', {
   "common.save": "Spremi",
   "common.delete": "Izbriši",
   "common.cancel": "Odustani",
+  "common.ok": "U redu",
   "common.close": "Zatvori",
   "common.done": "Gotovo",
   "common.loading": "Učitavanje…",

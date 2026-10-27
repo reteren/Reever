@@ -207,6 +207,7 @@ I18N.register('it', {
   "common.save": "Salva",
   "common.delete": "Elimina",
   "common.cancel": "Annulla",
+  "common.ok": "OK",
   "common.close": "Chiudi",
   "common.done": "Fatto",
   "common.loading": "Caricamento…",

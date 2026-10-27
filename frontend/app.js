@@ -109,6 +109,31 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
 const listen = tauri?.event?.listen || (async()=>()=>{});
 const $ = (s)=>document.querySelector(s);
 const el=(t,p={},k=[])=>{const e=document.createElement(t);Object.assign(e,p);for(const c of k)e.append(c);return e;};
+// Вопрос в окне программы вместо confirm()/alert() WebView2 — те рисуют чужую серую плашку
+// у верхнего края. Ответ — Promise<boolean>: Enter — да, Esc — отмена. cancel:false — просто сообщение.
+function ask(text,{ok=t('common.ok'),danger=false,cancel=true}={}){
+  return new Promise((resolve)=>{
+    const before=document.activeElement;
+    const yes=el('button',{type:'button',className:'key '+(danger?'danger':'default'),textContent:ok});
+    const no=el('button',{type:'button',className:'key',textContent:t('common.cancel')});
+    const overlay=el('div',{className:'overlay on'},[el('div',{className:'modal lcd',role:'dialog',ariaModal:'true'},[
+      el('div',{className:'modal-body'},[el('div',{className:'ask-text',textContent:text})]),
+      el('div',{className:'modal-foot'},cancel?[no,yes]:[yes])])]);
+    const onKey=(e)=>{
+      if(e.key!=='Escape'&&e.key!=='Enter') return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      close(e.key==='Enter');
+    };
+    function close(answer){
+      window.removeEventListener('keydown',onKey,true);
+      overlay.remove(); before?.focus?.();
+      resolve(answer||!cancel);
+    }
+    yes.onclick=()=>close(true); no.onclick=()=>close(false);
+    window.addEventListener('keydown',onKey,true);
+    document.body.append(overlay); yes.focus();
+  });
+}
 
 let appWindow=null;
 try{ appWindow = tauri?.window?.getCurrentWindow?.() || null; }catch(e){ reportError('window',e); }
@@ -191,7 +216,7 @@ let actions=[], selId=null, filter='all', query='', editorDirty=false;
 async function loadActions(){ actions=await invoke('list_actions'); editorDirty=false; $('#t-count').textContent=actions.length; renderRows(); renderEditor(); }
 async function confirmDiscardActionEdits(){
   if(!editorDirty) return true;
-  if(!confirm(t('actions.confirmDiscard'))) return false;
+  if(!await ask(t('actions.confirmDiscard'))) return false;
   const previousId=selId;
   await loadActions();
   selId=previousId;
@@ -259,8 +284,8 @@ function renderEditor(){
   const foot=el('div',{className:'editrow',style:'margin-top:16px;'});
   // Калибровка и сохранение — одного вида, удаление — отдельное, пунктиром.
   const cal=el('button',{className:'default',textContent:t('actions.calibrate')}); cal.onclick=()=>calibrate(a);
-  const save=el('button',{className:'default',textContent:t('common.save')}); save.onclick=async()=>{ if(!(a.label||'').trim()){alert(t('actions.needName'));return;} await invoke('save_action',{action:a}); editorDirty=false; await loadActions(); };
-  const del=el('button',{className:'danger',textContent:t('common.delete')}); del.onclick=async()=>{ if(!await confirmDiscardActionEdits())return; if(confirm(t('actions.confirmDelete'))){await invoke('delete_action',{id:a.id}); selId=null; await loadActions();} };
+  const save=el('button',{className:'default',textContent:t('common.save')}); save.onclick=async()=>{ if(!(a.label||'').trim()){await ask(t('actions.needName'),{cancel:false});return;} await invoke('save_action',{action:a}); editorDirty=false; await loadActions(); };
+  const del=el('button',{className:'danger',textContent:t('common.delete')}); del.onclick=async()=>{ if(!await confirmDiscardActionEdits())return; if(await ask(t('actions.confirmDelete'),{ok:t('common.delete'),danger:true})){await invoke('delete_action',{id:a.id}); selId=null; await loadActions();} };
   foot.append(cal,save,del); E.append(foot);
 }
 $('#addBtn').onclick=async()=>{ if(!await confirmDiscardActionEdits())return; const id='act_'+Date.now().toString(36); actions.push({id,label:'',kind:'shell',target:'',verbs:[],phrases:[]}); selId=id; editorDirty=true; renderRows(); renderEditor(); };
@@ -638,7 +663,7 @@ function renderGrammarEditor(){
   };
   cancel.onclick=()=>openGrammar(null);
   reset.onclick=async()=>{
-    if(!window.confirm(t('grammar.confirmReset')))return;
+    if(!await ask(t('grammar.confirmReset'),{danger:true}))return;
     reset.disabled=true;errors.hidden=true;
     try{
       const result=await invoke('reset_grammar');
@@ -1088,9 +1113,9 @@ function languagesEditor(models){
     item.disabled=!ready;
     // Сначала язык интерфейса, потом язык распознавания: французу французская модель
     // нужна вместе с французским интерфейсом.
-    item.onclick=()=>{
+    item.onclick=async()=>{
       if(code!=='en'&&I18N.SUPPORTED.includes(code)&&!I18N.enabled.includes(code)
-        &&confirm(t('settings.languages.offerUi',{language:name(code)}))){
+        &&await ask(t('settings.languages.offerUi',{language:name(code)}))){
         const ui=[...I18N.enabled,code];
         settingsObj.ui_languages=ui; I18N.setEnabled(ui);
       }

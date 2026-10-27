@@ -208,6 +208,7 @@ I18N.register('yue', {
   "common.save": "儲存",
   "common.delete": "刪除",
   "common.cancel": "取消",
+  "common.ok": "確定",
   "common.close": "閂",
   "common.done": "完成",
   "common.loading": "載入緊…",

@@ -207,6 +207,7 @@ I18N.register('zh', {
   "common.save": "保存",
   "common.delete": "删除",
   "common.cancel": "取消",
+  "common.ok": "确定",
   "common.close": "关闭",
   "common.done": "完成",
   "common.loading": "正在加载…",

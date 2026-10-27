@@ -208,6 +208,7 @@ I18N.register('fi', {
   "common.save": "Tallenna",
   "common.delete": "Poista",
   "common.cancel": "Peruuta",
+  "common.ok": "OK",
   "common.close": "Sulje",
   "common.done": "Valmis",
   "common.loading": "Ladataan…",

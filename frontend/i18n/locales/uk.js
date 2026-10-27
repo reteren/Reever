@@ -208,6 +208,7 @@ I18N.register('uk', {
   "common.save": "Зберегти",
   "common.delete": "Видалити",
   "common.cancel": "Скасувати",
+  "common.ok": "Гаразд",
   "common.close": "Закрити",
   "common.done": "Готово",
   "common.loading": "Завантаження…",

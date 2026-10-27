@@ -207,6 +207,7 @@ I18N.register('ja', {
   "common.save": "保存",
   "common.delete": "削除",
   "common.cancel": "キャンセル",
+  "common.ok": "OK",
   "common.close": "閉じる",
   "common.done": "完了",
   "common.loading": "読み込み中…",

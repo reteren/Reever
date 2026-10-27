@@ -208,6 +208,7 @@ I18N.register('bg', {
   "common.save": "Запазване",
   "common.delete": "Изтриване",
   "common.cancel": "Отказ",
+  "common.ok": "ОК",
   "common.close": "Затваряне",
   "common.done": "Готово",
   "common.loading": "Зареждане…",

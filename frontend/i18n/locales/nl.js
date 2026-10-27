@@ -208,6 +208,7 @@ I18N.register('nl', {
   "common.save": "Opslaan",
   "common.delete": "Verwijderen",
   "common.cancel": "Annuleren",
+  "common.ok": "OK",
   "common.close": "Sluiten",
   "common.done": "Klaar",
   "common.loading": "Laden…",

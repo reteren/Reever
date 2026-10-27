@@ -207,6 +207,7 @@ I18N.register('pt', {
   "common.save": "Salvar",
   "common.delete": "Excluir",
   "common.cancel": "Cancelar",
+  "common.ok": "OK",
   "common.close": "Fechar",
   "common.done": "Concluído",
   "common.loading": "Carregando…",

@@ -208,6 +208,7 @@ I18N.register('pl', {
   "common.save": "Zapisz",
   "common.delete": "Usuń",
   "common.cancel": "Anuluj",
+  "common.ok": "OK",
   "common.close": "Zamknij",
   "common.done": "Gotowe",
   "common.loading": "Ładowanie…",

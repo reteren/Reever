@@ -209,6 +209,7 @@ I18N.register('en', {
   "common.save": "Save",
   "common.delete": "Delete",
   "common.cancel": "Cancel",
+  "common.ok": "OK",
   "common.close": "Close",
   "common.done": "Done",
   "common.loading": "Loading…",

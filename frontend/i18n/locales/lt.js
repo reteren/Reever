@@ -208,6 +208,7 @@ I18N.register('lt', {
   "common.save": "Išsaugoti",
   "common.delete": "Ištrinti",
   "common.cancel": "Atšaukti",
+  "common.ok": "Gerai",
   "common.close": "Uždaryti",
   "common.done": "Atlikta",
   "common.loading": "Įkeliama…",

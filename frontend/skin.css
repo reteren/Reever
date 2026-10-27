@@ -446,6 +446,7 @@ body.shaded #shade { display: block !important; }
 .modal { position: relative; width: 420px; max-height: 70vh; border-radius: 12px; border: 1px solid var(--acc-3); box-shadow: 0 20px 60px rgba(0, 0, 0, .7), 0 0 30px rgba(39, 230, 170, .15); display: flex; flex-direction: column; animation: chIn .32s var(--e-out); }
 .modal-body { padding: 18px; overflow: auto; }
 .modal-foot { padding: 0 18px 16px; display: flex; justify-content: flex-end; gap: 8px; }
+.ask-text { font-size: 14px; line-height: 1.45; text-wrap: pretty; padding: 4px 0 2px; }
 .calbig { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .calorb { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 50% 70%, var(--acc) 0%, rgba(39, 230, 170, .2) 60%, transparent 70%); box-shadow: 0 0 30px var(--acc-3); animation: blink 1.2s ease-in-out infinite; }
 /* 500 и разрядка: при 600 со свечением двоеточие слипалось с «d» в кляксу («heard:») */

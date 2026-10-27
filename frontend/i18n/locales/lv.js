@@ -208,6 +208,7 @@ I18N.register('lv', {
   "common.save": "Saglabāt",
   "common.delete": "Dzēst",
   "common.cancel": "Atcelt",
+  "common.ok": "Labi",
   "common.close": "Aizvērt",
   "common.done": "Gatavs",
   "common.loading": "Ielāde…",

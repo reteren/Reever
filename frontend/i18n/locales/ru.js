@@ -207,6 +207,7 @@ I18N.register('ru', {
   "common.save": "Сохранить",
   "common.delete": "Удалить",
   "common.cancel": "Отмена",
+  "common.ok": "ОК",
   "common.close": "Закрыть",
   "common.done": "Готово",
   "common.loading": "Загрузка…",
