@@ -59,6 +59,7 @@
 <div class="bubble" id="bubble"><div><span class="prompt">›</span><span id="text"></span><span class="caret" id="caret"></span></div></div>
 <div class="tail" id="tail"></div>
 <script>
+document.addEventListener('contextmenu', (e) => e.preventDefault());
 // Пузырь над маскотом: что говорится, пишется сюда по ходу речи. Окно ставит над головой
 // осьминога Rust (bubble.rs) и разрешает показываться, только пока маскот на экране.
 //  reever://partial — текущая фраза по ходу речи (пусто — фраза кончилась);
