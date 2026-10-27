@@ -145,6 +145,14 @@ pub struct Settings {
     /// «никогда», не читается: все переходят на 10 с.
     #[serde(default = "default_models_unload_after_s")]
     pub models_unload_after_s: u32,
+    /// Держать загруженные ASR-модели в памяти между фразами. По умолчанию включено;
+    /// при выключении сохраняется прежняя выгрузка после `models_unload_after_s`.
+    #[serde(default = "default_true")]
+    pub keep_asr_loaded: bool,
+    /// Тихая подстройка детектора: первые 40 подтверждённых «ривер» сохраняются в папке
+    /// настроек и доучивают детектор, потом стираются (voice_adapt.rs).
+    #[serde(default = "default_true")]
+    pub voice_passive: bool,
     /// Свой индекс дисков для «найди …» и «папка …». Выключен — ни снимка в памяти, ни
     /// фоновых потоков, но и искать файлы голосом нечем.
     #[serde(default = "default_true")]
@@ -448,6 +456,8 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("models_unload_after_s", models_unload_after_s, u32);
+    restore!("keep_asr_loaded", keep_asr_loaded, bool);
+    restore!("voice_passive", voice_passive, bool);
     restore!("local_index", local_index, bool);
     restore!("dictation_clipboard", dictation_clipboard, bool);
     restore!("dictation_live", dictation_live, bool);
@@ -511,6 +521,8 @@ impl Default for Settings {
             ui_languages: default_ui_languages(),
             languages: default_languages(),
             models_unload_after_s: default_models_unload_after_s(),
+            keep_asr_loaded: true,
+            voice_passive: true,
             local_index: true,
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),

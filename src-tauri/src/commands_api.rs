@@ -325,6 +325,9 @@ pub async fn finish_voice_adapt(
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
     let result = tauri::async_runtime::spawn_blocking(move || {
         let result = adapt_and_save(&pcm, name, &weights, &dir);
+        if result.is_ok() {
+            crate::voice_adapt::save_enrollment(&dir.join("voice"), &pcm);
+        }
         pcm.fill(0.0);
         result
     })
@@ -363,17 +366,50 @@ fn adapt_and_save(
     Ok(report)
 }
 
-/// Подстройка для весов, что сейчас работают: `null` — её нет.
+/// Тренер тихой подстройки (voice_adapt::start_passive): учит голову для весов, что сейчас
+/// работают, и при успехе перезапускает поток распознавания с ней.
+pub fn passive_trainer(app: AppHandle, shared: Arc<SharedState>) -> crate::voice_adapt::Trainer {
+    Box::new(move |pcm| {
+        let config = app.state::<LiveConfig>().get();
+        let (name, weights) = crate::recognizer::spotter_weights(&app, &config);
+        let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+        let result = adapt_and_save(pcm, name, &weights, &dir);
+        let line = match &result {
+            Ok(report) => format!(
+                "voice: quiet adaptation on {} wake words — detector heard {} before, {} after{}",
+                report.words,
+                report.heard_before,
+                report.heard_after,
+                if report.adapted { "; applied" } else { "; no gain, kept as is" }
+            ),
+            Err(error) => format!("voice: quiet adaptation skipped: {error}"),
+        };
+        crate::events::ui_log(&app, line);
+        if result.as_ref().is_ok_and(|report| report.adapted) {
+            shared.reload.store(true, Ordering::Relaxed);
+        }
+        result
+    })
+}
+
+/// Подстройка для весов, что сейчас работают (`null` — её нет), и сколько обращений
+/// собрала тихая подстройка.
 #[tauri::command]
 pub fn voice_adapt_status(app: AppHandle, config: State<'_, LiveConfig>) -> Option<serde_json::Value> {
     let config = config.get();
     let (name, weights) = crate::recognizer::spotter_weights(&app, &config);
     let dir = app.path().app_config_dir().ok()?;
-    let base = std::fs::read(weights).ok()?;
-    crate::wake::personal_for(&dir, name, &base).map(|(_, meta)| meta)
+    let passive = crate::voice_adapt::PassiveState::load(&dir.join("voice"));
+    let base = std::fs::read(weights).ok();
+    let personal = base.and_then(|base| crate::wake::personal_for(&dir, name, &base).map(|(_, meta)| meta));
+    Some(json!({
+        "report": personal.as_ref().and_then(|meta| meta.get("report")).cloned(),
+        "passive": { "collected": passive.collected, "goal": crate::voice_adapt::PASSIVE_GOAL },
+    }))
 }
 
-/// Убрать подстройку для всех весов — снова общий детектор.
+/// Убрать подстройку для всех весов — снова общий детектор, и тихая подстройка
+/// начинается заново.
 #[tauri::command]
 pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> Result<(), String> {
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
@@ -382,6 +418,7 @@ pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> 
         let _ = std::fs::remove_file(bin);
         let _ = std::fs::remove_file(meta);
     }
+    crate::voice_adapt::reset_passive(&dir.join("voice"));
     state.reload.store(true, Ordering::Relaxed);
     Ok(())
 }

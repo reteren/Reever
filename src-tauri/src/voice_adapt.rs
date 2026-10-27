@@ -16,33 +16,158 @@ use anyhow::{bail, Context};
 use crate::kws::{TcnModel, HOP_SAMPLES};
 use crate::wake::THRESHOLD;
 
-/// Каким независимым каналом подтверждено обращение.
+/// Кто услышал «ривер» первым: детектор или большая модель, когда детектор промолчал.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WakeSource {
     Kws,
     AsrOnly,
-    Enrollment,
 }
 
-/// Короткий подтверждённый фрагмент: PCM mono 16 кГц, конец примерно через
-/// 300 мс после wake-слова. Буфер передаётся во владение фоновой подстройке.
+/// Подтверждённое большой моделью «ривер»: само слово с запасом ~0,25 с до и 0,3 с после,
+/// PCM mono 16 кГц.
 pub struct WakeClip {
     pub samples: Vec<i16>,
-    pub kws_score: f32,
     pub source: WakeSource,
 }
 
-/// Неблокирующий вход для подтверждённого wake. Реализация очереди следует
-/// отдельным изменением; конвейер может подключиться к этому API уже сейчас.
-pub fn offer_wake_clip(_clip: WakeClip) {}
+// ── Тихая подстройка ────────────────────────────────────────────────────
+// Первые PASSIVE_GOAL подтверждённых «ривер» копятся в `<папка настроек>/voice/clips.pcm`
+// (через полсекунды тишины, как в записи из Настроек) и на шагах PASSIVE_STEPS доучивают
+// голову сети на всём накопленном вместе с записью «скажите „ривер“», если она была. Самые
+// ценные — AsrOnly: их детектор пропустил. На последнем шаге записи стираются; остаётся
+// подстроенная голова. Счётчик — в `passive.json`.
 
-/// Активен ли сбор примеров через шарик.
-pub fn enrollment_active() -> bool {
-    false
+/// Сколько обращений слушать.
+pub const PASSIVE_GOAL: u32 = 40;
+const PASSIVE_STEPS: [u32; 3] = [10, 20, 40];
+const GAP: usize = RATE / 2;
+
+/// Обучить и сохранить подстройку по записи (склейке слов через тишину).
+pub type Trainer = Box<dyn Fn(&[f32]) -> Result<Report, String> + Send>;
+
+static PASSIVE_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static PASSIVE: std::sync::OnceLock<std::sync::Mutex<std::sync::mpsc::Sender<WakeClip>>> =
+    std::sync::OnceLock::new();
+
+/// Сколько обращений уже собрано и закончена ли тихая подстройка.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct PassiveState {
+    pub collected: u32,
+    #[serde(default)]
+    pub sources: [u32; 2],
 }
 
-/// Неблокирующий вход для очередной VAD-фразы во время обучения.
-pub fn offer_enrollment_segment(_samples: Vec<i16>) {}
+impl PassiveState {
+    pub fn load(dir: &Path) -> Self {
+        std::fs::read_to_string(dir.join("passive.json"))
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or_default()
+    }
+
+    fn save(&self, dir: &Path) {
+        let _ = std::fs::create_dir_all(dir);
+        if let Ok(text) = serde_json::to_string(self) {
+            let _ = std::fs::write(dir.join("passive.json"), text);
+        }
+    }
+
+    pub fn done(&self) -> bool {
+        self.collected >= PASSIVE_GOAL
+    }
+}
+
+/// Запустить поток тихой подстройки (один раз на процесс). `dir` — `<папка настроек>/voice`.
+pub fn start_passive(dir: std::path::PathBuf, train: Trainer) {
+    let (tx, rx) = std::sync::mpsc::channel::<WakeClip>();
+    if PASSIVE.set(std::sync::Mutex::new(tx)).is_err() {
+        return;
+    }
+    let _ = std::thread::Builder::new()
+        .name("reever-voice-adapt".into())
+        .spawn(move || {
+            for clip in rx {
+                passive_step(&dir, clip, &train);
+            }
+        });
+}
+
+/// Настройка «подстраиваться под мой голос»; выключена — новые обращения не сохраняются.
+pub fn set_passive_enabled(on: bool) {
+    PASSIVE_ON.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Отдать подтверждённое обращение потоку подстройки; не ждёт и ничего не делает, когда
+/// подстройка выключена или уже закончена.
+pub fn offer_wake_clip(clip: WakeClip) {
+    if !PASSIVE_ON.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    if let Some(tx) = PASSIVE.get().and_then(|tx| tx.lock().ok()) {
+        let _ = tx.send(clip);
+    }
+}
+
+/// Запись «скажите „ривер“» из Настроек или первого запуска — пусть тихая подстройка
+/// учится и на ней. Ничего не пишет, если подстройка выключена или закончена.
+pub fn save_enrollment(dir: &Path, pcm: &[f32]) {
+    if !PASSIVE_ON.load(std::sync::atomic::Ordering::Relaxed) || PassiveState::load(dir).done() {
+        return;
+    }
+    let _ = std::fs::create_dir_all(dir);
+    let bytes: Vec<u8> = pcm
+        .iter()
+        .flat_map(|v| ((v.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes())
+        .collect();
+    let _ = std::fs::write(dir.join("enrollment.pcm"), bytes);
+}
+
+/// Начать тихую подстройку заново: стереть записи и счётчик.
+pub fn reset_passive(dir: &Path) {
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+fn passive_step(dir: &Path, clip: WakeClip, train: &Trainer) {
+    let mut state = PassiveState::load(dir);
+    if state.done() || !PASSIVE_ON.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    let _ = std::fs::create_dir_all(dir);
+    let mut bytes = Vec::with_capacity((clip.samples.len() + GAP) * 2);
+    bytes.extend(std::iter::repeat_n(0u8, GAP * 2));
+    bytes.extend(clip.samples.iter().flat_map(|s| s.to_le_bytes()));
+    use std::io::Write;
+    let appended = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("clips.pcm"))
+        .and_then(|mut file| file.write_all(&bytes));
+    if appended.is_err() {
+        return;
+    }
+    state.collected += 1;
+    state.sources[usize::from(clip.source == WakeSource::AsrOnly)] += 1;
+    state.save(dir);
+    if !PASSIVE_STEPS.contains(&state.collected) {
+        return;
+    }
+    let read = |name: &str| -> Vec<f32> {
+        std::fs::read(dir.join(name))
+            .unwrap_or_default()
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0)
+            .collect()
+    };
+    let mut pcm = read("enrollment.pcm");
+    pcm.extend(std::iter::repeat_n(0.0, GAP));
+    pcm.extend(read("clips.pcm"));
+    let _ = train(&pcm);
+    pcm.fill(0.0);
+    if state.done() {
+        let _ = std::fs::remove_file(dir.join("clips.pcm"));
+        let _ = std::fs::remove_file(dir.join("enrollment.pcm"));
+    }
+}
 
 const RATE: usize = 16_000;
 /// Дольше запись не копится (настройки забыли закрыть).
@@ -395,6 +520,31 @@ mod tests {
         let (strong, _) = fit(&positives, &negatives, &[0.0, 0.0], 0.0, 100.0);
         assert!(weak[0] > strong[0] && strong[0] > 0.0);
         assert!(weak[1] < 0.0);
+    }
+
+    #[test]
+    fn passive_trains_on_steps_and_forgets_the_audio_at_the_goal() {
+        let dir = std::env::temp_dir().join(format!("reever-passive-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        set_passive_enabled(true);
+        let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = calls.clone();
+        let train: Trainer = Box::new(move |pcm| {
+            seen.lock().unwrap().push(pcm.len());
+            Err("test".into())
+        });
+        for _ in 0..PASSIVE_GOAL + 3 {
+            let clip = WakeClip { samples: vec![1000; RATE / 2], source: WakeSource::AsrOnly };
+            passive_step(&dir, clip, &train);
+        }
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls.len(), PASSIVE_STEPS.len());
+        // Каждый шаг учится на всём накопленном: клипы с тишиной между ними.
+        assert_eq!(calls[0], GAP + 10 * (GAP + RATE / 2));
+        let state = PassiveState::load(&dir);
+        assert_eq!((state.collected, state.sources), (PASSIVE_GOAL, [0, PASSIVE_GOAL]));
+        assert!(!dir.join("clips.pcm").exists());
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

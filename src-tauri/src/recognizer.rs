@@ -190,7 +190,10 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         );
     }
 
-    let lazy_loading = s.models_unload_after_s <= crate::config::MODELS_UNLOAD_MAX_S;
+    // Новое безопасное значение по умолчанию держит ASR готовой для независимого
+    // текстового wake-канала. Старую экономию памяти можно вернуть явно.
+    let lazy_loading = !s.keep_asr_loaded
+        && s.models_unload_after_s <= crate::config::MODELS_UNLOAD_MAX_S;
     let asr = if lazy_loading {
         ui_log(
             app,
@@ -227,6 +230,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         vad,
     );
     engine.set_strict_spotted_wake(lazy_loading);
+    crate::voice_adapt::set_passive_enabled(s.voice_passive);
     // Каждая модель сама пишет и родной язык, и английские вставки латиницей: второй
     // модели для цели команды нет. Ru = «как услышала модель». «Ривер» модель может
     // записать английским словом — это и разрешает english_primary.
@@ -777,6 +781,20 @@ fn log_languages(app: &AppHandle, cfg: &ReeverConfig) {
             app,
             crate::msg!("log.languages.missing", languages = names(&cfg.models.missing)),
         );
+        let pack = if cfg
+            .models
+            .missing
+            .iter()
+            .any(|code| matches!(*code, "zh" | "yue" | "ja" | "ko"))
+        {
+            "asian"
+        } else {
+            "european"
+        };
+        let _ = app.emit(
+            "reever://language-pack-missing",
+            json!({ "languages": cfg.models.missing, "pack": pack }),
+        );
     }
     if !cfg.models.need_lid.is_empty() {
         ui_log(
@@ -1175,6 +1193,9 @@ impl Worker<'_> {
             EngineEvent::State(s) => set_state(self.app, s),
             EngineEvent::WakeHeard => {
                 self.blackbox_mark("heard");
+                if let Some(clip) = engine.take_wake_clip() {
+                    crate::voice_adapt::offer_wake_clip(clip);
+                }
                 ui_log(self.app, crate::msg!("log.listen"));
                 self.prefetch_index();
                 // Сигнал уже прозвучал на детекторе — большая модель «ривер» лишь подтвердила.
@@ -1206,7 +1227,13 @@ impl Worker<'_> {
                     let _ = self.app.emit("reever://partial", t);
                 }
             }
-            EngineEvent::Command { text, alt } => self.command(engine, &text, alt.as_deref()),
+            EngineEvent::Command { text, alt } => {
+                // «ривер открой …» одной фразой — без WakeHeard, но «ривер» в ней подтверждён.
+                if let Some(clip) = engine.take_wake_clip() {
+                    crate::voice_adapt::offer_wake_clip(clip);
+                }
+                self.command(engine, &text, alt.as_deref())
+            }
             EngineEvent::Confirm(yes) => self.confirm(yes),
             EngineEvent::Choice(text) => self.choice(&text),
             EngineEvent::Calibration { text, alt } => self.calibration(&text, alt.as_deref()),

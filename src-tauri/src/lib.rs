@@ -463,8 +463,12 @@ pub fn run() {
                 return Ok(());
             }
 
-            // --- аудио-воркер ---
+            // --- тихая подстройка под голос и аудио-воркер ---
             let handle = app.handle().clone();
+            voice_adapt::start_passive(
+                index_dir.join("voice"),
+                commands_api::passive_trainer(handle.clone(), shared.clone()),
+            );
             std::thread::Builder::new()
                 .name("reever-audio".into())
                 .spawn(move || recognizer::run_worker(handle, shared))

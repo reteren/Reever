@@ -403,6 +403,8 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     fast_checked: bool,
     /// Распознанный текст фразы, законченной досрочно, — чтобы не считать его второй раз.
     fast_timed: Option<Timed>,
+    /// Фрагмент последнего подтверждённого wake для фоновой подстройки.
+    wake_clip: Option<crate::voice_adapt::WakeClip>,
 }
 
 /// Пауза, после которой фраза проверяется на законченную команду («ривер открой
@@ -469,6 +471,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             known_targets: std::collections::HashMap::new(),
             fast_checked: false,
             fast_timed: None,
+            wake_clip: None,
         }
     }
 
@@ -528,6 +531,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
 
     pub fn set_english_primary(&mut self, english: bool) {
         self.english_primary = english;
+    }
+
+    /// Забрать фрагмент wake после `WakeHeard`; вызов не блокируется и очищает слот.
+    pub fn take_wake_clip(&mut self) -> Option<crate::voice_adapt::WakeClip> {
+        self.wake_clip.take()
     }
 
     /// После ленивой загрузки аудио повторно подаётся с pre-roll. Сохраняем факт,
@@ -808,6 +816,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         }
         self.spot_age = None;
         self.spot_pending = None;
+        self.wake_clip = None;
         self.idle_speech_age = None;
         self.segmenter.reset();
         self.vad.reset();
@@ -1428,7 +1437,17 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         } else {
             timed
         };
-        let Some(rest) = strip_initial_wake(&timed.text, &self.cfg.wake_words) else {
+        // Горячая ASR — независимый канал: сильное текстовое «ривер/river» в начале
+        // фразы принимается даже без события KWS. Созвучия английской модели ниже
+        // разрешаются только при KWS-кандидате в этой же фразе.
+        let rest = strip_initial_wake(&timed.text, &self.cfg.wake_words).or_else(|| {
+            if !spotted {
+                strip_strong_english_wake(&timed.text)
+            } else {
+                None
+            }
+        });
+        let Some(rest) = rest else {
             // В разговоре (звонок) «ривер» звучит посреди речи: фраза началась раньше, и
             // wake не в её начале. После паузы — это обращение: разбираем хвост с «ривер».
             if self.trace {
@@ -1476,6 +1495,16 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             }
             return;
         };
+        self.wake_clip = wake_clip_range(&timed, audio.len(), &self.cfg.wake_words).map(
+            |(start, end)| crate::voice_adapt::WakeClip {
+                samples: audio[start..end].to_vec(),
+                source: if spotted {
+                    crate::voice_adapt::WakeSource::Kws
+                } else {
+                    crate::voice_adapt::WakeSource::AsrOnly
+                },
+            },
+        );
         self.spot_age = None;
         let rest = rest.trim();
         if self.try_start_dictation(audio, &timed, out) {
@@ -2355,6 +2384,33 @@ fn strip_english_wake(text: &str) -> Option<String> {
     spelled.then(|| words[skip + 1..].join(" "))
 }
 
+/// Сильные английские формы, которые можно принять без акустического кандидата.
+/// Более широкие варианты (`ever`, `riva`, `rival`, `reverse` и т. п.) остаются
+/// условными и используются только в `confirm_wake` после KWS.
+fn strip_strong_english_wake(text: &str) -> Option<String> {
+    const LEADS: [&str; 7] = ["a", "i", "uh", "um", "oh", "ah", "the"];
+    let normalized = normalize(text);
+    let words: Vec<&str> = normalized.split_whitespace().collect();
+    let skip = usize::from(words.len() > 1 && LEADS.contains(&words[0]));
+    let word = *words.get(skip)?;
+    matches!(word, "river" | "reever" | "rever")
+        .then(|| words[skip + 1..].join(" "))
+}
+
+/// Где в `audio` само слово-обращение, с запасом 250 мс до и 300 мс после, — образец для
+/// подстройки детектора. Без тайминга слов отрезка нет: на целой фразе с командой детектор
+/// выучил бы и команду.
+fn wake_clip_range(timed: &Timed, audio_len: usize, wake_words: &[String]) -> Option<(usize, usize)> {
+    let word = timed.words.iter().take(2).find(|word| {
+        strip_initial_wake(&word.text, wake_words).is_some_and(|rest| rest.trim().is_empty())
+            || strip_strong_english_wake(&word.text).is_some_and(|rest| rest.is_empty())
+    })?;
+    let at = |seconds: f32| ((seconds.max(0.0) * SAMPLE_RATE as f32) as usize).min(audio_len);
+    let start = at(word.start).saturating_sub(samples(250));
+    let end = (at(word.end) + samples(300)).min(audio_len);
+    (end >= start + samples(400)).then_some((start, end))
+}
+
 fn strip_initial_wake(text: &str, wake_words: &[String]) -> Option<String> {
     // Нечёткость (опечатки ASR) решает textnorm::strip_wake, но он ищет wake в первых двух
     // словах. Вторым словом wake допустим только после обращения — иначе «открой ривер
@@ -2557,6 +2613,27 @@ mod tests {
         assert!(events.is_empty());
         assert_eq!(asr_calls.get(), 0);
         assert_eq!(vad_calls.get(), 0);
+    }
+
+    #[test]
+    fn wake_clip_is_the_wake_word_with_margins_not_the_command() {
+        let word = |text: &str, start: f32, end: f32| TimedWord { text: text.into(), start, end };
+        let timed = Timed {
+            text: "ривер открой загрузки".into(),
+            words: vec![word("ривер", 0.30, 0.70), word("открой", 0.80, 1.20), word("загрузки", 1.25, 1.90)],
+        };
+        let wake = vec!["ривер".to_string()];
+        assert_eq!(
+            wake_clip_range(&timed, samples(2_200), &wake),
+            Some((samples(50), samples(1_000)))
+        );
+        let english = Timed {
+            text: "uh river".into(),
+            words: vec![word("uh", 0.0, 0.2), word("river", 0.25, 0.6)],
+        };
+        assert_eq!(wake_clip_range(&english, samples(1_000), &wake), Some((0, samples(900))));
+        // Без тайминга слов отрезка нет.
+        assert_eq!(wake_clip_range(&Timed { text: "ривер".into(), words: vec![] }, samples(1_000), &wake), None);
     }
 
     #[test]
