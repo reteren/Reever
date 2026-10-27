@@ -189,7 +189,7 @@ a { color: var(--acc-hot); text-decoration: underline; text-underline-offset: 3p
 }
 .heard[data-heard] { font: 500 30px/1.05 var(--f-lcd); font-variation-settings: 'ELSH' 2, 'ELGR' 1; color: var(--acc-hot); text-shadow: var(--g3); letter-spacing: .03em; }
 /* Включён язык без скачанного пакета — заметно, но в тон экрана */
-.pack-warn { margin: -4px 0 12px; padding: 6px 10px; border: 1px solid var(--acc-4); border-left: 3px solid var(--acc); font: 400 13px/1.4 var(--f-ui); color: var(--acc-hot); }
+.pack-warn { margin: -4px 0 12px; padding: 6px 10px; border: 1px dotted var(--acc-4); font: 400 13px/1.4 var(--f-ui); color: var(--acc-hot); }
 .heard::after { content: ''; display: inline-block; width: .55em; height: 1em; margin-left: 4px; vertical-align: -.12em; background: var(--acc); box-shadow: 0 0 8px var(--acc); animation: blink 1.06s steps(2, jump-none) infinite; }
 
 .grammar-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
