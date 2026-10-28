@@ -436,9 +436,12 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         }
 
         // recv с таймаутом — чтобы реагировать на паузу даже без аудио.
+        let waiting = std::time::Instant::now();
         let mut chunk = match rx.recv_timeout(Duration::from_millis(200)) {
             Ok(c) => {
                 last_chunk = std::time::Instant::now();
+                // Ждал звук — очередь была пуста, воркер не отстаёт.
+                engine.set_audio_caught_up(last_chunk - waiting >= Duration::from_millis(2));
                 c
             }
             Err(RecvTimeoutError::Timeout) => {

@@ -168,6 +168,10 @@ struct Lag {
     audio: usize,
     floor_ms: f64,
     last_wall_ms: f64,
+    /// Воркер ждал звук (очередь пуста) — следующий замер и есть ноль отставания. Иначе
+    /// звук, не поданный в движок (пауза, окно выбора, запись «ривер», переоткрытие
+    /// микрофона), навсегда сдвигал бы отставание: опора догоняет лишь на 2 мс в секунду.
+    caught_up: bool,
 }
 
 impl Lag {
@@ -178,7 +182,11 @@ impl Lag {
         self.audio += count;
         let lag = wall_ms - self.audio as f64 * 1000.0 / SAMPLE_RATE as f64;
         let drift = (wall_ms - self.last_wall_ms) / 1000.0 * LAG_DRIFT_MS_PER_S;
-        self.floor_ms = (self.floor_ms + drift).min(lag);
+        self.floor_ms = if std::mem::take(&mut self.caught_up) {
+            lag
+        } else {
+            (self.floor_ms + drift).min(lag)
+        };
         self.last_wall_ms = wall_ms;
         lag - self.floor_ms
     }
@@ -810,6 +818,11 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     }
 
     /// Пауза микрофона: вернуться в простой, затереть все буферы нулями.
+    /// Воркер дождался звука из пустой очереди (`true`) или взял уже накопившийся.
+    pub fn set_audio_caught_up(&mut self, caught_up: bool) {
+        self.lag.caught_up = caught_up;
+    }
+
     pub fn reset(&mut self) {
         if let Some(spotter) = self.spotter.as_deref_mut() {
             spotter.reset();
@@ -2431,6 +2444,16 @@ mod tests {
     use std::rc::Rc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+
+    #[test]
+    fn lag_forgets_audio_gap_once_worker_waits() {
+        let mut lag = Lag::default();
+        lag.advance(SAMPLE_RATE as usize / 10);
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        assert!(lag.advance(160) > LIVE_STALE_MS, "без звука 400 мс — это отставание");
+        lag.caught_up = true;
+        assert!(lag.advance(160) < 50.0, "пустая очередь — отставания нет");
+    }
 
     struct MockTranscriber {
         texts: VecDeque<String>,
