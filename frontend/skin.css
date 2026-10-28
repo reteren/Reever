@@ -211,7 +211,7 @@ a { color: var(--acc-hot); text-decoration: underline; text-underline-offset: 3p
 #grammarExamples .row.open span { color: var(--acc-2); }
 #grammarExamples .row.off code, #grammarExamples .row.off span { opacity: .45; }
 #grammarExamples .grammar-editor { margin: 4px 0 10px 34px; padding-left: 10px; border-left: 1px solid var(--acc-4); }
-.grammar-live-note, .grammar-preview-note { margin-top: 8px; }
+.grammar-preview-note { margin-top: 8px; }
 
 /* ── Контролы в языке терминала ──────────────────────────────────────── */
 button { font: inherit; color: inherit; }

@@ -693,7 +693,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 const GROUPS=[
   ['interface',[['lite_ui','lite_ui',null,'instant'],['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
-  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['voice_passive','bool'],['wake_sound','bool'],['wake_blackbox','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
+  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['voice_passive','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[
