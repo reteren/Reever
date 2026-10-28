@@ -133,7 +133,9 @@
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
     function resize(scale) {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Не выше ×1,5: на экране 200 % шейдер рамки считает вдвое меньше пикселей, а хром с
+      // бликами при растяжении почти не мягчеет. Вернуть ×2 — заменить 1.5 на 2.
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.round(skin.w * scale * dpr);
       canvas.height = Math.round(skin.h * scale * dpr);
       gl.viewport(0, 0, canvas.width, canvas.height);
