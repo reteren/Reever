@@ -391,7 +391,7 @@ fieldset.grp legend {
 .lunka::before {
   width: var(--box); height: var(--box); margin: calc(var(--box) / -2) 0 0 calc(var(--box) / -2);
   background: var(--b-on) center / var(--box) var(--box) no-repeat;
-  opacity: 0; transition: opacity .22s var(--e-out), filter .22s var(--e-out);
+  opacity: 0; transition: opacity .22s var(--e-out);
   filter: drop-shadow(0 0 3px rgba(39, 230, 170, .85)) drop-shadow(0 0 10px rgba(39, 230, 170, .5));
 }
 /* продавливание: тень от кромки лунки ложится на купол сверху */
@@ -402,7 +402,7 @@ fieldset.grp legend {
 }
 .lunka .ico {
   position: relative; z-index: 1; width: calc(var(--d) * .52); height: calc(var(--d) * .52); stroke-width: 2.6;
-  filter: drop-shadow(0 0 1px rgba(39, 230, 170, .9)) drop-shadow(0 0 4px rgba(39, 230, 170, .45)); transition: filter .18s var(--e-out);
+  filter: drop-shadow(0 0 1px rgba(39, 230, 170, .9)) drop-shadow(0 0 4px rgba(39, 230, 170, .45));
 }
 .lunka:hover { color: #032619; }
 .lunka:hover::before { opacity: 1; }

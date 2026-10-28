@@ -56,6 +56,10 @@
     const ctx = canvas.getContext('2d');
     const spr = document.createElement('canvas'), sctx = spr.getContext('2d', { willReadFrequently: true });
     const sil = document.createElement('canvas'), gctx = sil.getContext('2d');
+    // размытый силуэт — широкое и узкое свечение; считаются при смене кадра спрайта, а не каждый
+    // кадр: два blur() на весь холст 60 раз в секунду были самым дорогим в окне маскота
+    const glowWide = document.createElement('canvas'), wctx = glowWide.getContext('2d');
+    const glowNear = document.createElement('canvas'), nctx = glowNear.getContext('2d');
     const eyeCanvas = document.createElement('canvas');
     let eye = null;
     try { eye = window.SkinOrb.createCore(eyeCanvas, 40); } catch (e) { console.error('mascot orb', e); }
@@ -93,7 +97,7 @@
       G = { ...G, ...g };
       dpr = window.devicePixelRatio || 1;
       u = G.k * dpr;
-      for (const c of [canvas, spr, sil]) { c.width = Math.round(G.W * G.k * dpr); c.height = Math.round(G.H * G.k * dpr); }
+      for (const c of [canvas, spr, sil, glowWide, glowNear]) { c.width = Math.round(G.W * G.k * dpr); c.height = Math.round(G.H * G.k * dpr); }
       eye?.resize(G.k * (G.eyeScale || 1));
       drawn = null;
     }
@@ -119,6 +123,12 @@
         gctx.globalCompositeOperation = 'source-in';
         gctx.fillStyle = `rgb(${GLOW.join(',')})`;
         gctx.fillRect(0, 0, sil.width, sil.height);
+        for (const [g, px] of [[wctx, 10], [nctx, 3]]) {
+          g.clearRect(0, 0, sil.width, sil.height);
+          g.filter = `blur(${(px * u).toFixed(1)}px)`;
+          g.drawImage(sil, 0, 0);
+          g.filter = 'none';
+        }
       }
       drawn = cur.img;
       return true;
@@ -226,16 +236,13 @@
       if (cur) {
         ctx.save();
         if (pull) { ctx.translate(pull.x, pull.y); ctx.rotate(pull.rot); ctx.scale(pull.s, pull.s); ctx.translate(-pull.x, -pull.y); }
-        // свечение: мягко «дышит» и разгорается от голоса и принятой команды
+        // свечение: мягко «дышит» и разгорается от голоса и принятой команды — яркостью готового ореола
         const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
         if (opts.glow && g > 0.01) {
-          ctx.filter = `blur(${((7 + 5 * Math.min(1.5, g)) * u).toFixed(1)}px)`;
           ctx.globalAlpha = Math.min(1, 0.75 * g);
-          ctx.drawImage(sil, 0, 0);
-          ctx.filter = `blur(${(3 * u).toFixed(1)}px)`;
+          ctx.drawImage(glowWide, 0, 0);
           ctx.globalAlpha = Math.min(1, 0.35 * g);
-          ctx.drawImage(sil, 0, 0);
-          ctx.filter = 'none';
+          ctx.drawImage(glowNear, 0, 0);
           ctx.globalAlpha = 1;
         }
         ctx.drawImage(spr, 0, 0);
