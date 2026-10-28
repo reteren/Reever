@@ -281,6 +281,38 @@ pub fn harden_dll_search() {
     }
 }
 
+/// Запущен ли exe из папки test-build (tools/test_build.sh).
+fn is_test_build() -> bool {
+    std::env::current_exe().ok().is_some_and(|own| {
+        own.parent()
+            .and_then(|dir| dir.file_name())
+            .is_some_and(|name| name.eq_ignore_ascii_case("test-build"))
+    })
+}
+
+/// Автозапуск с Windows включён по умолчанию: при первом запуске установленной программы он
+/// включается один раз, дальше решает пользователь (галочка в настройках). Отметка о том, что
+/// умолчание уже применено, — `autostart-default.txt` рядом с настройками. Dev- и тестовая
+/// сборка автозапуск не трогают: в Run попал бы путь к временному exe.
+fn enable_autostart_by_default(app: &tauri::AppHandle) {
+    use tauri_plugin_autostart::ManagerExt;
+    if cfg!(debug_assertions) || is_test_build() {
+        return;
+    }
+    let Ok(dir) = app.path().app_config_dir() else { return };
+    let marker = dir.join("autostart-default.txt");
+    if marker.exists() {
+        return;
+    }
+    match app.autolaunch().enable() {
+        Ok(()) => {
+            let _ = std::fs::create_dir_all(&dir);
+            let _ = std::fs::write(&marker, "1");
+        }
+        Err(e) => eprintln!("[reever] autostart: {e}"),
+    }
+}
+
 /// Тестовая сборка (tools/test_build.sh, папка test-build) при запуске закрывает другие
 /// экземпляры Reever, например установленный: иначе она лишь подняла бы окно установленного
 /// и вышла, а проверялась бы старая версия. Два слушающих Reever сразу — двойные команды.
@@ -293,12 +325,7 @@ fn replace_other_instances_if_test_build() {
         OpenProcess, TerminateProcess, WaitForSingleObject, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
     };
 
-    let Ok(own) = std::env::current_exe() else { return };
-    let is_test_build = own
-        .parent()
-        .and_then(|dir| dir.file_name())
-        .is_some_and(|name| name.eq_ignore_ascii_case("test-build"));
-    if !is_test_build {
+    if !is_test_build() {
         return;
     }
     let own_pid = std::process::id();
@@ -378,6 +405,7 @@ pub fn run() {
             let index = local_index::IndexManager::new(index_dir.join("index-v1.bin"));
             index.set_enabled(cfg.settings.local_index);
             app.manage(index);
+            enable_autostart_by_default(app.handle());
 
             // --- трей ---
             let locale = uilang::resolve_enabled(
