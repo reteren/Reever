@@ -387,8 +387,6 @@ I18N.register('sl', {
   "confirm.no": "Ne",
   "confirm.noTitle": "Ne (Esc)",
   "confirm.left": "Preklic čez {seconds} s",
-  "settings.keep_asr_loaded": "Model govora naj ostane v pomnilniku",
-  "settings.keep_asr_loaded.help": "Tako Reever sliši »river« že prvič, tudi če ga mali detektor zgreši. Stane približno 0,8 GB pomnilnika; ko je izklopljeno, se model po nedejavnosti sprosti in prvi ukaz je odvisen le od detektorja.",
   "settings.voice_passive": "Neopazno se prilagajaj mojemu glasu",
   "settings.voice_passive.help": "Prvih 40 nagovorov se shrani na tem računalniku, nauči detektor vašega glasu in se nato izbriše. Nič ne zapusti računalnika.",
   "settings.voice_passive.progress": "Tiha prilagoditev: slišano {count} od {goal}.",

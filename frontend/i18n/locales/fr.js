@@ -386,8 +386,6 @@ I18N.register('fr', {
   "confirm.no": "Non",
   "confirm.noTitle": "Non (Échap)",
   "confirm.left": "Annulation dans {seconds} s",
-  "settings.keep_asr_loaded": "Garder le modèle vocal en mémoire",
-  "settings.keep_asr_loaded.help": "Reever entend alors « river » du premier coup, même si le petit détecteur l’a manqué. Coûte environ 0,8 Go de mémoire ; désactivé, le modèle se décharge après inactivité et la première commande dépend du seul détecteur.",
   "settings.voice_passive": "M’adapter discrètement à ma voix",
   "settings.voice_passive.help": "Les 40 premiers appels sont conservés sur cet ordinateur, entraînent le détecteur à votre voix puis sont supprimés. Rien ne quitte l’ordinateur.",
   "settings.voice_passive.progress": "Adaptation discrète : {count} sur {goal} entendus.",

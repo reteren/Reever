@@ -387,8 +387,6 @@ I18N.register('nl', {
   "confirm.no": "Nee",
   "confirm.noTitle": "Nee (Esc)",
   "confirm.left": "Annulering over {seconds} s",
-  "settings.keep_asr_loaded": "Spraakmodel in het geheugen houden",
-  "settings.keep_asr_loaded.help": "Dan hoort Reever „river” meteen de eerste keer, ook als de kleine detector het mist. Kost ongeveer 0,8 GB geheugen; uitgeschakeld wordt het model na inactiviteit ontladen en hangt de eerste opdracht alleen van de detector af.",
   "settings.voice_passive": "Me ongemerkt aan mijn stem aanpassen",
   "settings.voice_passive.help": "De eerste 40 aanroepen worden op deze computer bewaard, leren de detector uw stem en worden daarna verwijderd. Niets verlaat de computer.",
   "settings.voice_passive.progress": "Stille aanpassing: {count} van {goal} gehoord.",

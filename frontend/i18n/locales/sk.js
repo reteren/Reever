@@ -387,8 +387,6 @@ I18N.register('sk', {
   "confirm.no": "Nie",
   "confirm.noTitle": "Nie (Esc)",
   "confirm.left": "Zrušenie o {seconds} s",
-  "settings.keep_asr_loaded": "Držať model reči v pamäti",
-  "settings.keep_asr_loaded.help": "Reever potom počuje „river“ na prvýkrát, aj keď ho malý detektor prepočuje. Stojí asi 0,8 GB pamäte; po vypnutí sa model po nečinnosti uvoľní a prvý príkaz závisí len od detektora.",
   "settings.voice_passive": "Nenápadne sa prispôsobovať môjmu hlasu",
   "settings.voice_passive.help": "Prvých 40 oslovení sa uloží v tomto počítači, naučí detektor váš hlas a potom sa zmaže. Nič neopustí počítač.",
   "settings.voice_passive.progress": "Tiché prispôsobenie: počuté {count} z {goal}.",

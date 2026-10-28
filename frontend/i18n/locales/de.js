@@ -386,8 +386,6 @@ I18N.register('de', {
   "confirm.no": "Nein",
   "confirm.noTitle": "Nein (Esc)",
   "confirm.left": "Abbruch in {seconds} s",
-  "settings.keep_asr_loaded": "Sprachmodell im Speicher halten",
-  "settings.keep_asr_loaded.help": "Dann hört Reever „River“ schon beim ersten Mal, auch wenn der kleine Detektor es verpasst. Kostet etwa 0,8 GB Speicher; ausgeschaltet wird das Modell nach Leerlauf entladen und der erste Befehl hängt allein vom Detektor ab.",
   "settings.voice_passive": "Unauffällig an meine Stimme anpassen",
   "settings.voice_passive.help": "Die ersten 40 Aktivierungen werden auf diesem Computer gespeichert, trainieren den Detektor auf Ihre Stimme und werden dann gelöscht. Nichts verlässt den Computer.",
   "settings.voice_passive.progress": "Stille Anpassung: {count} von {goal} gehört.",

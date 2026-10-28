@@ -386,8 +386,6 @@ I18N.register('it', {
   "confirm.no": "No",
   "confirm.noTitle": "No (Esc)",
   "confirm.left": "Annullamento tra {seconds} s",
-  "settings.keep_asr_loaded": "Tieni il modello vocale in memoria",
-  "settings.keep_asr_loaded.help": "Così Reever sente «river» al primo colpo anche se il piccolo rilevatore lo perde. Costa circa 0,8 GB di memoria; se disattivato, il modello viene scaricato dopo l’inattività e il primo comando dipende solo dal rilevatore.",
   "settings.voice_passive": "Adattati alla mia voce in silenzio",
   "settings.voice_passive.help": "Le prime 40 attivazioni restano su questo computer, insegnano la tua voce al rilevatore e poi vengono eliminate. Niente lascia il computer.",
   "settings.voice_passive.progress": "Adattamento silenzioso: {count} su {goal} sentite.",

@@ -387,8 +387,6 @@ I18N.register('pl', {
   "confirm.no": "Nie",
   "confirm.noTitle": "Nie (Esc)",
   "confirm.left": "Anulowanie za {seconds} s",
-  "settings.keep_asr_loaded": "Trzymaj model mowy w pamięci",
-  "settings.keep_asr_loaded.help": "Wtedy Reever słyszy „river” za pierwszym razem, nawet gdy mały detektor go przeoczy. Kosztuje około 0,8 GB pamięci; po wyłączeniu model jest zwalniany po bezczynności, a pierwsze polecenie zależy tylko od detektora.",
   "settings.voice_passive": "Dyskretnie dopasowuj się do mojego głosu",
   "settings.voice_passive.help": "Pierwsze 40 wywołań zostaje na tym komputerze, uczy detektor Twojego głosu, a potem jest usuwanych. Nic nie opuszcza komputera.",
   "settings.voice_passive.progress": "Ciche dopasowanie: usłyszano {count} z {goal}.",

@@ -386,8 +386,6 @@ I18N.register('es', {
   "confirm.no": "No",
   "confirm.noTitle": "No (Esc)",
   "confirm.left": "Se cancela en {seconds} s",
-  "settings.keep_asr_loaded": "Mantener el modelo de voz en memoria",
-  "settings.keep_asr_loaded.help": "Así Reever oye «river» a la primera, aunque el detector pequeño lo pierda. Cuesta unos 0,8 GB de memoria; si se desactiva, el modelo se descarga tras la inactividad y la primera orden depende solo del detector.",
   "settings.voice_passive": "Adaptarme a mi voz sin avisar",
   "settings.voice_passive.help": "Las primeras 40 activaciones se guardan en este equipo, enseñan tu voz al detector y luego se borran. Nada sale del equipo.",
   "settings.voice_passive.progress": "Adaptación silenciosa: {count} de {goal} oídas.",

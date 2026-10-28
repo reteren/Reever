@@ -387,8 +387,6 @@ I18N.register('ko', {
   "confirm.no": "아니요",
   "confirm.noTitle": "아니요 (Esc)",
   "confirm.left": "{seconds}초 후 취소",
-  "settings.keep_asr_loaded": "음성 모델을 메모리에 유지",
-  "settings.keep_asr_loaded.help": "작은 감지기가 놓쳐도 Reever가 첫 번째에 “river”를 알아듣습니다. 메모리를 약 0.8GB 사용하며, 끄면 유휴 후 모델이 내려가고 첫 명령은 감지기에만 의존합니다.",
   "settings.voice_passive": "내 목소리에 조용히 맞추기",
   "settings.voice_passive.help": "처음 40번의 호출은 이 컴퓨터에 저장되어 감지기가 내 목소리를 학습한 뒤 삭제됩니다. 어떤 것도 컴퓨터 밖으로 나가지 않습니다.",
   "settings.voice_passive.progress": "조용한 맞춤: {goal}번 중 {count}번 들음.",

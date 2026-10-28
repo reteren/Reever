@@ -386,8 +386,6 @@ I18N.register('ar', {
   "confirm.no": "لا",
   "confirm.noTitle": "لا (Esc)",
   "confirm.left": "إلغاء خلال {seconds} ث",
-  "settings.keep_asr_loaded": "إبقاء نموذج الكلام في الذاكرة",
-  "settings.keep_asr_loaded.help": "عندها يسمع Reever كلمة «river» من المرة الأولى حتى لو فاتت الكاشف الصغير. يستهلك نحو 0.8 غيغابايت من الذاكرة؛ وعند إيقافه يُفرَّغ النموذج بعد الخمول ويعتمد الأمر الأول على الكاشف وحده.",
   "settings.voice_passive": "التكيّف مع صوتي بهدوء",
   "settings.voice_passive.help": "تُحفظ أول 40 مناداة على هذا الحاسوب لتعليم الكاشف صوتك ثم تُحذف. لا يغادر شيء الحاسوب.",
   "settings.voice_passive.progress": "التكيّف الهادئ: سُمع {count} من {goal}.",

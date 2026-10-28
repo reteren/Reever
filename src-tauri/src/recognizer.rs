@@ -190,10 +190,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         );
     }
 
-    // Новое безопасное значение по умолчанию держит ASR готовой для независимого
-    // текстового wake-канала. Старую экономию памяти можно вернуть явно.
-    let lazy_loading = !s.keep_asr_loaded
-        && s.models_unload_after_s <= crate::config::MODELS_UNLOAD_MAX_S;
+    // По умолчанию ASR не выгружается и остаётся независимым текстовым wake-каналом.
+    // Экономию памяти включает ползунок выгрузки.
+    let lazy_loading = s.models_unload_after_s <= crate::config::MODELS_UNLOAD_MAX_S;
     let asr = if lazy_loading {
         ui_log(
             app,

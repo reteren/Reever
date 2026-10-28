@@ -387,8 +387,6 @@ I18N.register('sv', {
   "confirm.no": "Nej",
   "confirm.noTitle": "Nej (Esc)",
   "confirm.left": "Avbryts om {seconds} s",
-  "settings.keep_asr_loaded": "Behåll talmodellen i minnet",
-  "settings.keep_asr_loaded.help": "Då hör Reever ”river” redan första gången, även när den lilla detektorn missar det. Kostar ungefär 0,8 GB minne; avstängt laddas modellen ur efter inaktivitet och det första kommandot beror bara på detektorn.",
   "settings.voice_passive": "Anpassa mig diskret till min röst",
   "settings.voice_passive.help": "De första 40 tilltalen sparas på den här datorn, lär detektorn din röst och raderas sedan. Inget lämnar datorn.",
   "settings.voice_passive.progress": "Tyst anpassning: {count} av {goal} hörda.",

@@ -386,8 +386,6 @@ I18N.register('ja', {
   "confirm.no": "いいえ",
   "confirm.noTitle": "いいえ（Esc）",
   "confirm.left": "{seconds} 秒後にキャンセル",
-  "settings.keep_asr_loaded": "音声モデルをメモリに保持する",
-  "settings.keep_asr_loaded.help": "小さな検出器が聞き逃しても、Reever は最初の一回で「river」を聞き取れます。メモリを約 0.8 GB 使います。オフにするとアイドル後にモデルが解放され、最初のコマンドは検出器だけが頼りになります。",
   "settings.voice_passive": "さりげなく自分の声に合わせる",
   "settings.voice_passive.help": "最初の 40 回の呼びかけはこのコンピューターに保存され、検出器にあなたの声を学習させた後で削除されます。データがコンピューターの外に出ることはありません。",
   "settings.voice_passive.progress": "さりげない調整：{count}/{goal} 回を聞き取りました。",

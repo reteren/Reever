@@ -387,8 +387,6 @@ I18N.register('hr', {
   "confirm.no": "Ne",
   "confirm.noTitle": "Ne (Esc)",
   "confirm.left": "Otkazivanje za {seconds} s",
-  "settings.keep_asr_loaded": "Drži model govora u memoriji",
-  "settings.keep_asr_loaded.help": "Tada Reever čuje „river” iz prve, čak i kad ga mali detektor propusti. Troši oko 0,8 GB memorije; kad je isključeno, model se nakon mirovanja oslobađa i prva naredba ovisi samo o detektoru.",
   "settings.voice_passive": "Neprimjetno se prilagođavaj mom glasu",
   "settings.voice_passive.help": "Prvih 40 obraćanja čuva se na ovom računalu, uči detektor vaš glas i zatim se briše. Ništa ne napušta računalo.",
   "settings.voice_passive.progress": "Tiha prilagodba: čuto {count} od {goal}.",

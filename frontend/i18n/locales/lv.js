@@ -387,8 +387,6 @@ I18N.register('lv', {
   "confirm.no": "Nē",
   "confirm.noTitle": "Nē (Esc)",
   "confirm.left": "Atcelšana pēc {seconds} s",
-  "settings.keep_asr_loaded": "Turēt runas modeli atmiņā",
-  "settings.keep_asr_loaded.help": "Tad Reever dzird “river” jau pirmajā reizē, pat ja mazais detektors to palaiž garām. Aizņem apmēram 0,8 GB atmiņas; izslēdzot modelis pēc dīkstāves tiek izlādēts un pirmā komanda ir atkarīga tikai no detektora.",
   "settings.voice_passive": "Nemanāmi pielāgoties manai balsij",
   "settings.voice_passive.help": "Pirmās 40 uzrunas tiek saglabātas šajā datorā, iemāca detektoram jūsu balsi un pēc tam tiek dzēstas. Nekas neatstāj datoru.",
   "settings.voice_passive.progress": "Klusā pielāgošana: dzirdētas {count} no {goal}.",

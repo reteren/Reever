@@ -387,8 +387,6 @@ I18N.register('ro', {
   "confirm.no": "Nu",
   "confirm.noTitle": "Nu (Esc)",
   "confirm.left": "Anulare în {seconds} s",
-  "settings.keep_asr_loaded": "Păstrează modelul vocal în memorie",
-  "settings.keep_asr_loaded.help": "Astfel Reever aude „river” din prima, chiar dacă detectorul mic îl ratează. Costă aproximativ 0,8 GB de memorie; dezactivat, modelul se descarcă după inactivitate, iar prima comandă depinde doar de detector.",
   "settings.voice_passive": "Adaptează-te discret la vocea mea",
   "settings.voice_passive.help": "Primele 40 de apelări sunt păstrate pe acest computer, învață detectorul vocea ta și apoi sunt șterse. Nimic nu părăsește computerul.",
   "settings.voice_passive.progress": "Adaptare discretă: {count} din {goal} auzite.",

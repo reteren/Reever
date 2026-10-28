@@ -387,8 +387,6 @@ I18N.register('hu', {
   "confirm.no": "Nem",
   "confirm.noTitle": "Nem (Esc)",
   "confirm.left": "Megszakítás {seconds} mp múlva",
-  "settings.keep_asr_loaded": "A beszédmodell maradjon a memóriában",
-  "settings.keep_asr_loaded.help": "Így a Reever elsőre meghallja a „river” szót, akkor is, ha a kis detektor elvéti. Körülbelül 0,8 GB memóriát igényel; kikapcsolva a modell tétlenség után kiürül, és az első parancs csak a detektoron múlik.",
   "settings.voice_passive": "Észrevétlenül alkalmazkodjon a hangomhoz",
   "settings.voice_passive.help": "Az első 40 megszólítás ezen a gépen marad, megtanítja a detektornak a hangját, majd törlődik. Semmi nem hagyja el a gépet.",
   "settings.voice_passive.progress": "Csendes hangolás: {count} / {goal} hallva.",

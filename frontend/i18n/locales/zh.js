@@ -386,8 +386,6 @@ I18N.register('zh', {
   "confirm.no": "否",
   "confirm.noTitle": "否（Esc）",
   "confirm.left": "{seconds} 秒后取消",
-  "settings.keep_asr_loaded": "将语音模型保留在内存中",
-  "settings.keep_asr_loaded.help": "这样即使小型检测器漏听，Reever 也能第一次就听到“river”。约占 0.8 GB 内存；关闭后模型会在空闲后卸载，第一条命令只能依赖检测器。",
   "settings.voice_passive": "悄悄适应我的声音",
   "settings.voice_passive.help": "前 40 次唤醒会保存在这台电脑上，用来让检测器学习你的声音，之后删除。任何数据都不会离开电脑。",
   "settings.voice_passive.progress": "静默适应：已听到 {count}/{goal}。",

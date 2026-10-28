@@ -387,8 +387,6 @@ I18N.register('et', {
   "confirm.no": "Ei",
   "confirm.noTitle": "Ei (Esc)",
   "confirm.left": "Tühistub {seconds} s pärast",
-  "settings.keep_asr_loaded": "Hoia kõnemudel mälus",
-  "settings.keep_asr_loaded.help": "Siis kuuleb Reever sõna „river” esimesel korral, isegi kui väike tuvastaja sellest mööda laseb. Võtab umbes 0,8 GB mälu; väljalülitatult laaditakse mudel pärast jõudeolekut mälust välja ja esimene käsk sõltub ainult tuvastajast.",
   "settings.voice_passive": "Kohandu märkamatult minu häälega",
   "settings.voice_passive.help": "Esimesed 40 pöördumist salvestatakse sellesse arvutisse, õpetavad tuvastajale teie häält ja kustutatakse siis. Midagi ei lahku arvutist.",
   "settings.voice_passive.progress": "Vaikne kohandamine: kuuldud {count}/{goal}.",

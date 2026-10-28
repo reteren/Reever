@@ -387,8 +387,6 @@ I18N.register('mt', {
   "confirm.no": "Le",
   "confirm.noTitle": "Le (Esc)",
   "confirm.left": "Jitħassar f'{seconds} s",
-  "settings.keep_asr_loaded": "Żomm il-mudell tad-diskors fil-memorja",
-  "settings.keep_asr_loaded.help": "Hekk Reever jisma’ “river” mill-ewwel darba, anke jekk id-ditekter iż-żgħir jitilfu. Jiswa madwar 0.8 GB memorja; jekk jintefa, il-mudell jinħatt wara inattività u l-ewwel kmand jiddependi biss fuq id-ditekter.",
   "settings.voice_passive": "Adatta ruħek bil-moħbi għal leħni",
   "settings.voice_passive.help": "L-ewwel 40 sejħa jinżammu fuq dan il-kompjuter, jgħallmu lid-ditekter leħnek u mbagħad jitħassru. Xejn ma joħroġ mill-kompjuter.",
   "settings.voice_passive.progress": "Adattament siekta: {count} minn {goal} instemgħu.",

@@ -387,8 +387,6 @@ I18N.register('lt', {
   "confirm.no": "Ne",
   "confirm.noTitle": "Ne (Esc)",
   "confirm.left": "Atšaukiama po {seconds} s",
-  "settings.keep_asr_loaded": "Laikyti kalbos modelį atmintyje",
-  "settings.keep_asr_loaded.help": "Tada Reever išgirsta „river“ iš pirmo karto, net jei mažasis detektorius jį praleidžia. Užima apie 0,8 GB atminties; išjungus modelis po neveiklos iškraunamas, o pirmoji komanda priklauso tik nuo detektoriaus.",
   "settings.voice_passive": "Nepastebimai prisitaikyti prie mano balso",
   "settings.voice_passive.help": "Pirmieji 40 kreipinių išsaugomi šiame kompiuteryje, išmoko detektorių jūsų balso ir tada ištrinami. Niekas nepalieka kompiuterio.",
   "settings.voice_passive.progress": "Tylusis prisitaikymas: išgirsta {count} iš {goal}.",

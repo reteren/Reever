@@ -2,7 +2,7 @@ const tauri = window.__TAURI__;
 const previewSettings={
   wake_words:['ривер','ревер','ривьер'],
   match_threshold:0.7,
-  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_after_s:10,keep_asr_loaded:true,voice_passive:true,local_index:true,
+  asr_threads:4,languages:['en','ru'],ui_languages:['en','ru'],models_unload_after_s:121,voice_passive:true,local_index:true,
   vad_threshold:0.5,wake_pause_ms:600,command_pause_ms:900,command_wait_ms:5000,
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
@@ -697,7 +697,7 @@ const GROUPS=[
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[
-    ['asr_threads','number'],['keep_asr_loaded','bool'],['models_unload_after_s','unload'],['vad_threshold','number'],['wake_pause_ms','number'],
+    ['asr_threads','number'],['models_unload_after_s','unload'],['vad_threshold','number'],['wake_pause_ms','number'],
     ['command_pause_ms','number'],['command_wait_ms','number'],['partial_results','bool'],['match_threshold','number']]],
   ['dictation',[
     ['dictation_clipboard','bool'],['dictation_live','bool'],['dictation_english','bool'],['dictation_english_level','strength'],
@@ -962,7 +962,7 @@ function fieldEl(key,type,opts,when='save'){
     // 0 — сразу после команды, 1–120 с, крайнее правое положение — не выгружать.
     const NEVER=121;
     const row=el('div',{className:'mascot-scale'});
-    const value=Math.min(NEVER,Math.max(0,Math.round(Number(settingsObj[key]??10)||0)));
+    const value=Math.min(NEVER,Math.max(0,Math.round(Number(settingsObj[key]??NEVER)||0)));
     inp=el('input',{type:'range',min:'0',max:String(NEVER),step:'1',value:String(value)});
     const label=v=>v>=NEVER?t(`settings.${key}.never`):v===0?t(`settings.${key}.now`):t(`settings.${key}.seconds`,{n:v});
     const out=el('span',{className:'mascot-scale-value',textContent:label(value)});

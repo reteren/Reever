@@ -387,8 +387,6 @@ I18N.register('yue', {
   "confirm.no": "唔係",
   "confirm.noTitle": "唔係（Esc）",
   "confirm.left": "{seconds} 秒後取消",
-  "settings.keep_asr_loaded": "將語音模型保留喺記憶體",
-  "settings.keep_asr_loaded.help": "咁就算細檢測器聽漏，Reever 都可以第一次就聽到「river」。大約用 0.8 GB 記憶體；關咗之後模型閒置後會卸載，第一個指令就只靠檢測器。",
   "settings.voice_passive": "靜靜雞適應我把聲",
   "settings.voice_passive.help": "頭 40 次喚醒會儲存喺呢部電腦，用嚟教檢測器認你把聲，之後刪除。任何資料都唔會離開電腦。",
   "settings.voice_passive.progress": "靜默適應：聽到 {count}/{goal}。",

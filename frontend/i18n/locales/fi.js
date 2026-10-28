@@ -387,8 +387,6 @@ I18N.register('fi', {
   "confirm.no": "Ei",
   "confirm.noTitle": "Ei (Esc)",
   "confirm.left": "Peruutus {seconds} s kuluttua",
-  "settings.keep_asr_loaded": "Pidä puhemalli muistissa",
-  "settings.keep_asr_loaded.help": "Silloin Reever kuulee ”river” heti ensimmäisellä kerralla, vaikka pieni tunnistin ohittaisi sen. Vie noin 0,8 Gt muistia; pois päältä malli poistetaan muistista joutoajan jälkeen ja ensimmäinen komento riippuu vain tunnistimesta.",
   "settings.voice_passive": "Mukaudu ääneeni huomaamatta",
   "settings.voice_passive.help": "Ensimmäiset 40 kutsua tallennetaan tälle tietokoneelle, opettavat tunnistimelle äänesi ja poistetaan sitten. Mikään ei poistu tietokoneelta.",
   "settings.voice_passive.progress": "Hiljainen mukautus: {count}/{goal} kuultu.",

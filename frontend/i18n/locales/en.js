@@ -388,8 +388,6 @@ I18N.register('en', {
   "confirm.no": "No",
   "confirm.noTitle": "No (Esc)",
   "confirm.left": "Cancels in {seconds} s",
-  "settings.keep_asr_loaded": "Keep the speech model in memory",
-  "settings.keep_asr_loaded.help": "Reever then hears “river” on the first try even when the small detector misses it. Costs about 0.8 GB of memory; when off, the model unloads after idle and the first command relies on the detector alone.",
   "settings.voice_passive": "Quietly adapt to my voice",
   "settings.voice_passive.help": "The first 40 times you say the wake word are kept on this computer, teach the detector your voice and are then deleted. Nothing leaves the computer.",
   "settings.voice_passive.progress": "Quiet adaptation: {count} of {goal} heard.",
