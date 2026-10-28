@@ -260,6 +260,8 @@
     let running = false, loopFrame = 0;
     function tick(t) {
       loopFrame = 0;
+      // не чаще ~60 кадров, как петля главного окна (shell.js, FRAME_MS)
+      if (last && t - last < 13) { loopFrame = requestAnimationFrame(tick); return; }
       const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
       acc += dt; last = t;
       const fps = inPortal() ? PORTAL_FPS

@@ -282,9 +282,13 @@
     scheduleLoop();
   }
 
+  // Не чаще ~60 кадров: на мониторе 144–180 Гц каждый лишний кадр — полный проход шейдера рамки.
+  // Порог с запасом ниже 16,7 мс, чтобы на 60 Гц дрожание кадров не роняло до 30.
+  const FRAME_MS = 13;
   function loop(now) {
     loopFrame = 0;
     if (!running) return;
+    if (now - last < FRAME_MS) { scheduleLoop(); return; }
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
     const time = (now - t0) / 1000;
     // уровень: быстрая атака, медленный спад; доли — за кадр 60 Гц, пересчёт на любую частоту
@@ -490,14 +494,14 @@
   new MutationObserver(fitRail).observe($('#rail'), { childList: true, characterData: true, subtree: true });
   new MutationObserver(fitTicker).observe($('#partial'), { childList: true, characterData: true, subtree: true });
 
-  // Подстраховка: не каждая сборка WebView2 сообщает document.hidden, когда окно
-  // спрятано в трей. Раз в секунду спрашиваем само окно: скрыто — петля стоит.
-  if (win) setInterval(async () => {
-    let visible = true;
-    try { visible = await win.isVisible() && !(await win.isMinimized()); } catch { return; }
-    if (!visible && running) stop();
-    else if (visible && !running && !document.hidden) { start(); if (booted) { powerOn(true); sweepNow(0.7, 0.9); } }
-  }, 1000);
+  // Свёрнутое окно: петля встаёт по кнопке рамки сразу, не дожидаясь document.hidden (не каждая
+  // сборка WebView2 его сообщает), и просыпается, когда окно снова в фокусе. «В трей» окно
+  // уничтожает целиком (send_to_tray), там останавливать нечего.
+  $('#winMin')?.addEventListener('click', () => stop());
+  window.addEventListener('focus', () => {
+    if (running || document.hidden) return;
+    start(); if (booted) { powerOn(true); sweepNow(0.7, 0.9); }
+  });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { stop(); return; }
