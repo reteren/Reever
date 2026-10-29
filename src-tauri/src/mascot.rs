@@ -272,6 +272,13 @@ fn hide_later(window: WebviewWindow, generation: u64) {
         let _ = window.emit("mascot://leave", ());
         let app = window.app_handle().clone();
         LEAVING.store(true, Ordering::Relaxed);
+        // Новое «ривер» могло прийти между проверкой выше и «leave»: тогда его «enter» уже
+        // ушёл раньше нашего «leave», и осьминог исчез бы на всю команду. Вернуть его.
+        if GENERATION.load(Ordering::Relaxed) != generation {
+            LEAVING.store(false, Ordering::Relaxed);
+            let _ = window.emit("mascot://enter", false);
+            return;
+        }
         bubble::notify(&app);
         let to_orb = events::main_visible();
         if to_orb {
