@@ -389,5 +389,9 @@ I18N.register('yue', {
   "settings.voice_passive.progress": "靜默適應：聽到 {count}/{goal}。",
   "settings.voice_passive.done": "靜默適應完成（{goal}/{goal}），錄音已刪除。",
   "voiceAdapt.introHint": "等 Reever 適應你把聲。講「{wake}」{goal} 次，每次之後停一停——淨係講呢個字。只需一分鐘，做一次就得。",
-  "home.packMissing": "{languages}：未下載 {pack} 語言包，Reever 差唔多聽唔明呢種語言。請再執行安裝程式並剔選語言包。"
+  "home.packMissing": "{languages}：未下載 {pack} 語言包，Reever 差唔多聽唔明呢種語言。請再執行安裝程式並剔選語言包。",
+  "mascotIntro.1": "你好！我係 Reever，你嘅語音助手。",
+  "mascotIntro.2": "講«{wake}»，再講要做咩：我可以開程式、搵檔案、幫你打字。",
+  "mascotIntro.3": "你可以捉住我個頭，拖我去邊度都得。",
+  "mascotIntro.4": "我幾時出現由你話事：{settings} → {section}。遲啲見！"
 });

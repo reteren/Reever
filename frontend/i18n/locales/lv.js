@@ -389,5 +389,9 @@ I18N.register('lv', {
   "settings.voice_passive.progress": "Klusā pielāgošana: dzirdētas {count} no {goal}.",
   "settings.voice_passive.done": "Klusā pielāgošana pabeigta ({goal} no {goal}), ieraksti dzēsti.",
   "voiceAdapt.introHint": "Pielāgosim Reever jūsu balsij. Sakiet “{wake}” {goal} reizes ar īsu pauzi pēc katras — tikai vārdu. Tas aizņem minūti un vajadzīgs tikai vienreiz.",
-  "home.packMissing": "{languages}: valodas pakotne {pack} nav lejupielādēta, tāpēc Reever šo runu gandrīz nesaprot. Palaidiet instalēšanas programmu vēlreiz un atzīmējiet pakotni."
+  "home.packMissing": "{languages}: valodas pakotne {pack} nav lejupielādēta, tāpēc Reever šo runu gandrīz nesaprot. Palaidiet instalēšanas programmu vēlreiz un atzīmējiet pakotni.",
+  "mascotIntro.1": "Sveiki! Es esmu Reever, tavs balss palīgs.",
+  "mascotIntro.2": "Saki «{wake}» un ko darīt: atveru programmas, atrodu failus un rakstu tavā vietā.",
+  "mascotIntro.3": "Vari satvert mani aiz galvas un pārvilkt, kur vien gribi.",
+  "mascotIntro.4": "Kad man parādīties, izlem tu: {settings} → {section}. Uz tikšanos!"
 });

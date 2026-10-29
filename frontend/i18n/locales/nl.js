@@ -389,5 +389,9 @@ I18N.register('nl', {
   "settings.voice_passive.progress": "Stille aanpassing: {count} van {goal} gehoord.",
   "settings.voice_passive.done": "Stille aanpassing voltooid ({goal} van {goal}), opnamen verwijderd.",
   "voiceAdapt.introHint": "Laten we Reever op uw stem afstemmen. Zeg {goal} keer „{wake}” met een korte pauze na elke keer — alleen het woord. Dit duurt een minuut en is maar één keer nodig.",
-  "home.packMissing": "{languages}: het taalpakket {pack} is niet gedownload, dus Reever verstaat deze spraak nauwelijks. Start het installatieprogramma opnieuw en vink het pakket aan."
+  "home.packMissing": "{languages}: het taalpakket {pack} is niet gedownload, dus Reever verstaat deze spraak nauwelijks. Start het installatieprogramma opnieuw en vink het pakket aan.",
+  "mascotIntro.1": "Hoi! Ik ben Reever, je spraakassistent.",
+  "mascotIntro.2": "Zeg «{wake}» en wat ik moet doen: ik open programma's, vind bestanden en typ voor je.",
+  "mascotIntro.3": "Je kunt me bij mijn hoofd pakken en overal naartoe slepen.",
+  "mascotIntro.4": "Wanneer ik verschijn, bepaal jij: {settings} → {section}. Tot ziens!"
 });

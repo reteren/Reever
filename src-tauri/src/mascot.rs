@@ -74,6 +74,10 @@ static SHOWN: AtomicBool = AtomicBool::new(false);
 static RESTING: AtomicBool = AtomicBool::new(false);
 /// Маскот уже уходит в портал (пузырь над ним гаснет сразу, не дожидаясь конца ухода).
 static LEAVING: AtomicBool = AtomicBool::new(false);
+/// Знакомство первого запуска (`mascot_intro`): осьминог на экране и говорит в пузыре.
+static INTRO: AtomicBool = AtomicBool::new(false);
+/// Реплики знакомства; пузырь забирает их один раз (`bubble_intro`).
+static INTRO_LINES: Mutex<Vec<String>> = Mutex::new(Vec::new());
 /// Как часто проверять, что окно маскота не задвинуто под обычные окна (`keep_on_top`),
 /// в тиках `watch_cursor` по 40 мс.
 const TOPMOST_CHECK_TICKS: u32 = 25;
@@ -136,6 +140,10 @@ pub(crate) fn on_screen() -> bool {
     SHOWN.load(Ordering::Relaxed) && !LEAVING.load(Ordering::Relaxed)
 }
 
+pub(crate) fn intro_active() -> bool {
+    INTRO.load(Ordering::Relaxed)
+}
+
 fn command_active() -> bool {
     matches!(events::current_state().as_str(), "listening" | "busy")
 }
@@ -190,7 +198,7 @@ pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
 /// после того, как команда отработала.
 pub fn on_state(app: &AppHandle, state: &str) {
     // «loading» бывает и посреди команды (модели догружаются после «ривер») — не повод уходить
-    if mode() != "commands" || state == "loading" {
+    if mode() != "commands" || state == "loading" || intro_active() {
         return;
     }
     // После `on_wake` «idle» ещё ничего не значит: его ставят и по окончании загрузки
@@ -304,6 +312,60 @@ fn hide(window: &WebviewWindow) {
     LEAVING.store(false, Ordering::Relaxed);
     let _ = window.emit("mascot://hidden", ());
     bubble::notify(window.app_handle());
+}
+
+/// Первый запуск (app.js): осьминог выходит на экран и представляется — реплики `lines`
+/// печатает пузырь, потом зовёт `mascot_intro_done`. Пузырь показывается и тогда, когда
+/// он выключен в настройках. `false` — маскота нет (режим `never`, лёгкий интерфейс).
+#[tauri::command]
+pub fn mascot_intro(app: AppHandle, lines: Vec<String>) -> bool {
+    if mode() == "never" || lines.is_empty() {
+        return false;
+    }
+    if let Ok(mut current) = INTRO_LINES.lock() {
+        *current = lines;
+    }
+    INTRO.store(true, Ordering::Relaxed);
+    let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
+    bubble::sync(&app);
+    // окно ещё создаётся (первые секунды после запуска) — выйдет, когда будет готово
+    let Some(window) = app.get_webview_window("mascot") else { return true };
+    if !SHOWN.load(Ordering::Relaxed) && IN_ORB.load(Ordering::Relaxed) && events::main_visible() {
+        orb(&app, "depart");
+        std::thread::spawn(move || {
+            std::thread::sleep(TELEPORT);
+            if GENERATION.load(Ordering::Relaxed) == generation {
+                show(&window);
+            }
+        });
+    } else {
+        if IN_ORB.load(Ordering::Relaxed) {
+            orb(&app, "absent");
+        }
+        show(&window);
+    }
+    true
+}
+
+/// bubble.html: реплики знакомства (пусто — знакомства нет или они уже отданы).
+#[tauri::command]
+pub fn bubble_intro() -> Vec<String> {
+    INTRO_LINES.lock().map(|mut lines| std::mem::take(&mut *lines)).unwrap_or_default()
+}
+
+/// bubble.html договорил знакомство: в режиме `commands` осьминог уходит в сферу.
+#[tauri::command]
+pub fn mascot_intro_done(app: AppHandle) {
+    if !INTRO.swap(false, Ordering::Relaxed) {
+        return;
+    }
+    let _ = app.emit_to("main", "reever://mascot-intro-done", ());
+    bubble::sync(&app);
+    if mode() == "commands" && !command_active() {
+        if let Some(window) = app.get_webview_window("mascot") {
+            hide_later(window.clone(), GENERATION.fetch_add(1, Ordering::Relaxed) + 1);
+        }
+    }
 }
 
 /// mascot.html: осьминог приземлился (true) или взлетел/исчез (false).
@@ -433,7 +495,10 @@ fn create(app: &AppHandle) {
         }
         if mode == "never" {
             let _ = window.destroy();
-        } else if mode == "always" || command_active() {
+        } else if mode == "always" || command_active() || intro_active() {
+            if IN_ORB.load(Ordering::Relaxed) {
+                orb(&app, "absent");
+            }
             show(&window);
         }
     });

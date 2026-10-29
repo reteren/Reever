@@ -389,5 +389,9 @@ I18N.register('da', {
   "settings.voice_passive.progress": "Diskret tilpasning: {count} af {goal} hørt.",
   "settings.voice_passive.done": "Diskret tilpasning færdig ({goal} af {goal}), optagelser slettet.",
   "voiceAdapt.introHint": "Lad os tilpasse Reever til din stemme. Sig „{wake}“ {goal} gange med en kort pause efter hver — kun ordet. Det tager et minut og skal kun gøres én gang.",
-  "home.packMissing": "{languages}: sprogpakken {pack} er ikke hentet, så Reever forstår næsten ikke denne tale. Kør installationsprogrammet igen, og markér pakken."
+  "home.packMissing": "{languages}: sprogpakken {pack} er ikke hentet, så Reever forstår næsten ikke denne tale. Kør installationsprogrammet igen, og markér pakken.",
+  "mascotIntro.1": "Hej! Jeg er Reever, din stemmeassistent.",
+  "mascotIntro.2": "Sig «{wake}» og hvad jeg skal gøre: jeg åbner programmer, finder filer og skriver for dig.",
+  "mascotIntro.3": "Du kan tage fat i mit hoved og trække mig hvorhen du vil.",
+  "mascotIntro.4": "Hvornår jeg dukker op, bestemmer du: {settings} → {section}. Vi ses!"
 });

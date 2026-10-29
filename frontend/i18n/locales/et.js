@@ -389,5 +389,9 @@ I18N.register('et', {
   "settings.voice_passive.progress": "Vaikne kohandamine: kuuldud {count}/{goal}.",
   "settings.voice_passive.done": "Vaikne kohandamine lõpetatud ({goal}/{goal}), salvestised kustutatud.",
   "voiceAdapt.introHint": "Häälestame Reeveri teie häälele. Öelge „{wake}” {goal} korda, iga järel lühike paus — ainult see sõna. See võtab minuti ja on vaja vaid korra.",
-  "home.packMissing": "{languages}: keelepakett {pack} pole alla laaditud, seega Reever seda kõnet peaaegu ei mõista. Käivitage paigaldusprogramm uuesti ja märkige pakett."
+  "home.packMissing": "{languages}: keelepakett {pack} pole alla laaditud, seega Reever seda kõnet peaaegu ei mõista. Käivitage paigaldusprogramm uuesti ja märkige pakett.",
+  "mascotIntro.1": "Tere! Mina olen Reever, sinu häälassistent.",
+  "mascotIntro.2": "Ütle «{wake}» ja mida teha: avan programme, leian faile ja kirjutan sinu eest.",
+  "mascotIntro.3": "Võid mind peast haarata ja kuhu iganes lohistada.",
+  "mascotIntro.4": "Millal ma ilmun, otsustad sina: {settings} → {section}. Näeme!"
 });

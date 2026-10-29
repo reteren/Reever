@@ -389,5 +389,9 @@ I18N.register('cs', {
   "settings.voice_passive.progress": "Tiché přizpůsobení: slyšeno {count} z {goal}.",
   "settings.voice_passive.done": "Tiché přizpůsobení dokončeno ({goal} z {goal}), nahrávky smazány.",
   "voiceAdapt.introHint": "Přizpůsobme Reever vašemu hlasu. Řekněte „{wake}“ {goal}krát s krátkou pauzou po každém — jen samotné slovo. Zabere to minutu a stačí jednou.",
-  "home.packMissing": "{languages}: jazykový balíček {pack} není stažen, takže Reever této řeči skoro nerozumí. Spusťte instalátor znovu a balíček zaškrtněte."
+  "home.packMissing": "{languages}: jazykový balíček {pack} není stažen, takže Reever této řeči skoro nerozumí. Spusťte instalátor znovu a balíček zaškrtněte.",
+  "mascotIntro.1": "Ahoj! Jsem Reever, tvůj hlasový asistent.",
+  "mascotIntro.2": "Řekni «{wake}» a co mám udělat: otevřu programy, najdu soubory a napíšu text za tebe.",
+  "mascotIntro.3": "Můžeš mě chytit za hlavu a přetáhnout kamkoli.",
+  "mascotIntro.4": "Kdy se objevím, rozhodneš ty: {settings} → {section}. Zatím!"
 });

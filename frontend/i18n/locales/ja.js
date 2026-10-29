@@ -388,5 +388,9 @@ I18N.register('ja', {
   "settings.voice_passive.progress": "さりげない調整：{count}/{goal} 回を聞き取りました。",
   "settings.voice_passive.done": "さりげない調整が完了しました（{goal}/{goal}）。録音は削除されました。",
   "voiceAdapt.introHint": "Reever をあなたの声に合わせましょう。「{wake}」と {goal} 回、毎回少し間を空けて言ってください（言葉だけ）。1 分ほどで終わり、一度だけ必要です。",
-  "home.packMissing": "{languages}：{pack} 言語パックがダウンロードされていないため、Reever はこの言語をほとんど理解できません。インストーラーを再実行してパックを選択してください。"
+  "home.packMissing": "{languages}：{pack} 言語パックがダウンロードされていないため、Reever はこの言語をほとんど理解できません。インストーラーを再実行してパックを選択してください。",
+  "mascotIntro.1": "こんにちは！Reever です。あなたの音声アシスタントです。",
+  "mascotIntro.2": "«{wake}» と言ってから用件をどうぞ。アプリを開いたり、ファイルを探したり、文字を入力したりします。",
+  "mascotIntro.3": "頭をつかんで好きな場所へドラッグできます。",
+  "mascotIntro.4": "いつ現れるかは {settings} → {section} で決められます。またね！"
 });

@@ -388,5 +388,9 @@ I18N.register('zh', {
   "settings.voice_passive.progress": "静默适应：已听到 {count}/{goal}。",
   "settings.voice_passive.done": "静默适应已完成（{goal}/{goal}），录音已删除。",
   "voiceAdapt.introHint": "让 Reever 适应你的声音。请说“{wake}”{goal} 次，每次后稍作停顿——只说这个词。只需一分钟，只做一次。",
-  "home.packMissing": "{languages}：未下载 {pack} 语言包，Reever 几乎听不懂这种语言。请重新运行安装程序并勾选该语言包。"
+  "home.packMissing": "{languages}：未下载 {pack} 语言包，Reever 几乎听不懂这种语言。请重新运行安装程序并勾选该语言包。",
+  "mascotIntro.1": "你好！我是 Reever，你的语音助手。",
+  "mascotIntro.2": "说«{wake}»，再说要做什么：我能打开程序、查找文件、帮你打字。",
+  "mascotIntro.3": "你可以抓住我的头，把我拖到任何地方。",
+  "mascotIntro.4": "我什么时候出现由你决定：{settings} → {section}。回头见！"
 });

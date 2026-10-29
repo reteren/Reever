@@ -389,5 +389,9 @@ I18N.register('hr', {
   "settings.voice_passive.progress": "Tiha prilagodba: čuto {count} od {goal}.",
   "settings.voice_passive.done": "Tiha prilagodba završena ({goal} od {goal}), snimke obrisane.",
   "voiceAdapt.introHint": "Prilagodimo Reever vašem glasu. Recite „{wake}” {goal} puta s kratkom stankom nakon svakog — samo riječ. Traje minutu i potrebno je samo jednom.",
-  "home.packMissing": "{languages}: jezični paket {pack} nije preuzet pa Reever jedva razumije taj govor. Ponovno pokrenite instalacijski program i označite paket."
+  "home.packMissing": "{languages}: jezični paket {pack} nije preuzet pa Reever jedva razumije taj govor. Ponovno pokrenite instalacijski program i označite paket.",
+  "mascotIntro.1": "Bok! Ja sam Reever, tvoj glasovni pomoćnik.",
+  "mascotIntro.2": "Reci «{wake}» i što da napravim: otvaram programe, pronalazim datoteke i tipkam umjesto tebe.",
+  "mascotIntro.3": "Možeš me uhvatiti za glavu i odvući kamo god želiš.",
+  "mascotIntro.4": "Kad ću se pojavljivati, biraš ti: {settings} → {section}. Vidimo se!"
 });

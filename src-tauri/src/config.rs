@@ -173,7 +173,7 @@ fn default_models_unload_after_s() -> u32 {
     MODELS_UNLOAD_MAX_S + 1
 }
 fn default_mascot_mode() -> String {
-    "always".into()
+    "commands".into()
 }
 fn default_mascot_scale() -> u32 {
     100

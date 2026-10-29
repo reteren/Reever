@@ -389,5 +389,9 @@ I18N.register('hu', {
   "settings.voice_passive.progress": "Csendes hangolás: {count} / {goal} hallva.",
   "settings.voice_passive.done": "A csendes hangolás kész ({goal} / {goal}), a felvételek törölve.",
   "voiceAdapt.introHint": "Hangoljuk a Reevert a hangjához. Mondja ki {goal} alkalommal: „{wake}”, mindegyik után rövid szünettel — csak a szót. Egy percig tart, és csak egyszer kell.",
-  "home.packMissing": "{languages}: a(z) {pack} nyelvi csomag nincs letöltve, ezért a Reever alig érti ezt a beszédet. Futtassa újra a telepítőt, és jelölje be a csomagot."
+  "home.packMissing": "{languages}: a(z) {pack} nyelvi csomag nincs letöltve, ezért a Reever alig érti ezt a beszédet. Futtassa újra a telepítőt, és jelölje be a csomagot.",
+  "mascotIntro.1": "Szia! Reever vagyok, a hangalapú asszisztensed.",
+  "mascotIntro.2": "Mondd, hogy «{wake}», és hogy mit tegyek: programokat nyitok, fájlokat keresek és gépelek helyetted.",
+  "mascotIntro.3": "Megfoghatsz a fejemnél, és bárhová áthúzhatsz.",
+  "mascotIntro.4": "Hogy mikor jelenjek meg, te döntöd el: {settings} → {section}. Viszlát!"
 });

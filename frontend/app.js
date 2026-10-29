@@ -7,7 +7,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'classic',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_english_level:2,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_blackbox:false,mascot_mode:'always',mascot_scale:100,mascot_bubble:true,lite_ui:document.documentElement.classList.contains('lite')
+  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_english_level:2,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_blackbox:false,mascot_mode:'commands',mascot_scale:100,mascot_bubble:true,lite_ui:document.documentElement.classList.contains('lite')
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -828,6 +828,26 @@ async function maybeVoiceIntro(){
   if(!document.hidden) open();
   else document.addEventListener('visibilitychange',function once(){ if(document.hidden) return; document.removeEventListener('visibilitychange',once); open(); });
 }
+// Знакомство первого запуска: маскот выходит из сферы и в пузыре рассказывает о себе, потом
+// (в режиме «во время команд») уходит обратно. Один раз; в лёгком интерфейсе маскота нет.
+const MASCOT_INTRO_KEY='reever.mascotIntroShown';
+async function maybeMascotIntro(){
+  if(!tauri||document.documentElement.classList.contains('lite')) return;
+  try{ if(localStorage.getItem(MASCOT_INTRO_KEY)) return; localStorage.setItem(MASCOT_INTRO_KEY,'1'); }catch{ return; }
+  if(document.hidden) await new Promise(resolve=>document.addEventListener('visibilitychange',function once(){
+    if(document.hidden) return; document.removeEventListener('visibilitychange',once); resolve();
+  }));
+  const params={wake:voiceWord(),settings:t('nav.settings'),section:t('settings.group.mascot')};
+  const lines=[1,2,3,4].map(n=>t(`mascotIntro.${n}`,params));
+  let done;
+  const finished=new Promise(resolve=>{ done=resolve; });
+  subscribe('reever://mascot-intro-done',()=>done());
+  let started=false;
+  try{ started=await invoke('mascot_intro',{lines}); }catch(e){ reportError('mascotIntro',e); }
+  if(!started) return;
+  // пузырь не ответил (окно не создалось) — калибровку голоса всё равно не держим
+  await Promise.race([finished,new Promise(resolve=>setTimeout(resolve,45000))]);
+}
 async function voiceIntroFinished(){
   voiceIntro=false;
   try{ localStorage.setItem(VOICE_INTRO_KEY,'1'); }catch{}
@@ -1206,5 +1226,6 @@ async function changeLanguage(preference){
   startIndexStatusPolling();
   loadActions().catch(e=>reportError('loadActions',e)); loadGrammar(); refreshPause();
   await loadSettings();
+  await maybeMascotIntro();
   maybeVoiceIntro();
 })();

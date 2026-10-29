@@ -389,5 +389,9 @@ I18N.register('fi', {
   "settings.voice_passive.progress": "Hiljainen mukautus: {count}/{goal} kuultu.",
   "settings.voice_passive.done": "Hiljainen mukautus valmis ({goal}/{goal}), tallenteet poistettu.",
   "voiceAdapt.introHint": "Viritetään Reever äänellesi. Sano ”{wake}” {goal} kertaa, lyhyt tauko jokaisen jälkeen — pelkkä sana. Se vie minuutin ja tehdään vain kerran.",
-  "home.packMissing": "{languages}: kielipakettia {pack} ei ole ladattu, joten Reever tuskin ymmärtää tätä puhetta. Suorita asennusohjelma uudelleen ja valitse paketti."
+  "home.packMissing": "{languages}: kielipakettia {pack} ei ole ladattu, joten Reever tuskin ymmärtää tätä puhetta. Suorita asennusohjelma uudelleen ja valitse paketti.",
+  "mascotIntro.1": "Hei! Olen Reever, ääniavustajasi.",
+  "mascotIntro.2": "Sano «{wake}» ja mitä tehdä: avaan ohjelmia, etsin tiedostoja ja kirjoitan puolestasi.",
+  "mascotIntro.3": "Voit tarttua minua päästä ja vetää minut minne vain.",
+  "mascotIntro.4": "Milloin ilmestyn, päätät itse: {settings} → {section}. Nähdään!"
 });

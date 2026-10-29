@@ -390,5 +390,9 @@ I18N.register('en', {
   "settings.voice_passive.progress": "Quiet adaptation: {count} of {goal} heard.",
   "settings.voice_passive.done": "Quiet adaptation finished ({goal} of {goal}), recordings deleted.",
   "voiceAdapt.introHint": "Let’s tune Reever to your voice. Say “{wake}” {goal} times with a short pause after each — just the word. This takes a minute and is needed once.",
-  "home.packMissing": "{languages}: the {pack} language pack is not downloaded, so Reever barely understands this speech. Run the installer again and tick the pack."
+  "home.packMissing": "{languages}: the {pack} language pack is not downloaded, so Reever barely understands this speech. Run the installer again and tick the pack.",
+  "mascotIntro.1": "Hi! I'm Reever, your voice assistant.",
+  "mascotIntro.2": "Say «{wake}» and tell me what to do: I open apps, find files and type for you.",
+  "mascotIntro.3": "You can grab me by the head and drag me anywhere.",
+  "mascotIntro.4": "When I show up is up to you: {settings} → {section}. See you!"
 });

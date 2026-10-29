@@ -389,5 +389,9 @@ I18N.register('lt', {
   "settings.voice_passive.progress": "Tylusis prisitaikymas: išgirsta {count} iš {goal}.",
   "settings.voice_passive.done": "Tylusis prisitaikymas baigtas ({goal} iš {goal}), įrašai ištrinti.",
   "voiceAdapt.introHint": "Pritaikykime Reever jūsų balsui. Pasakykite „{wake}“ {goal} kartų su trumpa pauze po kiekvieno — tik žodį. Tai užtruks minutę ir reikia tik kartą.",
-  "home.packMissing": "{languages}: kalbos paketas {pack} neatsisiųstas, todėl Reever šios kalbos beveik nesupranta. Paleiskite diegimo programą dar kartą ir pažymėkite paketą."
+  "home.packMissing": "{languages}: kalbos paketas {pack} neatsisiųstas, todėl Reever šios kalbos beveik nesupranta. Paleiskite diegimo programą dar kartą ir pažymėkite paketą.",
+  "mascotIntro.1": "Labas! Aš esu Reever, tavo balso asistentas.",
+  "mascotIntro.2": "Pasakyk «{wake}» ir ką daryti: atidarau programas, randu failus ir rašau už tave.",
+  "mascotIntro.3": "Gali mane paimti už galvos ir nutempti kur tik nori.",
+  "mascotIntro.4": "Kada pasirodyti, sprendi tu: {settings} → {section}. Iki!"
 });

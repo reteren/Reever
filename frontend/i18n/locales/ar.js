@@ -388,5 +388,9 @@ I18N.register('ar', {
   "settings.voice_passive.progress": "التكيّف الهادئ: سُمع {count} من {goal}.",
   "settings.voice_passive.done": "اكتمل التكيّف الهادئ ({goal} من {goal}) وحُذفت التسجيلات.",
   "voiceAdapt.introHint": "لنضبط Reever على صوتك. قل «{wake}» {goal} مرات مع توقف قصير بعد كل مرة — الكلمة فقط. يستغرق ذلك دقيقة ويلزم مرة واحدة.",
-  "home.packMissing": "{languages}: حزمة اللغة {pack} غير منزّلة، لذا لا يكاد Reever يفهم هذا الكلام. شغّل المثبّت مجددًا وحدّد الحزمة."
+  "home.packMissing": "{languages}: حزمة اللغة {pack} غير منزّلة، لذا لا يكاد Reever يفهم هذا الكلام. شغّل المثبّت مجددًا وحدّد الحزمة.",
+  "mascotIntro.1": "مرحبًا! أنا Reever، مساعدك الصوتي.",
+  "mascotIntro.2": "قل «{wake}» ثم ما تريد: أفتح البرامج وأجد الملفات وأكتب عنك.",
+  "mascotIntro.3": "يمكنك الإمساك برأسي وسحبي إلى أي مكان.",
+  "mascotIntro.4": "متى أظهر؟ القرار لك: {settings} ← {section}. إلى اللقاء!"
 });

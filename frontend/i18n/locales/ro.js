@@ -389,5 +389,9 @@ I18N.register('ro', {
   "settings.voice_passive.progress": "Adaptare discretă: {count} din {goal} auzite.",
   "settings.voice_passive.done": "Adaptarea discretă s-a încheiat ({goal} din {goal}), înregistrările au fost șterse.",
   "voiceAdapt.introHint": "Să potrivim Reever pe vocea ta. Spune „{wake}” de {goal} ori, cu o pauză scurtă după fiecare — doar cuvântul. Durează un minut și e nevoie o singură dată.",
-  "home.packMissing": "{languages}: pachetul de limbă {pack} nu este descărcat, așa că Reever abia înțelege această vorbire. Rulează din nou programul de instalare și bifează pachetul."
+  "home.packMissing": "{languages}: pachetul de limbă {pack} nu este descărcat, așa că Reever abia înțelege această vorbire. Rulează din nou programul de instalare și bifează pachetul.",
+  "mascotIntro.1": "Salut! Sunt Reever, asistentul tău vocal.",
+  "mascotIntro.2": "Spune «{wake}» și ce să fac: deschid programe, găsesc fișiere și scriu în locul tău.",
+  "mascotIntro.3": "Mă poți prinde de cap și trage oriunde vrei.",
+  "mascotIntro.4": "Când apar hotărăști tu: {settings} → {section}. Pe curând!"
 });

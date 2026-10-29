@@ -23,6 +23,11 @@ static ARROW_X: AtomicI32 = AtomicI32::new(1700);
 const HEAD_ABOVE_CENTER: f64 = 64.0;
 const TIP_GAP: f64 = 2.0;
 
+/// Настройка включена — или маскот как раз представляется (`mascot::mascot_intro`).
+fn enabled() -> bool {
+    ENABLED.load(Ordering::Relaxed) || mascot::intro_active()
+}
+
 pub fn configure(app: &AppHandle, on: bool) {
     ENABLED.store(on, Ordering::Relaxed);
     sync(app);
@@ -31,7 +36,7 @@ pub fn configure(app: &AppHandle, on: bool) {
 /// Окно пузыря есть, только пока он может понадобиться: настройка включена и маскот
 /// вообще бывает на экране (не режим `never`).
 pub fn sync(app: &AppHandle) {
-    let want = ENABLED.load(Ordering::Relaxed) && mascot::mode() != "never";
+    let want = enabled() && mascot::mode() != "never";
     match (want, app.get_webview_window("bubble")) {
         (true, None) => create(app),
         (false, Some(window)) => {
@@ -53,7 +58,7 @@ pub fn notify(app: &AppHandle) {
 #[tauri::command]
 pub fn bubble_layout() -> (bool, f64) {
     (
-        ENABLED.load(Ordering::Relaxed) && mascot::on_screen(),
+        enabled() && mascot::on_screen(),
         ARROW_X.load(Ordering::Relaxed) as f64 / 10.0,
     )
 }

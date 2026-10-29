@@ -389,5 +389,9 @@ I18N.register('pl', {
   "settings.voice_passive.progress": "Ciche dopasowanie: usłyszano {count} z {goal}.",
   "settings.voice_passive.done": "Ciche dopasowanie zakończone ({goal} z {goal}), nagrania usunięte.",
   "voiceAdapt.introHint": "Dopasujmy Reever do Twojego głosu. Powiedz „{wake}” {goal} razy z krótką przerwą po każdym — tylko samo słowo. To zajmie minutę i trzeba to zrobić raz.",
-  "home.packMissing": "{languages}: pakiet językowy {pack} nie jest pobrany, więc Reever prawie nie rozumie tej mowy. Uruchom instalator ponownie i zaznacz pakiet."
+  "home.packMissing": "{languages}: pakiet językowy {pack} nie jest pobrany, więc Reever prawie nie rozumie tej mowy. Uruchom instalator ponownie i zaznacz pakiet.",
+  "mascotIntro.1": "Cześć! Jestem Reever, twój asystent głosowy.",
+  "mascotIntro.2": "Powiedz «{wake}» i co mam zrobić: otwieram programy, znajduję pliki i piszę za ciebie.",
+  "mascotIntro.3": "Możesz złapać mnie za głowę i przeciągnąć, gdzie chcesz.",
+  "mascotIntro.4": "Kiedy mam się pojawiać, decydujesz ty: {settings} → {section}. Do zobaczenia!"
 });

@@ -389,5 +389,9 @@ I18N.register('ko', {
   "settings.voice_passive.progress": "조용한 맞춤: {goal}번 중 {count}번 들음.",
   "settings.voice_passive.done": "조용한 맞춤 완료({goal}/{goal}), 녹음 삭제됨.",
   "voiceAdapt.introHint": "Reever를 내 목소리에 맞춰 봅시다. “{wake}”를 {goal}번, 매번 잠깐 쉬고 말해 주세요 — 단어만. 1분이면 되고 한 번만 하면 됩니다.",
-  "home.packMissing": "{languages}: {pack} 언어 팩이 다운로드되지 않아 Reever가 이 말을 거의 알아듣지 못합니다. 설치 프로그램을 다시 실행하고 팩을 선택하세요."
+  "home.packMissing": "{languages}: {pack} 언어 팩이 다운로드되지 않아 Reever가 이 말을 거의 알아듣지 못합니다. 설치 프로그램을 다시 실행하고 팩을 선택하세요.",
+  "mascotIntro.1": "안녕하세요! 저는 음성 비서 Reever예요.",
+  "mascotIntro.2": "«{wake}»라고 말한 뒤 할 일을 말해 주세요. 프로그램을 열고, 파일을 찾고, 글을 입력해 드려요.",
+  "mascotIntro.3": "제 머리를 잡고 원하는 곳으로 끌어 옮길 수 있어요.",
+  "mascotIntro.4": "제가 언제 나타날지는 {settings} → {section}에서 정할 수 있어요. 또 만나요!"
 });

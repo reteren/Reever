@@ -388,5 +388,9 @@ I18N.register('de', {
   "settings.voice_passive.progress": "Stille Anpassung: {count} von {goal} gehört.",
   "settings.voice_passive.done": "Stille Anpassung abgeschlossen ({goal} von {goal}), Aufnahmen gelöscht.",
   "voiceAdapt.introHint": "Stimmen wir Reever auf Ihre Stimme ab. Sagen Sie „{wake}“ {goal} Mal, nach jedem eine kurze Pause – nur das Wort. Das dauert eine Minute und ist nur einmal nötig.",
-  "home.packMissing": "{languages}: Das Sprachpaket {pack} ist nicht heruntergeladen, daher versteht Reever diese Sprache kaum. Starten Sie das Installationsprogramm erneut und wählen Sie das Paket."
+  "home.packMissing": "{languages}: Das Sprachpaket {pack} ist nicht heruntergeladen, daher versteht Reever diese Sprache kaum. Starten Sie das Installationsprogramm erneut und wählen Sie das Paket.",
+  "mascotIntro.1": "Hallo! Ich bin Reever, dein Sprachassistent.",
+  "mascotIntro.2": "Sag «{wake}» und was ich tun soll – ich öffne Programme, finde Dateien und tippe für dich.",
+  "mascotIntro.3": "Du kannst mich am Kopf packen und überallhin ziehen.",
+  "mascotIntro.4": "Wann ich auftauche, entscheidest du: {settings} → {section}. Bis bald!"
 });

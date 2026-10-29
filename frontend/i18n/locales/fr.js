@@ -388,5 +388,9 @@ I18N.register('fr', {
   "settings.voice_passive.progress": "Adaptation discrète : {count} sur {goal} entendus.",
   "settings.voice_passive.done": "Adaptation discrète terminée ({goal} sur {goal}), enregistrements supprimés.",
   "voiceAdapt.introHint": "Adaptons Reever à votre voix. Dites « {wake} » {goal} fois avec une courte pause après chaque fois — seulement le mot. Cela prend une minute et ne se fait qu’une fois.",
-  "home.packMissing": "{languages} : le pack de langue {pack} n’est pas téléchargé, Reever comprend donc à peine cette langue. Relancez l’installateur et cochez le pack."
+  "home.packMissing": "{languages} : le pack de langue {pack} n’est pas téléchargé, Reever comprend donc à peine cette langue. Relancez l’installateur et cochez le pack.",
+  "mascotIntro.1": "Salut ! Je suis Reever, ton assistant vocal.",
+  "mascotIntro.2": "Dis «{wake}» et ce qu'il faut faire : j'ouvre des programmes, je trouve des fichiers et je tape pour toi.",
+  "mascotIntro.3": "Tu peux m'attraper par la tête et me déplacer où tu veux.",
+  "mascotIntro.4": "Quand j'apparais, c'est toi qui choisis : {settings} → {section}. À bientôt !"
 });

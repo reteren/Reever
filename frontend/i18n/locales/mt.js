@@ -389,5 +389,9 @@ I18N.register('mt', {
   "settings.voice_passive.progress": "Adattament siekta: {count} minn {goal} instemgħu.",
   "settings.voice_passive.done": "L-adattament siekta tlesta ({goal} minn {goal}), ir-reġistrazzjonijiet tħassru.",
   "voiceAdapt.introHint": "Ejja nadattaw lil Reever għal leħnek. Għid “{wake}” {goal} darbiet b’waqfa qasira wara kull waħda — il-kelma biss. Tieħu minuta u hija meħtieġa darba biss.",
-  "home.packMissing": "{languages}: il-pakkett tal-lingwa {pack} mhuwiex imniżżel, għalhekk Reever bilkemm jifhem dan id-diskors. Erġa’ ħaddem l-installatur u immarka l-pakkett."
+  "home.packMissing": "{languages}: il-pakkett tal-lingwa {pack} mhuwiex imniżżel, għalhekk Reever bilkemm jifhem dan id-diskors. Erġa’ ħaddem l-installatur u immarka l-pakkett.",
+  "mascotIntro.1": "Bongu! Jien Reever, l-assistent tal-vuċi tiegħek.",
+  "mascotIntro.2": "Għid «{wake}» u x'għandi nagħmel: niftaħ programmi, insib fajls u nikteb għalik.",
+  "mascotIntro.3": "Tista' taqbadni minn rasi u tkaxkarni fejn trid.",
+  "mascotIntro.4": "Meta nidher tiddeċiedi int: {settings} → {section}. Narawk!"
 });

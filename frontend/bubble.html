@@ -66,6 +66,7 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 //  reever://said    — готовый кусок диктовки («напиши …»): они копятся;
 //  reever://heard   — окончательный текст команды.
 // Пузырь живёт, пока Reever слушает и выполняет команду, и гаснет чуть погодя после.
+// При первом запуске маскот представляется: реплики (bubble_intro) печатаются по буквам.
 (function () {
   const tauri = window.__TAURI__;
   const { invoke } = tauri.core;
@@ -75,13 +76,15 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
   const HOLD_MS = 1600;   // сколько пузырь держится после конца команды
 
   let allowed = false, active = false, committed = '', live = '', holdTimer = 0;
+  let intro = null;   // печатаемая реплика знакомства; null — знакомства нет
   const join = (a, b) => (a && b ? `${a} ${b}` : a || b);
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   function render() {
-    const text = join(committed, live).trim();
+    const text = intro !== null ? intro : join(committed, live).trim();
     if (text) $('text').textContent = text;
-    $('caret').classList.toggle('off', !active || !!holdTimer);
-    const on = allowed && active && !!text;
+    $('caret').classList.toggle('off', intro === null && (!active || !!holdTimer));
+    const on = allowed && (intro !== null || active) && !!text;
     $('bubble').classList.toggle('on', on);
     $('tail').classList.toggle('on', on);
   }
@@ -101,12 +104,27 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
   listen('reever://said', (e) => { committed = join(committed, String(e.payload || '').trim()); live = ''; render(); });
   listen('reever://heard', (e) => { const v = String(e.payload || '').trim(); if (v) { committed = v; live = ''; } render(); });
 
+  async function playIntro(lines) {
+    intro = '';
+    // ждать, пока осьминог выйдет на экран (не дольше 10 с), и дать ему приземлиться
+    for (let waited = 0; !allowed && waited < 10000; waited += 100) await sleep(100);
+    await sleep(900);
+    for (const line of lines) {
+      for (let i = 1; i <= line.length; i++) { intro = line.slice(0, i); render(); await sleep(34); }
+      await sleep(1400 + line.length * 40);
+    }
+    intro = null; render();
+    await sleep(500);
+    invoke('mascot_intro_done').catch(() => {});
+  }
+
   function relayout() {
     invoke('bubble_layout').then(([ok, ax]) => {
       allowed = !!ok;
       document.documentElement.style.setProperty('--ax', `${ax}px`);
       render();
     }).catch(() => {});
+    if (intro === null) invoke('bubble_intro').then((lines) => { if (lines?.length) playIntro(lines); }).catch(() => {});
   }
   win.listen('bubble://layout', relayout);
   relayout();
