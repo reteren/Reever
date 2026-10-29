@@ -393,5 +393,8 @@ I18N.register('sv', {
   "mascotIntro.1": "Hej! Jag heter Reever, din röstassistent.",
   "mascotIntro.2": "Säg «{wake}» och vad jag ska göra: jag öppnar program, hittar filer och skriver åt dig.",
   "mascotIntro.3": "Du kan ta tag i mitt huvud och dra mig vart du vill.",
-  "mascotIntro.4": "När jag dyker upp bestämmer du: {settings} → {section}. Vi ses!"
+  "mascotIntro.4": "När jag dyker upp bestämmer du: {settings} → {section}. Vi ses!",
+  "kind.key": "Tangent",
+  "intent.key": "tryck på en tangent eller ett kortkommando",
+  "example.key": "tryck på en tangent: «{keys}»"
 });

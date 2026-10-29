@@ -393,5 +393,8 @@ I18N.register('ko', {
   "mascotIntro.1": "안녕하세요! 저는 음성 비서 Reever예요.",
   "mascotIntro.2": "«{wake}»라고 말한 뒤 할 일을 말해 주세요. 프로그램을 열고, 파일을 찾고, 글을 입력해 드려요.",
   "mascotIntro.3": "제 머리를 잡고 원하는 곳으로 끌어 옮길 수 있어요.",
-  "mascotIntro.4": "제가 언제 나타날지는 {settings} → {section}에서 정할 수 있어요. 또 만나요!"
+  "mascotIntro.4": "제가 언제 나타날지는 {settings} → {section}에서 정할 수 있어요. 또 만나요!",
+  "kind.key": "키",
+  "intent.key": "키 또는 단축키 누르기",
+  "example.key": "키 누르기: «{keys}»"
 });

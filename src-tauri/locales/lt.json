@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibravimas: nieko neatpažinta, bandykite dar kartą",
   "log.calibration.saved": "✓ kalibravimas «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibravimas «{action}»: «{phrase}» (jau yra)",
-  "log.calibration.saved.private": "✓ kalibravimas «{action}»: frazė išsaugota"
+  "log.calibration.saved.private": "✓ kalibravimas «{action}»: frazė išsaugota",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ nežinomas klavišas «{name}»",
+  "log.key.failed": "⚠ nepavyko paspausti {keys}: {error}"
 }

@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ 校正：乜都識別唔到，再試吓",
   "log.calibration.saved": "✓ 校正「{action}」：«{phrase}»",
   "log.calibration.exists": "✓ 校正「{action}」：«{phrase}»（已經有）",
-  "log.calibration.saved.private": "✓ 校正「{action}」：句子已儲存"
+  "log.calibration.saved.private": "✓ 校正「{action}」：句子已儲存",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ 唔識呢個掣«{name}»",
+  "log.key.failed": "⚠ 撳唔到 {keys}：{error}"
 }

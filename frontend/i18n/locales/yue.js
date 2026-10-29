@@ -393,5 +393,8 @@ I18N.register('yue', {
   "mascotIntro.1": "你好！我係 Reever，你嘅語音助手。",
   "mascotIntro.2": "講«{wake}»，再講要做咩：我可以開程式、搵檔案、幫你打字。",
   "mascotIntro.3": "你可以捉住我個頭，拖我去邊度都得。",
-  "mascotIntro.4": "我幾時出現由你話事：{settings} → {section}。遲啲見！"
+  "mascotIntro.4": "我幾時出現由你話事：{settings} → {section}。遲啲見！",
+  "kind.key": "按掣",
+  "intent.key": "撳一個掣或者快捷鍵",
+  "example.key": "撳掣：«{keys}»"
 });

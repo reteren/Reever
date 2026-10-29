@@ -392,5 +392,8 @@ I18N.register('fr', {
   "mascotIntro.1": "Salut ! Je suis Reever, ton assistant vocal.",
   "mascotIntro.2": "Dis «{wake}» et ce qu'il faut faire : j'ouvre des programmes, je trouve des fichiers et je tape pour toi.",
   "mascotIntro.3": "Tu peux m'attraper par la tête et me déplacer où tu veux.",
-  "mascotIntro.4": "Quand j'apparais, c'est toi qui choisis : {settings} → {section}. À bientôt !"
+  "mascotIntro.4": "Quand j'apparais, c'est toi qui choisis : {settings} → {section}. À bientôt !",
+  "kind.key": "Touche",
+  "intent.key": "appuyer sur une touche ou un raccourci",
+  "example.key": "appuyer sur une touche : «{keys}»"
 });

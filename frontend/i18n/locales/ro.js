@@ -393,5 +393,8 @@ I18N.register('ro', {
   "mascotIntro.1": "Salut! Sunt Reever, asistentul tău vocal.",
   "mascotIntro.2": "Spune «{wake}» și ce să fac: deschid programe, găsesc fișiere și scriu în locul tău.",
   "mascotIntro.3": "Mă poți prinde de cap și trage oriunde vrei.",
-  "mascotIntro.4": "Când apar hotărăști tu: {settings} → {section}. Pe curând!"
+  "mascotIntro.4": "Când apar hotărăști tu: {settings} → {section}. Pe curând!",
+  "kind.key": "Tastă",
+  "intent.key": "apasă o tastă sau o combinație",
+  "example.key": "apasă o tastă: «{keys}»"
 });

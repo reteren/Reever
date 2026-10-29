@@ -392,5 +392,8 @@ I18N.register('es', {
   "mascotIntro.1": "¡Hola! Soy Reever, tu asistente de voz.",
   "mascotIntro.2": "Di «{wake}» y lo que quieres: abro programas, busco archivos y escribo por ti.",
   "mascotIntro.3": "Puedes agarrarme de la cabeza y arrastrarme a donde quieras.",
-  "mascotIntro.4": "Cuándo aparezco lo decides tú: {settings} → {section}. ¡Hasta luego!"
+  "mascotIntro.4": "Cuándo aparezco lo decides tú: {settings} → {section}. ¡Hasta luego!",
+  "kind.key": "Tecla",
+  "intent.key": "pulsar una tecla o un atajo",
+  "example.key": "pulsar una tecla: «{keys}»"
 });

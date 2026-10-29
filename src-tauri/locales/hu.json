@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibrálás: semmit sem ismert fel, próbáld újra",
   "log.calibration.saved": "✓ «{action}» kalibrálása: «{phrase}»",
   "log.calibration.exists": "✓ «{action}» kalibrálása: «{phrase}» (már megvan)",
-  "log.calibration.saved.private": "✓ «{action}» kalibrálása: kifejezés mentve"
+  "log.calibration.saved.private": "✓ «{action}» kalibrálása: kifejezés mentve",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ ismeretlen billentyű «{name}»",
+  "log.key.failed": "⚠ nem sikerült lenyomni: {keys}: {error}"
 }

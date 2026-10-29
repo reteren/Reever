@@ -393,5 +393,8 @@ I18N.register('lv', {
   "mascotIntro.1": "Sveiki! Es esmu Reever, tavs balss palīgs.",
   "mascotIntro.2": "Saki «{wake}» un ko darīt: atveru programmas, atrodu failus un rakstu tavā vietā.",
   "mascotIntro.3": "Vari satvert mani aiz galvas un pārvilkt, kur vien gribi.",
-  "mascotIntro.4": "Kad man parādīties, izlem tu: {settings} → {section}. Uz tikšanos!"
+  "mascotIntro.4": "Kad man parādīties, izlem tu: {settings} → {section}. Uz tikšanos!",
+  "kind.key": "Taustiņš",
+  "intent.key": "nospiest taustiņu vai kombināciju",
+  "example.key": "nospiest taustiņu: «{keys}»"
 });

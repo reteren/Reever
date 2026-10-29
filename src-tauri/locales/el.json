@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ βαθμονόμηση: δεν αναγνωρίστηκε τίποτα, δοκιμάστε ξανά",
   "log.calibration.saved": "✓ βαθμονόμηση «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ βαθμονόμηση «{action}»: «{phrase}» (υπάρχει ήδη)",
-  "log.calibration.saved.private": "✓ βαθμονόμηση «{action}»: η φράση αποθηκεύτηκε"
+  "log.calibration.saved.private": "✓ βαθμονόμηση «{action}»: η φράση αποθηκεύτηκε",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ άγνωστο πλήκτρο «{name}»",
+  "log.key.failed": "⚠ αποτυχία πατήματος {keys}: {error}"
 }

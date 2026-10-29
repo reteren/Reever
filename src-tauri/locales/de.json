@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ Kalibrierung: nichts erkannt, versuch es noch einmal",
   "log.calibration.saved": "✓ Kalibrierung «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ Kalibrierung «{action}»: «{phrase}» (schon vorhanden)",
-  "log.calibration.saved.private": "✓ Kalibrierung «{action}»: Phrase gespeichert"
+  "log.calibration.saved.private": "✓ Kalibrierung «{action}»: Phrase gespeichert",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ unbekannte Taste «{name}»",
+  "log.key.failed": "⚠ {keys} konnte nicht gedrückt werden: {error}"
 }

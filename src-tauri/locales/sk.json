@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibrácia: nič nerozpoznané, skúste to znova",
   "log.calibration.saved": "✓ kalibrácia «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibrácia «{action}»: «{phrase}» (už existuje)",
-  "log.calibration.saved.private": "✓ kalibrácia «{action}»: fráza uložená"
+  "log.calibration.saved.private": "✓ kalibrácia «{action}»: fráza uložená",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ neznámy kláves «{name}»",
+  "log.key.failed": "⚠ nepodarilo sa stlačiť {keys}: {error}"
 }

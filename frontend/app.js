@@ -22,6 +22,7 @@ const defaultGrammarPreview=()=>({
     {id:'kill',kind:'kill',label:'завершить программу (как в диспетчере задач)',triggers:['заверши','kill','end task'],url:'',enabled:true,lang:'auto'},
     {id:'calc',kind:'calc',label:'калькулятор',triggers:['посчитай','сколько будет','calculate','how much is'],url:'',enabled:true,lang:'auto'},
     {id:'dictate',kind:'dictate',label:'диктовка: ввести текст в поле с курсором',triggers:['напиши','запиши','диктовка','type','write','dictate'],url:'',enabled:true,lang:'auto'},
+    {id:'key',kind:'key',label:'нажать клавишу или сочетание',triggers:['кнопка','клавиша','нажми','press','press key'],url:'',enabled:true,lang:'auto'},
     {id:'find',kind:'find',label:'найти файл или папку (окно выбора)',triggers:['найди','найти','поищи','find'],url:'',enabled:true,lang:'auto'},
     {id:'find_folder',kind:'find_folder',label:'найти папку (окно выбора)',triggers:['найди папку','найти папку','поищи папку','find folder'],url:'',enabled:true,lang:'auto'},
     {id:'find_file',kind:'find_file',label:'найти файл (окно выбора)',triggers:['найди файл','найти файл','поищи файл','find file'],url:'',enabled:true,lang:'auto'},
@@ -39,7 +40,7 @@ const DEFAULT_INTENT_LABELS={
   kill:'завершить программу (как в диспетчере задач)',calc:'посчитать в калькуляторе',
   dictate:'диктовка: ввести текст в поле с курсором',find:'найти файл или папку (окно выбора)',
   find_folder:'найти папку (окно выбора)',find_file:'найти файл (окно выбора)',
-  chat_gpt:'спросить ChatGPT (чат в браузере)',chat_claude:'спросить Claude (чат в браузере)',
+  key:'нажать клавишу или сочетание',chat_gpt:'спросить ChatGPT (чат в браузере)',chat_claude:'спросить Claude (чат в браузере)',
   chat_gemini:'спросить Gemini (чат в браузере)'
 };
 function isDefaultLabel(intent){
@@ -65,7 +66,7 @@ function grammarErrors(g){
     ids.add(intent.id);
     if(intent.kind==='search'&&!String(intent.url||'').includes('{q}')) errors.push(t('validation.searchQ',{name}));
     if(intent.kind==='web_chat'&&!/^https?:\/\//.test(String(intent.url||'').trim())) errors.push(t('validation.chatUrl',{name}));
-    if((intent.kind==='calc'||intent.kind==='dictate')&&!(intent.triggers||[]).some(phrase=>String(phrase).trim())) errors.push(t('validation.needPhrase',{name}));
+    if((intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='key')&&!(intent.triggers||[]).some(phrase=>String(phrase).trim())) errors.push(t('validation.needPhrase',{name}));
     for(const phrase of intent.triggers||[]){
       const key=String(phrase).trim().toLocaleLowerCase();
       if(!key&&intent.kind!=='launch') errors.push(t('validation.emptyPhrase',{name}));
@@ -467,6 +468,7 @@ function grammarExample(intent,wake,russian){
   if(!trigger) return null;
   if(intent.kind==='close'||intent.kind==='kill') return [`${wake} ${trigger} X`,t(intent.kind==='close'?'example.close':'example.kill')];
   if(intent.kind==='calc') return [`${wake} ${trigger} X`,t('example.calc',{expr:russian?'33 умножить на 78':'33 times 78'})];
+  if(intent.kind==='key') return [`${wake} ${trigger} X`,t('example.key',{keys:russian?'энтер, контрол эс, эф пять':'enter, ctrl s, f5'})];
   if(intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file'){
     const help=intent.kind==='find_folder'?'example.findFolders':intent.kind==='find_file'?'example.findFiles':'example.findBoth';
     return [`${wake} ${trigger} X`,t(help)];
@@ -553,7 +555,7 @@ function addChipEditor(parent,getValues,setValues,kind,minimum=0){
 }
 function grammarIntentFieldset(intent){
     const group=el('fieldset',{className:'grp grammar-intent'});
-    const kindIcons={launch:'play',folder:'folder',search:'lens',close:'x',kill:'stop',calc:'sum',dictate:'pen',web_chat:'spark',find:'lens',find_folder:'folder',find_file:'file'};
+    const kindIcons={launch:'play',folder:'folder',search:'lens',close:'x',kill:'stop',calc:'sum',dictate:'pen',key:'term',web_chat:'spark',find:'lens',find_folder:'folder',find_file:'file'};
     const legend=el('legend');
     const kindIcon=el('span',{className:'grammar-kind-icon'},[icon(kindIcons[intent.kind]||'spark')]);
     kindIcon.setAttribute('aria-hidden','true');
@@ -576,7 +578,7 @@ function grammarIntentFieldset(intent){
     const setTriggers=values=>intent.triggers=values;
     const visibleTriggers=()=>getTriggers().filter(value=>String(value).trim()&&!hiddenTriggers.has(value));
     const triggerHost=el('div'); group.append(triggerHost);
-    const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='web_chat'||intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')?1:0;
+    const minimumTriggers=(intent.kind==='close'||intent.kind==='kill'||intent.kind==='calc'||intent.kind==='dictate'||intent.kind==='key'||intent.kind==='web_chat'||intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file')?1:0;
     if(minimumTriggers) triggerHost.append(el('div',{className:'hint grammar-small-note'}));
     addChipEditor(triggerHost,visibleTriggers,values=>{
       const hasBare=intent.kind==='launch'&&getTriggers().some(value=>!String(value).trim());

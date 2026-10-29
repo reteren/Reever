@@ -393,5 +393,8 @@ I18N.register('nl', {
   "mascotIntro.1": "Hoi! Ik ben Reever, je spraakassistent.",
   "mascotIntro.2": "Zeg «{wake}» en wat ik moet doen: ik open programma's, vind bestanden en typ voor je.",
   "mascotIntro.3": "Je kunt me bij mijn hoofd pakken en overal naartoe slepen.",
-  "mascotIntro.4": "Wanneer ik verschijn, bepaal jij: {settings} → {section}. Tot ziens!"
+  "mascotIntro.4": "Wanneer ik verschijn, bepaal jij: {settings} → {section}. Tot ziens!",
+  "kind.key": "Toets",
+  "intent.key": "een toets of sneltoets indrukken",
+  "example.key": "toets indrukken: «{keys}»"
 });

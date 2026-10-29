@@ -115,6 +115,8 @@ pub enum Route {
     Kill(Vec<String>),
     /// Посчитать в калькуляторе: кандидаты выражения (русский и английский варианты).
     Calc(Vec<String>),
+    /// Нажать клавишу или сочетание: кандидаты названия (русский и английский варианты).
+    Key(Vec<String>),
     /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
     /// (он сам печатает текст); сюда она доходит только из eval и тестов.
     Dictate(String),
@@ -198,6 +200,7 @@ pub fn route(
             IntentKind::Close => Route::Close(payloads),
             IntentKind::Kill => Route::Kill(payloads),
             IntentKind::Calc => Route::Calc(payloads),
+            IntentKind::Key => Route::Key(payloads),
             IntentKind::Dictate => Route::Dictate(join_cjk(&payloads[0])),
             IntentKind::Find | IntentKind::FindFolder | IntentKind::FindFile => Route::Find {
                 scope: match trigger.intent.kind {
@@ -433,6 +436,28 @@ pub fn dispatch(
                 ),
             );
             DispatchResult::Done(false)
+        }
+        Route::Key(candidates) => {
+            let parsed: Vec<_> = candidates.iter().map(|candidate| crate::keys::parse(candidate)).collect();
+            let keys = match parsed.iter().find_map(|result| result.as_ref().ok()) {
+                Some(keys) => keys.clone(),
+                None => {
+                    let unknown = parsed.into_iter().find_map(Result::err).unwrap_or_default();
+                    ui_log(app, crate::msg!("log.key.unknown", name = unknown));
+                    return DispatchResult::Done(false);
+                }
+            };
+            let name = crate::keys::describe(&keys);
+            match crate::keys::press(&keys) {
+                Ok(()) => {
+                    ui_log(app, crate::msg!("log.key.pressed", keys = name));
+                    DispatchResult::Done(true)
+                }
+                Err(error) => {
+                    ui_log(app, crate::msg!("log.key.failed", keys = name, error = format!("{error:#}")));
+                    DispatchResult::Done(false)
+                }
+            }
         }
         Route::Calc(candidates) => {
             let expression = candidates

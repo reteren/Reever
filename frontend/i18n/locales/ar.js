@@ -392,5 +392,8 @@ I18N.register('ar', {
   "mascotIntro.1": "مرحبًا! أنا Reever، مساعدك الصوتي.",
   "mascotIntro.2": "قل «{wake}» ثم ما تريد: أفتح البرامج وأجد الملفات وأكتب عنك.",
   "mascotIntro.3": "يمكنك الإمساك برأسي وسحبي إلى أي مكان.",
-  "mascotIntro.4": "متى أظهر؟ القرار لك: {settings} ← {section}. إلى اللقاء!"
+  "mascotIntro.4": "متى أظهر؟ القرار لك: {settings} ← {section}. إلى اللقاء!",
+  "kind.key": "مفتاح",
+  "intent.key": "الضغط على مفتاح أو اختصار",
+  "example.key": "الضغط على مفتاح: «{keys}»"
 });

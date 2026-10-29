@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibrazzjoni: ma ġie rikonoxxut xejn, erġa' pprova",
   "log.calibration.saved": "✓ kalibrazzjoni «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibrazzjoni «{action}»: «{phrase}» (diġà teżisti)",
-  "log.calibration.saved.private": "✓ kalibrazzjoni «{action}»: il-frażi ġiet issejvjata"
+  "log.calibration.saved.private": "✓ kalibrazzjoni «{action}»: il-frażi ġiet issejvjata",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ buttuna mhux magħrufa «{name}»",
+  "log.key.failed": "⚠ ma rnexxilix nagħfas {keys}: {error}"
 }

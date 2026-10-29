@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ калибриране: нищо не е разпознато, опитайте отново",
   "log.calibration.saved": "✓ калибриране «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ калибриране «{action}»: «{phrase}» (вече го има)",
-  "log.calibration.saved.private": "✓ калибриране «{action}»: фразата е запазена"
+  "log.calibration.saved.private": "✓ калибриране «{action}»: фразата е запазена",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ непознат клавиш «{name}»",
+  "log.key.failed": "⚠ неуспешно натискане на {keys}: {error}"
 }

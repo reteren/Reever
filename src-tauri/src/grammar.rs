@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 11;
+const GRAMMAR_VERSION: u32 = 12;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -22,6 +22,7 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (6, &["chat_gemini"]),
     (7, &["chat_gpt", "chat_claude"]),
     (8, &["find", "find_folder", "find_file"]),
+    (12, &["key"]),
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
 /// Версия 10 — «отмена» языков из языковых пакетов (models.rs).
@@ -674,6 +675,8 @@ pub enum IntentKind {
     FindFolder,
     /// «Найди файл …» — только файлы.
     FindFile,
+    /// «Кнопка энтер», «кнопка контрол эс» — нажать клавишу или сочетание (keys.rs).
+    Key,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -910,6 +913,13 @@ impl Grammar {
                     IntentKind::Kill,
                     "завершить программу (как в диспетчере задач)",
                     &["заверши", "kill", "end task"],
+                    "",
+                ),
+                intent(
+                    "key",
+                    IntentKind::Key,
+                    "нажать клавишу или сочетание",
+                    &["кнопка", "клавиша", "нажми", "press", "press key"],
                     "",
                 ),
             ],
@@ -2034,7 +2044,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 11);
+        assert_eq!(Grammar::defaults().version, 12);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

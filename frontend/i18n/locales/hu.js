@@ -393,5 +393,8 @@ I18N.register('hu', {
   "mascotIntro.1": "Szia! Reever vagyok, a hangalapú asszisztensed.",
   "mascotIntro.2": "Mondd, hogy «{wake}», és hogy mit tegyek: programokat nyitok, fájlokat keresek és gépelek helyetted.",
   "mascotIntro.3": "Megfoghatsz a fejemnél, és bárhová áthúzhatsz.",
-  "mascotIntro.4": "Hogy mikor jelenjek meg, te döntöd el: {settings} → {section}. Viszlát!"
+  "mascotIntro.4": "Hogy mikor jelenjek meg, te döntöd el: {settings} → {section}. Viszlát!",
+  "kind.key": "Billentyű",
+  "intent.key": "billentyű vagy billentyűparancs lenyomása",
+  "example.key": "billentyű lenyomása: «{keys}»"
 });

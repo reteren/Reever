@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibrēšana: nekas nav atpazīts, mēģiniet vēlreiz",
   "log.calibration.saved": "✓ kalibrēšana «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibrēšana «{action}»: «{phrase}» (jau ir)",
-  "log.calibration.saved.private": "✓ kalibrēšana «{action}»: frāze saglabāta"
+  "log.calibration.saved.private": "✓ kalibrēšana «{action}»: frāze saglabāta",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ nezināms taustiņš «{name}»",
+  "log.key.failed": "⚠ neizdevās nospiest {keys}: {error}"
 }

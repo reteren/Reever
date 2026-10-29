@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ المعايرة: لم يتم التعرّف على شيء، أعد المحاولة",
   "log.calibration.saved": "✓ معايرة «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ معايرة «{action}»: «{phrase}» (موجودة مسبقًا)",
-  "log.calibration.saved.private": "✓ معايرة «{action}»: تم حفظ العبارة"
+  "log.calibration.saved.private": "✓ معايرة «{action}»: تم حفظ العبارة",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ مفتاح غير معروف «{name}»",
+  "log.key.failed": "⚠ تعذّر الضغط على {keys}: {error}"
 }

@@ -393,5 +393,8 @@ I18N.register('hr', {
   "mascotIntro.1": "Bok! Ja sam Reever, tvoj glasovni pomoćnik.",
   "mascotIntro.2": "Reci «{wake}» i što da napravim: otvaram programe, pronalazim datoteke i tipkam umjesto tebe.",
   "mascotIntro.3": "Možeš me uhvatiti za glavu i odvući kamo god želiš.",
-  "mascotIntro.4": "Kad ću se pojavljivati, biraš ti: {settings} → {section}. Vidimo se!"
+  "mascotIntro.4": "Kad ću se pojavljivati, biraš ti: {settings} → {section}. Vidimo se!",
+  "kind.key": "Tipka",
+  "intent.key": "pritisnuti tipku ili prečac",
+  "example.key": "pritisnuti tipku: «{keys}»"
 });

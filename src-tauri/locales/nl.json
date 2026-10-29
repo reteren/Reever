@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibratie: niets herkend, probeer opnieuw",
   "log.calibration.saved": "✓ kalibratie «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibratie «{action}»: «{phrase}» (bestaat al)",
-  "log.calibration.saved.private": "✓ kalibratie «{action}»: zin opgeslagen"
+  "log.calibration.saved.private": "✓ kalibratie «{action}»: zin opgeslagen",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ onbekende toets «{name}»",
+  "log.key.failed": "⚠ kon {keys} niet indrukken: {error}"
 }

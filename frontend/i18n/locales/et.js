@@ -393,5 +393,8 @@ I18N.register('et', {
   "mascotIntro.1": "Tere! Mina olen Reever, sinu häälassistent.",
   "mascotIntro.2": "Ütle «{wake}» ja mida teha: avan programme, leian faile ja kirjutan sinu eest.",
   "mascotIntro.3": "Võid mind peast haarata ja kuhu iganes lohistada.",
-  "mascotIntro.4": "Millal ma ilmun, otsustad sina: {settings} → {section}. Näeme!"
+  "mascotIntro.4": "Millal ma ilmun, otsustad sina: {settings} → {section}. Näeme!",
+  "kind.key": "Klahv",
+  "intent.key": "vajuta klahvi või kiirklahvi",
+  "example.key": "vajuta klahvi: «{keys}»"
 });

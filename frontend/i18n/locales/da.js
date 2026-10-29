@@ -393,5 +393,8 @@ I18N.register('da', {
   "mascotIntro.1": "Hej! Jeg er Reever, din stemmeassistent.",
   "mascotIntro.2": "Sig «{wake}» og hvad jeg skal gøre: jeg åbner programmer, finder filer og skriver for dig.",
   "mascotIntro.3": "Du kan tage fat i mit hoved og trække mig hvorhen du vil.",
-  "mascotIntro.4": "Hvornår jeg dukker op, bestemmer du: {settings} → {section}. Vi ses!"
+  "mascotIntro.4": "Hvornår jeg dukker op, bestemmer du: {settings} → {section}. Vi ses!",
+  "kind.key": "Tast",
+  "intent.key": "tryk på en tast eller genvej",
+  "example.key": "tryk på en tast: «{keys}»"
 });

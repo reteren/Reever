@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ 보정: 아무것도 인식하지 못했습니다. 다시 시도하세요",
   "log.calibration.saved": "✓ 보정 «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ 보정 «{action}»: «{phrase}» (이미 있음)",
-  "log.calibration.saved.private": "✓ 보정 «{action}»: 문구 저장됨"
+  "log.calibration.saved.private": "✓ 보정 «{action}»: 문구 저장됨",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ 알 수 없는 키 «{name}»",
+  "log.key.failed": "⚠ {keys}을(를) 누르지 못했습니다: {error}"
 }

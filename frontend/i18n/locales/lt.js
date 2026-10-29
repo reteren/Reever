@@ -393,5 +393,8 @@ I18N.register('lt', {
   "mascotIntro.1": "Labas! Aš esu Reever, tavo balso asistentas.",
   "mascotIntro.2": "Pasakyk «{wake}» ir ką daryti: atidarau programas, randu failus ir rašau už tave.",
   "mascotIntro.3": "Gali mane paimti už galvos ir nutempti kur tik nori.",
-  "mascotIntro.4": "Kada pasirodyti, sprendi tu: {settings} → {section}. Iki!"
+  "mascotIntro.4": "Kada pasirodyti, sprendi tu: {settings} → {section}. Iki!",
+  "kind.key": "Klavišas",
+  "intent.key": "paspausti klavišą ar derinį",
+  "example.key": "paspausti klavišą: «{keys}»"
 });

@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibracija: nič ni prepoznano, poskusite znova",
   "log.calibration.saved": "✓ kalibracija «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibracija «{action}»: «{phrase}» (že obstaja)",
-  "log.calibration.saved.private": "✓ kalibracija «{action}»: fraza shranjena"
+  "log.calibration.saved.private": "✓ kalibracija «{action}»: fraza shranjena",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ neznana tipka «{name}»",
+  "log.key.failed": "⚠ tipke {keys} ni bilo mogoče pritisniti: {error}"
 }

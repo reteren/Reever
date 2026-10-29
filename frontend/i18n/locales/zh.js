@@ -392,5 +392,8 @@ I18N.register('zh', {
   "mascotIntro.1": "你好！我是 Reever，你的语音助手。",
   "mascotIntro.2": "说«{wake}»，再说要做什么：我能打开程序、查找文件、帮你打字。",
   "mascotIntro.3": "你可以抓住我的头，把我拖到任何地方。",
-  "mascotIntro.4": "我什么时候出现由你决定：{settings} → {section}。回头见！"
+  "mascotIntro.4": "我什么时候出现由你决定：{settings} → {section}。回头见！",
+  "kind.key": "按键",
+  "intent.key": "按下按键或快捷键",
+  "example.key": "按键：«{keys}»"
 });

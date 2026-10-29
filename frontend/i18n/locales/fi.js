@@ -393,5 +393,8 @@ I18N.register('fi', {
   "mascotIntro.1": "Hei! Olen Reever, ääniavustajasi.",
   "mascotIntro.2": "Sano «{wake}» ja mitä tehdä: avaan ohjelmia, etsin tiedostoja ja kirjoitan puolestasi.",
   "mascotIntro.3": "Voit tarttua minua päästä ja vetää minut minne vain.",
-  "mascotIntro.4": "Milloin ilmestyn, päätät itse: {settings} → {section}. Nähdään!"
+  "mascotIntro.4": "Milloin ilmestyn, päätät itse: {settings} → {section}. Nähdään!",
+  "kind.key": "Näppäin",
+  "intent.key": "paina näppäintä tai pikanäppäintä",
+  "example.key": "paina näppäintä: «{keys}»"
 });

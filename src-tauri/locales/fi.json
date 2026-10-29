@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibrointi: mitään ei tunnistettu, yritä uudelleen",
   "log.calibration.saved": "✓ kalibrointi «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibrointi «{action}»: «{phrase}» (on jo)",
-  "log.calibration.saved.private": "✓ kalibrointi «{action}»: fraasi tallennettu"
+  "log.calibration.saved.private": "✓ kalibrointi «{action}»: fraasi tallennettu",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ tuntematon näppäin «{name}»",
+  "log.key.failed": "⚠ näppäintä {keys} ei voitu painaa: {error}"
 }

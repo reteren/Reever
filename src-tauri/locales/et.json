@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibreerimine: midagi ei tuvastatud, proovi uuesti",
   "log.calibration.saved": "✓ kalibreerimine «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibreerimine «{action}»: «{phrase}» (juba olemas)",
-  "log.calibration.saved.private": "✓ kalibreerimine «{action}»: fraas salvestatud"
+  "log.calibration.saved.private": "✓ kalibreerimine «{action}»: fraas salvestatud",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ tundmatu klahv «{name}»",
+  "log.key.failed": "⚠ klahvi {keys} vajutamine ebaõnnestus: {error}"
 }

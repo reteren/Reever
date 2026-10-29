@@ -392,5 +392,8 @@ I18N.register('de', {
   "mascotIntro.1": "Hallo! Ich bin Reever, dein Sprachassistent.",
   "mascotIntro.2": "Sag «{wake}» und was ich tun soll – ich öffne Programme, finde Dateien und tippe für dich.",
   "mascotIntro.3": "Du kannst mich am Kopf packen und überallhin ziehen.",
-  "mascotIntro.4": "Wann ich auftauche, entscheidest du: {settings} → {section}. Bis bald!"
+  "mascotIntro.4": "Wann ich auftauche, entscheidest du: {settings} → {section}. Bis bald!",
+  "kind.key": "Taste",
+  "intent.key": "eine Taste oder Tastenkombination drücken",
+  "example.key": "Taste drücken: «{keys}»"
 });

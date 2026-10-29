@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ calibrazione: nulla riconosciuto, ripeti",
   "log.calibration.saved": "✓ calibrazione «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ calibrazione «{action}»: «{phrase}» (già presente)",
-  "log.calibration.saved.private": "✓ calibrazione «{action}»: frase salvata"
+  "log.calibration.saved.private": "✓ calibrazione «{action}»: frase salvata",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ tasto sconosciuto «{name}»",
+  "log.key.failed": "⚠ impossibile premere {keys}: {error}"
 }

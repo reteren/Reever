@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ calibrare: nu s-a recunoscut nimic, încearcă din nou",
   "log.calibration.saved": "✓ calibrare «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ calibrare «{action}»: «{phrase}» (există deja)",
-  "log.calibration.saved.private": "✓ calibrare «{action}»: fraza a fost salvată"
+  "log.calibration.saved.private": "✓ calibrare «{action}»: fraza a fost salvată",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ tastă necunoscută «{name}»",
+  "log.key.failed": "⚠ nu s-a putut apăsa {keys}: {error}"
 }

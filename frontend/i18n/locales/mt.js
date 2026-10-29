@@ -393,5 +393,8 @@ I18N.register('mt', {
   "mascotIntro.1": "Bongu! Jien Reever, l-assistent tal-vuċi tiegħek.",
   "mascotIntro.2": "Għid «{wake}» u x'għandi nagħmel: niftaħ programmi, insib fajls u nikteb għalik.",
   "mascotIntro.3": "Tista' taqbadni minn rasi u tkaxkarni fejn trid.",
-  "mascotIntro.4": "Meta nidher tiddeċiedi int: {settings} → {section}. Narawk!"
+  "mascotIntro.4": "Meta nidher tiddeċiedi int: {settings} → {section}. Narawk!",
+  "kind.key": "Buttuna",
+  "intent.key": "agħfas buttuna jew shortcut",
+  "example.key": "agħfas buttuna: «{keys}»"
 });

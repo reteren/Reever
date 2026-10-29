@@ -393,5 +393,8 @@ I18N.register('sk', {
   "mascotIntro.1": "Ahoj! Som Reever, tvoj hlasový asistent.",
   "mascotIntro.2": "Povedz «{wake}» a čo mám urobiť: otvorím programy, nájdem súbory a napíšem text za teba.",
   "mascotIntro.3": "Môžeš ma chytiť za hlavu a pretiahnuť kamkoľvek.",
-  "mascotIntro.4": "Kedy sa objavím, rozhodneš ty: {settings} → {section}. Zatiaľ!"
+  "mascotIntro.4": "Kedy sa objavím, rozhodneš ty: {settings} → {section}. Zatiaľ!",
+  "kind.key": "Kláves",
+  "intent.key": "stlačiť kláves alebo skratku",
+  "example.key": "stlačiť kláves: «{keys}»"
 });

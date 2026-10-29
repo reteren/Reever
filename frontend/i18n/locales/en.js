@@ -394,5 +394,8 @@ I18N.register('en', {
   "mascotIntro.1": "Hi! I'm Reever, your voice assistant.",
   "mascotIntro.2": "Say «{wake}» and tell me what to do: I open apps, find files and type for you.",
   "mascotIntro.3": "You can grab me by the head and drag me anywhere.",
-  "mascotIntro.4": "When I show up is up to you: {settings} → {section}. See you!"
+  "mascotIntro.4": "When I show up is up to you: {settings} → {section}. See you!",
+  "kind.key": "Key",
+  "intent.key": "press a key or shortcut",
+  "example.key": "press a key: «{keys}»"
 });

@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ kalibrering: inget kändes igen, försök igen",
   "log.calibration.saved": "✓ kalibrering «{action}»: «{phrase}»",
   "log.calibration.exists": "✓ kalibrering «{action}»: «{phrase}» (finns redan)",
-  "log.calibration.saved.private": "✓ kalibrering «{action}»: frasen sparad"
+  "log.calibration.saved.private": "✓ kalibrering «{action}»: frasen sparad",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ okänd tangent «{name}»",
+  "log.key.failed": "⚠ kunde inte trycka på {keys}: {error}"
 }

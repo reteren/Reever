@@ -151,5 +151,8 @@
   "log.calibration.nothing": "⚠ 校准：未识别到内容，请重试",
   "log.calibration.saved": "✓ 校准「{action}」：「{phrase}」",
   "log.calibration.exists": "✓ 校准「{action}」：「{phrase}」（已存在）",
-  "log.calibration.saved.private": "✓ 校准「{action}」：短语已保存"
+  "log.calibration.saved.private": "✓ 校准「{action}」：短语已保存",
+  "log.key.pressed": "⌨ {keys}",
+  "log.key.unknown": "⚠ 未知按键«{name}»",
+  "log.key.failed": "⚠ 无法按下 {keys}：{error}"
 }

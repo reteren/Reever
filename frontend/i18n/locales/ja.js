@@ -392,5 +392,8 @@ I18N.register('ja', {
   "mascotIntro.1": "こんにちは！Reever です。あなたの音声アシスタントです。",
   "mascotIntro.2": "«{wake}» と言ってから用件をどうぞ。アプリを開いたり、ファイルを探したり、文字を入力したりします。",
   "mascotIntro.3": "頭をつかんで好きな場所へドラッグできます。",
-  "mascotIntro.4": "いつ現れるかは {settings} → {section} で決められます。またね！"
+  "mascotIntro.4": "いつ現れるかは {settings} → {section} で決められます。またね！",
+  "kind.key": "キー",
+  "intent.key": "キーやショートカットを押す",
+  "example.key": "キーを押す：«{keys}»"
 });
