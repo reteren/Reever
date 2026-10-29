@@ -139,6 +139,11 @@ pub struct Settings {
     /// «никогда», не читается.
     #[serde(default = "default_models_unload_after_s")]
     pub models_unload_after_s: u32,
+    /// Ползунок выгрузки уже без галочки «Держать модель речи в памяти». В старом
+    /// settings.json этого ключа нет — там галочка (по умолчанию включённая) перекрывала
+    /// ползунок, и при чтении он переводится на «никогда» (`parse_settings`).
+    #[serde(default = "default_true")]
+    pub models_unload_migrated: bool,
     /// Тихая подстройка детектора: первые 40 подтверждённых «ривер» сохраняются в папке
     /// настроек и доучивают детектор, потом стираются (voice_adapt.rs).
     #[serde(default = "default_true")]
@@ -460,8 +465,11 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("models_unload_after_s", models_unload_after_s, u32);
-    // Была галочка «Держать модель речи в памяти»: включённая перекрывала ползунок.
-    if object.get("keep_asr_loaded").and_then(|v| v.as_bool()) == Some(true) {
+    // Была галочка «Держать модель речи в памяти»: включённая (и по умолчанию) перекрывала
+    // ползунок. Её ключа могло и не быть — тогда она тоже считалась включённой.
+    if !object.contains_key("models_unload_migrated")
+        && object.get("keep_asr_loaded").and_then(|v| v.as_bool()) != Some(false)
+    {
         settings.models_unload_after_s = MODELS_UNLOAD_MAX_S + 1;
     }
     restore!("voice_passive", voice_passive, bool);
@@ -524,6 +532,7 @@ impl Default for Settings {
             ui_languages: default_ui_languages(),
             languages: default_languages(),
             models_unload_after_s: default_models_unload_after_s(),
+            models_unload_migrated: true,
             voice_passive: true,
             local_index: true,
             mascot_mode: default_mascot_mode(),
@@ -755,6 +764,16 @@ pub(crate) fn resource(app: &AppHandle, rel: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::parse_settings;
+
+    #[test]
+    fn old_unload_slider_was_overridden_by_keep_loaded() {
+        let never = super::MODELS_UNLOAD_MAX_S + 1;
+        assert_eq!(parse_settings(r#"{"models_unload_after_s": 10}"#).models_unload_after_s, never);
+        let off = r#"{"models_unload_after_s": 10, "keep_asr_loaded": false}"#;
+        assert_eq!(parse_settings(off).models_unload_after_s, 10);
+        let new = r#"{"models_unload_after_s": 10, "models_unload_migrated": true}"#;
+        assert_eq!(parse_settings(new).models_unload_after_s, 10);
+    }
 
     #[test]
     fn english_is_always_a_recognition_language() {
