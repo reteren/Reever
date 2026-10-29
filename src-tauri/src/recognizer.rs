@@ -262,11 +262,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         Ok(capture) => {
             ui_log(
                 app,
-                if capture.is_raw() {
-                    "microphone: raw mode — Windows sound enhancements (equalizer, voice clarity) are bypassed"
-                } else {
-                    "microphone: standard mode — raw mode is unavailable, Windows sound enhancements apply"
-                },
+                if capture.is_raw() { crate::msg!("log.mic.raw") } else { crate::msg!("log.mic.standard") },
             );
             mic.opened();
             Some(capture)
@@ -402,7 +398,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         if stream.is_some() && (crate::audio::STREAM_FAILED.load(Ordering::SeqCst) || stalled) {
             stream = None;
             stalled = false;
-            ui_log(app, "⚠ microphone stream stopped — reopening it");
+            ui_log(app, crate::msg!("log.mic.reopen"));
             std::thread::sleep(Duration::from_millis(300));
         }
         // Windows сменила микрофон по умолчанию — перейти на него.
@@ -931,7 +927,7 @@ impl MicLink {
         if self.missing_since.is_none() {
             self.missing_since = Some(std::time::Instant::now());
             ui_log(app, crate::msg!("log.mic.unavailable", error = error));
-            ui_log(app, "🎙 waiting for the microphone — Reever will pick it up as soon as it is back");
+            ui_log(app, crate::msg!("log.mic.waiting"));
         }
     }
 
@@ -940,7 +936,7 @@ impl MicLink {
         if let Some(since) = self.missing_since.take() {
             ui_log(
                 app,
-                format!("🎙 microphone is back after {:.1} s", since.elapsed().as_secs_f32()),
+                crate::msg!("log.mic.backAfter", seconds = format!("{:.1}", since.elapsed().as_secs_f32())),
             );
         }
     }
@@ -954,7 +950,7 @@ impl MicLink {
         self.checked = std::time::Instant::now();
         match self.switch_to(crate::micwatch::default_mic()) {
             Some(name) => {
-                ui_log(app, format!("🎙 Windows default microphone changed to «{name}» — switching to it"));
+                ui_log(app, crate::msg!("log.mic.defaultChanged", name = name));
                 true
             }
             None => false,

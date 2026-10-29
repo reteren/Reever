@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibrering «{action}»: frasen sparad",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ okänd tangent «{name}»",
-  "log.key.failed": "⚠ kunde inte trycka på {keys}: {error}"
+  "log.key.failed": "⚠ kunde inte trycka på {keys}: {error}",
+  "log.mic.raw": "mikrofon: råläge — Windows ljudförbättringar kringgås",
+  "log.mic.standard": "mikrofon: standardläge — Windows ljudförbättringar används",
+  "log.mic.reopen": "⚠ mikrofonströmmen stannade — öppnar den igen",
+  "log.mic.waiting": "🎙 väntar på mikrofonen — Reever tar den så fort den är tillbaka",
+  "log.mic.backAfter": "🎙 mikrofonen är tillbaka efter {seconds} s",
+  "log.mic.defaultChanged": "🎙 Windows standardmikrofon är nu «{name}» — byter till den",
+  "log.window.noConfig": "⚠ fönstret «{window}» är inte konfigurerat",
+  "log.window.failed": "⚠ fönstret «{window}» skapades inte: {error}"
 }

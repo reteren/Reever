@@ -80,6 +80,10 @@ fn append_log(message: &str) {
 
 /// Строка в журнал окна (на языке интерфейса) и в `reever.log` (всегда по-английски:
 /// файл читают при разборе сбоев, и он не должен зависеть от выбранного языка).
+/// Диагностика детектора и замеры («wake: …», «trace: …») — на английском и только для
+/// разбора по reever.log: в окне журнала она была бы непереведённым шумом.
+const DIAGNOSTIC_PREFIXES: &[&str] = &["wake:", "trace:", "voice:", "blackbox:"];
+
 pub fn ui_log(app: &AppHandle, msg: impl Into<LogText>) {
     let msg = msg.into();
     let english = msg.render("en");
@@ -87,6 +91,9 @@ pub fn ui_log(app: &AppHandle, msg: impl Into<LogText>) {
     #[cfg(debug_assertions)]
     println!("[reever] {english}");
     append_log(&english);
+    if matches!(&msg, LogText::Raw(text) if DIAGNOSTIC_PREFIXES.iter().any(|prefix| text.starts_with(prefix))) {
+        return;
+    }
     let shown = msg.render(crate::uilang::current());
     if let Ok(mut log) = UI_HISTORY.lock() {
         push_ui_log(&mut log, msg);

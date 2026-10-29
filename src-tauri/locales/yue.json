@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ 校正「{action}」：句子已儲存",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ 唔識呢個掣«{name}»",
-  "log.key.failed": "⚠ 撳唔到 {keys}：{error}"
+  "log.key.failed": "⚠ 撳唔到 {keys}：{error}",
+  "log.mic.raw": "咪：原始模式 — 唔用 Windows 聲音增強",
+  "log.mic.standard": "咪：標準模式 — 用緊 Windows 聲音增強",
+  "log.mic.reopen": "⚠ 咪嘅數據流停咗 — 重新開緊",
+  "log.mic.waiting": "🎙 等緊個咪 — 一返嚟 Reever 就會接上",
+  "log.mic.backAfter": "🎙 個咪 {seconds} 秒後返嚟咗",
+  "log.mic.defaultChanged": "🎙 Windows 預設咪轉咗做«{name}» — 轉緊過去",
+  "log.window.noConfig": "⚠ 視窗«{window}»冇設定",
+  "log.window.failed": "⚠ 開唔到視窗«{window}»：{error}"
 }

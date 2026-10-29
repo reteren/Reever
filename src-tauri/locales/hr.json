@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibracija «{action}»: fraza spremljena",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ nepoznata tipka «{name}»",
-  "log.key.failed": "⚠ nije uspjelo pritisnuti {keys}: {error}"
+  "log.key.failed": "⚠ nije uspjelo pritisnuti {keys}: {error}",
+  "log.mic.raw": "mikrofon: sirovi način — poboljšanja zvuka u Windowsima se zaobilaze",
+  "log.mic.standard": "mikrofon: standardni način — primjenjuju se poboljšanja zvuka u Windowsima",
+  "log.mic.reopen": "⚠ tok mikrofona je stao — ponovno ga otvaram",
+  "log.mic.waiting": "🎙 čekam mikrofon — Reever će ga preuzeti čim se vrati",
+  "log.mic.backAfter": "🎙 mikrofon se vratio nakon {seconds} s",
+  "log.mic.defaultChanged": "🎙 zadani mikrofon u Windowsima sada je «{name}» — prebacujem se",
+  "log.window.noConfig": "⚠ prozor «{window}» nije konfiguriran",
+  "log.window.failed": "⚠ prozor «{window}» nije stvoren: {error}"
 }

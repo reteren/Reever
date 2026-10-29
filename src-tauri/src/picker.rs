@@ -76,7 +76,7 @@ fn ensure_picker(app: &AppHandle) {
         .cloned()
     else {
         PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-        ui_log(app, "⚠ picker window config not found");
+        ui_log(app, crate::msg!("log.window.noConfig", window = "picker"));
         mark_current_session_closed(app);
         return;
     };
@@ -90,7 +90,7 @@ fn ensure_picker(app: &AppHandle) {
             Ok(window) => window,
             Err(error) => {
                 PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-                ui_log(&app, format!("⚠ picker window was not created: {error}"));
+                ui_log(&app, crate::msg!("log.window.failed", window = "picker", error = error));
                 mark_current_session_closed(&app);
                 return;
             }

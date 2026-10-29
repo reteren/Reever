@@ -81,8 +81,16 @@ pub static CURRENT: std::sync::Mutex<&'static str> = std::sync::Mutex::new("en")
 
 /// Как `resolve`, но среди включённых языков интерфейса (`Settings::ui_languages`):
 /// выключенный — английский.
+/// `auto` здесь — язык интерфейса Windows, а не региональный формат: его же берёт
+/// WebView2 (`navigator.language`), и журнал не расходится с окном (английская Windows
+/// с русским форматом дат — английский).
 pub fn resolve_enabled(preference: &str, enabled: &[&str]) -> &'static str {
-    let code = resolve(preference);
+    let preference = preference.trim();
+    let code = if preference.is_empty() || preference.eq_ignore_ascii_case("auto") {
+        normalize(&system_ui_language())
+    } else {
+        normalize(preference)
+    };
     if enabled.contains(&code) {
         code
     } else {
@@ -113,6 +121,23 @@ fn system_locale() -> String {
         return String::new();
     }
     String::from_utf16_lossy(&buffer[..length as usize - 1])
+}
+
+/// Первый язык интерфейса пользователя Windows («en-US»).
+fn system_ui_language() -> String {
+    use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
+    let (mut count, mut length) = (0u32, 0u32);
+    unsafe {
+        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, windows::core::PWSTR::null(), &mut length).is_err() || length == 0 {
+            return system_locale();
+        }
+        let mut buffer = vec![0u16; length as usize];
+        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, windows::core::PWSTR(buffer.as_mut_ptr()), &mut length).is_err() {
+            return system_locale();
+        }
+        let end = buffer.iter().position(|&unit| unit == 0).unwrap_or(buffer.len());
+        String::from_utf16_lossy(&buffer[..end])
+    }
 }
 
 pub fn current() -> &'static str {

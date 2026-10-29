@@ -125,7 +125,7 @@ fn show_main(app: &tauri::AppHandle) {
 
     let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "main").cloned() else {
         MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
-        events::ui_log(app, "⚠ main window config not found");
+        events::ui_log(app, crate::msg!("log.window.noConfig", window = "main"));
         return;
     };
 
@@ -140,7 +140,7 @@ fn show_main(app: &tauri::AppHandle) {
             Ok(window) => window,
             Err(error) => {
                 MAIN_CREATE_PENDING.store(false, Ordering::SeqCst);
-                events::ui_log(&app, format!("⚠ main window was not created: {error}"));
+                events::ui_log(&app, crate::msg!("log.window.failed", window = "main", error = error));
                 return;
             }
         };

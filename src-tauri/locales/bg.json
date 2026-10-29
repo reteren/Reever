@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ калибриране «{action}»: фразата е запазена",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ непознат клавиш «{name}»",
-  "log.key.failed": "⚠ неуспешно натискане на {keys}: {error}"
+  "log.key.failed": "⚠ неуспешно натискане на {keys}: {error}",
+  "log.mic.raw": "микрофон: суров режим — подобренията на звука в Windows не се прилагат",
+  "log.mic.standard": "микрофон: стандартен режим — подобренията на звука в Windows се прилагат",
+  "log.mic.reopen": "⚠ потокът на микрофона спря — отварям го отново",
+  "log.mic.waiting": "🎙 чакам микрофона — Reever ще го поеме веднага щом се върне",
+  "log.mic.backAfter": "🎙 микрофонът се върна след {seconds} s",
+  "log.mic.defaultChanged": "🎙 микрофонът по подразбиране в Windows е сменен на «{name}» — превключвам",
+  "log.window.noConfig": "⚠ прозорецът «{window}» не е описан в конфигурацията",
+  "log.window.failed": "⚠ прозорецът «{window}» не е създаден: {error}"
 }

@@ -88,7 +88,7 @@ fn ensure_window(app: &AppHandle) {
     READY.store(false, Ordering::SeqCst);
     let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "confirm").cloned() else {
         CREATE_PENDING.store(false, Ordering::SeqCst);
-        ui_log(app, "⚠ confirm window config not found");
+        ui_log(app, crate::msg!("log.window.noConfig", window = "confirm"));
         return;
     };
     let app = app.clone();
@@ -100,7 +100,7 @@ fn ensure_window(app: &AppHandle) {
             Ok(window) => window,
             Err(error) => {
                 CREATE_PENDING.store(false, Ordering::SeqCst);
-                ui_log(&app, format!("⚠ confirm window was not created: {error}"));
+                ui_log(&app, crate::msg!("log.window.failed", window = "confirm", error = error));
                 return;
             }
         };

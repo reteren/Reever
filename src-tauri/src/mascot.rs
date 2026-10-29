@@ -451,7 +451,7 @@ fn cloaked(hwnd: HWND) -> bool {
 
 fn create(app: &AppHandle) {
     let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "mascot").cloned() else {
-        ui_log(app, "⚠ не найден конфиг окна маскота");
+        ui_log(app, crate::msg!("log.window.noConfig", window = "mascot"));
         return;
     };
     let scale = SCALE.load(Ordering::Relaxed);
@@ -468,7 +468,7 @@ fn create(app: &AppHandle) {
         let window = match built {
             Ok(window) => window,
             Err(error) => {
-                ui_log(&app, format!("⚠ окно маскота не создано: {error}"));
+                ui_log(&app, crate::msg!("log.window.failed", window = "mascot", error = error));
                 return;
             }
         };

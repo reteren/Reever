@@ -96,7 +96,7 @@ pub fn place(app: &AppHandle) {
 
 fn create(app: &AppHandle) {
     let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "bubble").cloned() else {
-        ui_log(app, "⚠ не найден конфиг окна пузыря");
+        ui_log(app, crate::msg!("log.window.noConfig", window = "bubble"));
         return;
     };
     let app = app.clone();
@@ -108,7 +108,7 @@ fn create(app: &AppHandle) {
         let window = match built {
             Ok(window) => window,
             Err(error) => {
-                ui_log(&app, format!("⚠ окно пузыря не создано: {error}"));
+                ui_log(&app, crate::msg!("log.window.failed", window = "bubble", error = error));
                 return;
             }
         };

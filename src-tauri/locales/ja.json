@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ キャリブレーション「{action}」：フレーズを保存しました",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ 不明なキー«{name}»",
-  "log.key.failed": "⚠ {keys} を押せませんでした：{error}"
+  "log.key.failed": "⚠ {keys} を押せませんでした：{error}",
+  "log.mic.raw": "マイク：RAW モード — Windows のサウンド強化は使われません",
+  "log.mic.standard": "マイク：標準モード — Windows のサウンド強化が適用されます",
+  "log.mic.reopen": "⚠ マイクのストリームが止まりました — 開き直します",
+  "log.mic.waiting": "🎙 マイクを待っています — 戻り次第 Reever が使います",
+  "log.mic.backAfter": "🎙 マイクが {seconds} 秒後に戻りました",
+  "log.mic.defaultChanged": "🎙 Windows の既定のマイクが«{name}»に変わりました — 切り替えます",
+  "log.window.noConfig": "⚠ ウィンドウ«{window}»が設定されていません",
+  "log.window.failed": "⚠ ウィンドウ«{window}»を作成できませんでした：{error}"
 }

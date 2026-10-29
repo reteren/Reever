@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ βαθμονόμηση «{action}»: η φράση αποθηκεύτηκε",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ άγνωστο πλήκτρο «{name}»",
-  "log.key.failed": "⚠ αποτυχία πατήματος {keys}: {error}"
+  "log.key.failed": "⚠ αποτυχία πατήματος {keys}: {error}",
+  "log.mic.raw": "μικρόφωνο: ακατέργαστη λειτουργία — οι βελτιώσεις ήχου των Windows παρακάμπτονται",
+  "log.mic.standard": "μικρόφωνο: τυπική λειτουργία — εφαρμόζονται οι βελτιώσεις ήχου των Windows",
+  "log.mic.reopen": "⚠ η ροή του μικροφώνου σταμάτησε — ανοίγει ξανά",
+  "log.mic.waiting": "🎙 αναμονή για το μικρόφωνο — το Reever θα το πάρει μόλις επιστρέψει",
+  "log.mic.backAfter": "🎙 το μικρόφωνο επέστρεψε μετά από {seconds} s",
+  "log.mic.defaultChanged": "🎙 το προεπιλεγμένο μικρόφωνο των Windows άλλαξε σε «{name}» — γίνεται εναλλαγή",
+  "log.window.noConfig": "⚠ το παράθυρο «{window}» δεν έχει ρυθμιστεί",
+  "log.window.failed": "⚠ το παράθυρο «{window}» δεν δημιουργήθηκε: {error}"
 }

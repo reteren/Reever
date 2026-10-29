@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ calibrare «{action}»: fraza a fost salvată",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ tastă necunoscută «{name}»",
-  "log.key.failed": "⚠ nu s-a putut apăsa {keys}: {error}"
+  "log.key.failed": "⚠ nu s-a putut apăsa {keys}: {error}",
+  "log.mic.raw": "microfon: mod brut — îmbunătățirile de sunet Windows sunt ocolite",
+  "log.mic.standard": "microfon: mod standard — se aplică îmbunătățirile de sunet Windows",
+  "log.mic.reopen": "⚠ fluxul microfonului s-a oprit — îl redeschid",
+  "log.mic.waiting": "🎙 aștept microfonul — Reever îl preia imediat ce revine",
+  "log.mic.backAfter": "🎙 microfonul a revenit după {seconds} s",
+  "log.mic.defaultChanged": "🎙 microfonul implicit Windows s-a schimbat în «{name}» — comut pe el",
+  "log.window.noConfig": "⚠ fereastra «{window}» nu este configurată",
+  "log.window.failed": "⚠ fereastra «{window}» nu a fost creată: {error}"
 }

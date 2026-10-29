@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ calibración «{action}»: frase guardada",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ tecla desconocida «{name}»",
-  "log.key.failed": "⚠ no se pudo pulsar {keys}: {error}"
+  "log.key.failed": "⚠ no se pudo pulsar {keys}: {error}",
+  "log.mic.raw": "micrófono: modo sin procesar — se omiten las mejoras de sonido de Windows",
+  "log.mic.standard": "micrófono: modo estándar — se aplican las mejoras de sonido de Windows",
+  "log.mic.reopen": "⚠ el flujo del micrófono se detuvo — reabriéndolo",
+  "log.mic.waiting": "🎙 esperando el micrófono — Reever lo tomará en cuanto vuelva",
+  "log.mic.backAfter": "🎙 el micrófono volvió tras {seconds} s",
+  "log.mic.defaultChanged": "🎙 el micrófono predeterminado de Windows cambió a «{name}» — cambiando a él",
+  "log.window.noConfig": "⚠ la ventana «{window}» no está configurada",
+  "log.window.failed": "⚠ no se creó la ventana «{window}»: {error}"
 }

@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ калібрування «{action}»: фразу збережено",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ не знаю клавішу «{name}»",
-  "log.key.failed": "⚠ не вдалося натиснути {keys}: {error}"
+  "log.key.failed": "⚠ не вдалося натиснути {keys}: {error}",
+  "log.mic.raw": "мікрофон: сирий режим — покращення звуку Windows не застосовуються",
+  "log.mic.standard": "мікрофон: звичайний режим — покращення звуку Windows застосовуються",
+  "log.mic.reopen": "⚠ потік мікрофона зупинився — відкриваю знову",
+  "log.mic.waiting": "🎙 чекаю мікрофон — Reever підхопить його, щойно він повернеться",
+  "log.mic.backAfter": "🎙 мікрофон повернувся через {seconds} с",
+  "log.mic.defaultChanged": "🎙 мікрофон Windows за замовчуванням змінився на «{name}» — перемикаюся",
+  "log.window.noConfig": "⚠ вікно «{window}» не описане в конфігу",
+  "log.window.failed": "⚠ вікно «{window}» не створено: {error}"
 }

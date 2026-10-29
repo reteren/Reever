@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibrēšana «{action}»: frāze saglabāta",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ nezināms taustiņš «{name}»",
-  "log.key.failed": "⚠ neizdevās nospiest {keys}: {error}"
+  "log.key.failed": "⚠ neizdevās nospiest {keys}: {error}",
+  "log.mic.raw": "mikrofons: neapstrādātais režīms — Windows skaņas uzlabojumi tiek apieti",
+  "log.mic.standard": "mikrofons: standarta režīms — Windows skaņas uzlabojumi tiek lietoti",
+  "log.mic.reopen": "⚠ mikrofona straume apstājās — atveru no jauna",
+  "log.mic.waiting": "🎙 gaidu mikrofonu — Reever to paņems, tiklīdz tas atgriezīsies",
+  "log.mic.backAfter": "🎙 mikrofons atgriezās pēc {seconds} s",
+  "log.mic.defaultChanged": "🎙 Windows noklusējuma mikrofons tagad ir «{name}» — pārslēdzos",
+  "log.window.noConfig": "⚠ logs «{window}» nav konfigurēts",
+  "log.window.failed": "⚠ logs «{window}» netika izveidots: {error}"
 }

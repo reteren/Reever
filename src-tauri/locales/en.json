@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ calibration «{action}»: phrase saved",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ unknown key «{name}»",
-  "log.key.failed": "⚠ failed to press {keys}: {error}"
+  "log.key.failed": "⚠ failed to press {keys}: {error}",
+  "log.mic.raw": "microphone: raw mode — Windows sound enhancements are bypassed",
+  "log.mic.standard": "microphone: standard mode — Windows sound enhancements apply",
+  "log.mic.reopen": "⚠ microphone stream stopped — reopening it",
+  "log.mic.waiting": "🎙 waiting for the microphone — Reever will pick it up as soon as it is back",
+  "log.mic.backAfter": "🎙 microphone is back after {seconds} s",
+  "log.mic.defaultChanged": "🎙 Windows default microphone changed to «{name}» — switching to it",
+  "log.window.noConfig": "⚠ window «{window}» is not configured",
+  "log.window.failed": "⚠ window «{window}» was not created: {error}"
 }

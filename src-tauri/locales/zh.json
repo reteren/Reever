@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ 校准「{action}」：短语已保存",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ 未知按键«{name}»",
-  "log.key.failed": "⚠ 无法按下 {keys}：{error}"
+  "log.key.failed": "⚠ 无法按下 {keys}：{error}",
+  "log.mic.raw": "麦克风：原始模式 — 绕过 Windows 声音增强",
+  "log.mic.standard": "麦克风：标准模式 — 应用 Windows 声音增强",
+  "log.mic.reopen": "⚠ 麦克风数据流已停止 — 正在重新打开",
+  "log.mic.waiting": "🎙 正在等待麦克风 — 一恢复 Reever 就会接上",
+  "log.mic.backAfter": "🎙 麦克风在 {seconds} 秒后恢复",
+  "log.mic.defaultChanged": "🎙 Windows 默认麦克风已改为«{name}» — 正在切换",
+  "log.window.noConfig": "⚠ 窗口«{window}»没有配置",
+  "log.window.failed": "⚠ 窗口«{window}»未能创建：{error}"
 }

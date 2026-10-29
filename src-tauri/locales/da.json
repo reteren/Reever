@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibrering «{action}»: sætningen er gemt",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ ukendt tast «{name}»",
-  "log.key.failed": "⚠ kunne ikke trykke på {keys}: {error}"
+  "log.key.failed": "⚠ kunne ikke trykke på {keys}: {error}",
+  "log.mic.raw": "mikrofon: rå tilstand — Windows' lydforbedringer springes over",
+  "log.mic.standard": "mikrofon: standardtilstand — Windows' lydforbedringer anvendes",
+  "log.mic.reopen": "⚠ mikrofonstrømmen stoppede — åbner den igen",
+  "log.mic.waiting": "🎙 venter på mikrofonen — Reever tager den, så snart den er tilbage",
+  "log.mic.backAfter": "🎙 mikrofonen er tilbage efter {seconds} s",
+  "log.mic.defaultChanged": "🎙 Windows' standardmikrofon er skiftet til «{name}» — skifter til den",
+  "log.window.noConfig": "⚠ vinduet «{window}» er ikke konfigureret",
+  "log.window.failed": "⚠ vinduet «{window}» blev ikke oprettet: {error}"
 }

@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibracija «{action}»: fraza shranjena",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ neznana tipka «{name}»",
-  "log.key.failed": "⚠ tipke {keys} ni bilo mogoče pritisniti: {error}"
+  "log.key.failed": "⚠ tipke {keys} ni bilo mogoče pritisniti: {error}",
+  "log.mic.raw": "mikrofon: surovi način — izboljšave zvoka v sistemu Windows so izpuščene",
+  "log.mic.standard": "mikrofon: običajni način — izboljšave zvoka v sistemu Windows so vklopljene",
+  "log.mic.reopen": "⚠ tok mikrofona se je ustavil — ponovno ga odpiram",
+  "log.mic.waiting": "🎙 čakam na mikrofon — Reever ga bo prevzel takoj, ko se vrne",
+  "log.mic.backAfter": "🎙 mikrofon se je vrnil po {seconds} s",
+  "log.mic.defaultChanged": "🎙 privzeti mikrofon sistema Windows je zdaj «{name}» — preklapljam",
+  "log.window.noConfig": "⚠ okno «{window}» ni nastavljeno",
+  "log.window.failed": "⚠ okna «{window}» ni bilo mogoče ustvariti: {error}"
 }

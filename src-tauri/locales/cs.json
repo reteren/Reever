@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibrace «{action}»: fráze uložena",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ neznámá klávesa «{name}»",
-  "log.key.failed": "⚠ nepodařilo se stisknout {keys}: {error}"
+  "log.key.failed": "⚠ nepodařilo se stisknout {keys}: {error}",
+  "log.mic.raw": "mikrofon: surový režim — vylepšení zvuku Windows se obchází",
+  "log.mic.standard": "mikrofon: standardní režim — vylepšení zvuku Windows se používají",
+  "log.mic.reopen": "⚠ stream mikrofonu se zastavil — otevírám znovu",
+  "log.mic.waiting": "🎙 čekám na mikrofon — Reever ho převezme, jakmile se vrátí",
+  "log.mic.backAfter": "🎙 mikrofon se vrátil po {seconds} s",
+  "log.mic.defaultChanged": "🎙 výchozí mikrofon Windows se změnil na «{name}» — přepínám",
+  "log.window.noConfig": "⚠ okno «{window}» není nakonfigurováno",
+  "log.window.failed": "⚠ okno «{window}» se nepodařilo vytvořit: {error}"
 }

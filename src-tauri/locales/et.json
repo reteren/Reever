@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibreerimine «{action}»: fraas salvestatud",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ tundmatu klahv «{name}»",
-  "log.key.failed": "⚠ klahvi {keys} vajutamine ebaõnnestus: {error}"
+  "log.key.failed": "⚠ klahvi {keys} vajutamine ebaõnnestus: {error}",
+  "log.mic.raw": "mikrofon: toorrežiim — Windowsi helitäiustusi ei kasutata",
+  "log.mic.standard": "mikrofon: tavarežiim — Windowsi helitäiustused on kasutusel",
+  "log.mic.reopen": "⚠ mikrofoni voog peatus — avan uuesti",
+  "log.mic.waiting": "🎙 ootan mikrofoni — Reever võtab selle kohe, kui see tagasi on",
+  "log.mic.backAfter": "🎙 mikrofon on {seconds} s pärast tagasi",
+  "log.mic.defaultChanged": "🎙 Windowsi vaikemikrofon on nüüd «{name}» — lülitun sellele",
+  "log.window.noConfig": "⚠ aken «{window}» pole seadistatud",
+  "log.window.failed": "⚠ akent «{window}» ei loodud: {error}"
 }

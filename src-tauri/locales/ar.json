@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ معايرة «{action}»: تم حفظ العبارة",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ مفتاح غير معروف «{name}»",
-  "log.key.failed": "⚠ تعذّر الضغط على {keys}: {error}"
+  "log.key.failed": "⚠ تعذّر الضغط على {keys}: {error}",
+  "log.mic.raw": "الميكروفون: الوضع الخام — يتم تجاوز تحسينات الصوت في Windows",
+  "log.mic.standard": "الميكروفون: الوضع القياسي — تُطبَّق تحسينات الصوت في Windows",
+  "log.mic.reopen": "⚠ توقف بث الميكروفون — تجري إعادة فتحه",
+  "log.mic.waiting": "🎙 في انتظار الميكروفون — سيلتقطه Reever فور عودته",
+  "log.mic.backAfter": "🎙 عاد الميكروفون بعد {seconds} ث",
+  "log.mic.defaultChanged": "🎙 تغيّر الميكروفون الافتراضي في Windows إلى «{name}» — يجري التبديل إليه",
+  "log.window.noConfig": "⚠ النافذة «{window}» غير مهيأة",
+  "log.window.failed": "⚠ لم يتم إنشاء النافذة «{window}»: {error}"
 }

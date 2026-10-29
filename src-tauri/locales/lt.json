@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibravimas «{action}»: frazė išsaugota",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ nežinomas klavišas «{name}»",
-  "log.key.failed": "⚠ nepavyko paspausti {keys}: {error}"
+  "log.key.failed": "⚠ nepavyko paspausti {keys}: {error}",
+  "log.mic.raw": "mikrofonas: neapdorotas režimas — Windows garso patobulinimai apeinami",
+  "log.mic.standard": "mikrofonas: įprastas režimas — taikomi Windows garso patobulinimai",
+  "log.mic.reopen": "⚠ mikrofono srautas sustojo — atidarau iš naujo",
+  "log.mic.waiting": "🎙 laukiu mikrofono — Reever jį paims, kai tik jis grįš",
+  "log.mic.backAfter": "🎙 mikrofonas grįžo po {seconds} s",
+  "log.mic.defaultChanged": "🎙 numatytasis Windows mikrofonas dabar «{name}» — perjungiu",
+  "log.window.noConfig": "⚠ langas «{window}» nesukonfigūruotas",
+  "log.window.failed": "⚠ langas «{window}» nesukurtas: {error}"
 }

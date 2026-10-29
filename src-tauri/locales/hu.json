@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ «{action}» kalibrálása: kifejezés mentve",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ ismeretlen billentyű «{name}»",
-  "log.key.failed": "⚠ nem sikerült lenyomni: {keys}: {error}"
+  "log.key.failed": "⚠ nem sikerült lenyomni: {keys}: {error}",
+  "log.mic.raw": "mikrofon: nyers mód — a Windows hangjavításai kimaradnak",
+  "log.mic.standard": "mikrofon: normál mód — a Windows hangjavításai érvényesek",
+  "log.mic.reopen": "⚠ a mikrofon adatfolyama leállt — újranyitás",
+  "log.mic.waiting": "🎙 várakozás a mikrofonra — a Reever azonnal használja, amint visszatér",
+  "log.mic.backAfter": "🎙 a mikrofon {seconds} mp után visszatért",
+  "log.mic.defaultChanged": "🎙 a Windows alapértelmezett mikrofonja most «{name}» — átváltás",
+  "log.window.noConfig": "⚠ a(z) «{window}» ablak nincs beállítva",
+  "log.window.failed": "⚠ a(z) «{window}» ablak nem jött létre: {error}"
 }

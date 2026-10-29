@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibratie «{action}»: zin opgeslagen",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ onbekende toets «{name}»",
-  "log.key.failed": "⚠ kon {keys} niet indrukken: {error}"
+  "log.key.failed": "⚠ kon {keys} niet indrukken: {error}",
+  "log.mic.raw": "microfoon: ruwe modus — geluidsverbeteringen van Windows worden overgeslagen",
+  "log.mic.standard": "microfoon: standaardmodus — geluidsverbeteringen van Windows worden toegepast",
+  "log.mic.reopen": "⚠ microfoonstream gestopt — wordt opnieuw geopend",
+  "log.mic.waiting": "🎙 wacht op de microfoon — Reever pakt hem op zodra hij terug is",
+  "log.mic.backAfter": "🎙 microfoon is terug na {seconds} s",
+  "log.mic.defaultChanged": "🎙 standaardmicrofoon van Windows is nu «{name}» — overschakelen",
+  "log.window.noConfig": "⚠ venster «{window}» is niet geconfigureerd",
+  "log.window.failed": "⚠ venster «{window}» is niet gemaakt: {error}"
 }

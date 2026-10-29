@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ Kalibrierung «{action}»: Phrase gespeichert",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ unbekannte Taste «{name}»",
-  "log.key.failed": "⚠ {keys} konnte nicht gedrückt werden: {error}"
+  "log.key.failed": "⚠ {keys} konnte nicht gedrückt werden: {error}",
+  "log.mic.raw": "Mikrofon: Rohmodus — Windows-Klangverbesserungen werden umgangen",
+  "log.mic.standard": "Mikrofon: Standardmodus — Windows-Klangverbesserungen sind aktiv",
+  "log.mic.reopen": "⚠ Mikrofonstream gestoppt — wird neu geöffnet",
+  "log.mic.waiting": "🎙 warte auf das Mikrofon — Reever übernimmt es, sobald es wieder da ist",
+  "log.mic.backAfter": "🎙 Mikrofon ist nach {seconds} s wieder da",
+  "log.mic.defaultChanged": "🎙 Standardmikrofon von Windows ist jetzt «{name}» — wechsle dorthin",
+  "log.window.noConfig": "⚠ Fenster «{window}» ist nicht konfiguriert",
+  "log.window.failed": "⚠ Fenster «{window}» wurde nicht erstellt: {error}"
 }

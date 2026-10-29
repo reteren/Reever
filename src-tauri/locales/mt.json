@@ -154,5 +154,13 @@
   "log.calibration.saved.private": "✓ kalibrazzjoni «{action}»: il-frażi ġiet issejvjata",
   "log.key.pressed": "⌨ {keys}",
   "log.key.unknown": "⚠ buttuna mhux magħrufa «{name}»",
-  "log.key.failed": "⚠ ma rnexxilix nagħfas {keys}: {error}"
+  "log.key.failed": "⚠ ma rnexxilix nagħfas {keys}: {error}",
+  "log.mic.raw": "mikrofonu: modalità mhux ipproċessata — it-titjib tal-ħoss ta' Windows jinqabeż",
+  "log.mic.standard": "mikrofonu: modalità standard — it-titjib tal-ħoss ta' Windows japplika",
+  "log.mic.reopen": "⚠ il-fluss tal-mikrofonu waqaf — qed nerġa' niftaħu",
+  "log.mic.waiting": "🎙 qed nistenna l-mikrofonu — Reever jaqbdu hekk kif jerġa' lura",
+  "log.mic.backAfter": "🎙 il-mikrofonu reġa' lura wara {seconds} s",
+  "log.mic.defaultChanged": "🎙 il-mikrofonu default ta' Windows inbidel għal «{name}» — qed naqleb għalih",
+  "log.window.noConfig": "⚠ it-tieqa «{window}» mhix ikkonfigurata",
+  "log.window.failed": "⚠ it-tieqa «{window}» ma nħolqitx: {error}"
 }
