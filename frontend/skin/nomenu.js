@@ -1,9 +1,6 @@
-// Правый клик не открывает меню WebView2 (Назад, Обновить, Печать, Средства разработчика) —
-// в окне программы оно чужое и ломает страницу. В полях ввода меню остаётся: там оно даёт
-// «Вырезать / Копировать / Вставить». Подключается в index.html, picker.html и confirm.html.
-(() => {
-  const EDITABLE = 'input, textarea, [contenteditable]:not([contenteditable="false"])';
-  document.addEventListener('contextmenu', (e) => {
-    if (!e.target.closest?.(EDITABLE)) e.preventDefault();
-  });
-})();
+// Правый клик нигде не открывает меню WebView2 — ни на странице (Назад, Обновить, Печать),
+// ни в полях ввода (Эмодзи, Импорт паролей, Вырезать / Вставить): в окне программы оно
+// чужое. Копировать и вставлять в полях — Ctrl+C / Ctrl+V. Перехват на этапе захвата,
+// чтобы его не обходили обработчики, останавливающие всплытие. Подключается в index.html,
+// picker.html и confirm.html.
+document.addEventListener('contextmenu', (e) => e.preventDefault(), true);
