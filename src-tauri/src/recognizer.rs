@@ -298,8 +298,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         app,
         crate::msg!(
             "log.ready",
-            wake = s.wake_words.first().map(String::as_str).unwrap_or("ривер"),
-            cancel = cfg.settings.cancel_words.first().map(String::as_str).unwrap_or("отмена")
+            wake = crate::uilang::spoken(&s.wake_words, "ривер", "reever"),
+            cancel = crate::uilang::spoken(&cfg.settings.cancel_words, "отмена", "cancel")
         ),
     );
 
@@ -1254,9 +1254,9 @@ impl Worker<'_> {
             crate::msg!(
                 "log.dictation.start",
                 seconds = idle_s,
-                wake = self.cfg.settings.wake_words.first().map(String::as_str).unwrap_or("ривер"),
-                stop = if self.cfg.russian_enabled() { "стоп" } else { "stop" },
-                cancel = self.cancel_words.first().map(String::as_str).unwrap_or("отмена")
+                wake = crate::uilang::spoken(&self.cfg.settings.wake_words, "ривер", "reever"),
+                stop = if crate::uilang::current() == "ru" && self.cfg.russian_enabled() { "стоп" } else { "stop" },
+                cancel = crate::uilang::spoken(&self.cancel_words, "отмена", "cancel")
             ),
         );
         // Цепочка сигналов: «ривер» уже прозвучал (детектор/пауза) — теперь «принял команду».

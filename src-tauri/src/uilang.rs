@@ -140,6 +140,17 @@ fn system_ui_language() -> String {
     }
 }
 
+/// Слово для подсказки в журнале на языке интерфейса: в русском — первое из списка,
+/// в остальных — первое латиницей (как `displayWake` в app.js), иначе `english`.
+pub fn spoken(words: &[String], russian: &str, english: &str) -> String {
+    let words = words.iter().map(|word| word.trim()).filter(|word| !word.is_empty());
+    if current() == "ru" {
+        return words.into_iter().next().unwrap_or(russian).to_string();
+    }
+    let latin = |word: &&str| word.chars().any(|c| c.is_ascii_alphabetic()) && word.is_ascii();
+    words.into_iter().find(latin).unwrap_or(english).to_string()
+}
+
 pub fn current() -> &'static str {
     CURRENT.lock().map(|locale| *locale).unwrap_or("en")
 }

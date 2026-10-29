@@ -432,7 +432,7 @@ pub fn dispatch(
                 app,
                 crate::msg!(
                     "log.dictateByVoice",
-                    wake = cfg.settings.wake_words.first().map(String::as_str).unwrap_or("ривер")
+                    wake = crate::uilang::spoken(&cfg.settings.wake_words, "ривер", "reever")
                 ),
             );
             DispatchResult::Done(false)
