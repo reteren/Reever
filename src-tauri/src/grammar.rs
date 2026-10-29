@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 12;
+const GRAMMAR_VERSION: u32 = 13;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -55,6 +55,10 @@ const ADDED_CANCEL_WORDS: &[(u32, &str)] = &[
     (11, "anulează"),
     (11, "ikkanċella"),
     (11, "취소"),
+    // Версия 13: грамматика, созданная из старых настроек, теряла английские слова отмены
+    // (в настройках по умолчанию были только русские).
+    (13, "stop"),
+    (13, "cancel"),
 ];
 /// Новые фразы конца диктовки: (версия, фраза).
 const ADDED_DICTATION_STOP: &[(u32, &str)] = &[
@@ -775,12 +779,11 @@ impl Grammar {
                 add_trigger_if_free(&mut grammar, id, phrase);
             }
         }
-        grammar.cancel_words.extend(
-            ADDED_CANCEL_WORDS
-                .iter()
-                .filter(|(version, _)| *version >= 10)
-                .map(|(_, word)| word.to_string()),
-        );
+        for (version, word) in ADDED_CANCEL_WORDS {
+            if *version >= 10 && !grammar.cancel_words.iter().any(|existing| existing == word) {
+                grammar.cancel_words.push(word.to_string());
+            }
+        }
         grammar.dictation_stop.extend(
             ADDED_DICTATION_STOP
                 .iter()
@@ -996,8 +999,12 @@ impl Grammar {
             .filter(|word| !normalize(word).is_empty())
             .cloned()
             .collect();
-        if !configured_cancel_words.is_empty() {
-            grammar.cancel_words = configured_cancel_words;
+        // Слова из настроек — в дополнение к словам по умолчанию (английским и языков
+        // пакетов), а не вместо них.
+        for word in configured_cancel_words {
+            if !grammar.cancel_words.iter().any(|existing| normalize(existing) == normalize(&word)) {
+                grammar.cancel_words.push(word);
+            }
         }
 
         // Первый запуск: системные действия из resources/actions.json — с фразами на
@@ -2044,7 +2051,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 12);
+        assert_eq!(Grammar::defaults().version, 13);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()
@@ -2095,7 +2102,9 @@ mod tests {
         let (grammar, changed) = Grammar::load_or_migrate(&path, &settings, &mut actions);
         assert!(changed);
         assert_eq!(grammar.wake_words[0], "ривер");
-        assert_eq!(grammar.cancel_words, vec!["не надо"]);
+        // Слово из настроек дописано к словам по умолчанию, английские не потерялись.
+        assert_eq!(grammar.cancel_words.last().map(String::as_str), Some("не надо"));
+        assert!(grammar.cancel_words.iter().any(|word| word == "cancel"));
         assert_eq!(
             actions
                 .iter()
