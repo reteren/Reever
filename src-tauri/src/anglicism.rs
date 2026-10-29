@@ -22,7 +22,7 @@ use strsim::normalized_levenshtein;
 /// на английское и не нашлось в русском словаре.
 pub const MIN_STRENGTH: u8 = 1;
 pub const MAX_STRENGTH: u8 = 5;
-pub const DEFAULT_STRENGTH: u8 = 3;
+pub const DEFAULT_STRENGTH: u8 = 2;
 
 /// Кириллические языки распознавания и их словари Windows: только с ними замена работает.
 /// Записи в словаре русские; украинские и болгарские слова сводятся к ним в `normalize`.
@@ -482,8 +482,9 @@ milestone\t0.00002\t0\tмайлстоун,майлстон
 PNG\t0.08\t1\tпнг,пиэнджи
 ";
 
+    /// Ступень 3 «сбалансированно»: на ней проверены общие слова (на 2 «лайф» не меняется).
     fn lexicon() -> Anglicisms {
-        Anglicisms::parse(LEXICON, DEFAULT_STRENGTH)
+        Anglicisms::parse(LEXICON, 3)
     }
 
     /// Словарь Windows в тестах: всё, чего нет в списке, — не русское слово.

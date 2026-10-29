@@ -110,9 +110,9 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub dictation_live: bool,
     /// Английские слова в кириллической диктовке латиницей по словарю англицизмов
-    /// («харднес» → hardness, см. anglicism.rs). Выключено, пока не включит пользователь;
-    /// без кириллического языка распознавания не действует.
-    #[serde(default)]
+    /// («харднес» → hardness, см. anglicism.rs). Включено по умолчанию; без кириллического
+    /// языка распознавания не действует.
+    #[serde(default = "default_true")]
     pub dictation_english: bool,
     /// Сила замены англицизмов, 1–5: 1 — только очевидные английские слова, 5 — всё,
     /// что похоже на английское и не нашлось в русском словаре (anglicism.rs).
@@ -516,7 +516,7 @@ impl Default for Settings {
             dictation_idle_ms: default_dictation_idle_ms(),
             dictation_clipboard: true,
             dictation_live: true,
-            dictation_english: false,
+            dictation_english: true,
             dictation_english_level: default_dictation_english_level(),
             webchat_send: true,
             wake_blackbox: false,
