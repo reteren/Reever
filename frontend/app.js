@@ -7,7 +7,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'classic',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:false,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_spotter:true,wake_sound:true,wake_blackbox:false,mascot_mode:'always',mascot_scale:100,mascot_bubble:true,lite_ui:document.documentElement.classList.contains('lite')
+  dictation_clipboard:true,dictation_live:true,dictation_english:false,dictation_english_level:3,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_blackbox:false,mascot_mode:'always',mascot_scale:100,mascot_bubble:true,lite_ui:document.documentElement.classList.contains('lite')
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -693,7 +693,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 const GROUPS=[
   ['interface',[['lite_ui','lite_ui',null,'instant'],['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
-  ['activation',[['activation_mode','select',['both','wake','hotkey']],['wake_spotter','bool'],['voice_adapt','voice_adapt'],['voice_passive','bool'],['wake_sound','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
+  ['activation',[['activation_mode','select',['both','wake','hotkey']],['voice_adapt','voice_adapt'],['voice_passive','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[

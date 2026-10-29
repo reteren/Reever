@@ -678,7 +678,7 @@ where
     V: crate::speech::VoiceDetector,
 {
     let s = &cfg.settings;
-    if !s.wake_spotter || s.activation_mode == "hotkey" {
+    if s.activation_mode == "hotkey" {
         return;
     }
     let (name, mut weights) = spotter_weights(app, cfg);
@@ -1032,9 +1032,6 @@ impl Worker<'_> {
     }
 
     fn wake_sound(&mut self) {
-        if !self.cfg.settings.wake_sound {
-            return;
-        }
         let recent = self
             .last_wake_sound
             .is_some_and(|at| at.elapsed() < Duration::from_secs(3));
