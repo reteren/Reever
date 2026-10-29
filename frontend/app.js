@@ -437,7 +437,7 @@ function displayWake(){
   if(phraseLanguage()==='ru') return words[0]||'ривер';
   const latin=words.find(isEnglish);
   if(latin) return latin;
-  return !words.length||words[0].toLowerCase()==='ривер'?'river':words[0];
+  return !words.length||words[0].toLowerCase()==='ривер'?'reever':words[0];
 }
 function renderHomeHint(){
   const last=$('#lastCmd');
@@ -773,7 +773,7 @@ async function refreshVoiceAdapt(){
       :t('settings.voice_passive.progress',{count:passive.collected,goal:passive.goal})):'');
   voiceAdaptResetButton.disabled=!report&&!passive?.collected;
 }
-const voiceWord=()=>phraseLanguage()==='ru'?'ривер':'river';
+const voiceWord=()=>phraseLanguage()==='ru'?'ривер':'reever';
 const VOICE_GOAL=10;
 let voiceAdaptOpen=false, voiceWords=0, voiceIntro=false;
 function renderVoiceCount(words){
