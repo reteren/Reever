@@ -128,6 +128,15 @@ const RUSSIAN_LAYOUT: &[(char, u16, &str)] = &[
     ('б', 0xBC, ","), ('ю', 0xBE, "."), ('ё', 0xC0, "`"),
 ];
 
+/// Одна русская буква в команде — это названная латинская буква, а не клавиша на месте этой
+/// буквы в ЙЦУКЕН: распознавание пишет «вин плюс д» за «вин плюс дэ», и это Win+D, а не Win+L
+/// (блокировка экрана). Буквы без латинской пары (ж, ч, ш, ю, я…) остаются по раскладке.
+const RUSSIAN_SOUNDS: &[(char, char)] = &[
+    ('а', 'a'), ('б', 'b'), ('в', 'v'), ('г', 'g'), ('д', 'd'), ('е', 'e'), ('з', 'z'), ('и', 'i'),
+    ('к', 'k'), ('л', 'l'), ('м', 'm'), ('н', 'n'), ('о', 'o'), ('п', 'p'), ('р', 'r'), ('с', 's'),
+    ('т', 't'), ('у', 'u'), ('ф', 'f'), ('х', 'h'), ('ц', 'c'), ('э', 'e'),
+];
+
 fn number(word: &str) -> Option<u8> {
     word.parse().ok().or_else(|| NUMBERS.iter().find(|(names, _)| names.contains(&word)).map(|(_, n)| *n))
 }
@@ -148,6 +157,7 @@ fn single(word: &str) -> Option<Key> {
     if !rest.is_empty() {
         return None;
     }
+    let first = RUSSIAN_SOUNDS.iter().find(|(letter, _)| *letter == first).map_or(first, |&(_, latin)| latin);
     match first {
         'a'..='z' => {
             let index = first as usize - 'a' as usize;
@@ -282,6 +292,12 @@ mod tests {
         assert_eq!(names("вин эр"), "Win+R");
         assert_eq!(names("win-e"), "Win+E");
         assert_eq!(names("виндовс шифт эс"), "Win+Shift+S");
+        // одна русская буква — названная латинская, а не клавиша ЙЦУКЕН (д было L → Win+L)
+        assert_eq!(names("вин плюс д"), "Win+D");
+        assert_eq!(names("виндоуз д"), "Win+D");
+        assert_eq!(names("windows + д"), "Win+D");
+        assert_eq!(names("контрол с"), "Ctrl+S");
+        assert_eq!(names("вин в"), "Win+V");
     }
 
     #[test]
