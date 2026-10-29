@@ -34,7 +34,13 @@ const NAMED: &[(&[&str], Key)] = &[
     (&["контрол", "контрл", "контр", "ктрл", "control", "ctrl"], key(0x11, "Ctrl")),
     (&["шифт", "shift"], key(0x10, "Shift")),
     (&["альт", "alt"], key(0x12, "Alt")),
-    (&["вин", "винда", "виндовс", "win", "windows"], ext(0x5B, "Win")),
+    (
+        &[
+            "вин", "винда", "винды", "виндовс", "виндоус", "виндоувс", "виндовз", "виндоуз", "виндус",
+            "windows", "win", "windows key", "win key",
+        ],
+        ext(0x5B, "Win"),
+    ),
     (&["энтер", "ентер", "ввод", "enter", "return"], key(0x0D, "Enter")),
     (&["эскейп", "искейп", "ескейп", "эскейб", "эск", "escape", "esc"], key(0x1B, "Esc")),
     (&["пробел", "спейс", "space"], key(0x20, "Space")),
@@ -60,7 +66,7 @@ const NAMED: &[(&[&str], Key)] = &[
     (&["эй"], key(0x41, "A")),
     (&["би"], key(0x42, "B")),
     (&["си"], key(0x43, "C")),
-    (&["ди"], key(0x44, "D")),
+    (&["ди", "дэ"], key(0x44, "D")),
     (&["эф"], key(0x46, "F")),
     (&["джи"], key(0x47, "G")),
     (&["эйч"], key(0x48, "H")),
@@ -73,7 +79,7 @@ const NAMED: &[(&[&str], Key)] = &[
     (&["оу"], key(0x4F, "O")),
     (&["пи"], key(0x50, "P")),
     (&["кью"], key(0x51, "Q")),
-    (&["ар"], key(0x52, "R")),
+    (&["ар", "эр"], key(0x52, "R")),
     (&["эс"], key(0x53, "S")),
     (&["ти"], key(0x54, "T")),
     (&["ви"], key(0x56, "V")),
@@ -157,7 +163,7 @@ fn single(word: &str) -> Option<Key> {
 
 /// Разобрать «контрол шифт эс» в сочетание. `Err` — первое слово, которое не клавиша.
 pub fn parse(text: &str) -> Result<Vec<Key>, String> {
-    let cleaned = text.to_lowercase().replace('ё', "е").replace('+', " + ");
+    let cleaned = text.to_lowercase().replace('ё', "е").replace('+', " + ").replace('-', " ");
     let words: Vec<&str> = cleaned
         .split(|c: char| c.is_whitespace() || matches!(c, ',' | '.' | '!' | '?' | '«' | '»' | '"'))
         .filter(|word| !word.is_empty())
@@ -266,6 +272,16 @@ mod tests {
         assert_eq!(names("семь"), "7");
         assert_eq!(names("я"), "Z");
         assert_eq!(names("контрол z"), "Ctrl+Z");
+    }
+
+    #[test]
+    fn windows_shortcuts() {
+        assert_eq!(names("виндоувс + D"), "Win+D");
+        assert_eq!(names("Windows R"), "Win+R");
+        assert_eq!(names("виндоус плюс дэ"), "Win+D");
+        assert_eq!(names("вин эр"), "Win+R");
+        assert_eq!(names("win-e"), "Win+E");
+        assert_eq!(names("виндовс шифт эс"), "Win+Shift+S");
     }
 
     #[test]

@@ -468,7 +468,7 @@ function grammarExample(intent,wake,russian){
   if(!trigger) return null;
   if(intent.kind==='close'||intent.kind==='kill') return [`${wake} ${trigger} X`,t(intent.kind==='close'?'example.close':'example.kill')];
   if(intent.kind==='calc') return [`${wake} ${trigger} X`,t('example.calc',{expr:russian?'33 умножить на 78':'33 times 78'})];
-  if(intent.kind==='key') return [`${wake} ${trigger} X`,t('example.key',{keys:russian?'энтер, контрол эс, эф пять':'enter, ctrl s, f5'})];
+  if(intent.kind==='key') return [`${wake} ${trigger} X`,t('example.key',{keys:russian?'энтер, контрол эс, виндоус дэ':'enter, ctrl s, windows d'})];
   if(intent.kind==='find'||intent.kind==='find_folder'||intent.kind==='find_file'){
     const help=intent.kind==='find_folder'?'example.findFolders':intent.kind==='find_file'?'example.findFiles':'example.findBoth';
     return [`${wake} ${trigger} X`,t(help)];
