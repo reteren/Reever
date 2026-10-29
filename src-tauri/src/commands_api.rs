@@ -544,6 +544,39 @@ pub fn set_mascot(
     Ok(())
 }
 
+/// Настройки: вывести маскота на экран, чтобы его перетащили на нужное место.
+#[tauri::command]
+pub fn mascot_place(app: AppHandle) -> bool {
+    crate::mascot::begin_placing(&app)
+}
+
+/// Конец расстановки маскота: `save` — закрепить, где он стоит сейчас. Возвращает
+/// закреплённое место (`null` — не закреплено).
+#[tauri::command]
+pub fn mascot_pin(app: AppHandle, config: State<'_, LiveConfig>, save: bool) -> Result<Option<[i32; 2]>, String> {
+    let current = config.get();
+    let Some(anchor) = crate::mascot::finish_placing(&app, save) else {
+        return Ok(current.settings.mascot_position);
+    };
+    persist_value(&current, "mascot_position", serde_json::json!(anchor))?;
+    let mut fresh = (*current).clone();
+    fresh.settings.mascot_position = Some(anchor);
+    config.set(Arc::new(fresh));
+    Ok(Some(anchor))
+}
+
+/// Открепить маскота: снова правый нижний угол.
+#[tauri::command]
+pub fn mascot_unpin(app: AppHandle, config: State<'_, LiveConfig>) -> Result<(), String> {
+    let current = config.get();
+    persist_value(&current, "mascot_position", serde_json::Value::Null)?;
+    let mut fresh = (*current).clone();
+    fresh.settings.mascot_position = None;
+    config.set(Arc::new(fresh));
+    crate::mascot::unpin(&app);
+    Ok(())
+}
+
 /// Лёгкий интерфейс вкл/выкл: сохраняет выбор, убирает или возвращает маскота и
 /// пересоздаёт главное окно в другом виде (вид задаётся при создании окна).
 #[tauri::command]

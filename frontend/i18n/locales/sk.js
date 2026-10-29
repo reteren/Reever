@@ -396,5 +396,13 @@ I18N.register('sk', {
   "mascotIntro.4": "Kedy sa objavím, rozhodneš ty: {settings} → {section}. Zatiaľ!",
   "kind.key": "Kláves",
   "intent.key": "stlačiť kláves alebo skratku",
-  "example.key": "stlačiť kláves: «{keys}»"
+  "example.key": "stlačiť kláves: «{keys}»",
+  "settings.mascot_position": "Umiestnenie",
+  "settings.mascot_position.place": "Umiestniť maskota",
+  "settings.mascot_position.save": "Pripnúť sem",
+  "settings.mascot_position.reset": "Obnoviť",
+  "settings.mascot_position.placing": "Potiahni chobotnicu za hlavu tam, kde sa má objavovať, a stlač «Pripnúť sem».",
+  "settings.mascot_position.pinned": "Pripnuté: chobotnica sa vždy objaví na tomto mieste.",
+  "settings.mascot_position.corner": "Pravý dolný roh obrazovky.",
+  "settings.mascot_position.unavailable": "Maskot je vypnutý: najprv vyber, kedy sa má zobrazovať."
 });

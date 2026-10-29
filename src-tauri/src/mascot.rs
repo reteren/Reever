@@ -9,6 +9,9 @@
 //!   экрана, а после команды — обратно;
 //! - `never` — окна нет вовсе (WebView2 не держится в памяти), осьминог всегда в сфере.
 //!
+//! Место — `mascot_position`: в настройках осьминога выводят на экран, ставят мышью и
+//! закрепляют; дальше он каждый раз выходит там. Без него — правый нижний угол.
+//!
 //! Размер — `mascot_scale`, 100..500 % от исходного. Осьминога в сфере рисует главное окно
 //! (skin/shell.js) по событию `mascot://orb`.
 
@@ -78,6 +81,10 @@ static LEAVING: AtomicBool = AtomicBool::new(false);
 static INTRO: AtomicBool = AtomicBool::new(false);
 /// Реплики знакомства; пузырь забирает их один раз (`bubble_intro`).
 static INTRO_LINES: Mutex<Vec<String>> = Mutex::new(Vec::new());
+/// Закреплённое место (`Settings::mascot_position`).
+static PINNED: Mutex<Option<[i32; 2]>> = Mutex::new(None);
+/// Настройки вывели осьминога, чтобы его поставили: он стоит, пока не нажмут «Закрепить».
+static PLACING: AtomicBool = AtomicBool::new(false);
 /// Как часто проверять, что окно маскота не задвинуто под обычные окна (`keep_on_top`),
 /// в тиках `watch_cursor` по 40 мс.
 const TOPMOST_CHECK_TICKS: u32 = 25;
@@ -144,13 +151,114 @@ pub(crate) fn intro_active() -> bool {
     INTRO.load(Ordering::Relaxed)
 }
 
+/// Осьминогу сейчас положено быть на экране и в режиме `commands`: идёт команда или его ставят.
 fn command_active() -> bool {
-    matches!(events::current_state().as_str(), "listening" | "busy")
+    PLACING.load(Ordering::Relaxed) || matches!(events::current_state().as_str(), "listening" | "busy")
+}
+
+fn pinned() -> Option<[i32; 2]> {
+    PINNED.lock().ok().and_then(|pinned| *pinned)
+}
+
+/// Правый нижний угол видимой части осьминога (физические пиксели).
+fn anchor_of(window: &WebviewWindow) -> Option<[i32; 2]> {
+    let (position, size) = (window.outer_position().ok()?, window.outer_size().ok()?);
+    let corner = visible_corner(BIG.load(Ordering::Relaxed) as f64 / 1000.0);
+    Some([
+        position.x + (size.width as f64 * corner).round() as i32,
+        position.y + (size.height as f64 * corner).round() as i32,
+    ])
+}
+
+/// Место по умолчанию: правый нижний угол рабочей области основного монитора.
+fn default_anchor(window: &WebviewWindow) -> Option<[i32; 2]> {
+    let monitor = window.primary_monitor().ok()??;
+    let area = monitor.work_area();
+    let margin = (MARGIN * monitor.scale_factor()).round() as i32;
+    Some([
+        area.position.x + area.size.width as i32 - margin,
+        area.position.y + area.size.height as i32 - margin,
+    ])
+}
+
+/// Закреплённое место, если оно всё ещё на каком-то мониторе (монитор могли отключить).
+fn pinned_on_screen(window: &WebviewWindow) -> Option<[i32; 2]> {
+    let [x, y] = pinned()?;
+    let monitors = window.available_monitors().ok()?;
+    monitors
+        .iter()
+        .any(|monitor| {
+            let (position, size) = (monitor.position(), monitor.size());
+            x > position.x
+                && y > position.y
+                && x <= position.x + size.width as i32
+                && y <= position.y + size.height as i32
+        })
+        .then_some([x, y])
+}
+
+fn move_to(window: &WebviewWindow, [x, y]: [i32; 2]) {
+    let Ok(size) = window.outer_size() else { return };
+    let corner = visible_corner(BIG.load(Ordering::Relaxed) as f64 / 1000.0);
+    let _ = window.set_position(PhysicalPosition::new(
+        x - (size.width as f64 * corner).round() as i32,
+        y - (size.height as f64 * corner).round() as i32,
+    ));
+    bubble::place(window.app_handle());
+}
+
+/// Новое закреплённое место из настроек (`None` — угол по умолчанию).
+pub fn set_pinned(position: Option<[i32; 2]>) {
+    if let Ok(mut pinned) = PINNED.lock() {
+        *pinned = position;
+    }
+}
+
+/// Настройки: вывести осьминога на экран, чтобы его перетащили, куда нужно. Он стоит,
+/// пока не вызван `finish_placing`. `false` — маскота нет (режим `never`).
+pub fn begin_placing(app: &AppHandle) -> bool {
+    if mode() == "never" {
+        return false;
+    }
+    let Some(window) = app.get_webview_window("mascot") else { return false };
+    PLACING.store(true, Ordering::Relaxed);
+    GENERATION.fetch_add(1, Ordering::Relaxed);
+    if IN_ORB.load(Ordering::Relaxed) {
+        orb(app, "absent");
+    }
+    show(&window);
+    true
+}
+
+/// Конец расстановки: `save` — закрепить место, где осьминог стоит сейчас (его и вернуть).
+/// В режиме `commands` он после этого уходит, как после команды.
+pub fn finish_placing(app: &AppHandle, save: bool) -> Option<[i32; 2]> {
+    let was_placing = PLACING.swap(false, Ordering::Relaxed);
+    let window = app.get_webview_window("mascot")?;
+    let anchor = anchor_of(&window);
+    if save {
+        set_pinned(anchor);
+    }
+    if was_placing && mode() == "commands" && !command_active() {
+        hide_later(window, GENERATION.fetch_add(1, Ordering::Relaxed) + 1);
+    }
+    anchor.filter(|_| save)
+}
+
+/// Открепить: осьминог снова выходит в правом нижнем углу.
+pub fn unpin(app: &AppHandle) {
+    set_pinned(None);
+    if let Some(window) = app.get_webview_window("mascot") {
+        if let Some(anchor) = default_anchor(&window) {
+            move_to(&window, anchor);
+        }
+    }
 }
 
 /// Первый показ при запуске — по сохранённым настройкам.
 pub fn spawn(app: &AppHandle) {
     let settings = app.state::<LiveConfig>().get().settings.clone();
+    set_pinned(settings.mascot_position);
     apply(app, settings.effective_mascot_mode(), settings.mascot_scale);
     bubble::configure(app, settings.mascot_bubble);
 }
@@ -198,7 +306,7 @@ pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
 /// после того, как команда отработала.
 pub fn on_state(app: &AppHandle, state: &str) {
     // «loading» бывает и посреди команды (модели догружаются после «ривер») — не повод уходить
-    if mode() != "commands" || state == "loading" || intro_active() {
+    if mode() != "commands" || state == "loading" || intro_active() || PLACING.load(Ordering::Relaxed) {
         return;
     }
     // После `on_wake` «idle» ещё ничего не значит: его ставят и по окончании загрузки
@@ -266,7 +374,11 @@ fn hide_later(window: WebviewWindow, generation: u64) {
     std::thread::spawn(move || {
         std::thread::sleep(LINGER);
         // пока маскота держат в руке, он никуда не уходит — уйдёт после отпускания
-        if GENERATION.load(Ordering::Relaxed) != generation || DRAGGING.load(Ordering::Relaxed) || mode() != "commands" {
+        if GENERATION.load(Ordering::Relaxed) != generation
+            || DRAGGING.load(Ordering::Relaxed)
+            || PLACING.load(Ordering::Relaxed)
+            || mode() != "commands"
+        {
             return;
         }
         let _ = window.emit("mascot://leave", ());
@@ -304,6 +416,10 @@ fn show(window: &WebviewWindow) {
     // уже на экране (возможно, посреди ухода) — вернуть без повторного появления
     let fresh = !SHOWN.swap(true, Ordering::Relaxed);
     if fresh {
+        // закреплённое место: выходит там, даже если в прошлый раз его утащили
+        if let Some(anchor) = pinned_on_screen(window) {
+            move_to(window, anchor);
+        }
         events::set_mascot_visible(true);
     }
     LEAVING.store(false, Ordering::Relaxed);
@@ -484,16 +600,11 @@ fn create(app: &AppHandle) {
         let _ = window.set_ignore_cursor_events(true);
         let _ = window.show();
         watch_cursor(window.clone());
-        // Рабочая область, а не весь монитор: иначе маскот уедет под панель задач.
-        if let (Ok(Some(monitor)), Ok(size)) = (window.primary_monitor(), window.outer_size()) {
-            let area = monitor.work_area();
-            let margin = (MARGIN * monitor.scale_factor()).round() as i32;
-            let corner = visible_corner(big);
-            let x = area.position.x + area.size.width as i32 - (size.width as f64 * corner).round() as i32 - margin;
-            let y = area.position.y + area.size.height as i32 - (size.height as f64 * corner).round() as i32 - margin;
-            let _ = window.set_position(PhysicalPosition::new(x, y));
+        // Закреплённое место или угол рабочей области (не всего монитора: иначе маскот
+        // уедет под панель задач).
+        if let Some(anchor) = pinned_on_screen(&window).or_else(|| default_anchor(&window)) {
+            move_to(&window, anchor);
         }
-        bubble::place(&app);
         // режим, размер или состояние могли смениться, пока окно создавалось
         let mode = mode();
         let current = SCALE.load(Ordering::Relaxed);

@@ -396,5 +396,13 @@ I18N.register('sl', {
   "mascotIntro.4": "Kdaj se prikažem, izbereš ti: {settings} → {section}. Se vidiva!",
   "kind.key": "Tipka",
   "intent.key": "pritisni tipko ali bližnjico",
-  "example.key": "pritisni tipko: «{keys}»"
+  "example.key": "pritisni tipko: «{keys}»",
+  "settings.mascot_position": "Položaj",
+  "settings.mascot_position.place": "Postavi maskoto",
+  "settings.mascot_position.save": "Pripni sem",
+  "settings.mascot_position.reset": "Ponastavi",
+  "settings.mascot_position.placing": "Povleci hobotnico za glavo tja, kjer naj se prikaže, in pritisni «Pripni sem».",
+  "settings.mascot_position.pinned": "Pripeto: hobotnica se vedno prikaže na tem mestu.",
+  "settings.mascot_position.corner": "Spodnji desni kot zaslona.",
+  "settings.mascot_position.unavailable": "Maskota je izklopljena: najprej izberi, kdaj naj se prikaže."
 });

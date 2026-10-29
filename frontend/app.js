@@ -102,6 +102,8 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'inactive_triggers': return [];
     case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
+    case 'mascot_place': return true;
+    case 'mascot_pin': return [1900,1040];
     case 'index_status': return {state:'ready',entries:0,bytes:0};
     case 'get_wallpaper': return null;
     default: return undefined;
@@ -167,6 +169,8 @@ const KIND_GROUP={shell:'apps',uwp:'apps',url:'web',search:'web',folder:'folder'
 // Aero, но клавиатуру обслуживают полноценно.
 function selectNav(n){
   if(n.classList.contains('on')) return;
+  // Ушли из настроек, не закрепив маскота: место не меняется, сам он уходит.
+  if(mascotPlacing){ mascotPlacing=false; invoke('mascot_pin',{save:false}).catch(e=>reportError('mascotPosition',e)); }
   document.querySelectorAll('.navi').forEach(x=>{ x.classList.remove('on'); x.setAttribute('aria-selected','false'); });
   n.classList.add('on'); n.setAttribute('aria-selected','true');
   // Экран переключается как канал ЭЛТ: старое схлопывается в строку, новое раскрывается.
@@ -689,12 +693,13 @@ $('#grammarSettingsLink').onclick=event=>{
 };
 
 let settingsObj={};
+let mascotPlacing=false;
 let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // [ключ настройки, тип, варианты, когда применяется]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
   ['interface',[['lite_ui','lite_ui',null,'instant'],['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
-  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_bubble','bool',null,'instant']]],
+  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_position','mascot_position',null,'instant'],['mascot_bubble','bool',null,'instant']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['voice_adapt','voice_adapt'],['voice_passive','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
@@ -936,6 +941,33 @@ function fieldEl(key,type,opts,when='save'){
     }
     inp.value=I18N.enabled.includes(current)?current:'auto';
     inp.onchange=()=>changeLanguage(inp.value);
+  }
+  else if(type==='mascot_position'){
+    // Сразу: осьминог выходит на экран, его ставят мышью и закрепляют; дальше он
+    // выходит там. «Сбросить» — снова правый нижний угол.
+    const row=el('div',{className:'mascot-scale'});
+    const place=el('button',{type:'button',className:'sm'});
+    const reset=el('button',{type:'button',className:'sm',textContent:t('settings.mascot_position.reset')});
+    const about=el('div',{className:'hint setting-help'});
+    const render=()=>{
+      place.textContent=t(mascotPlacing?'settings.mascot_position.save':'settings.mascot_position.place');
+      reset.hidden=mascotPlacing||!settingsObj.mascot_position;
+      about.textContent=t(mascotPlacing?'settings.mascot_position.placing':settingsObj.mascot_position?'settings.mascot_position.pinned':'settings.mascot_position.corner');
+    };
+    place.onclick=async()=>{
+      try{
+        if(mascotPlacing){ settingsObj.mascot_position=await invoke('mascot_pin',{save:true}); mascotPlacing=false; }
+        else if(!(mascotPlacing=!!await invoke('mascot_place'))) $('#settingsMsg').textContent=t('settings.mascot_position.unavailable');
+      }catch(e){ $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('mascotPosition',e); }
+      render();
+    };
+    reset.onclick=async()=>{
+      try{ await invoke('mascot_unpin'); settingsObj.mascot_position=null; }
+      catch(e){ $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('mascotPosition',e); }
+      render();
+    };
+    render(); row.append(place,reset); wrap.append(row,about);
+    return wrap;
   }
   else if(type==='voice_adapt'){
     wrap.append(voiceAdaptField());

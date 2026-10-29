@@ -395,5 +395,13 @@ I18N.register('it', {
   "mascotIntro.4": "Quando comparire lo decidi tu: {settings} → {section}. A presto!",
   "kind.key": "Tasto",
   "intent.key": "premere un tasto o una scorciatoia",
-  "example.key": "premere un tasto: «{keys}»"
+  "example.key": "premere un tasto: «{keys}»",
+  "settings.mascot_position": "Posizione",
+  "settings.mascot_position.place": "Posiziona la mascotte",
+  "settings.mascot_position.save": "Fissa qui",
+  "settings.mascot_position.reset": "Ripristina",
+  "settings.mascot_position.placing": "Trascina il polpo per la testa dove deve apparire e premi «Fissa qui».",
+  "settings.mascot_position.pinned": "Fissato: il polpo appare sempre in questo punto.",
+  "settings.mascot_position.corner": "Angolo in basso a destra dello schermo.",
+  "settings.mascot_position.unavailable": "La mascotte è disattivata: prima scegli quando mostrarla."
 });

@@ -395,5 +395,13 @@ I18N.register('fr', {
   "mascotIntro.4": "Quand j'apparais, c'est toi qui choisis : {settings} → {section}. À bientôt !",
   "kind.key": "Touche",
   "intent.key": "appuyer sur une touche ou un raccourci",
-  "example.key": "appuyer sur une touche : «{keys}»"
+  "example.key": "appuyer sur une touche : «{keys}»",
+  "settings.mascot_position": "Position",
+  "settings.mascot_position.place": "Placer la mascotte",
+  "settings.mascot_position.save": "Fixer ici",
+  "settings.mascot_position.reset": "Réinitialiser",
+  "settings.mascot_position.placing": "Fais glisser la pieuvre par la tête là où elle doit apparaître, puis appuie sur «Fixer ici».",
+  "settings.mascot_position.pinned": "Fixé : la pieuvre apparaît toujours à cet endroit.",
+  "settings.mascot_position.corner": "Coin inférieur droit de l’écran.",
+  "settings.mascot_position.unavailable": "La mascotte est désactivée : choisis d’abord quand l’afficher."
 });

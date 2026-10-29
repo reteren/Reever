@@ -396,5 +396,13 @@ I18N.register('sv', {
   "mascotIntro.4": "När jag dyker upp bestämmer du: {settings} → {section}. Vi ses!",
   "kind.key": "Tangent",
   "intent.key": "tryck på en tangent eller ett kortkommando",
-  "example.key": "tryck på en tangent: «{keys}»"
+  "example.key": "tryck på en tangent: «{keys}»",
+  "settings.mascot_position": "Placering",
+  "settings.mascot_position.place": "Placera maskoten",
+  "settings.mascot_position.save": "Fäst här",
+  "settings.mascot_position.reset": "Återställ",
+  "settings.mascot_position.placing": "Dra bläckfisken i huvudet dit den ska dyka upp och tryck på «Fäst här».",
+  "settings.mascot_position.pinned": "Fäst: bläckfisken dyker alltid upp på den här platsen.",
+  "settings.mascot_position.corner": "Skärmens nedre högra hörn.",
+  "settings.mascot_position.unavailable": "Maskoten är avstängd: välj först när den ska visas."
 });

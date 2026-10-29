@@ -396,5 +396,13 @@ I18N.register('bg', {
   "mascotIntro.4": "Кога да се появявам, решаваш ти: {settings} → {section}. До скоро!",
   "kind.key": "Клавиш",
   "intent.key": "натисни клавиш или комбинация",
-  "example.key": "натисни клавиш: «{keys}»"
+  "example.key": "натисни клавиш: «{keys}»",
+  "settings.mascot_position": "Място",
+  "settings.mascot_position.place": "Постави маскота",
+  "settings.mascot_position.save": "Закрепи тук",
+  "settings.mascot_position.reset": "Нулирай",
+  "settings.mascot_position.placing": "Хвани октопода за главата, премести го там, където да се появява, и натисни «Закрепи тук».",
+  "settings.mascot_position.pinned": "Закрепено: октоподът винаги се появява на това място.",
+  "settings.mascot_position.corner": "Долният десен ъгъл на екрана.",
+  "settings.mascot_position.unavailable": "Маскотът е изключен: първо избери кога да се показва."
 });

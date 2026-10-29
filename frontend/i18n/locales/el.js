@@ -396,5 +396,13 @@ I18N.register('el', {
   "mascotIntro.4": "Πότε εμφανίζομαι το αποφασίζεις εσύ: {settings} → {section}. Τα λέμε!",
   "kind.key": "Πλήκτρο",
   "intent.key": "πάτημα πλήκτρου ή συντόμευσης",
-  "example.key": "πάτημα πλήκτρου: «{keys}»"
+  "example.key": "πάτημα πλήκτρου: «{keys}»",
+  "settings.mascot_position": "Θέση",
+  "settings.mascot_position.place": "Τοποθέτηση μασκότ",
+  "settings.mascot_position.save": "Καρφίτσωμα εδώ",
+  "settings.mascot_position.reset": "Επαναφορά",
+  "settings.mascot_position.placing": "Σύρε το χταπόδι από το κεφάλι εκεί όπου πρέπει να εμφανίζεται και πάτησε «Καρφίτσωμα εδώ».",
+  "settings.mascot_position.pinned": "Καρφιτσώθηκε: το χταπόδι εμφανίζεται πάντα σε αυτό το σημείο.",
+  "settings.mascot_position.corner": "Κάτω δεξιά γωνία της οθόνης.",
+  "settings.mascot_position.unavailable": "Η μασκότ είναι απενεργοποιημένη: διάλεξε πρώτα πότε θα εμφανίζεται."
 });

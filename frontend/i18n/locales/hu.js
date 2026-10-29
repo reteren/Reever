@@ -396,5 +396,13 @@ I18N.register('hu', {
   "mascotIntro.4": "Hogy mikor jelenjek meg, te döntöd el: {settings} → {section}. Viszlát!",
   "kind.key": "Billentyű",
   "intent.key": "billentyű vagy billentyűparancs lenyomása",
-  "example.key": "billentyű lenyomása: «{keys}»"
+  "example.key": "billentyű lenyomása: «{keys}»",
+  "settings.mascot_position": "Hely",
+  "settings.mascot_position.place": "Kabala elhelyezése",
+  "settings.mascot_position.save": "Rögzítés ide",
+  "settings.mascot_position.reset": "Visszaállítás",
+  "settings.mascot_position.placing": "Húzd a polipot a fejénél fogva oda, ahol meg kell jelennie, majd nyomd meg a «Rögzítés ide» gombot.",
+  "settings.mascot_position.pinned": "Rögzítve: a polip mindig ezen a helyen jelenik meg.",
+  "settings.mascot_position.corner": "A képernyő jobb alsó sarka.",
+  "settings.mascot_position.unavailable": "A kabala ki van kapcsolva: előbb válaszd ki, mikor jelenjen meg."
 });

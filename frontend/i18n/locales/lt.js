@@ -396,5 +396,13 @@ I18N.register('lt', {
   "mascotIntro.4": "Kada pasirodyti, sprendi tu: {settings} → {section}. Iki!",
   "kind.key": "Klavišas",
   "intent.key": "paspausti klavišą ar derinį",
-  "example.key": "paspausti klavišą: «{keys}»"
+  "example.key": "paspausti klavišą: «{keys}»",
+  "settings.mascot_position": "Vieta",
+  "settings.mascot_position.place": "Padėti talismaną",
+  "settings.mascot_position.save": "Prisegti čia",
+  "settings.mascot_position.reset": "Atstatyti",
+  "settings.mascot_position.placing": "Nutempk aštuonkojį už galvos ten, kur jis turi pasirodyti, ir paspausk «Prisegti čia».",
+  "settings.mascot_position.pinned": "Prisegta: aštuonkojis visada pasirodo šioje vietoje.",
+  "settings.mascot_position.corner": "Apatinis dešinysis ekrano kampas.",
+  "settings.mascot_position.unavailable": "Talismanas išjungtas: pirmiausia pasirink, kada jį rodyti."
 });

@@ -396,5 +396,13 @@ I18N.register('yue', {
   "mascotIntro.4": "我幾時出現由你話事：{settings} → {section}。遲啲見！",
   "kind.key": "按掣",
   "intent.key": "撳一個掣或者快捷鍵",
-  "example.key": "撳掣：«{keys}»"
+  "example.key": "撳掣：«{keys}»",
+  "settings.mascot_position": "位置",
+  "settings.mascot_position.place": "擺放吉祥物",
+  "settings.mascot_position.save": "固定喺呢度",
+  "settings.mascot_position.reset": "重設",
+  "settings.mascot_position.placing": "捉住八爪魚個頭，拖去想佢出現嘅位置，再撳«固定喺呢度»。",
+  "settings.mascot_position.pinned": "已固定：八爪魚一定喺呢個位置出現。",
+  "settings.mascot_position.corner": "螢幕右下角。",
+  "settings.mascot_position.unavailable": "吉祥物已經關咗：請先揀幾時顯示佢。"
 });

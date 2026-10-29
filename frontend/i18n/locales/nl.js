@@ -396,5 +396,13 @@ I18N.register('nl', {
   "mascotIntro.4": "Wanneer ik verschijn, bepaal jij: {settings} → {section}. Tot ziens!",
   "kind.key": "Toets",
   "intent.key": "een toets of sneltoets indrukken",
-  "example.key": "toets indrukken: «{keys}»"
+  "example.key": "toets indrukken: «{keys}»",
+  "settings.mascot_position": "Positie",
+  "settings.mascot_position.place": "Mascotte plaatsen",
+  "settings.mascot_position.save": "Hier vastzetten",
+  "settings.mascot_position.reset": "Herstellen",
+  "settings.mascot_position.placing": "Sleep de octopus aan zijn kop naar de plek waar hij moet verschijnen en druk op «Hier vastzetten».",
+  "settings.mascot_position.pinned": "Vastgezet: de octopus verschijnt altijd op deze plek.",
+  "settings.mascot_position.corner": "Rechteronderhoek van het scherm.",
+  "settings.mascot_position.unavailable": "De mascotte staat uit: kies eerst wanneer hij moet verschijnen."
 });

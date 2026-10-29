@@ -162,6 +162,10 @@ pub struct Settings {
     /// Пузырь-терминал над маскотом со сказанным по ходу речи.
     #[serde(default = "default_true")]
     pub mascot_bubble: bool,
+    /// Закреплённое место маскота: правый нижний угол видимой части, физические пиксели
+    /// экрана. `None` — правый нижний угол рабочей области.
+    #[serde(default)]
+    pub mascot_position: Option<[i32; 2]>,
     /// Лёгкий интерфейс: плоская панель без 3D-рамки, жидкой линзы и маскота. Пока он
     /// включён, маскота нет при любом `mascot_mode` (сам выбор сохраняется на потом).
     #[serde(default)]
@@ -486,6 +490,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("mascot_mode", mascot_mode, String);
     restore!("mascot_scale", mascot_scale, u32);
     restore!("mascot_bubble", mascot_bubble, bool);
+    restore!("mascot_position", mascot_position, Option<[i32; 2]>);
     restore!("lite_ui", lite_ui, bool);
 
     if !invalid.is_empty() {
@@ -538,6 +543,7 @@ impl Default for Settings {
             mascot_mode: default_mascot_mode(),
             mascot_scale: default_mascot_scale(),
             mascot_bubble: true,
+            mascot_position: None,
             lite_ui: false,
         }
     }

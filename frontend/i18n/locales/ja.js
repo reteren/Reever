@@ -395,5 +395,13 @@ I18N.register('ja', {
   "mascotIntro.4": "いつ現れるかは {settings} → {section} で決められます。またね！",
   "kind.key": "キー",
   "intent.key": "キーやショートカットを押す",
-  "example.key": "キーを押す：«{keys}»"
+  "example.key": "キーを押す：«{keys}»",
+  "settings.mascot_position": "位置",
+  "settings.mascot_position.place": "マスコットを配置",
+  "settings.mascot_position.save": "ここに固定",
+  "settings.mascot_position.reset": "リセット",
+  "settings.mascot_position.placing": "タコの頭をつかんで表示したい場所までドラッグし、«ここに固定»を押してください。",
+  "settings.mascot_position.pinned": "固定済み：タコはいつもこの場所に現れます。",
+  "settings.mascot_position.corner": "画面の右下隅。",
+  "settings.mascot_position.unavailable": "マスコットはオフです。先に表示するタイミングを選んでください。"
 });

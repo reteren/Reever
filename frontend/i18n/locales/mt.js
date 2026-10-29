@@ -396,5 +396,13 @@ I18N.register('mt', {
   "mascotIntro.4": "Meta nidher tiddeċiedi int: {settings} → {section}. Narawk!",
   "kind.key": "Buttuna",
   "intent.key": "agħfas buttuna jew shortcut",
-  "example.key": "agħfas buttuna: «{keys}»"
+  "example.key": "agħfas buttuna: «{keys}»",
+  "settings.mascot_position": "Post",
+  "settings.mascot_position.place": "Poġġi l-maskot",
+  "settings.mascot_position.save": "Waħħal hawn",
+  "settings.mascot_position.reset": "Irrisettja",
+  "settings.mascot_position.placing": "Kaxkar il-qarnita minn rasha fejn għandha tidher u agħfas «Waħħal hawn».",
+  "settings.mascot_position.pinned": "Imwaħħal: il-qarnita dejjem tidher f'dan il-post.",
+  "settings.mascot_position.corner": "Il-kantuniera t'isfel fuq il-lemin tal-iskrin.",
+  "settings.mascot_position.unavailable": "Il-maskot mitfi: l-ewwel agħżel meta għandu jidher."
 });

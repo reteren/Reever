@@ -396,5 +396,13 @@ I18N.register('lv', {
   "mascotIntro.4": "Kad man parādīties, izlem tu: {settings} → {section}. Uz tikšanos!",
   "kind.key": "Taustiņš",
   "intent.key": "nospiest taustiņu vai kombināciju",
-  "example.key": "nospiest taustiņu: «{keys}»"
+  "example.key": "nospiest taustiņu: «{keys}»",
+  "settings.mascot_position": "Vieta",
+  "settings.mascot_position.place": "Novietot talismanu",
+  "settings.mascot_position.save": "Piespraust šeit",
+  "settings.mascot_position.reset": "Atiestatīt",
+  "settings.mascot_position.placing": "Velc astoņkāji aiz galvas uz vietu, kur tam jāparādās, un nospied «Piespraust šeit».",
+  "settings.mascot_position.pinned": "Piesprausts: astoņkājis vienmēr parādās šajā vietā.",
+  "settings.mascot_position.corner": "Ekrāna apakšējais labais stūris.",
+  "settings.mascot_position.unavailable": "Talismans ir izslēgts: vispirms izvēlies, kad to rādīt."
 });

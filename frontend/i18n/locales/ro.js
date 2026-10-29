@@ -396,5 +396,13 @@ I18N.register('ro', {
   "mascotIntro.4": "Când apar hotărăști tu: {settings} → {section}. Pe curând!",
   "kind.key": "Tastă",
   "intent.key": "apasă o tastă sau o combinație",
-  "example.key": "apasă o tastă: «{keys}»"
+  "example.key": "apasă o tastă: «{keys}»",
+  "settings.mascot_position": "Poziție",
+  "settings.mascot_position.place": "Așază mascota",
+  "settings.mascot_position.save": "Fixează aici",
+  "settings.mascot_position.reset": "Resetează",
+  "settings.mascot_position.placing": "Trage caracatița de cap acolo unde trebuie să apară și apasă «Fixează aici».",
+  "settings.mascot_position.pinned": "Fixat: caracatița apare mereu în acest loc.",
+  "settings.mascot_position.corner": "Colțul din dreapta jos al ecranului.",
+  "settings.mascot_position.unavailable": "Mascota este dezactivată: alege mai întâi când să apară."
 });

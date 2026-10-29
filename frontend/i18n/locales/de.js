@@ -395,5 +395,13 @@ I18N.register('de', {
   "mascotIntro.4": "Wann ich auftauche, entscheidest du: {settings} → {section}. Bis bald!",
   "kind.key": "Taste",
   "intent.key": "eine Taste oder Tastenkombination drücken",
-  "example.key": "Taste drücken: «{keys}»"
+  "example.key": "Taste drücken: «{keys}»",
+  "settings.mascot_position": "Position",
+  "settings.mascot_position.place": "Maskottchen platzieren",
+  "settings.mascot_position.save": "Hier fixieren",
+  "settings.mascot_position.reset": "Zurücksetzen",
+  "settings.mascot_position.placing": "Zieh den Oktopus am Kopf dorthin, wo er erscheinen soll, und drück «Hier fixieren».",
+  "settings.mascot_position.pinned": "Fixiert: Der Oktopus erscheint immer an dieser Stelle.",
+  "settings.mascot_position.corner": "Untere rechte Bildschirmecke.",
+  "settings.mascot_position.unavailable": "Das Maskottchen ist aus: Wähle zuerst, wann es erscheinen soll."
 });

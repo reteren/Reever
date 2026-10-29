@@ -395,5 +395,13 @@ I18N.register('ru', {
   "mascotIntro.4": "Когда мне появляться — решай сам: {settings} → {section}. До встречи!",
   "kind.key": "Клавиша",
   "intent.key": "нажать клавишу или сочетание",
-  "example.key": "нажать клавишу: «{keys}»"
+  "example.key": "нажать клавишу: «{keys}»",
+  "settings.mascot_position": "Место",
+  "settings.mascot_position.place": "Поставить маскота",
+  "settings.mascot_position.save": "Закрепить здесь",
+  "settings.mascot_position.reset": "Сбросить",
+  "settings.mascot_position.placing": "Перетащи осьминога за голову туда, где он должен появляться, и нажми «Закрепить здесь».",
+  "settings.mascot_position.pinned": "Закреплено: осьминог всегда появляется в этом месте.",
+  "settings.mascot_position.corner": "Правый нижний угол экрана.",
+  "settings.mascot_position.unavailable": "Маскот выключен: сначала выбери, когда его показывать."
 });

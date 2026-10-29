@@ -396,5 +396,13 @@ I18N.register('uk', {
   "mascotIntro.4": "Коли мені з'являтися — вирішуй сам: {settings} → {section}. До зустрічі!",
   "kind.key": "Клавіша",
   "intent.key": "натиснути клавішу або сполучення",
-  "example.key": "натиснути клавішу: «{keys}»"
+  "example.key": "натиснути клавішу: «{keys}»",
+  "settings.mascot_position": "Місце",
+  "settings.mascot_position.place": "Поставити маскота",
+  "settings.mascot_position.save": "Закріпити тут",
+  "settings.mascot_position.reset": "Скинути",
+  "settings.mascot_position.placing": "Перетягни восьминога за голову туди, де він має з'являтися, і натисни «Закріпити тут».",
+  "settings.mascot_position.pinned": "Закріплено: восьминіг завжди з'являється в цьому місці.",
+  "settings.mascot_position.corner": "Правий нижній кут екрана.",
+  "settings.mascot_position.unavailable": "Маскота вимкнено: спершу вибери, коли його показувати."
 });

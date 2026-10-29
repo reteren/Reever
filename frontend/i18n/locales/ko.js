@@ -396,5 +396,13 @@ I18N.register('ko', {
   "mascotIntro.4": "제가 언제 나타날지는 {settings} → {section}에서 정할 수 있어요. 또 만나요!",
   "kind.key": "키",
   "intent.key": "키 또는 단축키 누르기",
-  "example.key": "키 누르기: «{keys}»"
+  "example.key": "키 누르기: «{keys}»",
+  "settings.mascot_position": "위치",
+  "settings.mascot_position.place": "마스코트 배치",
+  "settings.mascot_position.save": "여기에 고정",
+  "settings.mascot_position.reset": "초기화",
+  "settings.mascot_position.placing": "문어의 머리를 잡고 나타날 위치로 끌어 놓은 뒤 «여기에 고정»을 누르세요.",
+  "settings.mascot_position.pinned": "고정됨: 문어가 항상 이 위치에 나타납니다.",
+  "settings.mascot_position.corner": "화면 오른쪽 아래 모서리.",
+  "settings.mascot_position.unavailable": "마스코트가 꺼져 있습니다. 먼저 표시할 시점을 선택하세요."
 });

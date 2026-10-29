@@ -396,5 +396,13 @@ I18N.register('da', {
   "mascotIntro.4": "Hvornår jeg dukker op, bestemmer du: {settings} → {section}. Vi ses!",
   "kind.key": "Tast",
   "intent.key": "tryk på en tast eller genvej",
-  "example.key": "tryk på en tast: «{keys}»"
+  "example.key": "tryk på en tast: «{keys}»",
+  "settings.mascot_position": "Placering",
+  "settings.mascot_position.place": "Placér maskotten",
+  "settings.mascot_position.save": "Fastgør her",
+  "settings.mascot_position.reset": "Nulstil",
+  "settings.mascot_position.placing": "Træk blæksprutten i hovedet derhen, hvor den skal dukke op, og tryk på «Fastgør her».",
+  "settings.mascot_position.pinned": "Fastgjort: blæksprutten dukker altid op her.",
+  "settings.mascot_position.corner": "Skærmens nederste højre hjørne.",
+  "settings.mascot_position.unavailable": "Maskotten er slået fra: vælg først, hvornår den skal vises."
 });

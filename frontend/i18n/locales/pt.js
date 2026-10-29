@@ -395,5 +395,13 @@ I18N.register('pt', {
   "mascotIntro.4": "Quando eu apareço, você decide: {settings} → {section}. Até mais!",
   "kind.key": "Tecla",
   "intent.key": "pressionar uma tecla ou atalho",
-  "example.key": "pressionar uma tecla: «{keys}»"
+  "example.key": "pressionar uma tecla: «{keys}»",
+  "settings.mascot_position": "Posição",
+  "settings.mascot_position.place": "Posicionar o mascote",
+  "settings.mascot_position.save": "Fixar aqui",
+  "settings.mascot_position.reset": "Redefinir",
+  "settings.mascot_position.placing": "Arraste o polvo pela cabeça até onde ele deve aparecer e pressione «Fixar aqui».",
+  "settings.mascot_position.pinned": "Fixado: o polvo sempre aparece neste lugar.",
+  "settings.mascot_position.corner": "Canto inferior direito da tela.",
+  "settings.mascot_position.unavailable": "O mascote está desativado: primeiro escolha quando mostrá-lo."
 });

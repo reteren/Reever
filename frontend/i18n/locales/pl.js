@@ -396,5 +396,13 @@ I18N.register('pl', {
   "mascotIntro.4": "Kiedy mam się pojawiać, decydujesz ty: {settings} → {section}. Do zobaczenia!",
   "kind.key": "Klawisz",
   "intent.key": "naciśnij klawisz lub skrót",
-  "example.key": "naciśnij klawisz: «{keys}»"
+  "example.key": "naciśnij klawisz: «{keys}»",
+  "settings.mascot_position": "Miejsce",
+  "settings.mascot_position.place": "Ustaw maskotkę",
+  "settings.mascot_position.save": "Przypnij tutaj",
+  "settings.mascot_position.reset": "Resetuj",
+  "settings.mascot_position.placing": "Przeciągnij ośmiornicę za głowę tam, gdzie ma się pojawiać, i naciśnij «Przypnij tutaj».",
+  "settings.mascot_position.pinned": "Przypięto: ośmiornica zawsze pojawia się w tym miejscu.",
+  "settings.mascot_position.corner": "Prawy dolny róg ekranu.",
+  "settings.mascot_position.unavailable": "Maskotka jest wyłączona: najpierw wybierz, kiedy ma się pokazywać."
 });

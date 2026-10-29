@@ -395,5 +395,13 @@ I18N.register('zh', {
   "mascotIntro.4": "我什么时候出现由你决定：{settings} → {section}。回头见！",
   "kind.key": "按键",
   "intent.key": "按下按键或快捷键",
-  "example.key": "按键：«{keys}»"
+  "example.key": "按键：«{keys}»",
+  "settings.mascot_position": "位置",
+  "settings.mascot_position.place": "放置吉祥物",
+  "settings.mascot_position.save": "固定在这里",
+  "settings.mascot_position.reset": "重置",
+  "settings.mascot_position.placing": "抓住章鱼的头，把它拖到想让它出现的位置，然后点击«固定在这里»。",
+  "settings.mascot_position.pinned": "已固定：章鱼总是在这个位置出现。",
+  "settings.mascot_position.corner": "屏幕右下角。",
+  "settings.mascot_position.unavailable": "吉祥物已关闭：请先选择何时显示它。"
 });

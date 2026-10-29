@@ -396,5 +396,13 @@ I18N.register('et', {
   "mascotIntro.4": "Millal ma ilmun, otsustad sina: {settings} → {section}. Näeme!",
   "kind.key": "Klahv",
   "intent.key": "vajuta klahvi või kiirklahvi",
-  "example.key": "vajuta klahvi: «{keys}»"
+  "example.key": "vajuta klahvi: «{keys}»",
+  "settings.mascot_position": "Asukoht",
+  "settings.mascot_position.place": "Paiguta maskott",
+  "settings.mascot_position.save": "Kinnita siia",
+  "settings.mascot_position.reset": "Lähtesta",
+  "settings.mascot_position.placing": "Lohista kaheksajalg peast sinna, kus ta peab ilmuma, ja vajuta «Kinnita siia».",
+  "settings.mascot_position.pinned": "Kinnitatud: kaheksajalg ilmub alati sellesse kohta.",
+  "settings.mascot_position.corner": "Ekraani alumine parem nurk.",
+  "settings.mascot_position.unavailable": "Maskott on välja lülitatud: vali kõigepealt, millal teda näidata."
 });

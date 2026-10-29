@@ -395,5 +395,13 @@ I18N.register('ar', {
   "mascotIntro.4": "متى أظهر؟ القرار لك: {settings} ← {section}. إلى اللقاء!",
   "kind.key": "مفتاح",
   "intent.key": "الضغط على مفتاح أو اختصار",
-  "example.key": "الضغط على مفتاح: «{keys}»"
+  "example.key": "الضغط على مفتاح: «{keys}»",
+  "settings.mascot_position": "الموضع",
+  "settings.mascot_position.place": "ضع التميمة",
+  "settings.mascot_position.save": "ثبّت هنا",
+  "settings.mascot_position.reset": "إعادة تعيين",
+  "settings.mascot_position.placing": "اسحب الأخطبوط من رأسه إلى المكان الذي يجب أن يظهر فيه، ثم اضغط «ثبّت هنا».",
+  "settings.mascot_position.pinned": "مثبّت: يظهر الأخطبوط دائمًا في هذا المكان.",
+  "settings.mascot_position.corner": "الزاوية السفلية اليمنى من الشاشة.",
+  "settings.mascot_position.unavailable": "التميمة متوقفة: اختر أولًا متى تظهر."
 });

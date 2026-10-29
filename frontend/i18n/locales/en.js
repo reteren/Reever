@@ -397,5 +397,13 @@ I18N.register('en', {
   "mascotIntro.4": "When I show up is up to you: {settings} → {section}. See you!",
   "kind.key": "Key",
   "intent.key": "press a key or shortcut",
-  "example.key": "press a key: «{keys}»"
+  "example.key": "press a key: «{keys}»",
+  "settings.mascot_position": "Position",
+  "settings.mascot_position.place": "Place the mascot",
+  "settings.mascot_position.save": "Pin here",
+  "settings.mascot_position.reset": "Reset",
+  "settings.mascot_position.placing": "Drag the octopus by its head to where it should appear, then press «Pin here».",
+  "settings.mascot_position.pinned": "Pinned: the octopus always appears at this spot.",
+  "settings.mascot_position.corner": "Bottom right corner of the screen.",
+  "settings.mascot_position.unavailable": "The mascot is turned off: choose when to show it first."
 });

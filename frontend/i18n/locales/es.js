@@ -395,5 +395,13 @@ I18N.register('es', {
   "mascotIntro.4": "Cuándo aparezco lo decides tú: {settings} → {section}. ¡Hasta luego!",
   "kind.key": "Tecla",
   "intent.key": "pulsar una tecla o un atajo",
-  "example.key": "pulsar una tecla: «{keys}»"
+  "example.key": "pulsar una tecla: «{keys}»",
+  "settings.mascot_position": "Posición",
+  "settings.mascot_position.place": "Colocar la mascota",
+  "settings.mascot_position.save": "Fijar aquí",
+  "settings.mascot_position.reset": "Restablecer",
+  "settings.mascot_position.placing": "Arrastra el pulpo por la cabeza adonde debe aparecer y pulsa «Fijar aquí».",
+  "settings.mascot_position.pinned": "Fijado: el pulpo siempre aparece en este lugar.",
+  "settings.mascot_position.corner": "Esquina inferior derecha de la pantalla.",
+  "settings.mascot_position.unavailable": "La mascota está desactivada: primero elige cuándo mostrarla."
 });

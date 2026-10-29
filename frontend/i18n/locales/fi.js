@@ -396,5 +396,13 @@ I18N.register('fi', {
   "mascotIntro.4": "Milloin ilmestyn, päätät itse: {settings} → {section}. Nähdään!",
   "kind.key": "Näppäin",
   "intent.key": "paina näppäintä tai pikanäppäintä",
-  "example.key": "paina näppäintä: «{keys}»"
+  "example.key": "paina näppäintä: «{keys}»",
+  "settings.mascot_position": "Sijainti",
+  "settings.mascot_position.place": "Sijoita maskotti",
+  "settings.mascot_position.save": "Kiinnitä tähän",
+  "settings.mascot_position.reset": "Palauta",
+  "settings.mascot_position.placing": "Vedä mustekalaa päästä paikkaan, jossa sen pitää ilmestyä, ja paina «Kiinnitä tähän».",
+  "settings.mascot_position.pinned": "Kiinnitetty: mustekala ilmestyy aina tähän kohtaan.",
+  "settings.mascot_position.corner": "Näytön oikea alakulma.",
+  "settings.mascot_position.unavailable": "Maskotti on pois päältä: valitse ensin, milloin se näytetään."
 });
