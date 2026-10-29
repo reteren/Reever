@@ -1006,13 +1006,23 @@ struct Dictation {
 /// а активным ненадолго становится всплывающее окно.
 const FIELD_WAIT: Duration = Duration::from_millis(700);
 
+/// Детектор может сработать на одно «ривер» дважды подряд — второй сигнал в этих пределах
+/// не звучит. Больше нельзя: два настоящих «ривер» подряд бывают через 3 с (в журнале 2,99 с),
+/// и второй оставался без звука.
+const WAKE_SOUND_REPEAT: Duration = Duration::from_millis(1500);
+
+/// GigaAM подтверждает «ривер» детектора примерно через секунду. Сигнал детектора засчитывается
+/// за это подтверждение только в этих пределах — иначе «ривер» посреди речи через 10 с после
+/// прошлой команды молчал, потому что «сигнал уже был».
+const SPOT_CONFIRM_WINDOW: Duration = Duration::from_secs(4);
+
 impl Worker<'_> {
     fn sound(&self, name: &str) {
         self.player.play(&self.cfg.sound(name));
     }
 
     /// Сигнал «услышал ривер»: сразу от детектора, а если его нет — когда фраза разобрана.
-    /// Повтор того же «ривер» (детектор, потом GigaAM) в пределах 3 с не звучит.
+    /// Повтор того же «ривер» в пределах `WAKE_SOUND_REPEAT` не звучит.
     /// «Ривер» — индекс файлов (в покое он только на диске) подгружается заранее, пока
     /// распознаётся команда: «ривер найди …» не ждёт чтения снимка.
     fn prefetch_index(&self) {
@@ -1030,7 +1040,7 @@ impl Worker<'_> {
     fn wake_sound(&mut self) {
         let recent = self
             .last_wake_sound
-            .is_some_and(|at| at.elapsed() < Duration::from_secs(3));
+            .is_some_and(|at| at.elapsed() < WAKE_SOUND_REPEAT);
         if !recent {
             self.sound("start.wav");
             self.last_wake_sound = Some(std::time::Instant::now());
@@ -1183,7 +1193,7 @@ impl Worker<'_> {
                 let spotted = self
                     .last_spot_sound
                     .take()
-                    .is_some_and(|at| at.elapsed() < Duration::from_secs(15));
+                    .is_some_and(|at| at.elapsed() < SPOT_CONFIRM_WINDOW);
                 if !spotted {
                     self.wake_sound();
                 }
@@ -1200,6 +1210,9 @@ impl Worker<'_> {
                 self.prefetch_index();
             }
             EngineEvent::WakeRejected => {
+                // сигнал ложного срабатывания не должен глушить следующее настоящее «ривер»
+                self.last_spot_sound = None;
+                self.last_wake_sound = None;
                 crate::mascot::on_wake_rejected(self.app);
                 let _ = self.app.emit_to("main", "reever://wake-rejected", ());
             }
@@ -1209,6 +1222,9 @@ impl Worker<'_> {
                 }
             }
             EngineEvent::Command { text, alt } => {
+                // команда закончила это «ривер»: следующее — уже новое и звучит своим сигналом
+                self.last_spot_sound = None;
+                self.last_wake_sound = None;
                 // «ривер открой …» одной фразой — без WakeHeard, но «ривер» в ней подтверждён.
                 if let Some(clip) = engine.take_wake_clip() {
                     crate::voice_adapt::offer_wake_clip(clip);
