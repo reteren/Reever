@@ -547,6 +547,7 @@ pub fn run() {
             commands_api::set_mute_hotkey,
             commands_api::get_wallpaper,
             commands_api::set_ui_language,
+            commands_api::sync_ui_locale,
             mascot::mascot_drag,
             mascot::mascot_layout,
             mascot::mascot_rest,

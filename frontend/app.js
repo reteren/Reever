@@ -1225,6 +1225,7 @@ async function changeLanguage(preference){
     I18N.setEnabled(saved?.ui_languages);
   }catch{}
   await I18N.setLanguage(preference);
+  if(tauri) invoke('sync_ui_locale',{locale:I18N.locale}).catch(()=>{});
   startIndexStatusPolling();
   loadActions().catch(e=>reportError('loadActions',e)); loadGrammar(); refreshPause();
   await loadSettings();

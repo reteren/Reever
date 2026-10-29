@@ -507,6 +507,16 @@ pub fn set_ui_language(
     Ok(locale.into())
 }
 
+/// Окно загрузило перевод: журнал и меню трея — на том же языке, что и окно.
+#[tauri::command]
+pub fn sync_ui_locale(locale: String) {
+    if let Some(code) = crate::uilang::SUPPORTED.iter().copied().find(|code| *code == locale) {
+        if let Ok(mut current) = crate::uilang::CURRENT.lock() {
+            *current = code;
+        }
+    }
+}
+
 /// Маскот: режим показа и размер применяются сразу, без «Сохранить» и без
 /// перезапуска распознавания.
 #[tauri::command]

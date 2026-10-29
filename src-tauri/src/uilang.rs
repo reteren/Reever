@@ -81,13 +81,13 @@ pub static CURRENT: std::sync::Mutex<&'static str> = std::sync::Mutex::new("en")
 
 /// Как `resolve`, но среди включённых языков интерфейса (`Settings::ui_languages`):
 /// выключенный — английский.
-/// `auto` здесь — язык интерфейса Windows, а не региональный формат: его же берёт
-/// WebView2 (`navigator.language`), и журнал не расходится с окном (английская Windows
-/// с русским форматом дат — английский).
+/// `auto` здесь — первый из предпочитаемых языков пользователя (Параметры → Язык), а не
+/// региональный формат и не язык самой Windows: его же отдаёт WebView2 как
+/// `navigator.language`. Окно после загрузки всё равно сообщает свой язык (`sync_ui_locale`).
 pub fn resolve_enabled(preference: &str, enabled: &[&str]) -> &'static str {
     let preference = preference.trim();
     let code = if preference.is_empty() || preference.eq_ignore_ascii_case("auto") {
-        normalize(&system_ui_language())
+        normalize(&preferred_language())
     } else {
         normalize(preference)
     };
@@ -123,7 +123,34 @@ fn system_locale() -> String {
     String::from_utf16_lossy(&buffer[..length as usize - 1])
 }
 
-/// Первый язык интерфейса пользователя Windows («en-US»).
+/// Первый предпочитаемый язык пользователя («en-US»): значение Languages в
+/// HKCU\Control Panel\International\User Profile (его показывает Get-WinUserLanguageList).
+fn preferred_language() -> String {
+    use windows::core::w;
+    use windows::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_MULTI_SZ};
+    let mut buffer = vec![0u16; 1024];
+    let mut size = (buffer.len() * 2) as u32;
+    let status = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            w!(r"Control Panel\International\User Profile"),
+            w!("Languages"),
+            RRF_RT_REG_MULTI_SZ,
+            None,
+            Some(buffer.as_mut_ptr().cast()),
+            Some(&mut size),
+        )
+    };
+    if status.is_ok() {
+        let end = buffer.iter().position(|&unit| unit == 0).unwrap_or(0);
+        if end > 0 {
+            return String::from_utf16_lossy(&buffer[..end]);
+        }
+    }
+    system_ui_language()
+}
+
+/// Первый язык интерфейса Windows («ru-RU»).
 fn system_ui_language() -> String {
     use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
     let (mut count, mut length) = (0u32, 0u32);
