@@ -836,14 +836,23 @@ pub fn settle_goal(typed: &str, wanted: &str) -> String {
 /// `settled` — вариант посчитан, когда после речи уже пауза (`Engine`): последнее слово
 /// договорено, и печатается всё, не дожидаясь окончательного текста куска. Так же, если
 /// вариант не изменился: новых слов не прозвучало, последнее слово закончено.
+///
+/// Слова сравниваются без регистра и знаков: модель на каждом варианте переставляет знак в
+/// хвосте («релиза.» → «релиза, что»), и при сравнении «как есть» совпавших слов не было —
+/// поле ждало паузы и печатало рывками.
 pub fn partial_goal(typed: &str, previous: &str, preview: &str, settled: bool) -> Option<String> {
     let spans = word_spans(preview);
     let previous_spans = word_spans(previous);
+    let same = |&(a, b): &(usize, usize), &(c, d): &(usize, usize)| {
+        word_key(&preview[a..b]) == word_key(&previous[c..d])
+    };
     let agreed = if settled {
         spans.len()
     } else {
         // Без последнего (ещё звучащего) слова, если вариант изменился.
-        let stable = if preview == previous {
+        let unchanged = spans.len() == previous_spans.len()
+            && spans.iter().zip(previous_spans.iter()).all(|(x, y)| same(x, y));
+        let stable = if unchanged {
             spans.len()
         } else {
             spans.len().saturating_sub(1)
@@ -851,18 +860,35 @@ pub fn partial_goal(typed: &str, previous: &str, preview: &str, settled: bool) -
         spans[..stable]
             .iter()
             .zip(previous_spans.iter())
-            .take_while(|(&(a, b), &(c, d))| preview[a..b] == previous[c..d])
+            .take_while(|(x, y)| same(x, y))
             .count()
     };
     if agreed == 0 {
         return None;
     }
     let goal = &preview[..spans[agreed - 1].1];
-    if goal.chars().count() <= typed.chars().count() && typed.starts_with(goal) {
+    // Знак после последнего слова до паузы не печатаем: его модель ещё переставит.
+    let goal = if settled { goal } else { goal.trim_end_matches(|c: char| !c.is_alphanumeric()) };
+    if goal.is_empty() || (goal.chars().count() <= typed.chars().count() && typed.starts_with(goal)) {
         return None;
     }
     let erase = typed.chars().count() - common_prefix_chars(typed, goal);
-    (erase <= PARTIAL_REWRITE_CHARS).then(|| goal.to_string())
+    if erase <= PARTIAL_REWRITE_CHARS {
+        return Some(goal.to_string());
+    }
+    // Модель передумала далеко позади: напечатанное не стираем (это выровняет готовый
+    // кусок), а продолжаем со слов после совпавших. Раньше печать здесь вставала до конца
+    // куска — пять-десять секунд тишины, потом всё разом.
+    let typed_spans = word_spans(typed);
+    let goal_spans = word_spans(goal);
+    let typed_words: Vec<&str> = typed_spans.iter().map(|&(a, b)| &typed[a..b]).collect();
+    let goal_words: Vec<&str> = goal_spans.iter().map(|&(a, b)| &goal[a..b]).collect();
+    let aligned = aligned_words(&typed_words, &goal_words);
+    if aligned == 0 {
+        return None;
+    }
+    let tail = &goal[goal_spans[aligned - 1].1..];
+    (!tail.trim().is_empty()).then(|| format!("{}{tail}", typed.trim_end()))
 }
 
 /// Куски оформленного текста → строка с `\n` на месте перевода строки.
@@ -927,6 +953,21 @@ mod tests {
     }
 
     #[test]
+    fn partial_ignores_punctuation_and_case_the_model_keeps_changing() {
+        // Знак в хвосте переставляется на каждом варианте — слова всё равно совпали.
+        assert_eq!(
+            partial_goal("", "Это к релизу.", "Это к релизу, что мы", false),
+            Some("Это к релизу".into())
+        );
+        assert_eq!(
+            partial_goal("Это к релизу", "это к релизу что мы", "Это к релизу, что мы сделали", false),
+            Some("Это к релизу, что мы".into())
+        );
+        // На паузе знаки печатаются как есть.
+        assert_eq!(partial_goal("Это к релизу", "", "Это к релизу.", true), Some("Это к релизу.".into()));
+    }
+
+    #[test]
     fn live_steps_go_word_by_word_and_erase_first() {
         assert_eq!(next_live_step("", "Привет, как дела"), "Привет,");
         assert_eq!(next_live_step("Привет,", "Привет, как дела"), "Привет, как");
@@ -954,9 +995,10 @@ mod tests {
     #[test]
     fn partial_never_erases_far_back() {
         let typed = "раз два три четыре пять шесть семь";
+        // Передумала далеко позади — не стираем, но печать не встаёт: дальше новые слова.
         assert_eq!(
             partial_goal(typed, "раз дважды три четыре пять шесть семь восемь", "раз дважды три четыре пять шесть семь восемь девять", false),
-            None
+            Some(format!("{typed} восемь"))
         );
         assert_eq!(
             partial_goal(typed, "", "раз дважды три четыре пять шесть семь", true),
