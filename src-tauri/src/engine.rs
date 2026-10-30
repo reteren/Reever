@@ -1636,13 +1636,28 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     /// фраза простоя (тогда она обязана начинаться с wake-слова). Конец фразы разберёт
     /// `opening_segment` так же, как обычный старт диктовки.
     fn try_open_dictation(&mut self, idle: bool, out: &mut Vec<EngineEvent>) -> bool {
-        // В lazy-режиме частичный transcript ещё не даёт надёжно подтвердить wake.
-        // Диктовка стартует после полной фразы через handle_idle_transcript.
-        if idle && self.strict_spotted_wake {
-            return false;
-        }
-        let Ok(raw) = self.asr.transcribe_verbatim(self.segmenter.current_audio()) else {
-            return false;
+        // В lazy-режиме wake детектора подтверждает большая модель — по частичному тексту
+        // так же, как при досрочном конце команды (`try_fast_end`). Раньше здесь диктовка
+        // ждала конца всей первой фразы: «ривер напиши …» одним духом начинало печатать
+        // через 10–20 с, и маскот за это время успевал уйти.
+        let mut notes = Vec::new();
+        let raw = if idle && self.strict_spotted_wake {
+            let audio_len = self.segmenter.current_audio().len();
+            if !self.spot_age.is_some_and(|age| age <= audio_len + samples(SPOT_GRACE_MS)) {
+                return false;
+            }
+            let Ok(timed) = self.asr.transcribe_timed(self.segmenter.current_audio()) else {
+                return false;
+            };
+            match self.confirm_wake(&timed, audio_len, &mut notes) {
+                Some(confirmed) => confirmed.text,
+                None => return false,
+            }
+        } else {
+            let Ok(raw) = self.asr.transcribe_verbatim(self.segmenter.current_audio()) else {
+                return false;
+            };
+            raw
         };
         if idle && strip_initial_wake(&normalize(&raw), &self.cfg.wake_words).is_none() {
             return false;
@@ -1653,6 +1668,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         if raw.split_whitespace().count() <= skip {
             return false;
         }
+        out.append(&mut notes);
         out.push(EngineEvent::DictationStart);
         out.push(EngineEvent::State("listening"));
         self.dictation_lang = None;
