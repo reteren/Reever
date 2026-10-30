@@ -695,12 +695,12 @@ $('#grammarSettingsLink').onclick=event=>{
 let settingsObj={};
 let mascotPlacing=false;
 let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
-// [ключ настройки, тип, варианты, когда применяется]; подпись — settings.<ключ>,
+// [ключ настройки, тип, варианты]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
-  ['interface',[['lite_ui','lite_ui',null,'instant'],['ui_language','ui_language',null,'instant'],['ui_languages','ui_languages']]],
-  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never'],'instant'],['mascot_scale','mascot_scale',null,'instant'],['mascot_position','mascot_position',null,'instant'],['mascot_bubble','bool',null,'instant']]],
-  ['activation',[['activation_mode','select',['both','wake','hotkey']],['voice_adapt','voice_adapt'],['voice_passive','bool'],['hotkey','hotkey',null,'instant'],['mute_hotkey','hotkey',null,'instant']]],
+  ['interface',[['lite_ui','lite_ui'],['ui_language','ui_language'],['ui_languages','ui_languages']]],
+  ['mascot',[['mascot_mode','mascot_mode',['always','commands','never']],['mascot_scale','mascot_scale'],['mascot_position','mascot_position'],['mascot_bubble','bool']]],
+  ['activation',[['activation_mode','select',['both','wake','hotkey']],['voice_adapt','voice_adapt'],['voice_passive','bool'],['hotkey','hotkey'],['mute_hotkey','hotkey']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
   ['languages',[['languages','languages']]],
   ['recognition',[
@@ -715,9 +715,20 @@ const GROUPS=[
 // Замена англицизмов действует только при кириллическом языке распознавания
 // (anglicism::CYRILLIC_LANGUAGES).
 const CYRILLIC_LANGS=['ru','uk','bg'];
-// Всё применяется по «Сохранить»; пометка «— сразу» — у того, что действует уже при
-// изменении поля (язык интерфейса, хоткеи), без «Сохранить».
-const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} - ${t('settings.instant')}`:t('settings.'+key);
+// Кнопки «Сохранить» нет: каждое изменение сохраняется и применяется сразу. Частые
+// изменения подряд склеиваются в одно сохранение, Rust получает только изменённые ключи.
+const settingLabel=key=>t('settings.'+key);
+let settingsPatch={}, settingsSaveTimer=null;
+function saveSetting(key,value){
+  settingsObj[key]=value; settingsPatch[key]=value;
+  clearTimeout(settingsSaveTimer); settingsSaveTimer=setTimeout(flushSettings,300);
+}
+async function flushSettings(){
+  const patch=settingsPatch; settingsPatch={}; settingsSaveTimer=null;
+  if(!Object.keys(patch).length) return;
+  try{ await invoke('save_settings',{settings:patch}); $('#settingsMsg').textContent=t('settings.saved'); }
+  catch(e){ $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('saveSettings',e); }
+}
 const settingHelp=key=>I18N.has(`settings.${key}.help`)?t(`settings.${key}.help`):null;
 let cbSeq=0;
 // Индекс дисков: плитка на Главной и строка под переключателем в настройках.
@@ -892,16 +903,16 @@ function startIndexStatusPolling(){
   refreshIndexStatus();
   indexStatusTimer=setInterval(()=>{ refreshIndexStatus(); },5000);
 }
-function fieldEl(key,type,opts,when='save'){
-  const lbl=settingLabel(key,when), help=settingHelp(key);
+function fieldEl(key,type,opts){
+  const lbl=settingLabel(key), help=settingHelp(key);
   // Чекбокс в семёрке — подпись справа на одной строке, а не сверху.
   if(type==='bool'){
     const wrap=el('div',{className:help?'setting-with-help':''});
     const row=el('div',{className:'cbrow'});
     const id='cb'+(++cbSeq);
     const inp=el('input',{type:'checkbox',id}); inp.checked=key==='mascot_bubble'?settingsObj[key]!==false:!!settingsObj[key];
-    // Пузырь маскота включается сразу, без «Сохранить».
-    inp.onchange=()=>{ settingsObj[key]=inp.checked; if(key==='mascot_bubble') applyMascot(); };
+    // Пузырь маскота применяет и сохраняет set_mascot, без перезапуска распознавания.
+    inp.onchange=()=>{ if(key==='mascot_bubble'){ settingsObj[key]=inp.checked; applyMascot(); } else saveSetting(key,inp.checked); };
     const lab=el('label',{htmlFor:id,textContent:lbl});
     row.append(inp,lab); wrap.append(row);
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
@@ -925,7 +936,7 @@ function fieldEl(key,type,opts,when='save'){
   }
   const wrap=el('div'); wrap.append(el('label',{className:'fld',textContent:lbl}));
   let inp;
-  if(type==='list'){ inp=el('input',{value:(settingsObj[key]||[]).join(', ')}); inp.oninput=()=>settingsObj[key]=inp.value.split(',').map(s=>s.trim()).filter(Boolean); }
+  if(type==='list'){ inp=el('input',{value:(settingsObj[key]||[]).join(', ')}); inp.onchange=()=>saveSetting(key,inp.value.split(',').map(s=>s.trim()).filter(Boolean)); }
   else if(type==='languages'){
     wrap.append(languagesEditor(languageModels));
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
@@ -1005,10 +1016,10 @@ function fieldEl(key,type,opts,when='save'){
     const out=el('span',{className:'mascot-scale-value',textContent:`${value} / 5`});
     const about=el('div',{className:'hint setting-help',textContent:t(`settings.${key}.${value}`)});
     inp.oninput=()=>{
-      settingsObj[key]=Number(inp.value);
       out.textContent=`${inp.value} / 5`;
       about.textContent=t(`settings.${key}.${inp.value}`);
     };
+    inp.onchange=()=>saveSetting(key,Number(inp.value));
     row.append(inp,out); wrap.append(row,about);
     return wrap;
   }
@@ -1020,12 +1031,13 @@ function fieldEl(key,type,opts,when='save'){
     inp=el('input',{type:'range',min:'0',max:String(NEVER),step:'1',value:String(value)});
     const label=v=>v>=NEVER?t(`settings.${key}.never`):v===0?t(`settings.${key}.now`):t(`settings.${key}.seconds`,{n:v});
     const out=el('span',{className:'mascot-scale-value',textContent:label(value)});
-    inp.oninput=()=>{ const v=Number(inp.value); settingsObj[key]=v; out.textContent=label(v); };
+    inp.oninput=()=>{ out.textContent=label(Number(inp.value)); };
+    inp.onchange=()=>saveSetting(key,Number(inp.value));
     row.append(inp,out); wrap.append(row);
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
     return wrap;
   }
-  else if(type==='select'){ inp=el('select'); for(const o of opts){const optionKey=`settings.${key}.${o}`;const label=I18N.has(optionKey)?t(optionKey):I18N.has(`mode.${o}`)?t(`mode.${o}`):o;const op=el('option',{value:o,textContent:label});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>settingsObj[key]=inp.value; }
+  else if(type==='select'){ inp=el('select'); for(const o of opts){const optionKey=`settings.${key}.${o}`;const label=I18N.has(optionKey)?t(optionKey):I18N.has(`mode.${o}`)?t(`mode.${o}`):o;const op=el('option',{value:o,textContent:label});if((settingsObj[key]??opts[0])===o)op.selected=true;inp.append(op);} inp.onchange=()=>saveSetting(key,inp.value); }
   else if(type==='hotkey'){
     inp=el('button',{type:'button',className:'sm'}); inp.style.minWidth='150px';
     const render=()=>inp.textContent=settingsObj[key]||t('hotkey.none');
@@ -1059,7 +1071,12 @@ function fieldEl(key,type,opts,when='save'){
       window.addEventListener('keydown',onKey,true);
     };
   }
-  else { inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; } inp.oninput=()=>settingsObj[key]= type==='number'?Number(inp.value):inp.value; }
+  else {
+    inp=el('input',{type,value:settingsObj[key]??''}); if(['vad_threshold','match_threshold'].includes(key)){ inp.step='0.01'; inp.min='0'; inp.max='1'; }
+    // Сохраняется по окончании ввода (Enter или уход из поля), а не на каждую цифру:
+    // «0.» посреди набора не должен стать порогом 0.
+    inp.onchange=()=>{ if(type==='number'&&(inp.value===''||!Number.isFinite(Number(inp.value)))) return; saveSetting(key,type==='number'?Number(inp.value):inp.value); };
+  }
   wrap.append(inp);
   if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
   if(key==='local_index'){
@@ -1075,12 +1092,11 @@ function uiLanguagesEditor(){
   const box=el('div',{className:'lang-editor'});
   const enabled=I18N.enabled;
   const setLanguages=async codes=>{
-    settingsObj.ui_languages=codes; I18N.setEnabled(codes);
+    saveSetting('ui_languages',codes); I18N.setEnabled(codes);
     const current=settingsObj.ui_language||'auto';
     if(current!=='auto'&&!codes.includes(current)) await changeLanguage('auto');
     else if(I18N.resolve(current)!==I18N.locale) await changeLanguage(current);
     else renderSettings();
-    $('#settingsMsg').textContent=t('settings.languages.changed');
   };
   for(const code of enabled){
     const row=el('div',{className:'lang-row'});
@@ -1134,9 +1150,8 @@ function languagesEditor(models){
   const packOf=code=>models?.languages?.[code];
   const installed=pack=>(models?.installed||[]).includes(pack);
   const setLanguages=codes=>{
-    settingsObj.languages=codes; renderSettings(); renderGrammarExamples(); renderPackWarning();
+    saveSetting('languages',codes); renderSettings(); renderGrammarExamples(); renderPackWarning();
     if(grammarDraft) renderGrammarEditor();
-    $('#settingsMsg').textContent=t('settings.languages.changed');
   };
   for(const code of enabled){
     const row=el('div',{className:'lang-row'});
@@ -1199,29 +1214,23 @@ function renderSettings(){
     // В лёгком интерфейсе маскота нет: группа видна, но серая и недоступна.
     const locked=title==='mascot'&&!!settingsObj.lite_ui;
     if(locked){ g.disabled=true; g.classList.add('locked'); g.append(el('div',{className:'hint setting-help',textContent:t('settings.mascot.liteLocked')})); }
-    for(const f of fields){
-      const [key,type,opts,when]=f;
-      g.append(fieldEl(key,type,opts,when));
-    }
+    for(const [key,type,opts] of fields) g.append(fieldEl(key,type,opts));
     F.append(g);
   }
   const g=el('fieldset',{className:'grp'}); g.append(el('legend',{textContent:t('settings.group.os')}));
   const asRow=el('div',{className:'cbrow'});
   const asCb=el('input',{type:'checkbox',id:'cbAuto'}); asCb.checked=autostart;
   asCb.onchange=async()=>{ try{await invoke('set_autostart',{on:asCb.checked}); autostart=asCb.checked; $('#settingsMsg').textContent=t('settings.autostartState',{state:t(asCb.checked?'common.on':'common.off')});}catch(e){$('#settingsMsg').textContent=t('settings.error',{error:e});reportError('toggleAutostart',e);} };
-  asRow.append(asCb, el('label',{htmlFor:'cbAuto',textContent:settingLabel('autostart','instant')}));
+  asRow.append(asCb, el('label',{htmlFor:'cbAuto',textContent:settingLabel('autostart')}));
   g.append(asRow);
   const spWrap=el('div'); spWrap.append(el('label',{className:'fld',textContent:settingLabel('sound_pack')}));
   const sp=el('select'); for(const p of soundPacks){const o=el('option',{value:p,textContent:p});if((settingsObj.sound_pack??'classic')===p)o.selected=true;sp.append(o);}
-  sp.onchange=()=>settingsObj.sound_pack=sp.value; spWrap.append(sp); g.append(spWrap);
+  sp.onchange=()=>saveSetting('sound_pack',sp.value); spWrap.append(sp); g.append(spWrap);
   F.append(g);
   const mode=settingsObj.activation_mode||'both';
   $('#t-mode').textContent=I18N.has(`mode.${mode}`)?t(`mode.${mode}`):mode;
   $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'-':(settingsObj.hotkey||'-');
 }
-// Сохранение применяется сразу: Reever перечитывает настройки и перезапускает
-// распознавание (несколько секунд загрузки моделей), окно и всё остальное работают.
-$('#saveSettingsBtn').onclick=async()=>{ try{await invoke('save_settings',{settings:settingsObj}); $('#settingsMsg').textContent=t('settings.saved');}catch(e){$('#settingsMsg').textContent=t('settings.error',{error:e});reportError('saveSettings',e);} };
 
 // Язык интерфейса: перевести разметку и перерисовать всё, что построено из кода.
 // Rust сохраняет выбор в settings.json и переводит меню трея.

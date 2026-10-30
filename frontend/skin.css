@@ -303,7 +303,6 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .setting-index-status { font-variant-numeric: tabular-nums; }
 #settingsForm { margin-top: 14px; }
 .msg { min-height: 18px; margin-top: 8px; color: var(--acc-hot); text-shadow: var(--g2); }
-.save-row { margin-top: 6px; }
 
 fieldset.grp { margin: 0 0 12px; padding: 4px 14px 12px; border: 1px solid var(--acc-4); border-radius: 8px; }
 fieldset.grp legend {

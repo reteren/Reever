@@ -469,8 +469,27 @@ pub fn save_settings(
     state: State<'_, Arc<SharedState>>,
     settings: serde_json::Value,
 ) -> Result<(), String> {
+    // Окно сохраняет каждое изменение сразу и присылает только изменённые ключи: они
+    // вливаются в файл, и ключи, которые тем временем записал Rust, не затираются.
+    // Ничего не изменилось — распознавание не перезапускаем.
     let path = config.get().settings_path.clone();
-    let txt = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    let current: serde_json::Value = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .filter(serde_json::Value::is_object)
+        .unwrap_or_else(|| serde_json::json!({}));
+    let mut merged = current.clone();
+    if let (Some(into), Some(from)) = (merged.as_object_mut(), settings.as_object()) {
+        for (key, value) in from {
+            into.insert(key.clone(), value.clone());
+        }
+    } else {
+        return Err("settings must be an object".into());
+    }
+    if merged == current {
+        return Ok(());
+    }
+    let txt = serde_json::to_string_pretty(&merged).map_err(|e| e.to_string())?;
     std::fs::write(&path, txt).map_err(|e| e.to_string())?;
     let fresh = ReeverConfig::resolve(&app).map_err(|e| e.to_string())?;
     let s = &fresh.settings;

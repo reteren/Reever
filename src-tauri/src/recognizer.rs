@@ -103,6 +103,24 @@ impl Transcriber for LazyAsr {
     }
 }
 
+/// Модели, оставшиеся от прошлого запуска потока. Настройки сохраняются на каждое изменение,
+/// и перезапуск ради порога VAD или паузы не должен заново грузить сотни мегабайт: если план
+/// моделей и число потоков те же, новый запуск забирает их отсюда.
+static KEPT_ASR: Mutex<Option<(crate::models::ModelPlan, i32, AsrSet)>> = Mutex::new(None);
+
+fn keep_asr(cfg: &ReeverConfig, asr: &LazyAsr) {
+    let Some(models) = asr.inner.lock().ok().and_then(|mut slot| slot.take()) else { return };
+    if let Ok(mut kept) = KEPT_ASR.lock() {
+        *kept = Some((cfg.models.clone(), cfg.settings.asr_threads.max(1) as i32, models));
+    }
+}
+
+/// Оставленные модели, если они подходят; неподходящие освобождаются до загрузки новых.
+fn take_kept_asr(cfg: &ReeverConfig) -> Option<AsrSet> {
+    let (plan, threads, models) = KEPT_ASR.lock().ok()?.take()?;
+    (plan == cfg.models && threads == cfg.settings.asr_threads.max(1) as i32).then_some(models)
+}
+
 /// Загруженные модели и ошибка определителя языка, если он не загрузился.
 /// Модели распознавания, ошибка определителя языка и словарь англицизмов (если он нужен):
 /// словарь грузится вместе с моделями и живёт столько же.
@@ -193,12 +211,15 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     // По умолчанию ASR не выгружается и остаётся независимым текстовым wake-каналом.
     // Экономию памяти включает ползунок выгрузки.
     let lazy_loading = s.models_unload_after_s <= crate::config::MODELS_UNLOAD_MAX_S;
+    let kept = take_kept_asr(cfg);
     let asr = if lazy_loading {
         ui_log(
             app,
             crate::msg!("log.models.lazy"),
         );
         LazyAsr::default()
+    } else if let Some(models) = kept {
+        LazyAsr::loaded(models)
     } else {
         ui_log(app, crate::msg!("log.models.loading", path = model_names(cfg)));
         let (models, lid_error) = AsrSet::load(&cfg.models, s.asr_threads.max(1) as i32)
@@ -326,6 +347,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         if shared.reload.load(Ordering::Relaxed) {
             loading_audio.fill(0);
             clear_recent_audio(&mut recent_chunks, &mut recent_samples);
+            keep_asr(cfg, &asr);
             return Ok(());
         }
         if trace && stream.is_some() && last_audio_trace.elapsed() >= Duration::from_secs(60) {
