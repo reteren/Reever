@@ -82,7 +82,7 @@ fn append_log(message: &str) {
 /// файл читают при разборе сбоев, и он не должен зависеть от выбранного языка).
 /// Диагностика детектора и замеры («wake: …», «trace: …») — на английском и только для
 /// разбора по reever.log: в окне журнала она была бы непереведённым шумом.
-const DIAGNOSTIC_PREFIXES: &[&str] = &["wake:", "trace:", "voice:", "blackbox:"];
+const DIAGNOSTIC_PREFIXES: &[&str] = &["wake:", "trace:", "voice:", "blackbox:", "sound:", "mascot:"];
 
 pub fn ui_log(app: &AppHandle, msg: impl Into<LogText>) {
     let msg = msg.into();

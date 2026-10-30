@@ -1,8 +1,7 @@
-use std::cell::UnsafeCell;
-use std::fs::File;
-use std::io::BufReader;
+use std::cell::{RefCell, UnsafeCell};
+use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TrySendError};
 use std::sync::Arc;
@@ -567,37 +566,79 @@ fn start_cpal_capture(tx: AudioSender) -> anyhow::Result<Stream> {
 
 /// Аудио-плеер. OutputStream держим живым весь рантайм (иначе щелчки/латентность).
 /// OutputStream !Send -> создаётся и живёт в worker-потоке.
+///
+/// Сигналы проигрываются из памяти: под нагрузкой на диск чтение файла на каждый сигнал
+/// опаздывало. Вывод открывается заново, если Windows сменила устройство по умолчанию
+/// (открытый поток молча играл бы в прежнее) или поток сломался; без устройства вывода
+/// Reever работает молча, а не падает.
 pub struct Player {
-    _stream: OutputStream,
-    handle: OutputStreamHandle,
+    output: RefCell<Option<(OutputStream, OutputStreamHandle)>>,
+    /// Устройство вывода по умолчанию, на котором открыт поток.
+    device: RefCell<Option<String>>,
+    sounds: RefCell<HashMap<PathBuf, Arc<[u8]>>>,
 }
 
 impl Player {
-    pub fn new() -> anyhow::Result<Self> {
-        let (_stream, handle) =
-            OutputStream::try_default().map_err(|e| anyhow::anyhow!("audio out: {e}"))?;
-        Ok(Self { _stream, handle })
+    pub fn new() -> Self {
+        let player = Self {
+            output: RefCell::new(None),
+            device: RefCell::new(None),
+            sounds: RefCell::new(HashMap::new()),
+        };
+        let _ = player.open();
+        player
+    }
+
+    fn open(&self) -> anyhow::Result<()> {
+        *self.output.borrow_mut() = None;
+        *self.device.borrow_mut() = crate::micwatch::default_output().map(|(id, _)| id);
+        let output = OutputStream::try_default().map_err(|e| anyhow::anyhow!("audio out: {e}"))?;
+        *self.output.borrow_mut() = Some(output);
+        Ok(())
+    }
+
+    /// Раз в пару секунд из воркера: сменилось устройство по умолчанию — перейти на него.
+    /// Возвращает имя нового устройства для журнала.
+    pub fn follow_default_device(&self) -> Option<String> {
+        let (id, name) = crate::micwatch::default_output()?;
+        if self.device.borrow().as_deref() == Some(id.as_str()) && self.output.borrow().is_some() {
+            return None;
+        }
+        self.open().ok().map(|_| name)
     }
 
     /// НЕблокирующее воспроизведение: звук играет в фоне, воркер сразу продолжает
     /// (иначе длинный звук задерживал бы реакцию — Reever ждал бы конца проигрывания).
-    pub fn play(&self, path: &Path) {
-        let file = match File::open(path) {
-            Ok(f) => BufReader::new(f),
-            Err(e) => {
-                eprintln!("[reever] sound not found {}: {e}", path.display());
-                return;
+    pub fn play(&self, path: &Path) -> anyhow::Result<()> {
+        let bytes = self.bytes(path)?;
+        let sink = match self.sink() {
+            Ok(sink) => sink,
+            // поток мог сломаться (устройство пропало) — открыть заново и попробовать ещё раз
+            Err(_) => {
+                self.open()?;
+                self.sink()?
             }
         };
-        match Decoder::new(file) {
-            Ok(source) => {
-                if let Ok(sink) = Sink::try_new(&self.handle) {
-                    sink.append(source);
-                    sink.detach(); // играет до конца в фоне, не блокирует поток
-                }
-            }
-            Err(e) => eprintln!("[reever] decode error {}: {e}", path.display()),
+        sink.append(Decoder::new(std::io::Cursor::new(bytes))?);
+        sink.detach(); // играет до конца в фоне, не блокирует поток
+        Ok(())
+    }
+
+    fn sink(&self) -> anyhow::Result<Sink> {
+        let output = self.output.borrow();
+        let (_, handle) = output.as_ref().ok_or_else(|| anyhow::anyhow!("no audio output"))?;
+        Ok(Sink::try_new(handle)?)
+    }
+
+    fn bytes(&self, path: &Path) -> anyhow::Result<Arc<[u8]>> {
+        if let Some(bytes) = self.sounds.borrow().get(path) {
+            return Ok(bytes.clone());
         }
+        let bytes: Arc<[u8]> = std::fs::read(path)
+            .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?
+            .into();
+        self.sounds.borrow_mut().insert(path.to_path_buf(), bytes.clone());
+        Ok(bytes)
     }
 }
 

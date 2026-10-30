@@ -31,6 +31,8 @@ use crate::{textnorm, typing};
 const AUDIO_QUEUE: usize = 512;
 const WAKE_PREROLL_SAMPLES: usize = 16_000;
 const LOADING_AUDIO_LIMIT_SAMPLES: usize = 60 * 16_000;
+/// Сколько перезапуск распознавания ждёт конца идущей команды (диктовка бывает долгой).
+const RELOAD_WAIT_MAX: Duration = Duration::from_secs(60);
 
 /// Main ASR в lazy-режиме остаётся типом Engine, но сам объект хранится отдельно:
 /// worker может установить или забрать его, не пересоздавая VAD и wake-spotter.
@@ -178,7 +180,7 @@ fn set_asr_status(app: &AppHandle, status: &Mutex<Status>, asr: &'static str) {
 
 fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> anyhow::Result<()> {
     let s = &cfg.settings;
-    let player = Player::new()?;
+    let player = Player::new();
     let status = Arc::new(Mutex::new(Status {
         asr: "loading",
         model: model_names(cfg),
@@ -343,8 +345,18 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut voice_recording = false;
     let mut picker_muted = false;
     let mut voice_progress = std::time::Instant::now();
+    let mut reload_waiting: Option<std::time::Instant> = None;
     loop {
-        if shared.reload.load(Ordering::Relaxed) {
+        // Перезапуск (сохранены настройки, применилась тихая подстройка) ждёт конца команды:
+        // посреди неё он обрывал команду, сигнал и уводил маскота. Но не дольше RELOAD_WAIT_MAX.
+        let reload = shared.reload.load(Ordering::Relaxed);
+        if !reload {
+            reload_waiting = None;
+        }
+        let busy = matches!(crate::events::current_state().as_str(), "listening" | "busy");
+        if reload && busy && reload_waiting.get_or_insert_with(std::time::Instant::now).elapsed() < RELOAD_WAIT_MAX {
+            // команда ещё идёт — перезапуск после неё
+        } else if reload {
             loading_audio.fill(0);
             clear_recent_audio(&mut recent_chunks, &mut recent_samples);
             keep_asr(cfg, &asr);
@@ -384,6 +396,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             }
             if now.is_some() {
                 mic_level = now;
+            }
+            if let Some(name) = player.follow_default_device() {
+                ui_log(app, format!("sound: output switched to «{name}»"));
             }
         }
         if shared.paused.load(Ordering::Relaxed) {
@@ -1040,7 +1055,16 @@ const SPOT_CONFIRM_WINDOW: Duration = Duration::from_secs(4);
 
 impl Worker<'_> {
     fn sound(&self, name: &str) {
-        self.player.play(&self.cfg.sound(name));
+        self.play(&self.cfg.sound(name));
+    }
+
+    /// Сбой звука виден в reever.log: раньше он уходил в консоль, которой в релизе нет.
+    fn play(&self, path: &std::path::Path) {
+        let name = path.file_name().map(|name| name.to_string_lossy()).unwrap_or_default();
+        match self.player.play(path) {
+            Ok(()) => ui_log(self.app, format!("sound: {name}")),
+            Err(error) => ui_log(self.app, format!("sound: {name} not played: {error:#}")),
+        }
     }
 
     /// Сигнал «услышал ривер»: сразу от детектора, а если его нет — когда фраза разобрана.
@@ -1622,7 +1646,7 @@ impl Worker<'_> {
     fn confirm_sound(&self) {
         let path = self.cfg.sound("confirm.wav");
         if path.is_file() {
-            self.player.play(&path);
+            self.play(&path);
         } else {
             self.sound("start.wav");
         }

@@ -3,7 +3,7 @@
 //! это видно сразу, а не по догадкам.
 
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
-use windows::Win32::Media::Audio::{eCapture, eConsole, IMMDeviceEnumerator, MMDeviceEnumerator};
+use windows::Win32::Media::Audio::{eCapture, eConsole, eRender, EDataFlow, IMMDeviceEnumerator, MMDeviceEnumerator};
 use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
 
 /// Громкость (0–100 %) и выключен ли микрофон.
@@ -35,15 +35,21 @@ fn mic_level_local() -> Option<MicLevel> {
 /// микрофон (подключили гарнитуру, вернули выдернутый USB): открытый поток при этом
 /// не обрывается и молча продолжает слушать прежнее устройство.
 pub fn default_mic() -> Option<(String, String)> {
-    crate::input_thread::call(default_mic_local).flatten()
+    crate::input_thread::call(|| default_endpoint_local(eCapture)).flatten()
 }
 
-fn default_mic_local() -> Option<(String, String)> {
+/// То же для вывода звука: audio.rs переходит на новое устройство (наушники вместо колонок),
+/// иначе сигналы молча играли бы в прежнее.
+pub fn default_output() -> Option<(String, String)> {
+    crate::input_thread::call(|| default_endpoint_local(eRender)).flatten()
+}
+
+fn default_endpoint_local(flow: EDataFlow) -> Option<(String, String)> {
     use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
     use windows::Win32::System::Com::{CoTaskMemFree, STGM_READ};
     unsafe {
         let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
-        let device = enumerator.GetDefaultAudioEndpoint(eCapture, eConsole).ok()?;
+        let device = enumerator.GetDefaultAudioEndpoint(flow, eConsole).ok()?;
         let raw = device.GetId().ok()?;
         let id = raw.to_string().ok();
         CoTaskMemFree(Some(raw.0 as *const _));
