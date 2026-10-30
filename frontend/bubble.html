@@ -118,8 +118,12 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
     invoke('mascot_intro_done').catch(() => {});
   }
 
+  // Ответ на старый запрос мог прийти после нового — тогда он устарел, и пузырь не гаснет зря.
+  let layoutSeq = 0;
   function relayout() {
+    const seq = ++layoutSeq;
     invoke('bubble_layout').then(([ok, ax]) => {
+      if (seq !== layoutSeq) return;
       allowed = !!ok;
       document.documentElement.style.setProperty('--ax', `${ax}px`);
       render();

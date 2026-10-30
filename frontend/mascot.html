@@ -79,7 +79,12 @@
     else if (view.mode === 'portal_out') { view.present(); setResting(true); }
   });
   win.listen('mascot://leave', () => { if (!held && view.mode !== 'gone') { setResting(false); view.depart(); } });
-  win.listen('mascot://hidden', () => { entered = false; setResting(false); view.absent(); view.stop(); });
+  // Под нагрузкой события из разных потоков Rust доходят с опозданием: «спрятать» мог
+  // догнать уже следующий показ. Сверяемся с Rust — если маскоту положено быть на экране, выйти.
+  win.listen('mascot://hidden', () => {
+    entered = false; setResting(false); view.absent(); view.stop();
+    invoke('mascot_layout').then(([, , shown]) => { if (shown && !entered && view.mode === 'gone') { setResting(false); view.arrive(); } }).catch(() => {});
+  });
 
   // запас окна и виден ли маскот знает Rust; пока ответа нет — двукратный запас
   let laidOut = false;

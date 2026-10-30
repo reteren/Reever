@@ -55,6 +55,18 @@ const TELEPORT: Duration = Duration::from_millis(450);
 /// «ривер» (загрузка и распознавание — 1–2 с, на медленной машине дольше). Не подтвердила
 /// и ничего не случилось — ложное срабатывание, маскот уходит.
 const WAKE_GRACE: Duration = Duration::from_secs(8);
+/// Пока модели грузятся (состояние «loading»), срок `WAKE_GRACE` не истекает — но не дольше
+/// этого: под нагрузкой загрузка после «ривер» идёт дольше 8 с, и маскот уходил посреди команды.
+const WAKE_GRACE_MAX: Duration = Duration::from_secs(30);
+
+/// Смены «показать / уйти / спрятать» идут из разных потоков (аудио, отложенные уходы,
+/// команды окна). Проверка поколения и действие по ней — под одним замком: иначе новое
+/// «ривер» между проверкой и действием оставляло маскота спрятанным на всю команду.
+static TRANSITION: Mutex<()> = Mutex::new(());
+
+fn transition() -> std::sync::MutexGuard<'static, ()> {
+    TRANSITION.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 static MODE: Mutex<String> = Mutex::new(String::new());
 /// Осьминог сидит в сфере главного окна.
@@ -221,6 +233,7 @@ pub fn begin_placing(app: &AppHandle) -> bool {
         return false;
     }
     let Some(window) = app.get_webview_window("mascot") else { return false };
+    let _transition = transition();
     PLACING.store(true, Ordering::Relaxed);
     GENERATION.fetch_add(1, Ordering::Relaxed);
     if IN_ORB.load(Ordering::Relaxed) {
@@ -267,6 +280,7 @@ pub fn spawn(app: &AppHandle) {
 pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
     let mode = normalize_mode(mode);
     let scale = clamp_scale(scale);
+    let _transition = transition();
     if let Ok(mut current) = MODE.lock() {
         *current = mode.to_string();
     }
@@ -305,6 +319,12 @@ pub fn apply(app: &AppHandle, mode: &str, scale: u32) {
 /// Режим `commands`: появиться, когда Reever начал слушать, и уйти через секунду
 /// после того, как команда отработала.
 pub fn on_state(app: &AppHandle, state: &str) {
+    let _transition = transition();
+    on_state_locked(app, state);
+}
+
+/// `on_state` под уже взятым `transition()`.
+fn on_state_locked(app: &AppHandle, state: &str) {
     // «loading» бывает и посреди команды (модели догружаются после «ривер») — не повод уходить
     if mode() != "commands" || state == "loading" || intro_active() || PLACING.load(Ordering::Relaxed) {
         return;
@@ -325,6 +345,7 @@ pub fn on_state(app: &AppHandle, state: &str) {
             orb(app, "depart");
             std::thread::spawn(move || {
                 std::thread::sleep(TELEPORT);
+                let _transition = transition();
                 if GENERATION.load(Ordering::Relaxed) == generation {
                     show(&window);
                 }
@@ -348,13 +369,25 @@ pub fn on_wake(app: &AppHandle) {
     if mode() != "commands" {
         return;
     }
-    on_state(app, "listening");
-    WAKE_PENDING.store(true, Ordering::Relaxed);
+    let generation = {
+        let _transition = transition();
+        on_state_locked(app, "listening");
+        WAKE_PENDING.store(true, Ordering::Relaxed);
+        GENERATION.load(Ordering::Relaxed)
+    };
     let Some(window) = app.get_webview_window("mascot") else { return };
-    let generation = GENERATION.load(Ordering::Relaxed);
     std::thread::spawn(move || {
         std::thread::sleep(WAKE_GRACE);
+        let waited = std::time::Instant::now();
+        while events::current_state() == "loading"
+            && waited.elapsed() < WAKE_GRACE_MAX.saturating_sub(WAKE_GRACE)
+            && GENERATION.load(Ordering::Relaxed) == generation
+        {
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        let _transition = transition();
         if GENERATION.load(Ordering::Relaxed) == generation {
+            ui_log(window.app_handle(), "mascot: the wake word was not confirmed in time, leaving");
             WAKE_PENDING.store(false, Ordering::Relaxed);
             hide_later(window, generation);
         }
@@ -364,8 +397,9 @@ pub fn on_wake(app: &AppHandle) {
 /// Большая модель не нашла «ривер» во фразе после срабатывания детектора — уйти, не
 /// дожидаясь `WAKE_GRACE`.
 pub fn on_wake_rejected(app: &AppHandle) {
+    let _transition = transition();
     if WAKE_PENDING.swap(false, Ordering::Relaxed) {
-        on_state(app, "idle");
+        on_state_locked(app, "idle");
     }
 }
 
@@ -373,36 +407,32 @@ pub fn on_wake_rejected(app: &AppHandle) {
 fn hide_later(window: WebviewWindow, generation: u64) {
     std::thread::spawn(move || {
         std::thread::sleep(LINGER);
-        // пока маскота держат в руке, он никуда не уходит — уйдёт после отпускания
-        if GENERATION.load(Ordering::Relaxed) != generation
-            || DRAGGING.load(Ordering::Relaxed)
-            || PLACING.load(Ordering::Relaxed)
-            || mode() != "commands"
-        {
-            return;
-        }
-        let _ = window.emit("mascot://leave", ());
         let app = window.app_handle().clone();
-        LEAVING.store(true, Ordering::Relaxed);
-        // Новое «ривер» могло прийти между проверкой выше и «leave»: тогда его «enter» уже
-        // ушёл раньше нашего «leave», и осьминог исчез бы на всю команду. Вернуть его.
-        if GENERATION.load(Ordering::Relaxed) != generation {
-            LEAVING.store(false, Ordering::Relaxed);
-            let _ = window.emit("mascot://enter", false);
-            return;
-        }
-        bubble::notify(&app);
-        let to_orb = events::main_visible();
+        let to_orb = {
+            let _transition = transition();
+            // пока маскота держат в руке, он никуда не уходит — уйдёт после отпускания
+            if GENERATION.load(Ordering::Relaxed) != generation
+                || DRAGGING.load(Ordering::Relaxed)
+                || PLACING.load(Ordering::Relaxed)
+                || mode() != "commands"
+            {
+                return;
+            }
+            let _ = window.emit("mascot://leave", ());
+            LEAVING.store(true, Ordering::Relaxed);
+            bubble::notify(&app);
+            events::main_visible()
+        };
         if to_orb {
             std::thread::sleep(TELEPORT);
+            let _transition = transition();
             if GENERATION.load(Ordering::Relaxed) != generation {
                 return;
             }
             orb(&app, "arrive");
-            std::thread::sleep(LEAVE.saturating_sub(TELEPORT));
-        } else {
-            std::thread::sleep(LEAVE);
         }
+        std::thread::sleep(if to_orb { LEAVE.saturating_sub(TELEPORT) } else { LEAVE });
+        let _transition = transition();
         if GENERATION.load(Ordering::Relaxed) == generation && !DRAGGING.load(Ordering::Relaxed) {
             hide(&window);
             if !to_orb {
@@ -416,6 +446,7 @@ fn show(window: &WebviewWindow) {
     // уже на экране (возможно, посреди ухода) — вернуть без повторного появления
     let fresh = !SHOWN.swap(true, Ordering::Relaxed);
     if fresh {
+        ui_log(window.app_handle(), "mascot: shown");
         // закреплённое место: выходит там, даже если в прошлый раз его утащили
         if let Some(anchor) = pinned_on_screen(window) {
             move_to(window, anchor);
@@ -429,6 +460,7 @@ fn show(window: &WebviewWindow) {
 
 fn hide(window: &WebviewWindow) {
     if SHOWN.swap(false, Ordering::Relaxed) {
+        ui_log(window.app_handle(), "mascot: hidden");
         events::set_mascot_visible(false);
     }
     RESTING.store(false, Ordering::Relaxed);
@@ -453,10 +485,12 @@ pub fn mascot_intro(app: AppHandle, lines: Vec<String>) -> bool {
     bubble::sync(&app);
     // окно ещё создаётся (первые секунды после запуска) — выйдет, когда будет готово
     let Some(window) = app.get_webview_window("mascot") else { return true };
+    let _transition = transition();
     if !SHOWN.load(Ordering::Relaxed) && IN_ORB.load(Ordering::Relaxed) && events::main_visible() {
         orb(&app, "depart");
         std::thread::spawn(move || {
             std::thread::sleep(TELEPORT);
+            let _transition = transition();
             if GENERATION.load(Ordering::Relaxed) == generation {
                 show(&window);
             }
@@ -606,6 +640,7 @@ fn create(app: &AppHandle) {
             move_to(&window, anchor);
         }
         // режим, размер или состояние могли смениться, пока окно создавалось
+        let _transition = transition();
         let mode = mode();
         let current = SCALE.load(Ordering::Relaxed);
         if current != scale {
