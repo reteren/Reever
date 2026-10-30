@@ -411,6 +411,11 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     fast_checked: bool,
     /// Распознанный текст фразы, законченной досрочно, — чтобы не считать его второй раз.
     fast_timed: Option<Timed>,
+    /// Эта пауза фразы уже проверена на «ривер отмена / стоп».
+    control_checked: bool,
+    /// Текст этой проверки и длина звука, по которому он получен: `try_fast_end` в ту же
+    /// паузу берёт его, а не распознаёт фразу второй раз.
+    control_timed: Option<(usize, Timed)>,
     /// Фрагмент последнего подтверждённого wake для фоновой подстройки.
     wake_clip: Option<crate::voice_adapt::WakeClip>,
 }
@@ -421,6 +426,13 @@ const FAST_END_MS: u32 = 300;
 
 /// Длиннее этого фраза — не короткая команда (разговор, звонок): досрочно не проверяем.
 const FAST_END_MAX_PHRASE_MS: usize = 5_000;
+
+/// «Ривер отмена» / «ривер стоп» срабатывают уже после такой паузы, не дожидаясь конца
+/// фразы (0,6–0,9 с) и даже досрочного конца команды (0,3 с): прекращение должно быть сразу.
+const CONTROL_END_MS: u32 = 150;
+
+/// Длиннее этого фраза простоя или ожидания команды — не «ривер отмена»: не проверяем.
+const CONTROL_MAX_PHRASE_MS: usize = 3_000;
 
 /// Старый eager-режим принимает детектор только в начале речи; lazy-режим принимает
 /// срабатывание в любом месте и проверяет его основной ASR.
@@ -479,6 +491,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             known_targets: std::collections::HashMap::new(),
             fast_checked: false,
             fast_timed: None,
+            control_checked: false,
+            control_timed: None,
             wake_clip: None,
         }
     }
@@ -666,6 +680,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 .any(|event| matches!(event, SegmentEvent::SpeechStart));
             for event in segment_events {
                 self.handle_segment_event(event, &mut out);
+            }
+            if self.mode_epoch == epoch {
+                self.try_control_end(&mut out);
             }
             if self.mode_epoch == epoch {
                 self.try_fast_end(&mut out);
@@ -1023,6 +1040,12 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 let audio = self.segmenter.current_audio();
                 self.asr.transcribe_verbatim(audio)
             };
+            // «…ривер стоп» / «ривер отмена» на первой же паузе — кусок заканчивается сразу,
+            // а не после полной паузы диктовки.
+            if settled && result.as_ref().is_ok_and(|raw| self.is_dictation_control(raw)) {
+                self.finish_phrase_now(None, out);
+                return;
+            }
             let opening = matches!(&self.mode, Mode::Dictating(state) if state.opening);
             let result = result.map(|raw| {
                 if opening {
@@ -1292,8 +1315,18 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             return;
         }
         self.fast_checked = true;
-        let Ok(timed) = self.asr.transcribe_timed(self.segmenter.current_audio()) else {
-            return;
+        let speech_len = audio_len.saturating_sub(silence);
+        let cached = self
+            .control_timed
+            .take()
+            .filter(|(len, _)| *len == speech_len)
+            .map(|(_, timed)| timed);
+        let timed = match cached {
+            Some(timed) => timed,
+            None => match self.asr.transcribe_timed(self.segmenter.current_audio()) {
+                Ok(timed) => timed,
+                Err(_) => return,
+            },
         };
         // Журнал подтверждения попадает в out, только если команда выполняется досрочно,
         // иначе его напишет разбор полной фразы.
@@ -1331,6 +1364,109 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             self.handle_segment_event(SegmentEvent::SpeechEnd(audio), out);
             self.fast_timed = None;
         }
+    }
+
+    /// «Ривер отмена» / «ривер стоп» (и просто «отмена» после сигнала «слушаю») — фраза
+    /// заканчивается после `CONTROL_END_MS` тишины, и прекращение идёт обычным путём, только
+    /// без ожидания паузы. В диктовке с печатью по ходу речи это же проверяет `advance_partial`
+    /// на уже распознанном тексте; здесь — диктовка без неё.
+    fn try_control_end(&mut self, out: &mut Vec<EngineEvent>) {
+        let silence = self.segmenter.trailing_silence();
+        if silence == 0 {
+            self.control_checked = false;
+            self.control_timed = None;
+            return;
+        }
+        if self.control_checked || silence < samples(CONTROL_END_MS) {
+            return;
+        }
+        let audio_len = self.segmenter.current_audio().len();
+        let short = audio_len > 0 && audio_len <= samples(CONTROL_MAX_PHRASE_MS as u32);
+        let applies = match &self.mode {
+            Mode::Idle => self.cfg.wake_enabled && short,
+            Mode::Listening(state) => state.kind == ListenKind::Command && short,
+            Mode::Dictating(_) => !self.cfg.dictation_live && audio_len > 0,
+            _ => false,
+        };
+        if !applies {
+            return;
+        }
+        self.control_checked = true;
+
+        if matches!(self.mode, Mode::Dictating(_)) {
+            let Ok(raw) = self.asr.transcribe_verbatim(self.segmenter.current_audio()) else {
+                return;
+            };
+            if self.is_dictation_control(&raw) {
+                self.finish_phrase_now(None, out);
+            }
+            return;
+        }
+
+        let Ok(timed) = self.asr.transcribe_timed(self.segmenter.current_audio()) else {
+            return;
+        };
+        // Ключ — длина речи без тишины в конце: тишина растёт, пока ждём, а текст тот же.
+        self.control_timed = Some((audio_len.saturating_sub(silence), timed.clone()));
+        let mut notes = Vec::new();
+        let timed = if matches!(self.mode, Mode::Idle) && self.strict_spotted_wake {
+            match self.spot_age {
+                Some(age) if age <= audio_len + samples(SPOT_GRACE_MS) => {
+                    match self.confirm_wake(&timed, audio_len, &mut notes) {
+                        Some(confirmed) => confirmed,
+                        None => return,
+                    }
+                }
+                Some(_) => return,
+                None => timed,
+            }
+        } else {
+            timed
+        };
+        let control = match &self.mode {
+            Mode::Idle => match strip_initial_wake(&timed.text, &self.cfg.wake_words) {
+                Some(rest) => rest,
+                None => return,
+            },
+            _ => self.strip_repeated_wake(&timed.text),
+        };
+        if !self.is_control_command(&control) {
+            return;
+        }
+        out.append(&mut notes);
+        self.finish_phrase_now(Some(timed), out);
+    }
+
+    /// Закончить текущую фразу сейчас, как будто пауза уже выдержана.
+    fn finish_phrase_now(&mut self, timed: Option<Timed>, out: &mut Vec<EngineEvent>) {
+        self.control_timed = None;
+        if let Some(audio) = self.segmenter.finish_now() {
+            self.fast_timed = timed;
+            self.handle_segment_event(SegmentEvent::SpeechEnd(audio), out);
+            self.fast_timed = None;
+        }
+    }
+
+    fn cancel_words(&self) -> Vec<String> {
+        self.grammar
+            .as_ref()
+            .map(|grammar| grammar.cancel_words.clone())
+            .unwrap_or_else(|| Grammar::defaults().cancel_words)
+    }
+
+    /// Вся команда — слово отмены или остановки («отмена», «стоп», «хватит»), без цели.
+    fn is_control_command(&self, text: &str) -> bool {
+        let command = strip_leading_fillers(&normalize(text));
+        let words = command.split_whitespace().count();
+        (1..=2).contains(&words)
+            && (crate::textnorm::is_cancel(&command, &self.cancel_words()) || is_dictation_stop(&command))
+    }
+
+    /// Кусок диктовки заканчивается «ривер стоп / отмена» или сам им и является.
+    fn is_dictation_control(&self, raw: &str) -> bool {
+        let norm = normalize(raw);
+        self.trailing_control(&norm).is_some()
+            || strip_initial_wake(&norm, &self.cfg.wake_words).is_some_and(|rest| self.is_control_command(&rest))
     }
 
     /// «открой/закрой/заверши <известная цель>» или просто «<цель>», если запуск без
@@ -3564,15 +3700,23 @@ mod tests {
     }
 
     #[test]
-    fn lazy_idle_does_not_open_dictation_from_a_partial_wake() {
-        let (mut engine, asr_calls, _, _) = engine(test_config(), &["ривер напиши привет"]);
-        engine.set_strict_spotted_wake(true);
-        engine.mark_spotted_wake();
+    fn lazy_idle_opens_dictation_once_the_main_model_confirms_the_wake_word() {
+        let (mut confirmed, _, _, _) = engine(test_config(), &["ривер напиши привет"]);
+        confirmed.set_grammar(Grammar::defaults());
+        confirmed.set_strict_spotted_wake(true);
+        confirmed.mark_spotted_wake();
         let mut events = Vec::new();
+        assert!(confirmed.try_open_dictation(true, &mut events));
+        assert!(contains(&events, &EngineEvent::DictationStart), "{events:?}");
 
-        assert!(!engine.try_open_dictation(true, &mut events));
-        assert!(events.is_empty());
-        assert_eq!(asr_calls.get(), 0);
+        // Детектор ошибся: в частичном тексте «ривер» нет — диктовка не открывается.
+        let (mut false_spot, _, _, _) = engine(test_config(), &["напиши привет"]);
+        false_spot.set_grammar(Grammar::defaults());
+        false_spot.set_strict_spotted_wake(true);
+        false_spot.mark_spotted_wake();
+        let mut events = Vec::new();
+        assert!(!false_spot.try_open_dictation(true, &mut events));
+        assert!(events.is_empty(), "{events:?}");
     }
 
     #[test]
@@ -3823,6 +3967,18 @@ mod tests {
         engine
     }
 
+    #[test]
+    fn a_pause_is_transcribed_once_for_both_cancel_and_known_target_checks() {
+        let (mut engine, asr_calls, _, _) = engine(
+            EngineConfig { wake_pause_ms: 900, command_pause_ms: 900, ..test_config() },
+            &["ривер открой маркноут"],
+        );
+        engine.set_grammar(Grammar::defaults());
+        engine.set_known_targets([("маркноут".to_string(), "mark".to_string())]);
+        assert!(command_after(&mut engine).is_some());
+        assert_eq!(asr_calls.get(), 1);
+    }
+
     /// Мс тишины после речи, когда пришла команда (`None` — не пришла).
     fn command_after(
         engine: &mut Engine<MockTranscriber, MockVoiceDetector>,
@@ -3862,6 +4018,20 @@ mod tests {
         }
         let mut engine = fast_engine(&["ривер открой анти гравити идея"]);
         assert!(command_after(&mut engine).expect("команда").0 < 400);
+    }
+
+    #[test]
+    fn cancel_and_stop_end_the_phrase_almost_at_once() {
+        for (said, command) in [("ривер отмена", "отмена"), ("ривер стоп", "стоп"), ("ривер хватит", "хватит")] {
+            let mut engine = fast_engine(&[said]);
+            let (silence, text) = command_after(&mut engine).expect("команда");
+            assert_eq!(text, command);
+            assert!(silence < 250, "{said}: команда через {silence} мс тишины");
+        }
+        // Отмена внутри обычной фразы — не прекращение: такая фраза ждёт полной паузы.
+        let said = "ривер загугли отмена рейса";
+        let mut engine = fast_engine(&[said, said, said]);
+        assert!(command_after(&mut engine).expect("команда").0 >= 900);
     }
 
     #[test]
