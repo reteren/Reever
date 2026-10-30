@@ -608,7 +608,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                     out.push(EngineEvent::Log(format!("wake: detector candidate {note}").into()));
                 } else if fired && self.trace {
                     let ms = self.idle_speech_age.unwrap_or(0) * 1000 / SAMPLE_RATE as usize;
-                    out.push(EngineEvent::Log(format!("trace: the detector heard the wake word {ms} ms into the phrase — not at its start, skipped").into()));
+                    out.push(EngineEvent::Log(format!("trace: the detector heard the wake word {ms} ms into the phrase - not at its start, skipped").into()));
                 } else if let Some(age) = self.spot_age.as_mut() {
                     *age = age.saturating_add(pcm.len());
                 }
@@ -745,14 +745,14 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         let note = note.map(|n| format!(" {n},")).unwrap_or_default();
         if accepted {
             out.push(EngineEvent::Log(
-                format!("wake: detector heard the wake word —{note} speech {speech_ms} ms").into(),
+                format!("wake: detector heard the wake word -{note} speech {speech_ms} ms").into(),
             ));
             self.spot_age = Some(age);
             self.spot_at_start = at_start;
             out.push(EngineEvent::WakeSpotted);
         } else {
             out.push(EngineEvent::Log(
-                format!("wake: detector candidate{note} — rejected: not speech (speech {speech_ms} ms)").into(),
+                format!("wake: detector candidate{note} - rejected: not speech (speech {speech_ms} ms)").into(),
             ));
         }
     }

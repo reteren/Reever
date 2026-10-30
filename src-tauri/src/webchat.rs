@@ -73,12 +73,12 @@ pub fn open_and_send(url: &str, text: &str, send: bool) -> anyhow::Result<ChatOu
     let progress = typing::type_pieces(target, &[Piece::Text(text.to_string())]);
     if !progress.remaining.is_empty() {
         typing::set_clipboard(text)?;
-        bail!("focus left the chat field — the question is in the clipboard");
+        bail!("focus left the chat field - the question is in the clipboard");
     }
     if send {
         sleep(Duration::from_millis(150));
         if !typing::press_enter(target) {
-            bail!("failed to send the question — press Enter yourself");
+            bail!("failed to send the question - press Enter yourself");
         }
     }
     Ok(ChatOutcome::Typed)

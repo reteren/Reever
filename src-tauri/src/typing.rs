@@ -364,7 +364,7 @@ fn ensure_target(target: isize, expected_focus: HWND) -> anyhow::Result<()> {
     };
     unsafe { GetGUIThreadInfo(thread, &mut info) }.context("failed to check the input field")?;
     if info.hwndFocus.0 != expected_focus.0 {
-        bail!("the focused field changed — typing stopped");
+        bail!("the focused field changed - typing stopped");
     }
     Ok(())
 }
@@ -377,7 +377,7 @@ fn ensure_foreground_window(target: isize) -> anyhow::Result<()> {
     if foreground.0 as isize == target || root.0 as isize == target || owner.0 as isize == target {
         Ok(())
     } else {
-        bail!("the active window changed — typing stopped")
+        bail!("the active window changed - typing stopped")
     }
 }
 

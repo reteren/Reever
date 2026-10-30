@@ -1,6 +1,6 @@
 // Español. Las frases entre «» son comandos de voz y se mantienen en ruso.
 I18N.register('es', {
-  "app.pickerTitle": "Reever — encontrado",
+  "app.pickerTitle": "Reever - encontrado",
 
   "win.minimize": "Minimizar",
   "win.toTray": "Minimizar en la bandeja",
@@ -196,7 +196,7 @@ I18N.register('es', {
   "scan.noteTitle.system": "Una herramienta de Windows o de desarrollo. Márcala si la necesitas.",
   "scan.group.frequent": "Usados con frecuencia",
   "scan.group.recent": "Abiertos esta semana",
-  "scan.group.other": "Todo lo demás — de la A a la Z",
+  "scan.group.other": "Todo lo demás - de la A a la Z",
   "scan.mark.frequent": "a menudo",
   "scan.mark.recent": "reciente",
   "scan.usage": "En primer plano {minutes} min · último inicio {date}",
@@ -322,7 +322,7 @@ I18N.register('es', {
   "hotkey.applied": "atajo aplicado: {combo}",
   "hotkey.error": "atajo: {error}",
 
-  "error.prefix": "Error — {context}: {message}",
+  "error.prefix": "Error - {context}: {message}",
   "error.window": "al obtener la ventana",
   "error.subscribe": "al suscribirse a {event}",
   "error.minimize": "al minimizar la ventana",

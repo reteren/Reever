@@ -376,7 +376,7 @@ pub fn passive_trainer(app: AppHandle, shared: Arc<SharedState>) -> crate::voice
         let result = adapt_and_save(pcm, name, &weights, &dir);
         let line = match &result {
             Ok(report) => format!(
-                "voice: quiet adaptation on {} wake words — detector heard {} before, {} after{}",
+                "voice: quiet adaptation on {} wake words - detector heard {} before, {} after{}",
                 report.words,
                 report.heard_before,
                 report.heard_after,

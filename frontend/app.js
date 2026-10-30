@@ -213,8 +213,8 @@ function applyStatus(payload){
   if(!status||typeof status!=='object') return;
   lastStatus=status;
   const asr=status.asr;
-  $('#t-asr').replaceChildren(asr==='ready'?pill('pill.ready','ok'):asr==='error'?pill('pill.error','bad'):asr==='loading'?pill('pill.loading'):el('span',{className:'pill',textContent:'—'}));
-  $('#t-model').replaceChildren(el('span',{textContent:status.model||'—'}));
+  $('#t-asr').replaceChildren(asr==='ready'?pill('pill.ready','ok'):asr==='error'?pill('pill.error','bad'):asr==='loading'?pill('pill.loading'):el('span',{className:'pill',textContent:'-'}));
+  $('#t-model').replaceChildren(el('span',{textContent:status.model||'-'}));
 }
 
 let actions=[], selId=null, filter='all', query='', editorDirty=false;
@@ -357,7 +357,7 @@ function renderScanList(){
     if(app.group==='frequent'||app.group==='recent') name.append(el('em',{className:'smark '+app.group,textContent:t('scan.mark.'+app.group),title:scanUsageTitle(app)}));
     if(app.note) name.append(el('em',{className:'snote',textContent:t('scan.note.'+app.note),title:t('scan.noteTitle.'+app.note)}));
     const phrases=app.phrases.join(' · ');
-    const row=el('label',{className:'scanrow'+(off?' off':'')},[box,iconBox,el('span',{className:'sbody'},[name,el('span',{className:'sphr',textContent:phrases||'—',title:phrases})])]);
+    const row=el('label',{className:'scanrow'+(off?' off':'')},[box,iconBox,el('span',{className:'sbody'},[name,el('span',{className:'sphr',textContent:phrases||'-',title:phrases})])]);
     row.setAttribute('role','listitem');
     list.append(row);
   }
@@ -717,7 +717,7 @@ const GROUPS=[
 const CYRILLIC_LANGS=['ru','uk','bg'];
 // Всё применяется по «Сохранить»; пометка «— сразу» — у того, что действует уже при
 // изменении поля (язык интерфейса, хоткеи), без «Сохранить».
-const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} — ${t('settings.instant')}`:t('settings.'+key);
+const settingLabel=(key,when='save')=>when==='instant'?`${t('settings.'+key)} - ${t('settings.instant')}`:t('settings.'+key);
 const settingHelp=key=>I18N.has(`settings.${key}.help`)?t(`settings.${key}.help`):null;
 let cbSeq=0;
 // Индекс дисков: плитка на Главной и строка под переключателем в настройках.
@@ -1163,7 +1163,7 @@ function languagesEditor(models){
   for(const code of addable){
     const ready=installed(packOf(code));
     const item=el('button',{type:'button',className:'sm',role:'menuitem',
-      textContent:ready?name(code):`${name(code)} — ${t('settings.languages.notDownloaded')}`});
+      textContent:ready?name(code):`${name(code)} - ${t('settings.languages.notDownloaded')}`});
     item.disabled=!ready;
     // Язык распознавания не связан с языками интерфейса: добавляется молча, интерфейс не трогаем.
     item.onclick=()=>setLanguages([...enabled,code]);
@@ -1217,7 +1217,7 @@ function renderSettings(){
   F.append(g);
   const mode=settingsObj.activation_mode||'both';
   $('#t-mode').textContent=I18N.has(`mode.${mode}`)?t(`mode.${mode}`):mode;
-  $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'—':(settingsObj.hotkey||'—');
+  $('#t-hotkey').textContent=(settingsObj.activation_mode==='wake')?'-':(settingsObj.hotkey||'-');
 }
 // Сохранение применяется сразу: Reever перечитывает настройки и перезапускает
 // распознавание (несколько секунд загрузки моделей), окно и всё остальное работают.

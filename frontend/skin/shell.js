@@ -484,7 +484,7 @@
       : status.asr === 'loading' ? makePill('pill.loading')
       : document.createElement('span'));
     const model = $('#t-model');
-    if (model) model.replaceChildren(Object.assign(document.createElement('span'), { textContent: status.model || '—' }));
+    if (model) model.replaceChildren(Object.assign(document.createElement('span'), { textContent: status.model || '-' }));
   }
 
   document.addEventListener('click', e => {

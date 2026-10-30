@@ -167,7 +167,7 @@ impl AcousticWakeSpotter {
         }
         let left = left.saturating_sub(scores.len());
         if left == 0 {
-            self.note = Some(format!("{note} — rejected: verifier {best:.2}"));
+            self.note = Some(format!("{note} - rejected: verifier {best:.2}"));
             return Some(false);
         }
         self.verifying = Some((left, threshold, note));
@@ -240,7 +240,7 @@ impl AcousticWakeSpotter {
             "score {:.2}, {} frames, level {word:.0} dB, background {floor:.0} dB ({snr:+.0}){}",
             self.peak,
             self.run,
-            verdict.as_ref().map(|v| format!(" — {v}")).unwrap_or_default()
+            verdict.as_ref().map(|v| format!(" - {v}")).unwrap_or_default()
         ));
         verdict.is_none()
     }
