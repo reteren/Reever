@@ -42,6 +42,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, RegisterClassExW,
     SetWindowLongPtrW, SetWindowPos, ShowWindow, CREATESTRUCTW, GWLP_USERDATA, HTCLIENT,
+    LoadCursorW, SetCursor, GWL_EXSTYLE, IDC_ARROW, IDC_HAND, IDC_SIZEALL, WM_SETCURSOR,
+    WS_EX_LAYERED, WS_EX_TRANSPARENT,
     HTTRANSPARENT, HWND_TOPMOST, MA_NOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
     SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WM_DISPLAYCHANGE, WM_DPICHANGED,
     WM_ERASEBKGND, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE,
@@ -53,7 +55,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use super::device::Gfx;
 use super::image::Images;
 use super::text::Text;
-use super::{log, MouseButton, MouseEvent, MouseKind, RenderCx, WindowHandler, WindowId, WindowSpec};
+use super::{log, GpuCx, MouseButton, MouseEvent, MouseKind, RenderCx, WindowHandler, WindowId, WindowSpec};
 
 const CLASS_NAME: &str = "ReeverNativeWindow";
 
@@ -86,12 +88,61 @@ fn push(hwnd: HWND, kind: WinEventKind) {
     EVENTS.with(|e| e.borrow_mut().push_back(WinEvent { hwnd: hwnd.0 as isize, kind }));
 }
 
+/// Курсор над окном.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cursor {
+    Arrow,
+    Hand,
+    Move,
+}
+
+/// Курсор над окном. Звать только из потока окон (данные окна не делятся между потоками).
+pub fn set_cursor(hwnd: isize, cursor: Cursor) {
+    let hwnd = HWND(hwnd as *mut _);
+    unsafe {
+        let shared = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const WndShared;
+        if let Some(s) = shared.as_ref() {
+            if s.cursor.replace(cursor) != cursor {
+                apply_cursor(cursor);
+            }
+        }
+    }
+}
+
+unsafe fn apply_cursor(cursor: Cursor) {
+    let id = match cursor {
+        Cursor::Arrow => IDC_ARROW,
+        Cursor::Hand => IDC_HAND,
+        Cursor::Move => IDC_SIZEALL,
+    };
+    if let Ok(c) = LoadCursorW(None, id) {
+        SetCursor(c);
+    }
+}
+
+/// Окно пропускает мышь сквозь себя (клики уходят окнам под ним, в том числе чужим) или
+/// ловит её. WS_EX_LAYERED + WS_EX_TRANSPARENT — как set_ignore_cursor_events у Tauri;
+/// с окном на DirectComposition это совместимо (проверено: картинка остаётся, WindowFromPoint
+/// отдаёт окно под ним). Можно звать из любого потока.
+pub fn set_click_through(hwnd: isize, through: bool) {
+    let hwnd = HWND(hwnd as *mut _);
+    unsafe {
+        let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        let bits = WS_EX_LAYERED.0 | WS_EX_TRANSPARENT.0;
+        let new = if through { ex | bits } else { ex & !bits };
+        if new != ex {
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new as isize);
+        }
+    }
+}
+
 /// Проверка попадания: (x, y) в DIP внутри окна → попал ли указатель в видимую часть.
 pub type HitTest = Box<dyn Fn(f32, f32) -> bool>;
 
 /// Данные окна, доступные оконной процедуре (лежат в GWLP_USERDATA).
 struct WndShared {
     hit_test: RefCell<Option<HitTest>>,
+    cursor: Cell<Cursor>,
     scale: Cell<f32>,
     tracking: Cell<bool>,
 }
@@ -157,6 +208,14 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
             return LRESULT(HTCLIENT as isize);
         }
         WM_ERASEBKGND => return LRESULT(1),
+        WM_SETCURSOR => {
+            if let Some(s) = shared {
+                if loword(lp.0 as usize) == HTCLIENT {
+                    apply_cursor(s.cursor.get());
+                    return LRESULT(1);
+                }
+            }
+        }
         WM_PAINT => {
             let _ = ValidateRect(hwnd, None);
             push(hwnd, WinEventKind::Paint);
@@ -282,6 +341,7 @@ impl NativeWindow {
         }
         let shared = Box::into_raw(Box::new(WndShared {
             hit_test: RefCell::new(None),
+            cursor: Cell::new(Cursor::Arrow),
             scale: Cell::new(dx as f32 / 96.0),
             tracking: Cell::new(false),
         }));
@@ -447,6 +507,11 @@ impl NativeWindow {
         let scale = self.scale();
         let size = self.size_dip();
         let dc = &gfx.dc;
+        {
+            let context = unsafe { gfx.d3d.GetImmediateContext()? };
+            let gpu = GpuCx { d3d: &gfx.d3d, context: &context, dc, generation: gfx.generation, scale, now };
+            self.handler.prepare(&gpu);
+        }
         let surface = self.surface.as_mut().expect("surface");
         if surface.target.is_none() {
             let buffer: IDXGISurface = unsafe { surface.swap.GetBuffer(0)? };

@@ -87,7 +87,9 @@ impl Ui {
     pub fn create_window(&mut self, spec: WindowSpec, handler: Box<dyn WindowHandler>) -> Result<WindowId> {
         let id = WindowId(self.next_id);
         self.next_id += 1;
-        let w = NativeWindow::create(id, &spec, handler)?;
+        let mut w = NativeWindow::create(id, &spec, handler)?;
+        let hwnd = w.hwnd.0 as isize;
+        w.handler.attached(hwnd);
         self.windows.push(w);
         Ok(id)
     }
@@ -193,6 +195,16 @@ impl Ui {
             self.gfx = Some(Gfx::new(&self.factory, self.generation)?);
         }
         Ok(())
+    }
+
+    /// Отпустить графическое устройство, если окон не осталось (D3D11, Direct2D, кэш картинок):
+    /// поток окон без окон не держит память видеокарты и драйвера. Следующее окно создаст его заново.
+    pub fn release_device(&mut self) {
+        if self.windows.is_empty() {
+            self.brush = None;
+            self.images.clear_device();
+            self.gfx = None;
+        }
     }
 
     /// Проверка восстановления: пройти тот же путь, что при настоящей потере устройства.

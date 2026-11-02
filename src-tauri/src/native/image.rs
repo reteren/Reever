@@ -28,15 +28,41 @@ use windows::Win32::Graphics::Imaging::{
     WICDecodeMetadataCacheOnDemand,
 };
 use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
+use windows::Win32::UI::Shell::SHCreateMemStream;
 
 /// Номер картинки в реестре `Images`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImageId(pub(crate) u32);
 
+/// Достаёт сжатые байты картинки по запросу (например, из ресурсов, вшитых Tauri):
+/// в памяти не держится ни сжатая, ни полноразмерная копия — только кэш под масштаб.
+pub type Loader = Arc<dyn Fn() -> Option<Vec<u8>> + Send + Sync>;
+
 #[derive(Clone)]
 enum Source {
     File(PathBuf),
     Bytes(Arc<[u8]>),
+    Loader(Loader),
+}
+
+/// Альфа картинки, уменьшенной до `w`×`h` (для попиксельной проверки попадания).
+#[derive(Debug)]
+pub struct AlphaMask {
+    pub w: u32,
+    pub h: u32,
+    pub alpha: Vec<u8>,
+}
+
+impl AlphaMask {
+    /// Альфа в точке (доли картинки 0..1); вне картинки — 0.
+    pub fn at(&self, fx: f32, fy: f32) -> u8 {
+        if !(0.0..1.0).contains(&fx) || !(0.0..1.0).contains(&fy) {
+            return 0;
+        }
+        let x = ((fx * self.w as f32) as u32).min(self.w - 1);
+        let y = ((fy * self.h as f32) as u32).min(self.h - 1);
+        self.alpha[(y * self.w + x) as usize]
+    }
 }
 
 struct SourceEntry {
@@ -92,6 +118,11 @@ impl Images {
         self.push(Source::File(path.into()))
     }
 
+    /// Картинка, байты которой достаются по запросу при каждом декодировании.
+    pub fn add_loader(&mut self, loader: Loader) -> ImageId {
+        self.push(Source::Loader(loader))
+    }
+
     /// Картинка из байт (например, include_bytes!).
     pub fn add_bytes(&mut self, bytes: impl Into<Arc<[u8]>>) -> ImageId {
         self.push(Source::Bytes(bytes.into()))
@@ -115,6 +146,17 @@ impl Images {
         unsafe { decoder.GetFrame(0)?.GetSize(&mut w, &mut h)? };
         self.sources[id.0 as usize].size = Some((w, h));
         Ok((w, h))
+    }
+
+    /// Альфа картинки в размере `w`×`h` (декодируется заново: кэш — забота вызывающего).
+    pub fn alpha_mask(&self, id: ImageId, w: u32, h: u32) -> Result<AlphaMask> {
+        let (w, h) = (w.max(1), h.max(1));
+        let source = self.entry(id)?.source.clone();
+        let src = self.converted(&source, w, h)?;
+        let mut px = vec![0u8; (w * h * 4) as usize];
+        unsafe { src.CopyPixels(std::ptr::null(), w * 4, &mut px)? };
+        let alpha = px.chunks_exact(4).map(|p| p[3]).collect();
+        Ok(AlphaMask { w, h, alpha })
     }
 
     /// Бюджет кэша в байтах; лишнее вытесняется сразу.
@@ -180,16 +222,26 @@ impl Images {
                     GENERIC_READ,
                     WICDecodeMetadataCacheOnDemand,
                 ),
-                Source::Bytes(bytes) => {
-                    let stream = self.wic.CreateStream()?;
-                    stream.InitializeFromMemory(bytes)?;
-                    self.wic.CreateDecoderFromStream(&stream, std::ptr::null(), WICDecodeMetadataCacheOnDemand)
+                Source::Bytes(bytes) => self.decoder_from_memory(bytes),
+                Source::Loader(load) => {
+                    let bytes = load().ok_or_else(|| windows::core::Error::from(windows::Win32::Foundation::E_FAIL))?;
+                    self.decoder_from_memory(&bytes)
                 }
             }
         }
     }
 
-    fn decode(&self, dc: &ID2D1DeviceContext, source: &Source, w: u32, h: u32) -> Result<ID2D1Bitmap1> {
+    /// Декодер из памяти. WIC читает поток лениво, поэтому декодер держит копию байт
+    /// (IStream на HGLOBAL) — иначе временный буфер загрузчика ушёл бы раньше декодирования.
+    fn decoder_from_memory(&self, bytes: &[u8]) -> Result<IWICBitmapDecoder> {
+        unsafe {
+            let stream = SHCreateMemStream(Some(bytes)).ok_or_else(|| windows::core::Error::from(windows::Win32::Foundation::E_OUTOFMEMORY))?;
+            self.wic.CreateDecoderFromStream(&stream, std::ptr::null(), WICDecodeMetadataCacheOnDemand)
+        }
+    }
+
+    /// Кадр 0 в premultiplied BGRA размером `w`×`h`.
+    fn converted(&self, source: &Source, w: u32, h: u32) -> Result<IWICBitmapSource> {
         unsafe {
             let frame = self.decoder(source)?.GetFrame(0)?;
             // сначала в premultiplied BGRA, потом масштаб: уменьшение в premultiplied не даёт
@@ -212,6 +264,13 @@ impl Images {
                 scaler.Initialize(&converter, w, h, WICBitmapInterpolationModeHighQualityCubic)?;
                 scaler.into()
             };
+            Ok(src)
+        }
+    }
+
+    fn decode(&self, dc: &ID2D1DeviceContext, source: &Source, w: u32, h: u32) -> Result<ID2D1Bitmap1> {
+        let src = self.converted(source, w, h)?;
+        unsafe {
             let props = D2D1_BITMAP_PROPERTIES1 {
                 pixelFormat: D2D1_PIXEL_FORMAT {
                     format: DXGI_FORMAT_B8G8R8A8_UNORM,

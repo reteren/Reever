@@ -39,10 +39,10 @@ use windows::Win32::UI::HiDpi::{SetThreadDpiAwarenessContext, DPI_AWARENESS_CONT
 use windows::Win32::UI::WindowsAndMessaging::{PeekMessageW, PostThreadMessageW, MSG, PM_NOREMOVE, WM_APP};
 
 pub use frame::{FrameClock, FPS_LIMITS};
-pub use image::{ImageId, Images, DEFAULT_CACHE_BUDGET};
+pub use image::{AlphaMask, ImageId, Images, Loader, DEFAULT_CACHE_BUDGET};
 pub use text::{is_rtl, Align, Direction, Font, Text, TextLayout, TextStyle};
 pub use ui::Ui;
-pub use window::HitTest;
+pub use window::{set_click_through, set_cursor, Cursor, HitTest};
 
 /// Сообщение-будильник: в очереди задач что-то есть.
 const WM_JOB: u32 = WM_APP + 0x3A1;
@@ -131,8 +131,24 @@ pub struct MouseEvent {
     pub y: f32,
 }
 
+/// Доступ к D3D11 перед кадром (вне BeginDraw/EndDraw Direct2D): свои шейдеры рисуют в свои
+/// текстуры, а потом эти текстуры рисуются в кадре как битмапы Direct2D.
+pub struct GpuCx<'a> {
+    pub d3d: &'a windows::Win32::Graphics::Direct3D11::ID3D11Device,
+    pub context: &'a windows::Win32::Graphics::Direct3D11::ID3D11DeviceContext,
+    pub dc: &'a ID2D1DeviceContext,
+    /// Меняется при пересоздании устройства: ресурсы прошлого поколения выбросить.
+    pub generation: u64,
+    pub scale: f32,
+    pub now: Instant,
+}
+
 /// Содержимое окна. Живёт в потоке окон.
 pub trait WindowHandler: std::any::Any {
+    /// Окно создано (hwnd — для `set_cursor` и т.п. из потока окон).
+    fn attached(&mut self, _hwnd: isize) {}
+    /// Перед кадром, до рисования Direct2D: работа с D3D11 (свои шейдеры).
+    fn prepare(&mut self, _gpu: &GpuCx<'_>) {}
     /// Нарисовать кадр (фон уже прозрачный).
     fn render(&mut self, cx: &mut RenderCx<'_>);
     /// Окно анимируется: кадры идут сами, с лимитом частоты.
@@ -167,7 +183,7 @@ impl Color {
         Self::rgba(r, g, b, 255)
     }
 
-    fn d2d(self) -> D2D1_COLOR_F {
+    pub fn d2d(self) -> D2D1_COLOR_F {
         D2D1_COLOR_F { r: self.r, g: self.g, b: self.b, a: self.a }
     }
 }
@@ -186,7 +202,7 @@ impl Rect {
         Self { x, y, w, h }
     }
 
-    fn d2d(self) -> D2D_RECT_F {
+    pub fn d2d(self) -> D2D_RECT_F {
         D2D_RECT_F { left: self.x, top: self.y, right: self.x + self.w, bottom: self.y + self.h }
     }
 }
@@ -216,6 +232,23 @@ impl RenderCx<'_> {
 
     pub fn images(&mut self) -> &mut Images {
         self.images
+    }
+
+    /// Битмап картинки ровно `w`×`h` пикселей (для эффектов Direct2D). DPI битмапа — 96.
+    pub fn bitmap(&mut self, id: ImageId, w: u32, h: u32) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap1> {
+        match self.images.bitmap(self.dc, id, w, h) {
+            Ok(b) => Some(b),
+            Err(e) => {
+                log(&format!("native: картинка {}: {e}", id.0));
+                None
+            }
+        }
+    }
+
+    /// Кисть одного цвета (общая на кадр — цвет ставится перед каждым использованием).
+    pub fn brush(&self, color: Color) -> &ID2D1SolidColorBrush {
+        unsafe { self.brush.SetColor(&color.d2d()) };
+        self.brush
     }
 
     /// Выровнять DIP-координату по пиксельной сетке монитора.
