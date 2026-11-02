@@ -55,7 +55,8 @@ pub fn start(app: &AppHandle) {
     if let Some(config) = app.try_state::<crate::config::LiveConfig>() {
         let mut fresh = (*config.get()).clone();
         fresh.settings.native_main = true;
-        fresh.settings.lite_ui = false;
+        // REEVER_MAIN_DEMO_LITE=1 — лёгкий вид (lite.css)
+        fresh.settings.lite_ui = std::env::var_os("REEVER_MAIN_DEMO_LITE").is_some();
         // REEVER_MAIN_DEMO_FPS=60|30 — «Плавность» (по умолчанию без лимита, частота монитора)
         if let Some(fps) = std::env::var("REEVER_MAIN_DEMO_FPS").ok().and_then(|v| v.parse().ok()) {
             fresh.settings.fps_limit = fps;

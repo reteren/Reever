@@ -32,8 +32,56 @@ use crate::native::{
     RenderCx, TextStyle, WindowHandler,
 };
 
-pub const SKIN_W: f32 = 1280.0;
-pub const SKIN_H: f32 = 880.0;
+/// Лёгкий вид главного окна (lite_ui): своя раскладка 980×640 (lite.css). Окно одно —
+/// флаг общий, ставится при создании окна.
+static LITE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_lite(on: bool) {
+    LITE.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn lite() -> bool {
+    LITE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+// Раскладка: полный скин (1280×880, координаты #… в skin.css) или лёгкий (сетка lite.css:
+// отступы 12/14/14, зазор 10, колонки 228 | 628 | 76, ряды 36 | 340 | 170 | 38).
+pub fn skin_w() -> f32 {
+    if lite() { 980.0 } else { 1280.0 }
+}
+pub fn skin_h() -> f32 {
+    if lite() { 640.0 } else { 880.0 }
+}
+fn panel() -> (f32, f32, f32, f32, f32) {
+    if lite() { (0.0, 0.0, 980.0, 640.0, 18.0) } else { (130.0, 100.0, 1150.0, 780.0, 46.0) }
+}
+/// центр сферы и радиус (в лёгком — #orbHit 172 px в карточке 228×340)
+fn orb_geo() -> (f32, f32, f32) {
+    if lite() { (128.0, 228.0, 86.0) } else { (310.0, 352.0, 100.0) }
+}
+fn core() -> Rect {
+    if lite() { Rect::new(42.0, 142.0, 172.0, 172.0) } else { Rect::new(204.0, 246.0, 212.0, 212.0) }
+}
+fn title_r() -> Rect {
+    if lite() { Rect::new(14.0, 12.0, 228.0, 36.0) } else { Rect::new(178.0, 132.0, 212.0, 30.0) }
+}
+fn status_r() -> Rect {
+    if lite() { Rect::new(14.0, 408.0, 228.0, 170.0) } else { Rect::new(190.0, 510.0, 242.0, 158.0) }
+}
+fn rail_r() -> Rect {
+    if lite() { Rect::new(890.0, 58.0, 76.0, 520.0) } else { Rect::new(1045.0, 174.0, 69.0, 506.0) }
+}
+fn screen_r() -> Rect {
+    if lite() { Rect::new(252.0, 58.0, 628.0, 520.0) } else { Rect::new(465.0, 174.0, 560.0, 506.0) }
+}
+fn eq_r() -> Rect {
+    if lite() { Rect::new(14.0, 588.0, 952.0, 38.0) } else { Rect::new(190.0, 700.0, 924.0, 46.0) }
+}
+/// карточка под сферой в лёгком виде (grid-area: orb)
+fn orb_card() -> Rect {
+    Rect::new(14.0, 58.0, 228.0, 340.0)
+}
+
 
 /// ТЕСТ производительности, как FRAME_STATIC в shell.js (выбор пользователя): рамка без живого
 /// света — ни блика под курсором, ни света линзы по голосу, ни подсветки лунок. Шейдер рамки
@@ -41,14 +89,14 @@ pub const SKIN_H: f32 = 880.0;
 const FRAME_STATIC: bool = true;
 
 // Геометрия скина — та же, что в design/reever-frame.blend и skin.css.
-const PANEL: (f32, f32, f32, f32, f32) = (130.0, 100.0, 1150.0, 780.0, 46.0);
-const ORB: (f32, f32, f32) = (310.0, 352.0, 100.0);
-const CORE: Rect = Rect::new(204.0, 246.0, 212.0, 212.0);
-const TITLE: Rect = Rect::new(178.0, 132.0, 212.0, 30.0);
-const STATUS: Rect = Rect::new(190.0, 510.0, 242.0, 158.0);
-const RAIL: Rect = Rect::new(1045.0, 174.0, 69.0, 506.0);
-const SCREEN: Rect = Rect::new(465.0, 174.0, 560.0, 506.0);
-const EQ: Rect = Rect::new(190.0, 700.0, 924.0, 46.0);
+
+
+
+
+
+
+
+
 const TABS: [&str; 4] = ["home", "actions", "settings", "logs"];
 #[path = "access.rs"]
 mod access;
@@ -146,7 +194,7 @@ impl Assets {
     /// Форма окна по альфе рамки (windowRects в shell.js): пустоты между шипами пропускают
     /// клики; прямоугольники в координатах скина.
     pub fn shape(&self, images: &Images) -> Vec<[f64; 4]> {
-        let (w, h) = (SKIN_W as usize, SKIN_H as usize);
+        let (w, h) = (skin_w() as usize, skin_h() as usize);
         let Ok(mask) = images.alpha_mask(self.frame_color, w as u32, h as u32) else { return Vec::new() };
         shape_rects(&mask.alpha, w, h)
     }
@@ -159,7 +207,7 @@ pub fn shape_rects(alpha: &[u8], w: usize, h: usize) -> Vec<[f64; 4]> {
     for (i, a) in alpha.iter().enumerate().take(w * h) {
         on[i] = *a > 14;
     }
-    let (x0, y0, x1, y1, r) = PANEL;
+    let (x0, y0, x1, y1, r) = panel();
     for y in y0 as usize..(y1 as usize).min(h) {
         let yf = y as f32;
         let dy = (y0 + r - yf).max(yf - (y1 - r)).max(0.0);
@@ -355,6 +403,8 @@ pub struct MainView {
     shaded: bool,
     shade_pressed: Option<super::shade::ShadeHit>,
     // клавиатура и диктор (access.rs)
+    /// лёгкий вид: уровень жидкости сферы (наливается по «ривер», сливается после команды)
+    lite_fill: native::controls::anim::Tween,
     kfocus: KFocus,
     home_revealed: Option<(i32, i32)>,
     kvisible: bool,
@@ -404,6 +454,8 @@ pub struct MainView {
     // осьминог в сфере: свой вид маскота, рисуется в битмап линзы не чаще 30 раз в секунду
     orb: Option<MascotView>,
     orb_layer: Option<(ID2D1Bitmap1, (u32, u32), u64)>,
+    /// лёгкий вид: битмап сферы и ключ того, что в нём нарисовано
+    lite_orb_layer: Option<(ID2D1Bitmap1, (u32, u32), u64, Option<(i32, i32, i32, bool, bool, bool)>)>,
     orb_dirty: bool,
     orb_last: Instant,
 }
@@ -427,11 +479,18 @@ impl MainView {
             press: Press::default(),
             tip: crate::ui_text::t(locale, tip, &[]),
         };
-        let lunki = [
+        let mut lunki = [
             lunka(0, (965.0, 100.0), 22.0, "min", "win.minimize"),
             lunka(1, (1015.0, 100.0), 28.0, "shade", "win.shade"),
             lunka(2, (1065.0, 100.0), 30.0, "tray", "win.toTray"),
         ];
+        if lite() {
+            // .lunka в полосе #drag: прижаты вправо, отступы справа 84 / 42 / 0, 36×32
+            for (l, x) in lunki.iter_mut().zip([846.0f32, 888.0, 930.0]) {
+                l.center = (x + 18.0, 30.0);
+                l.box_size = 36.0;
+            }
+        }
         let tab = TABS.iter().position(|t| *t == snapshot.tab).unwrap_or(0);
         let (list0, hidden0, settings0) = (info.action_list.clone(), info.hidden_phrases.clone(), info.settings.clone());
         let mut v = Self {
@@ -467,6 +526,7 @@ impl MainView {
             shade: None,
             shaded: false,
             shade_pressed: None,
+            lite_fill: native::controls::anim::Tween::new(0.0),
             kfocus: KFocus::None,
             home_revealed: None,
             kvisible: false,
@@ -488,9 +548,9 @@ impl MainView {
             level_raw: 0.0,
             flash: 0.0,
             burst: 0.0,
-            fx: Fx::new((ORB.0, ORB.1), ORB.2),
+            fx: Fx::new((orb_geo().0, orb_geo().1), orb_geo().2),
             embers_until: Instant::now() + Duration::from_millis(1100),
-            eq: vec![0.0; ((EQ.w - 16.0) / 9.0) as usize],
+            eq: vec![0.0; ((eq_r().w - 16.0) / 9.0) as usize],
             eq_acc: 0.0,
             t0: Instant::now(),
             springs: Springs {
@@ -519,12 +579,13 @@ impl MainView {
             blink_phase: true,
             orb: None,
             orb_layer: None,
+            lite_orb_layer: None,
             orb_dirty: true,
             orb_last: Instant::now(),
             assets,
         };
         // кнопка в вебе сжата flex-колонкой до ~17 px и стоит под строкой «Хоткей»
-        v.pause.rect = Rect::new(STATUS.x + 12.0, STATUS.y + 137.0, STATUS.w - 24.0, 17.0);
+        v.pause.rect = Rect::new(status_r().x + 12.0, status_r().y + 137.0, status_r().w - 24.0, 17.0);
         v.pause.font_size = 15.0;
         v.web.label = v.t("main.openWeb");
         v.set_state(&snapshot.state);
@@ -539,7 +600,7 @@ impl MainView {
 
     /// Осьминог в сфере (вид маскота с раскладкой линзы); `inside` — сидит ли он там сейчас.
     pub fn set_orb_mascot(&mut self, mut view: MascotView, inside: bool) {
-        view.orb_layout(CORE.w);
+        view.orb_layout(core().w);
         view.orb_action(if inside { "present" } else { "absent" });
         self.orb = Some(view);
         self.orb_dirty = true;
@@ -556,10 +617,16 @@ impl MainView {
     }
 
     /// Чья альфа задаёт форму окна: рамки полоски или главной рамки.
-    pub fn shape_source(&self, shaded: bool) -> (ImageId, u32, u32) {
+    /// Чья альфа задаёт форму окна и его размер; None у источника — лёгкий вид
+    /// (скруглённый прямоугольник).
+    pub fn shape_source(&self, shaded: bool) -> (Option<ImageId>, u32, u32) {
         match (&self.shade, shaded) {
-            (Some(s), true) => s.shape_source(),
-            _ => (self.assets.frame_color, SKIN_W as u32, SKIN_H as u32),
+            (Some(s), true) => match s.shape_source() {
+                Some((id, w, h)) => (Some(id), w, h),
+                None => (None, super::shade::shade_w() as u32, super::shade::shade_h() as u32),
+            },
+            _ if lite() => (None, skin_w() as u32, skin_h() as u32),
+            _ => (Some(self.assets.frame_color), skin_w() as u32, skin_h() as u32),
         }
     }
 
@@ -798,7 +865,7 @@ impl MainView {
             return FrameLight {
                 mouse: (0.0, 0.0),
                 mouse_on: 0.0,
-                orb: (ORB.0, ORB.1),
+                orb: (orb_geo().0, orb_geo().1),
                 orb_light: targets("idle").orb_light,
                 sweep_x: -1.0,
                 sweep_i: 0.0,
@@ -810,7 +877,7 @@ impl MainView {
         FrameLight {
             mouse: (s.mx.v, s.my.v),
             mouse_on: s.mouse_on.v,
-            orb: (ORB.0, ORB.1),
+            orb: (orb_geo().0, orb_geo().1),
             orb_light: (s.orb_light.v + self.flash * 1.5).max(0.0),
             sweep_x: -1.0,
             sweep_i: 0.0,
@@ -821,7 +888,14 @@ impl MainView {
 
     // ── Рисование ─────────────────────────────────────────────────────
     fn draw_frame(&mut self, cx: &mut RenderCx<'_>) {
-        let r = Rect::new(0.0, 0.0, SKIN_W, SKIN_H);
+        if lite() {
+            // .lcd { box-shadow: var(--recess) } — гнёзда экранов в металле
+            for (r, radius) in [(title_r(), 9.0), (status_r(), 12.0), (rail_r(), 12.0), (screen_r(), 14.0), (eq_r(), 10.0)] {
+                native::controls::lite::recess(cx, r, radius, false);
+            }
+            return;
+        }
+        let r = Rect::new(0.0, 0.0, skin_w(), skin_h());
         if let Some(f) = &self.frame {
             unsafe {
                 cx.dc().DrawBitmap(f.bitmap(), Some(&r.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
@@ -837,7 +911,7 @@ impl MainView {
     }
 
     fn draw_title(&mut self, cx: &mut RenderCx<'_>) {
-        let r = TITLE;
+        let r = title_r();
         lcd_background(cx, r, 8.0);
         let logo = TextStyle { ..lcd(21.0, 700, 0.14) };
         let mut x = r.x + 10.0;
@@ -866,7 +940,7 @@ impl MainView {
 
     /// Точка состояния: мигает при «слушаю»/«выполняю».
     fn draw_dot(&mut self, cx: &mut RenderCx<'_>) {
-        let r = STATUS;
+        let r = status_r();
         let now = Instant::now();
         let blink = |period: f32| ((now.duration_since(self.t0).as_secs_f32() / (period / 2.0)) as i64) % 2 == 0;
         let dot = Rect::new(r.x + 12.0, r.y + 20.0 + 7.0, 10.0, 10.0);
@@ -887,7 +961,7 @@ impl MainView {
     }
 
     fn draw_status(&mut self, cx: &mut RenderCx<'_>) {
-        let r = STATUS;
+        let r = status_r();
         lcd_background(cx, r, 12.0);
         let (x0, x1) = (r.x + 12.0, r.x + r.w - 12.0);
         // точка состояния: мигает — слой обновляется на каждом переключении (advance)
@@ -975,14 +1049,14 @@ impl MainView {
 
     fn tab_rect(i: usize) -> Rect {
         // рельс: 4 клавиши поровну, внизу — счётчик действий (~52 px)
-        let inner = Rect::new(RAIL.x + 6.0, RAIL.y + 8.0, RAIL.w - 12.0, RAIL.h - 16.0);
+        let inner = Rect::new(rail_r().x + 6.0, rail_r().y + 8.0, rail_r().w - 12.0, rail_r().h - 16.0);
         let counter = 52.0;
         let h = (inner.h - counter - 4.0 * 4.0) / 4.0;
         Rect::new(inner.x, inner.y + i as f32 * (h + 4.0), inner.w, h)
     }
 
     fn draw_rail(&mut self, cx: &mut RenderCx<'_>) {
-        let r = RAIL;
+        let r = rail_r();
         lcd_background(cx, r, 12.0);
         for i in 0..4 {
             let tr = Self::tab_rect(i);
@@ -1047,7 +1121,7 @@ impl MainView {
     }
 
     fn draw_screen(&mut self, cx: &mut RenderCx<'_>) {
-        let r = SCREEN;
+        let r = screen_r();
         lcd_background(cx, r, 14.0);
         // бегущая строка
         let tk = Rect::new(r.x, r.y, r.w, 34.0);
@@ -1292,7 +1366,7 @@ impl MainView {
         unsafe { cx.dc().PopAxisAlignedClip() };
         // полоса прокрутки, когда список не влезает
         if self.home_max_scroll > 0.0 {
-            let track = Rect::new(SCREEN.x + SCREEN.w - 7.0, body.y, 3.0, body.h);
+            let track = Rect::new(screen_r().x + screen_r().w - 7.0, body.y, 3.0, body.h);
             let total = body.h + self.home_max_scroll;
             let th = (track.h * body.h / total).max(24.0);
             let ty = track.y + (track.h - th) * self.home_scroll / self.home_max_scroll;
@@ -1564,12 +1638,12 @@ impl MainView {
 
     /// Точка над видимой частью «Главной» (ниже бегущей строки).
     fn over_home(&self, x: f32, y: f32) -> bool {
-        TABS[self.tab] == "home" && native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0
+        TABS[self.tab] == "home" && native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0
     }
 
     /// Строка «Что можно сказать» под курсором (только видимая часть «Главной»).
     fn say_row_at(&self, x: f32, y: f32) -> Option<usize> {
-        if TABS[self.tab] != "home" || !native::controls::inside(SCREEN, x, y) || y < SCREEN.y + 34.0 {
+        if TABS[self.tab] != "home" || !native::controls::inside(screen_r(), x, y) || y < screen_r().y + 34.0 {
             return None;
         }
         self.say_rects.iter().position(|r| native::controls::inside(*r, x, y))
@@ -1636,7 +1710,7 @@ impl MainView {
     /// Эквалайзер: лента громкости меняется ~22 раза в секунду (шаг 45 мс), поэтому он в
     /// статичном слое, который обновляется на каждом шаге ленты, а не каждый кадр.
     fn draw_eq(&mut self, cx: &mut RenderCx<'_>) {
-        let r = EQ;
+        let r = eq_r();
         lcd_background(cx, r, 10.0);
         let cols = self.eq.len();
         let rows = 7usize;
@@ -1663,10 +1737,94 @@ impl MainView {
         lcd_overlay(cx, r, 10.0);
     }
 
+    /// Сфера лёгкого вида (#orbHit): пустая в покое, по «ривер» наливается до краёв и держится,
+    /// пока идёт команда; громкость подкачивает ореол.
+    fn draw_lite_orb(&mut self, cx: &mut RenderCx<'_>) {
+        let o = self.lite_orb_state(cx.now);
+        let (x, y, _) = orb_geo();
+        // сфера с ореолом — в своём битмапе: градиенты пересчитываются, только когда сменился
+        // уровень жидкости, громкость (шаг 1/50, как --lv) или наведение
+        let pad = 60.0;
+        let area = Rect::new(x - 86.0 - pad, y - 86.0 - pad, 172.0 + 2.0 * pad, 172.0 + 2.0 * pad);
+        let key = (
+            (o.fill * 200.0).round() as i32,
+            (o.level * 50.0).round() as i32,
+            (o.flash * 20.0).round() as i32,
+            o.hover,
+            o.paused,
+            o.glow > 0.5,
+        );
+        let size = ((area.w * cx.scale).round().max(1.0) as u32, (area.h * cx.scale).round().max(1.0) as u32);
+        let fits = self.lite_orb_layer.as_ref().is_some_and(|(_, sz, gen, _)| *sz == size && *gen == self.gpu_generation);
+        if !fits {
+            let (mut dx, mut dy) = (96.0f32, 96.0f32);
+            unsafe { cx.dc().GetDpi(&mut dx, &mut dy) };
+            let props = D2D1_BITMAP_PROPERTIES1 {
+                pixelFormat: D2D1_PIXEL_FORMAT { format: DXGI_FORMAT_B8G8R8A8_UNORM, alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED },
+                dpiX: dx,
+                dpiY: dy,
+                bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
+                colorContext: std::mem::ManuallyDrop::new(None),
+            };
+            match unsafe { cx.dc().CreateBitmap(D2D_SIZE_U { width: size.0, height: size.1 }, None, 0, &props) } {
+                Ok(b) => self.lite_orb_layer = Some((b, size, self.gpu_generation, None)),
+                Err(_) => {
+                    native::controls::lite::orb(cx, (x, y), 172.0, 7.0, &o);
+                    return;
+                }
+            }
+        }
+        let Some((bmp, _, _, last)) = self.lite_orb_layer.clone() else { return };
+        if last != Some(key) {
+            let dc = cx.dc().clone();
+            unsafe {
+                let old: Option<ID2D1Image> = dc.GetTarget().ok();
+                let mut m = windows::Foundation::Numerics::Matrix3x2::default();
+                dc.GetTransform(&mut m);
+                dc.SetTarget(&bmp);
+                dc.SetTransform(&windows::Foundation::Numerics::Matrix3x2 { M11: 1.0, M12: 0.0, M21: 0.0, M22: 1.0, M31: -area.x, M32: -area.y });
+                dc.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
+                native::controls::lite::orb(cx, (x, y), 172.0, 7.0, &o);
+                dc.SetTransform(&m);
+                if let Some(old) = old {
+                    dc.SetTarget(&old);
+                }
+            }
+            if let Some(l) = self.lite_orb_layer.as_mut() {
+                l.3 = Some(key);
+            }
+        }
+        unsafe {
+            cx.dc().DrawBitmap(&bmp, Some(&area.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+        }
+    }
+
+    /// Состояние сферы лёгкого вида (и мини-сферы полоски).
+    fn lite_orb_state(&mut self, now: Instant) -> native::controls::lite::Orb {
+        let active = self.woke_until.is_some() || matches!(self.state.as_str(), "listening" | "busy");
+        let target = if active || self.state == "error" { 1.0 } else { 0.0 };
+        if self.lite_fill.target() != target {
+            // наливается .9 с cubic-bezier(.22,1,.36,1), сливается .45 с cubic-bezier(.4,0,.6,1)
+            let (dur, ease) = if target > 0.5 { (0.9, native::controls::anim::E_SNAP) } else { (0.45, Bez(0.4, 0.0, 0.6, 1.0)) };
+            self.lite_fill.set(now, target, dur, ease);
+        }
+        native::controls::lite::Orb {
+            fill: self.lite_fill.value(now),
+            level: self.level,
+            glow: if active { 1.0 } else { 0.0 },
+            hover: self.orb_hover,
+            paused: self.state == "paused",
+            flash: self.flash.min(1.0),
+        }
+    }
+
     fn draw_core(&mut self, cx: &mut RenderCx<'_>) {
+        if lite() {
+            return;
+        }
         if let Some(lens) = &self.lens {
             unsafe {
-                cx.dc().DrawBitmap(lens.bitmap(), Some(&CORE.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+                cx.dc().DrawBitmap(lens.bitmap(), Some(&core().d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
             }
         }
     }
@@ -1692,7 +1850,7 @@ impl MainView {
         if !orb.visible() {
             return;
         }
-        let size = ((CORE.w * cx.scale).round().max(1.0) as u32, (CORE.h * cx.scale).round().max(1.0) as u32);
+        let size = ((core().w * cx.scale).round().max(1.0) as u32, (core().h * cx.scale).round().max(1.0) as u32);
         let fits = self.orb_layer.as_ref().is_some_and(|(_, sz, gen)| *sz == size && *gen == self.gpu_generation);
         if !fits {
             let props = D2D1_BITMAP_PROPERTIES1 {
@@ -1729,7 +1887,7 @@ impl MainView {
                         text: cx.text,
                         brush: cx.brush,
                         scale: cx.scale,
-                        size: (CORE.w, CORE.h),
+                        size: (core().w, core().h),
                         now: cx.now,
                     };
                     if let Some(orb) = self.orb.as_mut() {
@@ -1746,10 +1904,10 @@ impl MainView {
             }
         }
         // круг линзы: r = 100 вокруг центра сферы
-        let clip = Rect::new(ORB.0 - ORB.2, ORB.1 - ORB.2, ORB.2 * 2.0, ORB.2 * 2.0);
-        if native::controls::push_round_layer(cx, clip, ORB.2, 1.0) {
+        let clip = Rect::new(orb_geo().0 - orb_geo().2, orb_geo().1 - orb_geo().2, orb_geo().2 * 2.0, orb_geo().2 * 2.0);
+        if native::controls::push_round_layer(cx, clip, orb_geo().2, 1.0) {
             unsafe {
-                cx.dc().DrawBitmap(&bmp, Some(&CORE.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+                cx.dc().DrawBitmap(&bmp, Some(&core().d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
             }
             native::controls::pop_layer(cx);
         }
@@ -1758,12 +1916,36 @@ impl MainView {
     /// Статичная часть окна: экраны с текстом и рамка (в статическом режиме света).
     fn draw_static(&mut self, cx: &mut RenderCx<'_>) {
         let now = cx.now;
-        for (i, r) in [TITLE, STATUS, RAIL, SCREEN, EQ].into_iter().enumerate() {
+        if lite() {
+            // корпус — сталь, под сферой — карточка-гнездо со шкалой
+            native::controls::lite::metal_panel(cx, Rect::new(0.0, 0.0, skin_w(), skin_h()), 18.0);
+            let card = orb_card();
+            native::controls::lcd_background(cx, card, 14.0);
+            native::controls::lite::recess(cx, card, 14.0, false);
+            native::controls::lite::scale_ring(cx, (orb_geo().0, orb_geo().1), 214.0);
+        }
+        for (i, r) in [title_r(), status_r(), rail_r(), screen_r(), eq_r()].into_iter().enumerate() {
             let p = self.power(i, now);
             if p <= 0.0 {
                 continue; // экран ещё не включился
             }
             let anim = p < 1.0;
+            // лёгкий вид: мягкое проявление (liteOn) вместо ЭЛТ-щели
+            if anim && lite() {
+                self.scene.flush(cx);
+                if native::controls::push_round_layer(cx, Rect::new(r.x - 2.0, r.y - 2.0, r.w + 4.0, r.h + 4.0), 0.0, E_OUT.at(p)) {
+                    match i {
+                        0 => self.draw_title(cx),
+                        1 => self.draw_status(cx),
+                        2 => self.draw_rail(cx),
+                        3 => self.draw_screen(cx),
+                        _ => self.draw_eq(cx),
+                    }
+                    self.scene.flush(cx);
+                    native::controls::pop_layer(cx);
+                }
+                continue;
+            }
             let (clip, bright) = if anim { crt_on(r, p) } else { (r, 0.0) };
             if anim {
                 self.scene.flush(cx);
@@ -1792,12 +1974,18 @@ impl MainView {
         self.draw_frame(cx);
         // лунки в покое не меняются; наведение и нажатие обновляют слой (touch_static)
         for l in self.lunki.iter() {
-            l.draw(&mut self.scene, cx);
+            if lite() {
+                let r = Rect::new(l.center.0 - 18.0, l.center.1 - 16.0, 36.0, 32.0);
+                let h = l.press.hover_t.value(now);
+                native::controls::lite::key(&mut self.scene, cx, r, l.icon, h, l.press.pressed && l.press.hover);
+            } else {
+                l.draw(&mut self.scene, cx);
+            }
         }
         self.scene.flush(cx);
         self.draw_focus_ring(cx);
         if let Some(o) = self.overlay.as_mut() {
-            o.draw(&mut self.scene, cx, (SKIN_W, SKIN_H), cx.now);
+            o.draw(&mut self.scene, cx, (skin_w(), skin_h()), cx.now);
             self.scene.flush(cx);
             self.form_blink = o.next_blink(cx.now);
         }
@@ -1809,7 +1997,7 @@ impl MainView {
         if self.ticker_over <= 4.0 || self.power(3, cx.now) < 1.0 || self.overlay.is_some() {
             return;
         }
-        let r = SCREEN;
+        let r = screen_r();
         let tape = Rect::new(r.x + 14.0 + 13.0 + 8.0, r.y, r.w - 14.0 - 13.0 - 8.0 - 14.0, 34.0);
         let partial = self.partial.to_uppercase();
         let wide = TextStyle { direction: self.dir(), ..lcd(21.0, 500, 0.05) };
@@ -1853,7 +2041,7 @@ impl MainView {
 
     /// Обновить статичный слой, если нужно. false — слоя нет (рисовать напрямую).
     fn render_static(&mut self, cx: &mut RenderCx<'_>, dpi: (f32, f32)) -> bool {
-        let size = ((SKIN_W * cx.scale).round().max(1.0) as u32, (SKIN_H * cx.scale).round().max(1.0) as u32);
+        let size = ((skin_w() * cx.scale).round().max(1.0) as u32, (skin_h() * cx.scale).round().max(1.0) as u32);
         let fits = self.static_layer.as_ref().is_some_and(|(_, sz, gen)| *sz == size && *gen == self.gpu_generation);
         if !fits {
             let props = D2D1_BITMAP_PROPERTIES1 {
@@ -1877,7 +2065,8 @@ impl MainView {
             }
         }
         // рамка с живым светом меняется каждый кадр — слой тоже; пока шейдера рамки нет — тоже
-        let live = !FRAME_STATIC || Instant::now() < self.static_live_until || self.frame.is_none();
+        // в лёгком виде шейдера рамки нет вовсе — это не повод перерисовывать слой каждый кадр
+        let live = !FRAME_STATIC || Instant::now() < self.static_live_until || (self.frame.is_none() && !lite());
         if self.static_dirty || live {
             if std::env::var_os("REEVER_MAIN_PROFILE").is_some() {
                 PROFILE.with(|p| {
@@ -1932,8 +2121,8 @@ impl MainView {
         if self.tab != 3 && self.web.rect.w > 0.0 && self.web.hit(x, y) {
             return Some(Target::Web);
         }
-        let (dx, dy) = (x - ORB.0, y - ORB.1);
-        if dx * dx + dy * dy <= ORB.2 * ORB.2 {
+        let (dx, dy) = (x - orb_geo().0, y - orb_geo().1);
+        if dx * dx + dy * dy <= orb_geo().2 * orb_geo().2 {
             return Some(Target::Orb);
         }
         if let Some(i) = self.say_row_at(x, y) {
@@ -1945,7 +2134,7 @@ impl MainView {
     }
 
     fn over_screen(x: f32, y: f32) -> bool {
-        [TITLE, STATUS, RAIL, SCREEN, EQ].iter().any(|r| native::controls::inside(*r, x, y))
+        [title_r(), status_r(), rail_r(), screen_r(), eq_r()].iter().any(|r| native::controls::inside(*r, x, y))
     }
 
     fn activate(&mut self, t: Target) {
@@ -1955,7 +2144,9 @@ impl MainView {
             Target::Lunka(_) => (self.host)(Act::Shade(true)),
             Target::Tab(i) => {
                 if self.tab != i {
-                    self.channel = Some((Instant::now(), self.tab));
+                    if !lite() {
+                        self.channel = Some((Instant::now(), self.tab));
+                    }
                     if self.settings_tab.placing {
                         self.settings_tab.set_placing(false);
                         (self.host)(Act::Settings(super::settings_tab::SettingsOut::MascotPin(false)));
@@ -2061,7 +2252,7 @@ impl WindowHandler for MainView {
             let light = self.light();
             if let Some(f) = &mut self.frame {
                 if f.fits(gpu, frame_size(self.k, gpu.scale)) {
-                    f.render(gpu, (SKIN_W, SKIN_H), &light);
+                    f.render(gpu, (skin_w(), skin_h()), &light);
                 }
             }
         }
@@ -2073,8 +2264,8 @@ impl WindowHandler for MainView {
             }
         }
         // линза: та же, что глаз маскота
-        if !self.lens_failed {
-            let size = (CORE.w * self.k * gpu.scale).round().max(2.0) as u32;
+        if !self.lens_failed && !lite() {
+            let size = (core().w * self.k * gpu.scale).round().max(2.0) as u32;
             if self.lens.as_ref().map_or(true, |l| !l.fits(gpu, size)) {
                 match Lens::new(gpu, size) {
                     Ok(Some(l)) => self.lens = Some(l),
@@ -2113,12 +2304,13 @@ impl WindowHandler for MainView {
                 };
                 self.t(&key)
             };
+            let orb = self.lite_orb_state(cx.now);
             let (k, scene) = (self.k, &mut self.scene);
             if let Some(s) = self.shade.as_mut() {
                 s.set_text(&text);
-                s.render(scene, cx, k, base_scale);
+                s.render(scene, cx, k, base_scale, &orb);
             }
-            self.tooltip.draw(&mut self.scene, cx, (super::shade::SHADE_W, super::shade::SHADE_H));
+            self.tooltip.draw(&mut self.scene, cx, (super::shade::shade_w(), super::shade::shade_h()));
             self.scene.flush(cx);
             cx.scale = base_scale;
             unsafe { cx.dc().SetDpi(dpi_x, dpi_y) };
@@ -2127,7 +2319,7 @@ impl WindowHandler for MainView {
 
         // картинки для шейдера рамки — один раз на размер (дальше prepare)
         let size = frame_size(self.k, base_scale);
-        let need = !self.frame_failed && self.frame_px.is_none() && self.frame.as_ref().map_or(true, |_| false);
+        let need = !lite() && !self.frame_failed && self.frame_px.is_none() && self.frame.as_ref().map_or(true, |_| false);
         if need {
             let images = cx.images();
             if let (Ok(color), Ok(normal)) = (
@@ -2157,7 +2349,7 @@ impl WindowHandler for MainView {
         if self.render_static(cx, (dpi_x * self.k, dpi_y * self.k)) {
             if let Some((bmp, _, _)) = &self.static_layer {
                 unsafe {
-                    cx.dc().DrawBitmap(bmp, Some(&Rect::new(0.0, 0.0, SKIN_W, SKIN_H).d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+                    cx.dc().DrawBitmap(bmp, Some(&Rect::new(0.0, 0.0, skin_w(), skin_h()).d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
                 }
             }
         } else {
@@ -2166,7 +2358,11 @@ impl WindowHandler for MainView {
         }
         mark("static", cx);
         self.draw_ticker_live(cx);
-        self.fx.draw(cx);
+        if lite() {
+            self.draw_lite_orb(cx);
+        } else {
+            self.fx.draw(cx);
+        }
         mark("fx", cx);
         if prof {
             let mut acc = PROFILE.with(|p| p.take());
@@ -2183,7 +2379,7 @@ impl WindowHandler for MainView {
             }
             PROFILE.with(|p| p.replace(acc));
         }
-        self.tooltip.draw(&mut self.scene, cx, (SKIN_W, SKIN_H));
+        self.tooltip.draw(&mut self.scene, cx, (skin_w(), skin_h()));
         self.scene.flush(cx);
 
         cx.scale = base_scale;
@@ -2208,6 +2404,7 @@ impl WindowHandler for MainView {
             || self.tooltip.animating(Instant::now())
             || self.overlay.as_ref().is_some_and(|o| o.animating())
             || self.screens_animating(Instant::now())
+            || (lite() && self.lite_fill.running(Instant::now()))
             || Instant::now() < self.static_live_until
     }
 
@@ -2346,7 +2543,7 @@ impl WindowHandler for MainView {
             return redraw;
         }
         if TABS[self.tab] == "settings" {
-            let over = native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0;
+            let over = native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0;
             let skin = MouseEvent { kind: ev.kind, x, y };
             let busy = self.settings_tab.form.popup_open() || self.settings_tab.form.sliding();
             let mine = match ev.kind {
@@ -2377,7 +2574,7 @@ impl WindowHandler for MainView {
             }
         }
         if TABS[self.tab] == "actions" {
-            let over = native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0;
+            let over = native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0;
             let skin = MouseEvent { kind: ev.kind, x, y };
             let mine = match ev.kind {
                 MouseKind::Down(_) | MouseKind::DoubleClick => over || self.actions_tab.form.popup_open(),
@@ -2648,12 +2845,12 @@ impl WindowHandler for MainView {
             self.static_dirty = true;
             return true;
         }
-        if TABS[self.tab] == "logs" && native::controls::inside(SCREEN, x, y) {
+        if TABS[self.tab] == "logs" && native::controls::inside(screen_r(), x, y) {
             self.log_scroll = (self.log_scroll + delta * 48.0).max(0.0);
             self.static_dirty = true;
             return true;
         }
-        if TABS[self.tab] == "home" && native::controls::inside(SCREEN, x, y) && self.home_max_scroll > 0.0 {
+        if TABS[self.tab] == "home" && native::controls::inside(screen_r(), x, y) && self.home_max_scroll > 0.0 {
             let next = (self.home_scroll - delta * 48.0).clamp(0.0, self.home_max_scroll);
             if next != self.home_scroll {
                 self.home_scroll = next;
@@ -2689,7 +2886,7 @@ impl WindowHandler for MainView {
 /// Размер текстуры рамки в пикселях: как resize() в frame.js — не выше ×1,5 к DIP.
 fn frame_size(k: f32, scale: f32) -> (u32, u32) {
     let d = scale.min(1.5);
-    ((SKIN_W * k * d).round().max(2.0) as u32, (SKIN_H * k * d).round().max(2.0) as u32)
+    ((skin_w() * k * d).round().max(2.0) as u32, (skin_h() * k * d).round().max(2.0) as u32)
 }
 
 #[cfg(test)]
@@ -2698,7 +2895,7 @@ mod tests {
 
     #[test]
     fn shape_covers_the_panel_and_skips_empty_corners() {
-        let (w, h) = (SKIN_W as usize, SKIN_H as usize);
+        let (w, h) = (skin_w() as usize, skin_h() as usize);
         let alpha = vec![0u8; w * h];
         let rects = shape_rects(&alpha, w, h);
         let inside = |x: f64, y: f64| rects.iter().any(|r| x >= r[0] && x < r[2] && y >= r[1] && y < r[3]);
@@ -2735,4 +2932,19 @@ fn crt_on(r: Rect, p: f32) -> (Rect, f32) {
         (0.0, 0.494 * (1.0 - t), 4.0 - 3.0 * t)
     };
     (Rect::new(r.x + r.w * ix, r.y + r.h * iy, (r.w * (1.0 - 2.0 * ix)).max(1.0), (r.h * (1.0 - 2.0 * iy)).max(1.0)), b - 1.0)
+}
+
+/// Форма окна — скруглённый прямоугольник (лёгкий вид): полосы по строкам на скруглениях.
+pub fn rounded_rects(w: f32, h: f32, r: f32) -> Vec<[f64; 4]> {
+    let mut out = Vec::new();
+    let ri = r.ceil() as i32;
+    for row in 0..ri {
+        let dy = r - row as f32 - 0.5;
+        let dx = r - (r * r - dy * dy).max(0.0).sqrt();
+        let x0 = dx.round() as f64;
+        out.push([x0, row as f64, w as f64 - 2.0 * x0, 1.0]);
+        out.push([x0, (h as i32 - 1 - row) as f64, w as f64 - 2.0 * x0, 1.0]);
+    }
+    out.push([0.0, ri as f64, w as f64, (h as i32 - 2 * ri) as f64]);
+    out
 }

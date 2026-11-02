@@ -28,7 +28,7 @@ use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 
 use crate::native::{self, WindowId, WindowSpec};
 pub use view::Msg;
-use view::{Info, MainView, SKIN_H, SKIN_W};
+use view::{skin_h, skin_w, Info, MainView};
 
 static WIN: Mutex<Option<(WindowId, isize)>> = Mutex::new(None);
 static LISTEN: Once = Once::new();
@@ -64,7 +64,7 @@ pub enum Act {
 pub fn enabled(app: &AppHandle) -> bool {
     app.try_state::<crate::config::LiveConfig>().is_some_and(|c| {
         let s = &c.get().settings;
-        s.native_main && !s.lite_ui
+        s.native_main
     })
 }
 
@@ -272,7 +272,11 @@ fn set_shade(app: &AppHandle, on: bool) {
         }
         let (src, w, h) = v.shape_source(on);
         let k = v.k();
-        let shape = ui.images().alpha_mask(src, w, h).map(|m| view::shape_rects(&m.alpha, w as usize, h as usize)).unwrap_or_default();
+        let shape = match src {
+            Some(src) => ui.images().alpha_mask(src, w, h).map(|m| view::shape_rects(&m.alpha, w as usize, h as usize)).unwrap_or_default(),
+            // лёгкий вид: скруглённый прямоугольник (16 у полоски, 18 у окна)
+            None => view::rounded_rects(w as f32, h as f32, if on { 16.0 } else { 18.0 }),
+        };
         let scale = ui.info(id).map_or(1.0, |i| i.scale);
         let scaled: Vec<[f64; 4]> = shape.iter().map(|r| r.map(|x| x * k as f64)).collect();
         // сначала регион, потом размер: иначе на кадр мелькнёт старая форма в новом размере
@@ -539,8 +543,8 @@ fn placement() -> (i32, i32, f32) {
         let dpi = dx as f32 / 96.0;
         let r = info.rcWork;
         let (aw, ah) = ((r.right - r.left) as f32 / dpi - 24.0, (r.bottom - r.top) as f32 / dpi - 24.0);
-        let k = (aw / SKIN_W).min(ah / SKIN_H).min(1.0).max(0.3);
-        let (w, h) = ((SKIN_W * k * dpi).round() as i32, (SKIN_H * k * dpi).round() as i32);
+        let k = (aw / skin_w()).min(ah / skin_h()).min(1.0).max(0.3);
+        let (w, h) = ((skin_w() * k * dpi).round() as i32, (skin_h() * k * dpi).round() as i32);
         (r.left + (r.right - r.left - w) / 2, r.top + (r.bottom - r.top - h) / 2, k)
     }
 }
@@ -569,6 +573,8 @@ pub fn show(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
         let Some(ui) = crate::mascot_native::ui(&app) else { return };
+        let lite = app.try_state::<crate::config::LiveConfig>().is_some_and(|c| c.get().settings.lite_ui);
+        view::set_lite(lite);
         let (x, y, k) = placement();
         let snapshot = crate::events::get_ui_snapshot();
         let info = info(&app);
@@ -581,14 +587,15 @@ pub fn show(app: &AppHandle) {
         let app3 = app.clone();
         let made = ui.call(move |ui| {
             let assets = view::Assets::load(&app3, ui.images());
-            let shape = assets.shape(ui.images());
+            // лёгкий вид — скруглённый прямоугольник во всё окно, полный — по альфе рамки
+            let shape = if lite { view::rounded_rects(skin_w(), skin_h(), 18.0) } else { assets.shape(ui.images()) };
             let view = MainView::new(assets, k, &locale, snapshot, info, host);
             let spec = WindowSpec {
                 title: "Reever".into(),
                 x,
                 y,
-                width: SKIN_W * k,
-                height: SKIN_H * k,
+                width: skin_w() * k,
+                height: skin_h() * k,
                 topmost: false,
                 no_activate: demo,
                 visible: true,
@@ -596,7 +603,7 @@ pub fn show(app: &AppHandle) {
             let id = ui.create_window(spec, Box::new(view))?;
             let (hwnd, scale) = ui.info(id).map(|i| (i.hwnd, i.scale)).unwrap_or((0, 1.0));
             // осьминог в сфере: свой вид маскота (кадры общие с окном маскота через кэш картинок)
-            let orb = crate::mascot_native::load_assets(&app3, ui.images())
+            let orb = (!lite).then(|| crate::mascot_native::load_assets(&app3, ui.images())).flatten()
                 .map(|a| crate::mascot_native::MascotView::new(a, &crate::events::current_state()));
             // полоска компактного режима: своя рамка, те же картинки лунок
             let btn = ui.handler_mut::<MainView>(id).map(|v| v.shade_buttons());

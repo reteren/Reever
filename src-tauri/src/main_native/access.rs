@@ -270,7 +270,7 @@ impl MainView {
         // рельс вкладок
         let mut tabs = Node::new(Role::TabList);
         tabs.set_label(self.t("nav.sections"));
-        tabs.set_bounds(b(RAIL));
+        tabs.set_bounds(b(rail_r()));
         let mut tab_ids = Vec::new();
         for i in 0..4 {
             let id = NodeId(6 + i as u64);
@@ -292,9 +292,9 @@ impl MainView {
             _ => "mic.idle".into(),
         };
         for (id, text, r) in [
-            (10u64, self.t(&state_key), STATUS),
-            (12, self.partial.clone(), SCREEN),
-            (11, self.heard.clone().unwrap_or_else(|| self.info.say.hint.clone()), SCREEN),
+            (10u64, self.t(&state_key), status_r()),
+            (12, self.partial.clone(), screen_r()),
+            (11, self.heard.clone().unwrap_or_else(|| self.info.say.hint.clone()), screen_r()),
         ] {
             if text.trim().is_empty() {
                 continue;
@@ -315,7 +315,7 @@ impl MainView {
         // содержимое вкладки
         let mut content = Node::new(Role::Group);
         content.set_label(self.t(TAB_KEYS[self.tab]));
-        content.set_bounds(b(SCREEN));
+        content.set_bounds(b(screen_r()));
         let mut ckids = Vec::new();
         let mut focus = None;
         match TABS[self.tab] {
@@ -406,7 +406,7 @@ impl MainView {
         let mut root = Node::new(Role::Window);
         root.set_label("Reever".to_string());
         root.set_children(kids);
-        root.set_bounds(native::a11y::bounds(0.0, 0.0, SKIN_W, SKIN_H, s));
+        root.set_bounds(native::a11y::bounds(0.0, 0.0, skin_w(), skin_h(), s));
         nodes.push((NodeId(1), root));
         let focus = match self.kfocus {
             KFocus::Lunka(i) => NodeId(2 + i as u64),

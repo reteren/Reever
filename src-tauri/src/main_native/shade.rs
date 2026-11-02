@@ -14,8 +14,21 @@ use crate::native::controls::button::{Lunka, Press};
 use crate::native::controls::{lcd, lcd_background, lcd_overlay, Glow, Scene, ACC, ACC_HOT};
 use crate::native::{self, GpuCx, ImageId, Images, Rect, RenderCx, TextLayout, TextStyle};
 
-pub const SHADE_W: f32 = 640.0;
-pub const SHADE_H: f32 = 170.0;
+/// Размер полоски: полный вид 640×170, лёгкий — 520×64 (lite.css #shade).
+pub fn shade_w() -> f32 {
+    if lite() { 520.0 } else { 640.0 }
+}
+pub fn shade_h() -> f32 {
+    if lite() { 64.0 } else { 170.0 }
+}
+
+fn lite() -> bool {
+    super::view::lite()
+}
+
+/// Лёгкий вид: мини-сфера 44 (10, 10), строка между ней и клавишами, клавиши 34×34.
+const LITE_ORB: (f32, f32, f32) = (32.0, 32.0, 22.0);
+const LITE_TICKER: Rect = Rect { x: 62.0, y: 10.0, w: 362.0, h: 44.0 };
 /// центр и радиус сферы, рамка линзы (left 79, top 52, 66×66)
 const ORB: (f32, f32, f32) = (112.0, 85.0, 30.0);
 const CORE: Rect = Rect { x: 79.0, y: 52.0, w: 66.0, h: 66.0 };
@@ -74,7 +87,15 @@ impl Shade {
             lens: None,
             lens_failed: false,
             fx: Fx::new((ORB.0, ORB.1), ORB.2),
-            lunki: [lunka((510.0, 85.0), "expand", btn[0], t0), lunka((548.0, 85.0), "tray", btn[1], t1)],
+            lunki: if lite() {
+                let mut l = [lunka((449.0, 32.0), "expand", btn[0], t0), lunka((491.0, 32.0), "tray", btn[1], t1)];
+                for k in l.iter_mut() {
+                    k.box_size = 34.0;
+                }
+                l
+            } else {
+                [lunka((510.0, 85.0), "expand", btn[0], t0), lunka((548.0, 85.0), "tray", btn[1], t1)]
+            },
             orb_hover: false,
             text: String::new(),
             marquee_from: Instant::now(),
@@ -84,8 +105,9 @@ impl Shade {
     }
 
     /// Форма окна по альфе рамки полоски (прямоугольники в координатах полоски).
-    pub fn shape_source(&self) -> (ImageId, u32, u32) {
-        (self.color, SHADE_W as u32, SHADE_H as u32)
+    /// None — лёгкий вид: форма — скруглённый прямоугольник (`view::rounded_rects`).
+    pub fn shape_source(&self) -> Option<(ImageId, u32, u32)> {
+        (!lite()).then_some((self.color, shade_w() as u32, shade_h() as u32))
     }
 
     /// Устройство пересоздано или масштаб сменился — текстуры заново.
@@ -112,10 +134,13 @@ impl Shade {
 
     fn frame_size(k: f32, scale: f32) -> (u32, u32) {
         let d = scale.min(1.5);
-        ((SHADE_W * k * d).round().max(2.0) as u32, (SHADE_H * k * d).round().max(2.0) as u32)
+        ((shade_w() * k * d).round().max(2.0) as u32, (shade_h() * k * d).round().max(2.0) as u32)
     }
 
     pub fn prepare(&mut self, gpu: &GpuCx<'_>, k: f32, lens: &LensParams, orb_light: f32) {
+        if lite() {
+            return;
+        }
         if !self.frame_failed {
             if let Some(px) = self.frame_px.take() {
                 match FrameShader::new(gpu, &px) {
@@ -130,7 +155,7 @@ impl Shade {
             let light = self.light(orb_light);
             if let Some(f) = &mut self.frame {
                 if f.fits(gpu, Self::frame_size(k, gpu.scale)) {
-                    f.render(gpu, (SHADE_W, SHADE_H), &light);
+                    f.render(gpu, (shade_w(), shade_h()), &light);
                 }
             }
         }
@@ -166,8 +191,12 @@ impl Shade {
         (self.overflow > 4.0).then(|| self.last + Duration::from_millis(33))
     }
 
-    pub fn render(&mut self, scene: &mut Scene, cx: &mut RenderCx<'_>, k: f32, base_scale: f32) {
+    pub fn render(&mut self, scene: &mut Scene, cx: &mut RenderCx<'_>, k: f32, base_scale: f32, orb: &crate::native::controls::lite::Orb) {
         self.last = cx.now;
+        if lite() {
+            self.render_lite(scene, cx, orb);
+            return;
+        }
         // картинки для шейдера рамки — один раз на размер
         if !self.frame_failed && self.frame_px.is_none() && self.frame.is_none() {
             let size = Self::frame_size(k, base_scale);
@@ -184,10 +213,42 @@ impl Shade {
             }
         }
         // бегущая строка
-        lcd_background(cx, TICKER, 8.0);
-        scene.icon("play", Rect::new(TICKER.x + 12.0, TICKER.y + 16.0, 12.0, 12.0), 0.0, ACC, true, Glow::G2);
-        let inner = Rect::new(TICKER.x + 12.0 + 12.0 + 8.0, TICKER.y, TICKER.w - 12.0 - 12.0 - 8.0 - 12.0, TICKER.h);
-        let st: TextStyle = lcd(24.0, 500, 0.05);
+        self.draw_ticker(scene, cx, TICKER, 24.0);
+        // рамка
+        let r = Rect::new(0.0, 0.0, shade_w(), shade_h());
+        match &self.frame {
+            Some(f) => unsafe {
+                cx.dc().DrawBitmap(f.bitmap(), Some(&r.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+            },
+            None => cx.draw_image(self.color, r, 1.0),
+        }
+        for l in self.lunki.iter() {
+            l.draw(scene, cx);
+        }
+        scene.flush(cx);
+        self.fx.draw(cx);
+    }
+
+    /// Лёгкая полоска: сталь, мини-сфера, строка, две клавиши.
+    fn render_lite(&mut self, scene: &mut Scene, cx: &mut RenderCx<'_>, orb: &crate::native::controls::lite::Orb) {
+        use crate::native::controls::lite;
+        lite::metal_panel(cx, Rect::new(0.0, 0.0, shade_w(), shade_h()), 16.0);
+        lite::orb(cx, (LITE_ORB.0, LITE_ORB.1), LITE_ORB.2 * 2.0, 3.0, orb);
+        self.draw_ticker(scene, cx, LITE_TICKER, 22.0);
+        lite::recess(cx, LITE_TICKER, 8.0, false);
+        for l in self.lunki.iter() {
+            let r = Rect::new(l.center.0 - 17.0, l.center.1 - 17.0, 34.0, 34.0);
+            lite::key(scene, cx, r, l.icon, l.press.hover_t.value(cx.now), l.press.pressed && l.press.hover);
+        }
+        scene.flush(cx);
+    }
+
+    /// Табло строки (#shadeTicker): значок, текст (бежит, если не влезает), стекло.
+    fn draw_ticker(&mut self, scene: &mut Scene, cx: &mut RenderCx<'_>, t: Rect, size: f32) {
+        lcd_background(cx, t, 8.0);
+        scene.icon("play", Rect::new(t.x + 12.0, t.y + 16.0, 12.0, 12.0), 0.0, ACC, true, Glow::G2);
+        let inner = Rect::new(t.x + 12.0 + 12.0 + 8.0, t.y, t.w - 12.0 - 12.0 - 8.0 - 12.0, t.h);
+        let st: TextStyle = lcd(size, 500, 0.05);
         let text = if self.text.is_empty() { "REEVER".to_string() } else { self.text.clone() };
         if let Some(l) = scene.cache.get(cx.text(), &text, &st, 100_000.0) {
             let l: Rc<TextLayout> = l;
@@ -208,20 +269,7 @@ impl Shade {
             scene.set_clip(None);
             unsafe { cx.dc().PopAxisAlignedClip() };
         }
-        lcd_overlay(cx, TICKER, 8.0);
-        // рамка
-        let r = Rect::new(0.0, 0.0, SHADE_W, SHADE_H);
-        match &self.frame {
-            Some(f) => unsafe {
-                cx.dc().DrawBitmap(f.bitmap(), Some(&r.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
-            },
-            None => cx.draw_image(self.color, r, 1.0),
-        }
-        for l in self.lunki.iter() {
-            l.draw(scene, cx);
-        }
-        scene.flush(cx);
-        self.fx.draw(cx);
+        lcd_overlay(cx, t, 8.0);
     }
 
     pub fn hit(&self, x: f32, y: f32) -> Option<ShadeHit> {
@@ -231,7 +279,8 @@ impl Shade {
         if self.lunki[1].hit(x, y) {
             return Some(ShadeHit::Tray);
         }
-        let (dx, dy) = (x - ORB.0, y - ORB.1);
-        (dx * dx + dy * dy <= ORB.2 * ORB.2).then_some(ShadeHit::Orb)
+        let o = if lite() { LITE_ORB } else { ORB };
+        let (dx, dy) = (x - o.0, y - o.1);
+        (dx * dx + dy * dy <= o.2 * o.2).then_some(ShadeHit::Orb)
     }
 }
