@@ -12,6 +12,10 @@
   const SHOT = !tauri && params.has('shot');
   // Лёгкий интерфейс (lite.css): плоская панель, линза на CSS, без WebGL и маскота.
   const LITE = document.documentElement.classList.contains('lite');
+  // ТЕСТ производительности: рамка без живого света — ни блика под курсором, ни света линзы
+  // по голосу, ни бегущей волны, ни подсветки лунок. Шейдер рамки рисует один кадр и стоит.
+  // Вернуть живой свет — false.
+  const FRAME_STATIC = true;
 
   // Геометрия — та же, что в design/reever-frame.blend (CSS-пиксели скина).
   const SKIN = {
@@ -222,7 +226,7 @@
   // ── Свет ───────────────────────────────────────────────────────────
   const sweep = { x: -0.3, i: 0, speed: 0.8, active: false };
   function sweepNow(intensity = 0.7, speed = 0.75) {
-    if (reduced || SHOT) return;
+    if (reduced || SHOT || FRAME_STATIC) return;
     sweep.x = -0.25; sweep.i = intensity; sweep.speed = speed; sweep.active = true;
     wakeLoop();
   }
@@ -311,7 +315,11 @@
 
     // рисуется только видимый вид: полный скин или компактная полоска
     const V = shaded ? shadeView : mainView, G = shaded ? SHADE : SKIN;
-    if (V.frame) V.frame.render({
+    if (V.frame) V.frame.render(FRAME_STATIC ? {
+      mouse: { x: 0, y: 0, on: 0 }, orb: G.orb, orbLight: STATES.idle.orbLight,
+      sweep: { x: -1, i: 0 }, reveal, time,
+      lunki: [G.lunki[0][0], G.lunki[0][1], 0, G.lunki[1][0], G.lunki[1][1], 0, G.lunki[2][0], G.lunki[2][1], 0],
+    } : {
       mouse: { x: S.mx.v, y: S.my.v, on: S.mouseOn.v }, orb: G.orb, orbLight: Math.max(0, S.orbLight.v + flash * 1.5),
       sweep, reveal, time,
       lunki: [G.lunki[0][0], G.lunki[0][1], S.l0.v, G.lunki[1][0], G.lunki[1][1], S.l1.v, G.lunki[2][0], G.lunki[2][1], S.l2.v],

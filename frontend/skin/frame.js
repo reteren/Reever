@@ -140,9 +140,18 @@
       canvas.height = Math.round(skin.h * scale * dpr);
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(U.uCanvas, canvas.width, canvas.height);
+      lastKey = '';
     }
 
+    // Шейдер запускается, только когда освещение изменилось: иначе на экране остаётся прошлый
+    // кадр (холст без preserveDrawingBuffer не очищается, пока в него не рисуют).
+    let lastKey = '';
     function render(s) {
+      const q = v => Math.round(v * 1000);
+      const key = [q(s.mouse.x), q(s.mouse.y), q(s.mouse.on), q(s.orb.x), q(s.orb.y), q(s.orbLight),
+        q(s.sweep.x), q(s.sweep.i), q(s.reveal), ...s.lunki.map(q)].join(',');
+      if (key === lastKey) return;
+      lastKey = key;
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(U.uMouse, s.mouse.x, s.mouse.y); gl.uniform1f(U.uMouseOn, s.mouse.on);
       gl.uniform2f(U.uOrb, s.orb.x, s.orb.y); gl.uniform1f(U.uOrbI, s.orbLight);
