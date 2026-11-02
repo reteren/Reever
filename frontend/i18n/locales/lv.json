@@ -218,6 +218,8 @@
   "settings.lite_ui.help": "Vienkāršāks un vieglāks dizains.",
   "settings.native_mascot": "Vietējais talismans",
   "settings.native_mascot.help": "Talismans tiek zīmēts bez tīmekļa dzinēja: aizņem mazāk atmiņas un parādās ātrāk. Eksperimentāli.",
+  "settings.native_dialogs": "Vietējie izvēles un apstiprinājuma logi",
+  "settings.native_dialogs.help": "Logs “atrodi …” un jautājums pirms bīstamas komandas tiek zīmēti bez tīmekļa dzinēja: tie atveras ātrāk un neaizņem atmiņu. Vieglajā saskarnē pagaidām tīmeklis. Eksperimentāli.",
   "settings.fps_limit": "Plūdenums",
   "settings.fps_limit.help": "Cik bieži tiek pārzīmēta saskarnes animācija. Vājā datorā 60 vai 30 kadri samazina slodzi.",
   "settings.fps_limit.0": "Kā monitoram",

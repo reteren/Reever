@@ -218,6 +218,8 @@
   "settings.lite_ui.help": "Jednostavniji i lakši izgled.",
   "settings.native_mascot": "Izvorna maskota",
   "settings.native_mascot.help": "Maskota se crta bez web-pogona: troši manje memorije i brže se pojavljuje. Eksperimentalno.",
+  "settings.native_dialogs": "Izvorni prozori za odabir i potvrdu",
+  "settings.native_dialogs.help": "Prozor „pronađi …” i pitanje prije opasne naredbe crtaju se bez web-pogona: otvaraju se brže i ne drže memoriju. U laganom sučelju zasad web. Eksperimentalno.",
   "settings.fps_limit": "Glatkoća",
   "settings.fps_limit.help": "Koliko se često iscrtava animacija sučelja. Na slabom računalu 60 ili 30 sličica smanjuje opterećenje.",
   "settings.fps_limit.0": "Kao monitor",

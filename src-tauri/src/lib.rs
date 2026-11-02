@@ -565,6 +565,7 @@ pub fn run() {
             mascot::mascot_orb,
             mascot::set_native_mascot,
             mascot::set_fps_limit,
+            dialogs_native::set_native_dialogs,
             bubble::bubble_layout,
             commands_api::set_mascot,
             commands_api::mascot_place,

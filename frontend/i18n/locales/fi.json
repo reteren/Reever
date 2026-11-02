@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "Yksinkertaisempi ja kevyempi ulkoasu.",
   "settings.native_mascot": "Natiivi maskotti",
   "settings.native_mascot.help": "Maskotti piirretään ilman verkkomoottoria: vie vähemmän muistia ja ilmestyy nopeammin. Kokeellinen.",
+  "settings.native_dialogs": "Natiivit valinta- ja vahvistusikkunat",
+  "settings.native_dialogs.help": "Ikkuna ”etsi …” ja kysymys ennen vaarallista komentoa piirretään ilman verkkomoottoria: ne aukeavat nopeammin eivätkä varaa muistia. Kevyessä käyttöliittymässä toistaiseksi verkko. Kokeellinen.",
   "settings.fps_limit": "Sulavuus",
   "settings.fps_limit.help": "Kuinka usein käyttöliittymän animaatio piirretään uudelleen. Heikolla tietokoneella 60 tai 30 kuvaa keventää kuormaa.",
   "settings.fps_limit.0": "Kuten näyttö",

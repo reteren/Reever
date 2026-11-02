@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "Un diseño más sencillo y ligero.",
   "settings.native_mascot": "Mascota nativa",
   "settings.native_mascot.help": "La mascota se dibuja sin motor web: usa menos memoria y aparece más rápido. Experimental.",
+  "settings.native_dialogs": "Ventanas nativas de elección y confirmación",
+  "settings.native_dialogs.help": "La ventana «busca …» y la pregunta antes de un comando peligroso se dibujan sin motor web: se abren más rápido y no ocupan memoria. En la interfaz ligera, por ahora web. Experimental.",
   "settings.fps_limit": "Fluidez",
   "settings.fps_limit.help": "Con qué frecuencia se redibuja la animación de la interfaz. En un equipo poco potente, 60 o 30 fotogramas reducen la carga.",
   "settings.fps_limit.0": "Como el monitor",

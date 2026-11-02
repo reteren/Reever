@@ -218,6 +218,8 @@
   "settings.lite_ui.help": "Un design plus simple et plus léger.",
   "settings.native_mascot": "Mascotte native",
   "settings.native_mascot.help": "La mascotte est dessinée sans moteur web : moins de mémoire et apparition plus rapide. Expérimental.",
+  "settings.native_dialogs": "Fenêtres natives de choix et de confirmation",
+  "settings.native_dialogs.help": "La fenêtre « trouve … » et la question avant une commande dangereuse sont dessinées sans moteur web : elles s’ouvrent plus vite et n’occupent pas de mémoire. L’interface légère reste web pour l’instant. Expérimental.",
   "settings.fps_limit": "Fluidité",
   "settings.fps_limit.help": "Fréquence à laquelle l'animation de l'interface est redessinée. Sur un ordinateur peu puissant, 60 ou 30 images allègent la charge.",
   "settings.fps_limit.0": "Comme l'écran",

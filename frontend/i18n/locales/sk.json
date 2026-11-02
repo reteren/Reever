@@ -219,6 +219,8 @@
   "settings.lite_ui.help": "Jednoduchší a ľahší vzhľad.",
   "settings.native_mascot": "Natívny maskot",
   "settings.native_mascot.help": "Maskot sa vykresľuje bez webového jadra: zaberá menej pamäte a objavuje sa rýchlejšie. Experimentálne.",
+  "settings.native_dialogs": "Natívne okná výberu a potvrdenia",
+  "settings.native_dialogs.help": "Okno „nájdi …“ a otázka pred nebezpečným príkazom sa vykresľujú bez webového jadra: otvárajú sa rýchlejšie a nedržia pamäť. V odľahčenom rozhraní zatiaľ web. Experimentálne.",
   "settings.fps_limit": "Plynulosť",
   "settings.fps_limit.help": "Ako často sa prekresľuje animácia rozhrania. Na slabom počítači znížia záťaž 60 alebo 30 snímok.",
   "settings.fps_limit.0": "Ako monitor",

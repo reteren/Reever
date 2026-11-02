@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "Et enklere og lettere design.",
   "settings.native_mascot": "Indbygget maskot",
   "settings.native_mascot.help": "Maskotten tegnes uden webmotor: bruger mindre hukommelse og vises hurtigere. Eksperimentel.",
+  "settings.native_dialogs": "Indbyggede valg- og bekræftelsesvinduer",
+  "settings.native_dialogs.help": "Vinduet “find …” og spørgsmålet før en farlig kommando tegnes uden webmotor: de åbner hurtigere og optager ikke hukommelse. Den lette brugerflade bruger foreløbig web. Eksperimentel.",
   "settings.fps_limit": "Glathed",
   "settings.fps_limit.help": "Hvor ofte grænsefladens animation tegnes igen. På en svag computer letter 60 eller 30 billeder belastningen.",
   "settings.fps_limit.0": "Som skærmen",

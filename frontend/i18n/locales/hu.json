@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "Egyszerűbb, könnyebb megjelenés.",
   "settings.native_mascot": "Natív kabala",
   "settings.native_mascot.help": "A kabala webmotor nélkül rajzolódik ki: kevesebb memóriát használ, és gyorsabban jelenik meg. Kísérleti.",
+  "settings.native_dialogs": "Natív választó- és megerősítőablakok",
+  "settings.native_dialogs.help": "A „keresd …” ablak és a veszélyes parancs előtti kérdés webmotor nélkül rajzolódik ki: gyorsabban nyílnak, és nem foglalnak memóriát. A könnyű felületen egyelőre web. Kísérleti.",
   "settings.fps_limit": "Folyamatosság",
   "settings.fps_limit.help": "Milyen gyakran rajzolódik újra a felület animációja. Gyenge számítógépen a 60 vagy 30 képkocka csökkenti a terhelést.",
   "settings.fps_limit.0": "Mint a monitor",

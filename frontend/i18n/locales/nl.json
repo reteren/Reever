@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "Een eenvoudiger, lichter ontwerp.",
   "settings.native_mascot": "Native mascotte",
   "settings.native_mascot.help": "De mascotte wordt zonder webengine getekend: minder geheugen en sneller zichtbaar. Experimenteel.",
+  "settings.native_dialogs": "Native keuze- en bevestigingsvensters",
+  "settings.native_dialogs.help": "Het venster ‘zoek …’ en de vraag vóór een gevaarlijke opdracht worden zonder webengine getekend: ze openen sneller en houden geen geheugen vast. De lichte interface gebruikt voorlopig web. Experimenteel.",
   "settings.fps_limit": "Vloeiendheid",
   "settings.fps_limit.help": "Hoe vaak de animatie van de interface opnieuw wordt getekend. Op een zwakke computer verlagen 60 of 30 beelden de belasting.",
   "settings.fps_limit.0": "Zoals de monitor",

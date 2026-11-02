@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "A simpler, lighter design.",
   "settings.native_mascot": "Native mascot",
   "settings.native_mascot.help": "The mascot is drawn without the web engine: it uses less memory and appears faster. Experimental.",
+  "settings.native_dialogs": "Native choice and confirmation windows",
+  "settings.native_dialogs.help": "The “find …” window and the question before a dangerous command are drawn without the web engine: they open faster and hold no memory. Lite interface still uses the web ones. Experimental.",
   "settings.fps_limit": "Smoothness",
   "settings.fps_limit.help": "How often the interface animation is redrawn. On a weak computer, 60 or 30 frames ease the load.",
   "settings.fps_limit.0": "As the monitor",

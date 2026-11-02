@@ -216,6 +216,8 @@
   "settings.lite_ui.help": "よりシンプルで軽いデザイン。",
   "settings.native_mascot": "ネイティブのマスコット",
   "settings.native_mascot.help": "マスコットをウェブエンジンなしで描画します。メモリ使用量が減り、表示も速くなります。試験的な機能です。",
+  "settings.native_dialogs": "ネイティブの選択・確認ウィンドウ",
+  "settings.native_dialogs.help": "「探して …」のウィンドウと危険なコマンド前の確認をウェブエンジンなしで描画します。開くのが速く、メモリを使いません。軽量インターフェースでは当面ウェブのままです。試験的な機能です。",
   "settings.fps_limit": "なめらかさ",
   "settings.fps_limit.help": "インターフェースのアニメーションを描き直す頻度。性能の低いパソコンでは 60 または 30 フレームで負荷が下がります。",
   "settings.fps_limit.0": "モニターに合わせる",

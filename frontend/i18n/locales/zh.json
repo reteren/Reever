@@ -216,6 +216,8 @@
   "settings.lite_ui.help": "更简洁、更轻量的界面。",
   "settings.native_mascot": "原生吉祥物",
   "settings.native_mascot.help": "吉祥物不再通过网页引擎绘制：占用内存更少，出现更快。实验性功能。",
+  "settings.native_dialogs": "原生选择与确认窗口",
+  "settings.native_dialogs.help": "“查找 …”窗口和危险命令前的确认不再通过网页引擎绘制：打开更快，也不占用内存。轻量界面暂时仍使用网页窗口。实验性功能。",
   "settings.fps_limit": "流畅度",
   "settings.fps_limit.help": "界面动画的重绘频率。在性能较弱的电脑上，60 或 30 帧可以降低负载。",
   "settings.fps_limit.0": "与显示器相同",

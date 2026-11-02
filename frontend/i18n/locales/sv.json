@@ -217,6 +217,8 @@
   "settings.lite_ui.help": "En enklare och lättare design.",
   "settings.native_mascot": "Inbyggd maskot",
   "settings.native_mascot.help": "Maskoten ritas utan webbmotor: använder mindre minne och visas snabbare. Experimentell.",
+  "settings.native_dialogs": "Inbyggda val- och bekräftelsefönster",
+  "settings.native_dialogs.help": "Fönstret ”hitta …” och frågan före ett farligt kommando ritas utan webbmotor: de öppnas snabbare och håller inget minne. Det lätta gränssnittet använder tills vidare webb. Experimentell.",
   "settings.fps_limit": "Mjukhet",
   "settings.fps_limit.help": "Hur ofta gränssnittets animation ritas om. På en svag dator minskar 60 eller 30 bilder belastningen.",
   "settings.fps_limit.0": "Som skärmen",

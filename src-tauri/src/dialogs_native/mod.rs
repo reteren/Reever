@@ -134,3 +134,15 @@ pub fn send_dpi(hwnd: isize, dpi: u32) {
         SendMessageW(h, WM_DPICHANGED, WPARAM((dpi | (dpi << 16)) as usize), LPARAM(&s as *const RECT as isize));
     }
 }
+
+/// Настройки → Интерфейс: нативные окна выбора и подтверждения вкл/выкл — сразу: следующее
+/// окно покажется уже в новом виде (открытое сейчас доживает в прежнем).
+#[tauri::command]
+pub fn set_native_dialogs(config: tauri::State<'_, crate::config::LiveConfig>, enabled: bool) -> Result<(), String> {
+    let current = config.get();
+    crate::commands_api::persist_value(&current, "native_dialogs", serde_json::Value::Bool(enabled))?;
+    let mut fresh = (*current).clone();
+    fresh.settings.native_dialogs = enabled;
+    config.set(Arc::new(fresh));
+    Ok(())
+}
