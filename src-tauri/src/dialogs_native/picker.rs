@@ -79,7 +79,7 @@ enum Entry {
 
 pub struct PickerView {
     host: std::sync::Arc<dyn Host>,
-    ui: std::sync::Arc<UiThread>,
+    ui: Option<std::sync::Arc<UiThread>>,
     id: Option<WindowId>,
     hwnd: isize,
     skin: Skin,
@@ -112,7 +112,7 @@ pub struct PickerView {
 }
 
 impl PickerView {
-    fn new(host: std::sync::Arc<dyn Host>, ui: std::sync::Arc<UiThread>, skin: Skin) -> Self {
+    fn new(host: std::sync::Arc<dyn Host>, ui: Option<std::sync::Arc<UiThread>>, skin: Skin) -> Self {
         let (_, rtl) = locale();
         let mut query = TextInput::default();
         query.pad_left = 28.0;
@@ -248,7 +248,7 @@ impl PickerView {
         let (host, ui, id) = (self.host.clone(), self.ui.clone(), self.id);
         std::thread::spawn(move || {
             let result = host.search(&text, scope);
-            let Some(id) = id else { return };
+            let (Some(id), Some(ui)) = (id, ui) else { return };
             ui.post(move |ui| {
                 if let Some(v) = ui.handler_mut::<PickerView>(id) {
                     v.search_done(seq, &text, result);
@@ -866,7 +866,7 @@ pub fn show(app: &AppHandle, host: std::sync::Arc<dyn Host>, payload: Payload) {
         let (app2, ui2) = (app.clone(), ui.clone());
         let made = ui.call(move |ui| {
             let skin = load_skin(&app2, ui.images());
-            let mut view = PickerView::new(host, ui2, skin);
+            let mut view = PickerView::new(host, Some(ui2), skin);
             view.apply(payload);
             let spec = WindowSpec { title: "Reever".into(), x, y, width: WIN_W, height: WIN_H, topmost: true, no_activate: crate::dialog_demo::active(), visible: true };
             let id = ui.create_window(spec, Box::new(view))?;
@@ -929,4 +929,139 @@ pub fn snapshot(app: &AppHandle) -> Option<(u32, u32, Vec<u8>)> {
 pub fn fake_dpi(dpi: u32) {
     let Some((_, hwnd)) = WIN.lock().ok().and_then(|w| *w) else { return };
     crate::dialogs_native::send_dpi(hwnd, dpi);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::native::ImageId;
+    use std::sync::Arc;
+    use windows::Win32::UI::Input::KeyboardAndMouse::VK_3;
+
+    #[derive(Default)]
+    struct Mock {
+        calls: Mutex<Vec<String>>,
+    }
+
+    impl Host for Mock {
+        fn choose(&self, index: usize) {
+            self.calls.lock().unwrap().push(format!("choose {index}"));
+        }
+        fn close(&self) {
+            self.calls.lock().unwrap().push("close".into());
+        }
+        fn search(&self, query: &str, _scope: FindScope) -> Result<Option<Vec<FindItem>>, String> {
+            self.calls.lock().unwrap().push(format!("search {query}"));
+            Err("index-off".into())
+        }
+    }
+
+    fn calls(m: &Mock) -> Vec<String> {
+        // вызовы хоста идут в своих потоках — подождать
+        for _ in 0..100 {
+            if !m.calls.lock().unwrap().is_empty() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        std::thread::sleep(Duration::from_millis(20));
+        m.calls.lock().unwrap().clone()
+    }
+
+    fn view(n: usize) -> (PickerView, Arc<Mock>) {
+        let mock = Arc::new(Mock::default());
+        let skin = Skin { frame: ImageId(0), close_off: ImageId(1), close_on: ImageId(2) };
+        let mut v = PickerView::new(mock.clone(), None, skin);
+        let items = (0..n)
+            .map(|i| FindItem { name: format!("item {i}"), path: format!("C:\\x\\{i}"), folder: i % 2 == 0, frequent: i < 2, score: 0.0 })
+            .collect();
+        v.apply(Payload { title: "q".into(), query: "q".into(), scope: FindScope::Any, items });
+        (v, mock)
+    }
+
+    fn key(k: u16) -> KeyEvent {
+        KeyEvent { key: k as u32, ctrl: false, shift: false, alt: false, repeat: false }
+    }
+
+    #[test]
+    fn arrows_and_pages_move_selection_from_the_search_field() {
+        let (mut v, _) = view(20);
+        assert_eq!(v.focus, Focus::Query);
+        v.key(key(VK_DOWN.0));
+        v.key(key(VK_DOWN.0));
+        assert_eq!(v.selected, 2);
+        v.key(key(VK_UP.0));
+        assert_eq!(v.selected, 1);
+        v.key(key(VK_NEXT.0));
+        assert_eq!(v.selected, 9);
+        v.key(key(VK_PRIOR.0));
+        v.key(key(VK_PRIOR.0));
+        assert_eq!(v.selected, 0);
+        // Home из поля — каретке в поле, выбор не меняется
+        v.key(key(VK_DOWN.0));
+        v.key(key(VK_HOME.0));
+        assert_eq!(v.selected, 1);
+    }
+
+    #[test]
+    fn home_end_and_digits_work_in_the_list() {
+        let (mut v, mock) = view(12);
+        v.set_focus(Focus::List, true);
+        v.key(key(VK_END.0));
+        assert_eq!(v.selected, 11);
+        v.key(key(VK_HOME.0));
+        assert_eq!(v.selected, 0);
+        v.key(key(VK_3.0));
+        assert!(!v.char_input('3'), "цифра выбора не печатается");
+        assert_eq!(calls(&mock), vec!["choose 2"]);
+    }
+
+    #[test]
+    fn letter_in_list_goes_to_search_field() {
+        let (mut v, _) = view(5);
+        v.set_focus(Focus::List, false);
+        v.key(key(0x41));
+        assert_eq!(v.focus, Focus::Query);
+        v.query.set_text("");
+        v.char_input('a');
+        assert_eq!(v.query.text(), "a");
+        assert!(v.search_due.is_some(), "набор запускает поиск с задержкой");
+    }
+
+    #[test]
+    fn enter_opens_selection_and_escape_closes() {
+        let (mut v, mock) = view(5);
+        v.key(key(VK_DOWN.0));
+        v.key(key(VK_RETURN.0));
+        assert_eq!(calls(&mock), vec!["choose 1"]);
+        let (mut v, mock) = view(5);
+        v.key(key(VK_ESCAPE.0));
+        assert_eq!(calls(&mock), vec!["close"]);
+    }
+
+    #[test]
+    fn tab_cycles_focus_and_space_presses_chip() {
+        let (mut v, _) = view(3);
+        v.key(key(VK_TAB.0));
+        assert_eq!(v.focus, Focus::Chip(0));
+        v.key(key(VK_TAB.0));
+        assert_eq!(v.focus, Focus::Chip(1));
+        v.key(key(VK_SPACE.0));
+        assert_eq!(v.scope, FindScope::Folder);
+        assert_eq!(v.focus, Focus::Query);
+        let back = KeyEvent { shift: true, ..key(VK_TAB.0) };
+        v.key(back);
+        assert_eq!(v.focus, Focus::Close);
+        v.key(back);
+        assert_eq!(v.focus, Focus::Open);
+    }
+
+    #[test]
+    fn sections_frequent_then_all() {
+        let (v, _) = view(4);
+        assert!(matches!(v.entries[0], Entry::Section(_)));
+        assert!(matches!(v.entries[1], Entry::Item(0)));
+        assert!(matches!(v.entries[3], Entry::Section(_)));
+        assert_eq!(v.entries.len(), 6);
+    }
 }

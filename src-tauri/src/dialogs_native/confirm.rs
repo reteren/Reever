@@ -443,6 +443,81 @@ pub fn hide(app: &AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::native::ImageId;
+    use std::sync::Arc;
+
+    #[derive(Default)]
+    struct Mock {
+        answers: Mutex<Vec<(u64, bool)>>,
+    }
+
+    impl Host for Mock {
+        fn answer(&self, session: u64, yes: bool) {
+            self.answers.lock().unwrap().push((session, yes));
+        }
+    }
+
+    fn answers(m: &Mock) -> Vec<(u64, bool)> {
+        for _ in 0..100 {
+            if !m.answers.lock().unwrap().is_empty() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        std::thread::sleep(Duration::from_millis(20));
+        m.answers.lock().unwrap().clone()
+    }
+
+    fn view() -> (ConfirmView, Arc<Mock>) {
+        let mock = Arc::new(Mock::default());
+        let skin = Skin { frame: ImageId(0), close_off: ImageId(1), close_on: ImageId(2) };
+        let mut v = ConfirmView::new(mock.clone(), skin);
+        v.apply(Question { session: 7, kind: "shutdown".into(), app: String::new(), seconds: 8 });
+        (v, mock)
+    }
+
+    fn key(k: u16, shift: bool) -> KeyEvent {
+        KeyEvent { key: k as u32, ctrl: false, shift, alt: false, repeat: false }
+    }
+
+    #[test]
+    fn no_is_focused_and_enter_answers_no() {
+        let (mut v, mock) = view();
+        assert_eq!(v.focus, Focus::No);
+        v.key(key(VK_RETURN.0, false));
+        assert_eq!(answers(&mock), vec![(7, false)]);
+    }
+
+    #[test]
+    fn arrows_switch_to_yes_and_space_answers_yes() {
+        let (mut v, mock) = view();
+        v.key(key(VK_LEFT.0, false));
+        assert_eq!(v.focus, Focus::Yes);
+        v.key(key(VK_RIGHT.0, false));
+        assert_eq!(v.focus, Focus::No);
+        v.key(key(VK_RIGHT.0, false));
+        v.key(key(VK_SPACE.0, false));
+        assert_eq!(answers(&mock), vec![(7, true)]);
+    }
+
+    #[test]
+    fn escape_and_alt_f4_answer_no_once() {
+        let (mut v, mock) = view();
+        v.key(key(VK_ESCAPE.0, false));
+        v.close_requested();
+        assert_eq!(answers(&mock), vec![(7, false)]);
+    }
+
+    #[test]
+    fn tab_cycles_close_yes_no() {
+        let (mut v, _) = view();
+        v.key(key(VK_TAB.0, false));
+        assert_eq!(v.focus, Focus::Close);
+        v.key(key(VK_TAB.0, false));
+        assert_eq!(v.focus, Focus::Yes);
+        v.key(key(VK_TAB.0, true));
+        assert_eq!(v.focus, Focus::Close);
+    }
 
     #[test]
     fn strong_is_stripped_with_utf16_range() {
