@@ -146,3 +146,11 @@ pub fn set_native_dialogs(config: tauri::State<'_, crate::config::LiveConfig>, e
     config.set(Arc::new(fresh));
     Ok(())
 }
+
+/// Отпустить графическое устройство через минуту, если к тому времени окон не останется.
+pub fn release_later(ui: Arc<crate::native::UiThread>) {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        ui.post(|ui| ui.release_device());
+    });
+}

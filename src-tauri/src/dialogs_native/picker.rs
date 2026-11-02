@@ -1032,8 +1032,10 @@ pub fn hide(app: &AppHandle) {
     if let Some(ui) = ui_thread(app) {
         ui.post(move |ui| {
             ui.close_window(id);
-            ui.release_device();
         });
+        // устройство — не сразу: следующее окно (вопрос после выбора, новый поиск) в течение
+        // минуты покажется без пересоздания D3D11 (~200 мс)
+        super::release_later(ui.clone());
     }
 }
 
