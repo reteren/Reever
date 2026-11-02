@@ -215,6 +215,8 @@
   "settings.ui_languages": "Liidese keeled",
   "settings.lite_ui": "Kerge kasutajaliides",
   "settings.lite_ui.help": "Lihtsam ja kergem kujundus.",
+  "settings.native_mascot": "Natiivne maskott",
+  "settings.native_mascot.help": "Maskott joonistatakse ilma veebimootorita: võtab vähem mälu ja ilmub kiiremini. Katseline.",
   "settings.fps_limit": "Sujuvus",
   "settings.fps_limit.help": "Kui sageli liidese animatsiooni uuesti joonistatakse. Nõrgal arvutil vähendavad 60 või 30 kaadrit koormust.",
   "settings.fps_limit.0": "Nagu monitor",

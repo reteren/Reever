@@ -215,6 +215,8 @@
   "settings.ui_languages": "Lingue dell'interfaccia",
   "settings.lite_ui": "Interfaccia leggera",
   "settings.lite_ui.help": "Un design più semplice e leggero.",
+  "settings.native_mascot": "Mascotte nativa",
+  "settings.native_mascot.help": "La mascotte viene disegnata senza motore web: usa meno memoria e appare più in fretta. Sperimentale.",
   "settings.fps_limit": "Fluidità",
   "settings.fps_limit.help": "Quanto spesso viene ridisegnata l'animazione dell'interfaccia. Su un computer poco potente, 60 o 30 fotogrammi riducono il carico.",
   "settings.fps_limit.0": "Come il monitor",

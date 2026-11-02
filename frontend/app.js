@@ -7,7 +7,7 @@ const previewSettings={
   partial_results:true,cancel_words:['отмена','стоп','отбой','забудь'],
   raise_result:true,activation_mode:'both',hotkey:'Ctrl+Shift+G',confirm_dangerous:true,confirm_close:false,
   sound_pack:'classic',private_log:false,offline_mode:false,mute_hotkey:'',
-  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_english_level:2,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_blackbox:false,mascot_mode:'commands',mascot_scale:100,mascot_bubble:true,lite_ui:document.documentElement.classList.contains('lite')
+  dictation_clipboard:true,dictation_live:true,dictation_english:true,dictation_english_level:2,dictation_idle_ms:3000,dictation_pause_ms:800,webchat_send:true,wake_blackbox:false,mascot_mode:'commands',mascot_scale:100,mascot_bubble:true,native_mascot:false,lite_ui:document.documentElement.classList.contains('lite')
 };
 const defaultGrammarPreview=()=>({
   wake_words:['ривер','ревер','ривьер','ливер'],
@@ -706,7 +706,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // [ключ настройки, тип, варианты]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
-  ['interface',[['lite_ui','lite_ui'],['fps_limit','fps'],['ui_language','ui_language'],['ui_languages','ui_languages']]],
+  ['interface',[['lite_ui','lite_ui'],['fps_limit','fps'],['native_mascot','bool'],['ui_language','ui_language'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never']],['mascot_scale','mascot_scale'],['mascot_position','mascot_position'],['mascot_bubble','bool']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['voice_adapt','voice_adapt'],['voice_passive','bool'],['hotkey','hotkey'],['mute_hotkey','hotkey']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
@@ -920,7 +920,16 @@ function fieldEl(key,type,opts){
     const id='cb'+(++cbSeq);
     const inp=el('input',{type:'checkbox',id}); inp.checked=key==='mascot_bubble'?settingsObj[key]!==false:!!settingsObj[key];
     // Пузырь маскота применяет и сохраняет set_mascot, без перезапуска распознавания.
-    inp.onchange=()=>{ if(key==='mascot_bubble'){ settingsObj[key]=inp.checked; applyMascot(); } else saveSetting(key,inp.checked); };
+    // Нативный маскот переключает set_native_mascot — сразу, тоже без перезапуска распознавания.
+    inp.onchange=()=>{
+      if(key==='mascot_bubble'){ settingsObj[key]=inp.checked; applyMascot(); }
+      else if(key==='native_mascot'){
+        settingsObj[key]=inp.checked;
+        invoke('set_native_mascot',{enabled:inp.checked}).then(()=>{ $('#settingsMsg').textContent=t('settings.saved'); })
+          .catch(e=>{ $('#settingsMsg').textContent=t('settings.error',{error:e}); reportError('setNativeMascot',e); });
+      }
+      else saveSetting(key,inp.checked);
+    };
     const lab=el('label',{htmlFor:id,textContent:lbl});
     row.append(inp,lab); wrap.append(row);
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));

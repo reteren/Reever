@@ -8,12 +8,17 @@
     try { const v = Number(localStorage.getItem(KEY)); return ALLOWED.includes(v) ? v : 0; } catch { return 0; }
   };
   let limit = read(), pausedUntil = 0;
+  // Нативные окна (маскот без WebView2) localStorage не видят: выбор уходит в Rust при загрузке
+  // окна и при каждой смене; Rust сохраняет его в settings.json (fps_limit), только если он другой.
+  const tell = () => { try { window.__TAURI__?.core?.invoke('set_fps_limit', { limit }).catch(() => {}); } catch { } };
+  tell();
   addEventListener('storage', (e) => { if (e.key === KEY) limit = read(); });
   window.ReeverFps = {
     get limit() { return limit; },
     set(value) {
       limit = ALLOWED.includes(Number(value)) ? Number(value) : 0;
       try { localStorage.setItem(KEY, String(limit)); } catch { }
+      tell();
     },
     // Окно таскают: анимации стоят, пока оно движется, — перерисовка прозрачного окна на каждом
     // шаге перетаскивания и была рывками (shell.js зовёт pause на каждое событие сдвига).

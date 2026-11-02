@@ -215,6 +215,8 @@
   "settings.ui_languages": "A felület nyelvei",
   "settings.lite_ui": "Könnyű felület",
   "settings.lite_ui.help": "Egyszerűbb, könnyebb megjelenés.",
+  "settings.native_mascot": "Natív kabala",
+  "settings.native_mascot.help": "A kabala webmotor nélkül rajzolódik ki: kevesebb memóriát használ, és gyorsabban jelenik meg. Kísérleti.",
   "settings.fps_limit": "Folyamatosság",
   "settings.fps_limit.help": "Milyen gyakran rajzolódik újra a felület animációja. Gyenge számítógépen a 60 vagy 30 képkocka csökkenti a terhelést.",
   "settings.fps_limit.0": "Mint a monitor",

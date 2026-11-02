@@ -214,6 +214,8 @@
   "settings.ui_languages": "インターフェイスの言語",
   "settings.lite_ui": "ライトインターフェース",
   "settings.lite_ui.help": "よりシンプルで軽いデザイン。",
+  "settings.native_mascot": "ネイティブのマスコット",
+  "settings.native_mascot.help": "マスコットをウェブエンジンなしで描画します。メモリ使用量が減り、表示も速くなります。試験的な機能です。",
   "settings.fps_limit": "なめらかさ",
   "settings.fps_limit.help": "インターフェースのアニメーションを描き直す頻度。性能の低いパソコンでは 60 または 30 フレームで負荷が下がります。",
   "settings.fps_limit.0": "モニターに合わせる",

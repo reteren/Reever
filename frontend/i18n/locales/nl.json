@@ -215,6 +215,8 @@
   "settings.ui_languages": "Interfacetalen",
   "settings.lite_ui": "Lichte interface",
   "settings.lite_ui.help": "Een eenvoudiger, lichter ontwerp.",
+  "settings.native_mascot": "Native mascotte",
+  "settings.native_mascot.help": "De mascotte wordt zonder webengine getekend: minder geheugen en sneller zichtbaar. Experimenteel.",
   "settings.fps_limit": "Vloeiendheid",
   "settings.fps_limit.help": "Hoe vaak de animatie van de interface opnieuw wordt getekend. Op een zwakke computer verlagen 60 of 30 beelden de belasting.",
   "settings.fps_limit.0": "Zoals de monitor",

@@ -217,6 +217,8 @@
   "settings.ui_languages": "Jeziki vmesnika",
   "settings.lite_ui": "Lahek vmesnik",
   "settings.lite_ui.help": "Preprostejši in lažji videz.",
+  "settings.native_mascot": "Izvorna maskota",
+  "settings.native_mascot.help": "Maskota se riše brez spletnega pogona: porabi manj pomnilnika in se prikaže hitreje. Poskusno.",
   "settings.fps_limit": "Gladkost",
   "settings.fps_limit.help": "Kako pogosto se izriše animacija vmesnika. Na šibkem računalniku 60 ali 30 sličic zmanjša obremenitev.",
   "settings.fps_limit.0": "Kot monitor",

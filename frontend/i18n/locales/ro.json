@@ -216,6 +216,8 @@
   "settings.ui_languages": "Limbile interfeței",
   "settings.lite_ui": "Interfață ușoară",
   "settings.lite_ui.help": "Un design mai simplu și mai ușor.",
+  "settings.native_mascot": "Mascotă nativă",
+  "settings.native_mascot.help": "Mascota este desenată fără motor web: folosește mai puțină memorie și apare mai repede. Experimental.",
   "settings.fps_limit": "Fluiditate",
   "settings.fps_limit.help": "Cât de des este redesenată animația interfeței. Pe un computer slab, 60 sau 30 de cadre reduc încărcarea.",
   "settings.fps_limit.0": "Ca monitorul",

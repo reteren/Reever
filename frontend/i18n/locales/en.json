@@ -215,6 +215,8 @@
   "settings.ui_languages": "Interface languages",
   "settings.lite_ui": "Lite interface",
   "settings.lite_ui.help": "A simpler, lighter design.",
+  "settings.native_mascot": "Native mascot",
+  "settings.native_mascot.help": "The mascot is drawn without the web engine: it uses less memory and appears faster. Experimental.",
   "settings.fps_limit": "Smoothness",
   "settings.fps_limit.help": "How often the interface animation is redrawn. On a weak computer, 60 or 30 frames ease the load.",
   "settings.fps_limit.0": "As the monitor",

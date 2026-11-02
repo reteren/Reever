@@ -217,6 +217,8 @@
   "settings.ui_languages": "Języki interfejsu",
   "settings.lite_ui": "Lekki interfejs",
   "settings.lite_ui.help": "Prostszy, lżejszy wygląd.",
+  "settings.native_mascot": "Natywna maskotka",
+  "settings.native_mascot.help": "Maskotka jest rysowana bez silnika WWW: zajmuje mniej pamięci i pojawia się szybciej. Eksperymentalne.",
   "settings.fps_limit": "Płynność",
   "settings.fps_limit.help": "Jak często odświeżana jest animacja interfejsu. Na słabym komputerze 60 lub 30 klatek zmniejsza obciążenie.",
   "settings.fps_limit.0": "Jak monitor",

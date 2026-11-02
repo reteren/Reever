@@ -219,6 +219,8 @@
   "settings.ui_languages": "لغات الواجهة",
   "settings.lite_ui": "واجهة خفيفة",
   "settings.lite_ui.help": "تصميم أبسط وأخف.",
+  "settings.native_mascot": "تميمة أصلية",
+  "settings.native_mascot.help": "تُرسم التميمة دون محرك الويب: تستهلك ذاكرة أقل وتظهر أسرع. ميزة تجريبية.",
   "settings.fps_limit": "السلاسة",
   "settings.fps_limit.help": "عدد مرات إعادة رسم حركة الواجهة. على جهاز ضعيف، يخفّف 60 أو 30 إطارًا الحمل.",
   "settings.fps_limit.0": "مثل الشاشة",

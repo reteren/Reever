@@ -217,6 +217,8 @@
   "settings.ui_languages": "Jazyky rozhrania",
   "settings.lite_ui": "Ľahké rozhranie",
   "settings.lite_ui.help": "Jednoduchší a ľahší vzhľad.",
+  "settings.native_mascot": "Natívny maskot",
+  "settings.native_mascot.help": "Maskot sa vykresľuje bez webového jadra: zaberá menej pamäte a objavuje sa rýchlejšie. Experimentálne.",
   "settings.fps_limit": "Plynulosť",
   "settings.fps_limit.help": "Ako často sa prekresľuje animácia rozhrania. Na slabom počítači znížia záťaž 60 alebo 30 snímok.",
   "settings.fps_limit.0": "Ako monitor",

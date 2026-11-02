@@ -215,6 +215,8 @@
   "settings.ui_languages": "Idiomas de la interfaz",
   "settings.lite_ui": "Interfaz ligera",
   "settings.lite_ui.help": "Un diseño más sencillo y ligero.",
+  "settings.native_mascot": "Mascota nativa",
+  "settings.native_mascot.help": "La mascota se dibuja sin motor web: usa menos memoria y aparece más rápido. Experimental.",
   "settings.fps_limit": "Fluidez",
   "settings.fps_limit.help": "Con qué frecuencia se redibuja la animación de la interfaz. En un equipo poco potente, 60 o 30 fotogramas reducen la carga.",
   "settings.fps_limit.0": "Como el monitor",

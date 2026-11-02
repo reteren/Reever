@@ -214,6 +214,8 @@
   "settings.ui_languages": "介面語言清單",
   "settings.lite_ui": "輕量介面",
   "settings.lite_ui.help": "更簡潔、更輕量嘅介面。",
+  "settings.native_mascot": "原生吉祥物",
+  "settings.native_mascot.help": "吉祥物唔再經網頁引擎繪製：用少啲記憶體，出現得更快。實驗性功能。",
   "settings.fps_limit": "流暢度",
   "settings.fps_limit.help": "介面動畫嘅重繪頻率。喺效能較弱嘅電腦上，60 或者 30 格可以減輕負載。",
   "settings.fps_limit.0": "同顯示器一樣",

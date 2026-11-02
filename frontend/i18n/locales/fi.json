@@ -215,6 +215,8 @@
   "settings.ui_languages": "Käyttöliittymän kielet",
   "settings.lite_ui": "Kevyt käyttöliittymä",
   "settings.lite_ui.help": "Yksinkertaisempi ja kevyempi ulkoasu.",
+  "settings.native_mascot": "Natiivi maskotti",
+  "settings.native_mascot.help": "Maskotti piirretään ilman verkkomoottoria: vie vähemmän muistia ja ilmestyy nopeammin. Kokeellinen.",
   "settings.fps_limit": "Sulavuus",
   "settings.fps_limit.help": "Kuinka usein käyttöliittymän animaatio piirretään uudelleen. Heikolla tietokoneella 60 tai 30 kuvaa keventää kuormaa.",
   "settings.fps_limit.0": "Kuten näyttö",

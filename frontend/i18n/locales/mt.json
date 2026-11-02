@@ -218,6 +218,8 @@
   "settings.ui_languages": "Lingwi tal-interfaċċa",
   "settings.lite_ui": "Interfaċċja ħafifa",
   "settings.lite_ui.help": "Disinn aktar sempliċi u eħfef.",
+  "settings.native_mascot": "Maskot nattiv",
+  "settings.native_mascot.help": "Il-maskot jinġibed mingħajr magna tal-web: juża inqas memorja u jidher aktar malajr. Sperimentali.",
   "settings.fps_limit": "Ċarezza",
   "settings.fps_limit.help": "Kemm-il darba tinġibed mill-ġdid l-animazzjoni tal-interfaċċja. Fuq kompjuter dgħajjef, 60 jew 30 frejm inaqqsu t-tagħbija.",
   "settings.fps_limit.0": "Bħall-monitor",
