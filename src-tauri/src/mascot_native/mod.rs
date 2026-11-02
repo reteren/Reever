@@ -7,7 +7,7 @@
 //! Кадры и anim.json берутся из ресурсов, вшитых Tauri (frontend/), по запросу при каждом
 //! декодировании: в памяти держится только кэш уменьшенных под масштаб кадров.
 
-mod lens;
+pub(crate) mod lens;
 mod view;
 
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -36,6 +36,8 @@ pub mod micwatch;
 pub mod native;
 pub mod mascot_demo;
 pub mod mascot_native;
+pub mod main_native;
+pub mod main_demo;
 pub mod models;
 #[cfg(windows)]
 pub mod ortopt;
@@ -102,7 +104,7 @@ fn window_ready(app: tauri::AppHandle) {
 }
 
 /// Пауза микрофона и обратно (меню трея).
-fn toggle_pause(app: &tauri::AppHandle) {
+pub(crate) fn toggle_pause(app: &tauri::AppHandle) {
     if let Some(state) = app.try_state::<Arc<SharedState>>() {
         let now = !state.paused.load(Ordering::Relaxed);
         state.paused.store(now, Ordering::Relaxed);
@@ -116,8 +118,18 @@ fn quit(app: &tauri::AppHandle) {
     app.exit(0);
 }
 
-fn show_main(app: &tauri::AppHandle) {
+pub(crate) fn show_main(app: &tauri::AppHandle) {
     SHOW_REQUESTED.store(true, Ordering::SeqCst);
+    // нативное главное окно (main_native, настройка native_main): веб-вид не создаётся
+    if main_native::enabled(app) {
+        if app.get_webview_window("main").is_none() {
+            main_native::show(app);
+        }
+        return;
+    }
+    if main_native::is_open() {
+        main_native::destroy(app);
+    }
     if app.get_webview_window("main").is_some() {
         if WINDOW_SHOWN.load(Ordering::SeqCst) {
             reveal_main(app);
@@ -208,10 +220,11 @@ fn attach_main_window(app: &tauri::AppHandle, window: &WebviewWindow) {
     });
 }
 
-fn destroy_main(app: &tauri::AppHandle) {
+pub(crate) fn destroy_main(app: &tauri::AppHandle) {
     SHOW_REQUESTED.store(false, Ordering::SeqCst);
     WINDOW_SHOWN.store(false, Ordering::SeqCst);
     events::set_main_visible(false);
+    main_native::destroy(app);
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.destroy();
     }
@@ -227,8 +240,25 @@ pub(crate) fn lite_script(app: &tauri::AppHandle) -> String {
 /// Пересоздать открытое главное окно (сменился вид интерфейса). Закрытое — не трогаем:
 /// новый вид появится при следующем открытии.
 pub(crate) fn rebuild_main(app: &tauri::AppHandle) {
+    if main_native::is_open() {
+        switch_main(app);
+        return;
+    }
     if let Some(window) = app.get_webview_window("main") {
         // Destroyed увидит SHOW_REQUESTED и создаст окно заново.
+        SHOW_REQUESTED.store(true, Ordering::SeqCst);
+        let _ = window.destroy();
+    }
+}
+
+/// Открытое главное окно пересоздать в виде, который сейчас выбран (веб или нативный):
+/// сменилась настройка native_main или lite_ui. Закрытое — не трогаем.
+pub(crate) fn switch_main(app: &tauri::AppHandle) {
+    if main_native::is_open() {
+        main_native::destroy(app);
+        show_main(app);
+    } else if let Some(window) = app.get_webview_window("main") {
+        // Destroyed увидит SHOW_REQUESTED и покажет окно в новом виде (show_main)
         SHOW_REQUESTED.store(true, Ordering::SeqCst);
         let _ = window.destroy();
     }
@@ -256,6 +286,8 @@ fn signal_existing_instance_or_register() -> bool {
         "Local\\com.troid.reever.mascot-demo.show-main"
     } else if dialog_demo::active() {
         "Local\\com.troid.reever.dialog-demo.show-main"
+    } else if main_demo::active() {
+        "Local\\com.troid.reever.main-demo.show-main"
     } else {
         "Local\\com.troid.reever.show-main"
     };
@@ -434,10 +466,17 @@ pub fn run() {
             if !launched_hidden() {
                 show_main(app.handle());
             }
+            // нативное главное окно слушает распознавание с самого старта (main_native::init)
+            main_native::init(app.handle());
             mascot::spawn(app.handle());
             // проверка маскота без микрофона и горячих клавиш: REEVER_MASCOT_DEMO=1 (mascot_demo.rs)
             if mascot_demo::active() {
                 mascot_demo::start(app.handle());
+                return Ok(());
+            }
+            // проверка нативного главного окна: REEVER_MAIN_DEMO=1 (main_demo.rs)
+            if main_demo::active() {
+                main_demo::start(app.handle());
                 return Ok(());
             }
             // проверка окон выбора и подтверждения: REEVER_DIALOG_DEMO=1 (dialog_demo.rs)
@@ -566,6 +605,7 @@ pub fn run() {
             mascot::set_native_mascot,
             mascot::set_fps_limit,
             dialogs_native::set_native_dialogs,
+            main_native::set_native_main,
             bubble::bubble_layout,
             commands_api::set_mascot,
             commands_api::mascot_place,

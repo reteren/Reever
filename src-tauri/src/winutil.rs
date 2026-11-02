@@ -125,6 +125,13 @@ pub fn raise_new(before: &[isize], hint: &str) {
     bring_to_front(hwnd_from(pick));
 }
 
+/// Свернуть окно по сырому HWND (кнопка «свернуть» нативного главного окна).
+pub fn minimize_raw(raw: isize) {
+    unsafe {
+        let _ = windows::Win32::UI::WindowsAndMessaging::ShowWindow(hwnd_from(raw), windows::Win32::UI::WindowsAndMessaging::SW_MINIMIZE);
+    }
+}
+
 /// Вывести окно на передний план по сырому HWND (обход запрета смены foreground).
 pub fn bring_to_front_raw(raw: isize) {
     bring_to_front(hwnd_from(raw));

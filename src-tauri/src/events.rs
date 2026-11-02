@@ -34,11 +34,11 @@ static WAKE_PHRASE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize)]
 pub struct UiSnapshot {
-    state: String,
-    log: Vec<String>,
-    tab: String,
-    status: Option<Value>,
-    compact: bool,
+    pub(crate) state: String,
+    pub(crate) log: Vec<String>,
+    pub(crate) tab: String,
+    pub(crate) status: Option<Value>,
+    pub(crate) compact: bool,
 }
 
 fn push_ui_log(log: &mut VecDeque<LogText>, message: LogText) {
@@ -229,10 +229,12 @@ impl LevelMeter {
             // После создания WebView и далее раз в полсекунды уточняем видимость окна.
             // При скрытом окне (и без маскота) обнуляем пик и возвращаемся до расчёта RMS.
             self.last_check = Instant::now();
-            self.visible = app
-                .get_webview_window("main")
-                .and_then(|w| w.is_visible().ok())
-                .unwrap_or(false);
+            // нативное главное окно (main_native) — без веб-вида, но тоже показывает уровень
+            self.visible = crate::main_native::is_open()
+                || app
+                    .get_webview_window("main")
+                    .and_then(|w| w.is_visible().ok())
+                    .unwrap_or(false);
             if !self.visible {
                 MAIN_VISIBLE.store(false, Ordering::Relaxed);
                 if !mascot {

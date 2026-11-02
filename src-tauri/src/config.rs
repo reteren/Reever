@@ -181,6 +181,10 @@ pub struct Settings {
     /// confirm.html. В лёгком интерфейсе пока всегда веб.
     #[serde(default)]
     pub native_dialogs: bool,
+    /// Главное окно нативное (Direct2D, без WebView2) вместо index.html — этап 4, пока
+    /// перенесены каркас, «Главная» и «Лог». В лёгком интерфейсе пока всегда веб.
+    #[serde(default)]
+    pub native_main: bool,
 }
 
 fn default_dictation_english_level() -> u8 {
@@ -506,6 +510,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("native_mascot", native_mascot, bool);
     restore!("fps_limit", fps_limit, u32);
     restore!("native_dialogs", native_dialogs, bool);
+    restore!("native_main", native_main, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -562,6 +567,7 @@ impl Default for Settings {
             native_mascot: false,
             fps_limit: 0,
             native_dialogs: false,
+            native_main: false,
         }
     }
 }
@@ -719,8 +725,14 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::
 pub fn user_config_path(app: &AppHandle, name: &str) -> PathBuf {
     // Проверка маскота (REEVER_MASCOT_DEMO): свои копии конфигов во временной папке, чтобы
     // прогоны не меняли ни src-tauri/resources, ни настройки установленного Reever.
-    if crate::mascot_demo::active() || crate::dialog_demo::active() {
-        let dir = std::env::temp_dir().join(if crate::dialog_demo::active() { "reever-dialog-demo" } else { "reever-mascot-demo" });
+    if crate::mascot_demo::active() || crate::dialog_demo::active() || crate::main_demo::active() {
+        let dir = std::env::temp_dir().join(if crate::main_demo::active() {
+            "reever-main-demo"
+        } else if crate::dialog_demo::active() {
+            "reever-dialog-demo"
+        } else {
+            "reever-mascot-demo"
+        });
         let _ = std::fs::create_dir_all(&dir);
         let p = dir.join(name);
         if !p.exists() {
