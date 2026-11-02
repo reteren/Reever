@@ -295,6 +295,27 @@ impl Ui {
                     }
                 }
                 WinEventKind::Paint => w.dirty = true,
+                WinEventKind::Key(k) => {
+                    if w.handler.key(k) {
+                        w.dirty = true;
+                    }
+                }
+                WinEventKind::Char(c) => {
+                    if w.handler.char_input(c) {
+                        w.dirty = true;
+                    }
+                }
+                WinEventKind::Wheel(x, y, d) => {
+                    if w.handler.wheel(x, y, d) {
+                        w.dirty = true;
+                    }
+                }
+                WinEventKind::Focus(f) => {
+                    if w.handler.focus(f) {
+                        w.dirty = true;
+                    }
+                }
+                WinEventKind::Close => w.handler.close_requested(),
                 WinEventKind::Destroyed => {
                     // окно закрыла система (или его владелец) — забываем без второго DestroyWindow
                     self.windows.remove(i);

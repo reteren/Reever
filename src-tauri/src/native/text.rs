@@ -24,7 +24,7 @@ use windows::Win32::Graphics::DirectWrite::{
     IDWriteFontCollection, IDWriteTextLayout1, DWRITE_FONT_METRICS, DWRITE_FONT_STRETCH_NORMAL,
     DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_TEXT_RANGE,
     DWRITE_WORD_WRAPPING_EMERGENCY_BREAK, IDWriteFactory2, IDWriteFontFallback, IDWriteTextLayout2,
-    DWRITE_UNICODE_RANGE,
+    DWRITE_UNICODE_RANGE, DWRITE_TRIMMING, DWRITE_TRIMMING_GRANULARITY_CHARACTER,
     DWRITE_WORD_WRAPPING_WRAP,
 };
 
@@ -99,6 +99,9 @@ pub struct TextStyle {
     /// ("Segoe UI", "Microsoft YaHei UI", …): буква, которой нет в основном шрифте, берётся из
     /// первого семейства списка, где она есть.
     pub fallback: Vec<String>,
+    /// Не влезающее в ширину обрезать многоточием в конце (CSS text-overflow: ellipsis;
+    /// имеет смысл при `wrap: false`).
+    pub ellipsis: bool,
 }
 
 impl Default for TextStyle {
@@ -116,6 +119,7 @@ impl Default for TextStyle {
             letter_spacing: 0.0,
             break_words: false,
             fallback: Vec::new(),
+            ellipsis: false,
         }
     }
 }
@@ -225,6 +229,11 @@ impl Text {
                 let baseline = (line - (ascent + descent) * style.size) / 2.0 + ascent * style.size;
                 let f0: windows::Win32::Graphics::DirectWrite::IDWriteTextFormat = format.cast()?;
                 f0.SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, line, baseline)?;
+            }
+            if style.ellipsis {
+                let sign = self.factory.CreateEllipsisTrimmingSign(&format)?;
+                let trimming = DWRITE_TRIMMING { granularity: DWRITE_TRIMMING_GRANULARITY_CHARACTER, delimiter: 0, delimiterCount: 0 };
+                format.SetTrimming(&trimming, &sign)?;
             }
             let layout = self.factory.CreateTextLayout(&wide, &format, max_width.max(1.0), f32::MAX)?;
             if !style.fallback.is_empty() {

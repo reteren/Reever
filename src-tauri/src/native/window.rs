@@ -36,13 +36,21 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, GetDpiForWindow, MDT_EFFECTIVE_DPI};
-use windows::Win32::UI::Input::KeyboardAndMouse::{
-    ReleaseCapture, SetCapture, TrackMouseEvent, TME_LEAVE, TRACKMOUSEEVENT,
+use windows::Win32::UI::Input::Ime::{
+    ImmGetContext, ImmReleaseContext, ImmSetCandidateWindow, ImmSetCompositionWindow, CANDIDATEFORM,
+    CFS_EXCLUDE, CFS_POINT, COMPOSITIONFORM,
 };
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetKeyState, ReleaseCapture, SetCapture, SetFocus, TrackMouseEvent, TME_LEAVE, TRACKMOUSEEVENT, VK_CONTROL,
+    VK_SHIFT,
+};
+use windows::Win32::UI::WindowsAndMessaging::{WM_IME_STARTCOMPOSITION, WM_KILLFOCUS, WM_SETFOCUS};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, RegisterClassExW,
     SetWindowLongPtrW, SetWindowPos, ShowWindow, CREATESTRUCTW, GWLP_USERDATA, HTCLIENT,
     LoadCursorW, SetCursor, GWL_EXSTYLE, IDC_ARROW, IDC_HAND, IDC_SIZEALL, WM_SETCURSOR,
+    IDC_IBEAM, CS_DBLCLKS, HTCAPTION, SendMessageW, SetForegroundWindow, WM_CHAR, WM_CLOSE,
+    WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_MOUSEWHEEL, WM_NCLBUTTONDOWN, WM_SYSKEYDOWN,
     WS_EX_LAYERED, WS_EX_TRANSPARENT,
     HTTRANSPARENT, HWND_TOPMOST, MA_NOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
     SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, WINDOW_EX_STYLE, WM_DISPLAYCHANGE, WM_DPICHANGED,
@@ -55,7 +63,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use super::device::Gfx;
 use super::image::Images;
 use super::text::Text;
-use super::{log, GpuCx, MouseButton, MouseEvent, MouseKind, RenderCx, WindowHandler, WindowId, WindowSpec};
+use super::{log, GpuCx, KeyEvent, MouseButton, MouseEvent, MouseKind, RenderCx, WindowHandler, WindowId, WindowSpec};
 
 const CLASS_NAME: &str = "ReeverNativeWindow";
 
@@ -64,6 +72,13 @@ pub(crate) enum WinEventKind {
     Resized(u32, u32),
     Dpi(u32),
     Mouse(MouseEvent),
+    Key(KeyEvent),
+    Char(char),
+    /// колесо: точка (DIP окна) и доля оборота (+1 — от себя, на одно деление)
+    Wheel(f32, f32, f32),
+    Focus(bool),
+    /// Alt+F4, крестик в панели задач и т.п. — окно не закрывается само
+    Close,
     Paint,
     Destroyed,
     DisplayChange,
@@ -94,6 +109,8 @@ pub enum Cursor {
     Arrow,
     Hand,
     Move,
+    /// текстовый курсор над полем ввода
+    Text,
 }
 
 /// Курсор над окном. Звать только из потока окон (данные окна не делятся между потоками).
@@ -114,6 +131,7 @@ unsafe fn apply_cursor(cursor: Cursor) {
         Cursor::Arrow => IDC_ARROW,
         Cursor::Hand => IDC_HAND,
         Cursor::Move => IDC_SIZEALL,
+        Cursor::Text => IDC_IBEAM,
     };
     if let Ok(c) = LoadCursorW(None, id) {
         SetCursor(c);
@@ -136,6 +154,59 @@ pub fn set_click_through(hwnd: isize, through: bool) {
     }
 }
 
+/// Где каретка поля ввода (DIP окна: x, верх, высота) — туда Windows ставит окно набора
+/// IME (иероглифы, хангыль). None — поля в фокусе нет. Звать из потока окон.
+pub fn set_ime_caret(hwnd: isize, caret: Option<(f32, f32, f32)>) {
+    unsafe {
+        let shared = GetWindowLongPtrW(HWND(hwnd as *mut _), GWLP_USERDATA) as *const WndShared;
+        if let Some(s) = shared.as_ref() {
+            s.ime_caret.set(caret);
+            if caret.is_some() {
+                place_ime(HWND(hwnd as *mut _), s);
+            }
+        }
+    }
+}
+
+unsafe fn place_ime(hwnd: HWND, s: &WndShared) {
+    let Some((x, y, h)) = s.ime_caret.get() else { return };
+    let k = s.scale.get();
+    let imc = ImmGetContext(hwnd);
+    if imc.is_invalid() {
+        return;
+    }
+    let pos = POINT { x: (x * k).round() as i32, y: (y * k).round() as i32 };
+    let cf = COMPOSITIONFORM { dwStyle: CFS_POINT, ptCurrentPos: pos, rcArea: RECT::default() };
+    let _ = ImmSetCompositionWindow(imc, &cf);
+    // окно кандидатов — под строкой, не поверх неё
+    let cand = CANDIDATEFORM {
+        dwIndex: 0,
+        dwStyle: CFS_EXCLUDE,
+        ptCurrentPos: POINT { x: pos.x, y: pos.y + (h * k).round() as i32 },
+        rcArea: RECT { left: pos.x, top: pos.y, right: pos.x + 1, bottom: pos.y + (h * k).round() as i32 },
+    };
+    let _ = ImmSetCandidateWindow(imc, &cand);
+    let _ = ImmReleaseContext(hwnd, imc);
+}
+
+/// Начать перетаскивание окна за курсором (как за заголовок). Звать из потока окон по нажатию
+/// левой кнопки на пустом месте; пока кнопка зажата, кадры окна не рисуются (модальный цикл).
+pub fn begin_drag(hwnd: isize) {
+    unsafe {
+        let _ = ReleaseCapture();
+        SendMessageW(HWND(hwnd as *mut _), WM_NCLBUTTONDOWN, WPARAM(HTCAPTION as usize), LPARAM(0));
+    }
+}
+
+/// Поднять окно и отдать ему фокус клавиатуры.
+pub fn activate(hwnd: isize) {
+    unsafe {
+        let h = HWND(hwnd as *mut _);
+        let _ = SetForegroundWindow(h);
+        let _ = SetFocus(h);
+    }
+}
+
 /// Проверка попадания: (x, y) в DIP внутри окна → попал ли указатель в видимую часть.
 pub type HitTest = Box<dyn Fn(f32, f32) -> bool>;
 
@@ -143,6 +214,11 @@ pub type HitTest = Box<dyn Fn(f32, f32) -> bool>;
 struct WndShared {
     hit_test: RefCell<Option<HitTest>>,
     cursor: Cell<Cursor>,
+    /// окно берёт фокус по клику (диалоги) — иначе MA_NOACTIVATE (маскот, пузырь)
+    activate: bool,
+    ime_caret: Cell<Option<(f32, f32, f32)>>,
+    /// старшая половина суррогатной пары из прошлого WM_CHAR
+    high_surrogate: Cell<u16>,
     scale: Cell<f32>,
     tracking: Cell<bool>,
 }
@@ -157,6 +233,8 @@ fn ensure_class() -> Result<()> {
         cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
         lpfnWndProc: Some(wndproc),
         hInstance: hinstance.into(),
+        // двойной щелчок приходит как WM_LBUTTONDBLCLK
+        style: CS_DBLCLKS,
         lpszClassName: windows::core::PCWSTR(name.as_ptr()),
         ..Default::default()
     };
@@ -193,7 +271,64 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
         push(hwnd, WinEventKind::Mouse(MouseEvent { kind, x: x as f32 / scale, y: y as f32 / scale }));
     };
     match msg {
-        WM_MOUSEACTIVATE => return LRESULT(MA_NOACTIVATE as isize),
+        WM_MOUSEACTIVATE => {
+            if !shared.is_some_and(|s| s.activate) {
+                return LRESULT(MA_NOACTIVATE as isize);
+            }
+        }
+        WM_KEYDOWN | WM_SYSKEYDOWN => {
+            let ev = KeyEvent {
+                key: wp.0 as u32,
+                ctrl: GetKeyState(VK_CONTROL.0 as i32) < 0,
+                shift: GetKeyState(VK_SHIFT.0 as i32) < 0,
+                alt: msg == WM_SYSKEYDOWN,
+                repeat: (lp.0 >> 30) & 1 == 1,
+            };
+            push(hwnd, WinEventKind::Key(ev));
+            if msg == WM_KEYDOWN {
+                return LRESULT(0);
+            }
+            // Alt+F4 и меню окна — системе
+        }
+        WM_CHAR => {
+            let unit = wp.0 as u16;
+            if let Some(s) = shared {
+                if (0xD800..0xDC00).contains(&unit) {
+                    s.high_surrogate.set(unit);
+                    return LRESULT(0);
+                }
+                let high = s.high_surrogate.replace(0);
+                let units: Vec<u16> = if (0xDC00..0xE000).contains(&unit) && high != 0 { vec![high, unit] } else { vec![unit] };
+                if let Some(Ok(c)) = char::decode_utf16(units).next() {
+                    push(hwnd, WinEventKind::Char(c));
+                }
+            }
+            return LRESULT(0);
+        }
+        WM_MOUSEWHEEL => {
+            let delta = ((wp.0 >> 16) & 0xFFFF) as i16 as f32 / 120.0;
+            let (sx, sy) = signed_xy(lp);
+            let mut pt = POINT { x: sx, y: sy };
+            let _ = ScreenToClient(hwnd, &mut pt);
+            push(hwnd, WinEventKind::Wheel(pt.x as f32 / scale, pt.y as f32 / scale, delta));
+            return LRESULT(0);
+        }
+        WM_SETFOCUS => push(hwnd, WinEventKind::Focus(true)),
+        WM_KILLFOCUS => push(hwnd, WinEventKind::Focus(false)),
+        WM_CLOSE => {
+            push(hwnd, WinEventKind::Close);
+            return LRESULT(0);
+        }
+        WM_IME_STARTCOMPOSITION => {
+            if let Some(s) = shared {
+                place_ime(hwnd, s);
+            }
+        }
+        WM_LBUTTONDBLCLK => {
+            SetCapture(hwnd);
+            mouse(MouseKind::DoubleClick);
+            return LRESULT(0);
+        }
         WM_NCHITTEST => {
             if let Some(s) = shared {
                 if let Some(hit) = s.hit_test.borrow().as_ref() {
@@ -342,6 +477,9 @@ impl NativeWindow {
         let shared = Box::into_raw(Box::new(WndShared {
             hit_test: RefCell::new(None),
             cursor: Cell::new(Cursor::Arrow),
+            activate: !spec.no_activate,
+            ime_caret: Cell::new(None),
+            high_surrogate: Cell::new(0),
             scale: Cell::new(dx as f32 / 96.0),
             tracking: Cell::new(false),
         }));

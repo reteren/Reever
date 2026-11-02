@@ -16,6 +16,7 @@
 //! `Ui::set_fps_limit` (0/60/30) и стоят во время `Ui::pause_animations`.
 //! Tauri живёт рядом в своём потоке: этот модуль его цикл не трогает.
 
+pub mod controls;
 mod device;
 mod frame;
 mod image;
@@ -42,7 +43,7 @@ pub use frame::{FrameClock, FPS_LIMITS};
 pub use image::{AlphaMask, ImageId, Images, Loader, DEFAULT_CACHE_BUDGET};
 pub use text::{is_rtl, Align, Direction, Font, Text, TextLayout, TextStyle};
 pub use ui::Ui;
-pub use window::{set_click_through, set_cursor, Cursor, HitTest};
+pub use window::{activate, begin_drag, set_click_through, set_cursor, set_ime_caret, Cursor, HitTest};
 
 /// Сообщение-будильник: в очереди задач что-то есть.
 const WM_JOB: u32 = WM_APP + 0x3A1;
@@ -121,6 +122,19 @@ pub enum MouseKind {
     Up(MouseButton),
     /// Указатель ушёл из окна (координаты не заданы).
     Leave,
+    /// Второе нажатие левой кнопки подряд (вместо второго Down).
+    DoubleClick,
+}
+
+/// Нажатие клавиши: виртуальный код (VK_*) и модификаторы.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyEvent {
+    pub key: u32,
+    pub ctrl: bool,
+    pub shift: bool,
+    pub alt: bool,
+    /// автоповтор зажатой клавиши
+    pub repeat: bool,
 }
 
 /// Событие мыши; координаты в DIP внутри окна.
@@ -170,6 +184,24 @@ pub trait WindowHandler: std::any::Any {
     }
     /// Масштаб монитора сменился (окно перенесли); размеры в DIP остаются прежними.
     fn dpi_changed(&mut self, _scale: f32) {}
+    /// Клавиша; true — нужна перерисовка.
+    fn key(&mut self, _ev: KeyEvent) -> bool {
+        false
+    }
+    /// Введённый символ (после раскладки и IME); true — нужна перерисовка.
+    fn char_input(&mut self, _c: char) -> bool {
+        false
+    }
+    /// Колесо мыши в точке (DIP); `delta` — деления (+ от себя).
+    fn wheel(&mut self, _x: f32, _y: f32, _delta: f32) -> bool {
+        false
+    }
+    /// Окно получило или потеряло фокус клавиатуры.
+    fn focus(&mut self, _focused: bool) -> bool {
+        false
+    }
+    /// Окно просят закрыть (Alt+F4) — решает обработчик.
+    fn close_requested(&mut self) {}
 }
 
 /// Цвет без предумножения альфы, 0..1.
