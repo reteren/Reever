@@ -363,6 +363,10 @@ Function PageLeaveReinstall
       ${IfThen} $4 == "" ${|} ReadRegStr $4 SHCTX "${REEVER_LEGACY_PRODUCTKEY}" "" ${|}
       ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
       ${IfThen} $UpdateMode = 1 ${|} StrCpy $R1 "$R1 /UPDATE" ${|} ; append /UPDATE
+      ; Reever: при обновлении и откате установка продолжится, поэтому старый деинсталлятор
+      ; запускается как при обновлении — иначе он открепляет Reever от панели задач и «Пуска»
+      ; и удаляет ярлыки, ведь думает, что программу удаляют совсем.
+      ${IfThen} $R0 <> 0 ${|} StrCpy $R1 "$R1 /UPDATE" ${|}
       ${IfThen} $PassiveMode = 1 ${|} StrCpy $R1 "$R1 /P" ${|} ; append /P
       StrCpy $R1 "$R1 _?=$4" ; append uninstall directory
       ExecWait '$R1' $0
