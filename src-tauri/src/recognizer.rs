@@ -1612,6 +1612,7 @@ impl Worker<'_> {
                 None => ui_log(self.app, format!("📝 «{text}»")),
             }
             let _ = self.app.emit("reever://heard", text.to_string());
+            crate::mascot::heard(text);
         }
         if textnorm::is_cancel(text, &self.cancel_words) {
             ui_log(self.app, crate::msg!("log.cancelled"));

@@ -705,7 +705,7 @@ fn persist_hotkey(config: &ReeverConfig, key: &str, hotkey: &str) -> Result<(), 
 }
 
 /// Записывает одно поле в settings.json, не трогая остальные.
-fn persist_value(config: &ReeverConfig, key: &str, value: serde_json::Value) -> Result<(), String> {
+pub(crate) fn persist_value(config: &ReeverConfig, key: &str, value: serde_json::Value) -> Result<(), String> {
     let mut settings = std::fs::read_to_string(&config.settings_path)
         .ok()
         .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())

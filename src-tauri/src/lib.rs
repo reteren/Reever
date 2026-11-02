@@ -32,6 +32,7 @@ pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
 pub mod native;
+pub mod mascot_native;
 pub mod models;
 #[cfg(windows)]
 pub mod ortopt;
@@ -544,6 +545,8 @@ pub fn run() {
             mascot::mascot_intro_done,
             mascot::bubble_intro,
             mascot::mascot_orb,
+            mascot::set_native_mascot,
+            mascot::set_fps_limit,
             bubble::bubble_layout,
             commands_api::set_mascot,
             commands_api::mascot_place,

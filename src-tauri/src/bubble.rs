@@ -65,15 +65,11 @@ pub fn bubble_layout() -> (bool, f64) {
 
 /// Поставить пузырь над головой маскота (в пределах рабочей области его монитора).
 pub fn place(app: &AppHandle) {
-    let (Some(bubble), Some(mascot_window)) = (app.get_webview_window("bubble"), app.get_webview_window("mascot")) else {
+    // окно маскота — веб или нативное (mascot::geometry)
+    let (Some(bubble), Some((position, size, scale_factor, monitor))) = (app.get_webview_window("bubble"), mascot::geometry(app)) else {
         return;
     };
-    let (Ok(position), Ok(size), Ok(scale_factor), Ok(bubble_size)) = (
-        mascot_window.outer_position(),
-        mascot_window.outer_size(),
-        mascot_window.scale_factor(),
-        bubble.outer_size(),
-    ) else {
+    let Ok(bubble_size) = bubble.outer_size() else {
         return;
     };
     let k = mascot::scale() as f64 / 100.0;
@@ -82,7 +78,7 @@ pub fn place(app: &AppHandle) {
     let tip = cy - (HEAD_ABOVE_CENTER * k + TIP_GAP) * scale_factor;
     let (bw, bh) = (bubble_size.width as f64, bubble_size.height as f64);
     let mut x = cx - bw / 2.0;
-    if let Ok(Some(monitor)) = mascot_window.current_monitor() {
+    if let Some(monitor) = monitor {
         let area = monitor.work_area();
         let (left, right) = (area.position.x as f64, area.position.x as f64 + area.size.width as f64);
         x = x.min(right - bw).max(left);

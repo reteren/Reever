@@ -251,6 +251,7 @@ impl LevelMeter {
         }
         if mascot {
             let _ = app.emit_to("mascot", "reever://level", level);
+            crate::mascot::level(level);
         }
         self.peak = 0.0;
         self.last_emit = Instant::now();
