@@ -95,6 +95,14 @@ pub fn start(app: &AppHandle) {
         let lines = vec!["Привет! Я Ривер.".to_string(), "Скажите «ривер» — и я слушаю.".to_string()];
         mascot::mascot_intro(app.clone(), lines);
         wait(12.0);
+        // переключение окна на лету, как из настроек (set_native_mascot)
+        let native = mascot::native_enabled();
+        step(&app, started, if native { "switch-to-web" } else { "switch-to-native" });
+        mascot::set_native(&app, !native);
+        wait(6.0);
+        step(&app, started, "switch-back");
+        mascot::set_native(&app, native);
+        wait(6.0);
         step(&app, started, "done");
     });
 }

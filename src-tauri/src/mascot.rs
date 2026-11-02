@@ -269,6 +269,11 @@ pub(crate) fn geometry(app: &AppHandle) -> Option<(PhysicalPosition<i32>, Physic
     Some((w.outer_position()?, w.outer_size()?, w.scale_factor(), w.current_monitor()))
 }
 
+/// Окно маскота сейчас нативное (настройка `native_mascot`).
+pub fn native_enabled() -> bool {
+    NATIVE.load(Ordering::Relaxed)
+}
+
 /// Включить или выключить нативное окно маскота на лету: текущее окно убирается, новое
 /// создаётся в том же режиме (на экране маскот выходит заново из портала).
 pub fn set_native(app: &AppHandle, on: bool) {
