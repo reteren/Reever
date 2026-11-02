@@ -92,6 +92,8 @@ features = [
   "Win32_Graphics_Direct3D11",
   # mascot_native/: линза глаза — пиксельный шейдер, компилируется при запуске (d3dcompiler_47)
   "Win32_Graphics_Direct3D_Fxc",
+  # native/: окна выбора и подтверждения — ввод иероглифов (IME) в поле поиска
+  "Win32_UI_Input_Ime",
 ]
 
 [profile.release]
