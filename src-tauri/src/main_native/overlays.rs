@@ -23,7 +23,7 @@ pub enum Kind {
     /// калибровка действия: id, подпись, сколько фраз и последняя
     Calibration { id: String, label: String, count: usize, last: Option<String> },
     /// подстройка: слов услышано, итог (после «Готово»), идёт ли запись
-    Voice { words: u32, result: String, recording: bool, wake: String },
+    Voice { words: u32, result: String, recording: bool, wake: String, intro: bool },
     /// программы Windows (имя, AUMID); None — ещё грузятся
     Apps { list: Option<Vec<(String, String)>> },
     /// сканер: найденные программы (None — ищутся)
@@ -191,7 +191,8 @@ impl Overlay {
     fn ok_enabled(&self) -> bool {
         match &self.kind {
             Kind::Scan { .. } => self.scan_counts().0 > 0,
-            Kind::Voice { words, recording, .. } => *recording && *words >= 5,
+            // обязательная подстройка первого запуска — только после всех слов
+            Kind::Voice { words, recording, intro, .. } => *recording && *words >= if *intro { VOICE_GOAL } else { 5 },
             Kind::Calibration { .. } => true,
             Kind::Apps { .. } => false,
         }
@@ -238,9 +239,9 @@ impl Overlay {
             Kind::Calibration { label, count, last, .. } => {
                 self.draw_big(scene, cx, inner, now, &self.t("calibration.heading", &[("label", &label)]), &self.t("calibration.hint", &[]), &self.t("calibration.count", &[("count", &count.to_string())]), &last.map(|p| self.t("calibration.last", &[("phrase", &p)])).unwrap_or_default());
             }
-            Kind::Voice { words, result, wake, .. } => {
+            Kind::Voice { words, result, wake, intro, .. } => {
                 let goal = VOICE_GOAL.to_string();
-                let hint = self.t("voiceAdapt.hint", &[("wake", &wake), ("goal", &goal)]);
+                let hint = self.t(if intro { "voiceAdapt.introHint" } else { "voiceAdapt.hint" }, &[("wake", &wake), ("goal", &goal)]);
                 let count = self.t("voiceAdapt.count", &[("count", &words.to_string()), ("goal", &goal)]);
                 self.draw_big(scene, cx, inner, now, &self.t("voiceAdapt.title", &[]), &hint, &count, &result);
             }
@@ -296,7 +297,8 @@ impl Overlay {
         }
         for which in [0u8, 1] {
             let show_ok = !matches!(self.kind, Kind::Apps { .. });
-            let show_cancel = !matches!(self.kind, Kind::Calibration { .. });
+            // первая подстройка: ни отмены, ни пропуска, пока идёт запись
+            let show_cancel = !matches!(self.kind, Kind::Calibration { .. } | Kind::Voice { intro: true, recording: true, .. });
             let (b, show) = if which == 0 { (&mut self.ok, show_ok) } else { (&mut self.cancel, show_cancel) };
             if !show {
                 b.rect = Rect::new(0.0, 0.0, 0.0, 0.0);
@@ -644,6 +646,9 @@ impl Overlay {
 
     pub fn key(&mut self, ev: KeyEvent) -> (bool, Option<OverlayOut>) {
         let k = ev.key as u16;
+        if k == VK_ESCAPE.0 && matches!(self.kind, Kind::Voice { intro: true, recording: true, .. }) {
+            return (false, None);
+        }
         if k == VK_ESCAPE.0 {
             // Esc закрывает окно (как keydown в app.js); калибровку — «Готово»
             return (true, Some(OverlayOut::Close));
@@ -684,6 +689,20 @@ impl Overlay {
         self.search.set_focus(on && self.typing());
     }
 
+    /// Подстройка закончилась: итог; кнопка отмены становится «Закрыть».
+    pub fn voice_result(&mut self, text: String, restart: bool) {
+        if let Kind::Voice { result, recording, words, .. } = &mut self.kind {
+            *result = text;
+            if restart {
+                *recording = true;
+                *words = 0;
+            }
+        }
+        if !restart {
+            self.cancel.label = t(&self.locale, "common.close", &[]);
+        }
+    }
+
     /// Найденные программы пришли (сканер ещё открыт).
     pub fn set_scan(&mut self, apps: Vec<ScanApp>) {
         if let Kind::Scan { apps: a } = &mut self.kind {
@@ -716,11 +735,11 @@ mod tests {
 
     #[test]
     fn voice_done_needs_five_words_while_recording() {
-        let mut o = Overlay::new(Kind::Voice { words: 4, result: String::new(), recording: true, wake: "reever".into() }, "en", 0);
+        let mut o = Overlay::new(Kind::Voice { words: 4, result: String::new(), recording: true, wake: "reever".into(), intro: false }, "en", 0);
         assert!(!o.ok_enabled());
-        o.kind = Kind::Voice { words: 5, result: String::new(), recording: true, wake: "reever".into() };
+        o.kind = Kind::Voice { words: 5, result: String::new(), recording: true, wake: "reever".into(), intro: false };
         assert!(o.ok_enabled());
-        o.kind = Kind::Voice { words: 9, result: "done".into(), recording: false, wake: "reever".into() };
+        o.kind = Kind::Voice { words: 9, result: "done".into(), recording: false, wake: "reever".into(), intro: false };
         assert!(!o.ok_enabled());
     }
 

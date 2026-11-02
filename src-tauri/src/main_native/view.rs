@@ -83,8 +83,10 @@ pub enum Msg {
     Apps(Vec<(String, String)>),
     /// Подстройка под голос: сколько слов услышано.
     VoiceWords(u32),
-    /// Подстройка под голос закончилась: итог строкой.
-    VoiceResult(String),
+    /// Подстройка под голос закончилась: итог строкой; `true` — запись начата заново.
+    VoiceResult(String, bool),
+    /// Первый запуск: обязательная подстройка под голос.
+    VoiceIntro,
     /// Расстановка маскота не началась (он выключен).
     SettingsPlacing(bool),
     /// Прокрутить вкладку «Настройки» (проверка)
@@ -615,7 +617,7 @@ impl MainView {
                     let (label, phrases) = self.actions_tab.shown_phrases(&id).unwrap_or_default();
                     self.open_overlay(super::overlays::Kind::Calibration { id, label, count: phrases.len(), last: phrases.last().cloned() });
                 }
-                "voice" => self.open_overlay(super::overlays::Kind::Voice { words: 6, result: String::new(), recording: true, wake: "reever".into() }),
+                "voice" => self.open_overlay(super::overlays::Kind::Voice { words: 6, result: String::new(), recording: true, wake: "reever".into(), intro: false }),
                 "apps" => {
                     self.open_overlay(super::overlays::Kind::Apps { list: None });
                     (self.host)(Act::ListApps);
@@ -653,11 +655,20 @@ impl MainView {
                     }
                 }
             }
-            Msg::VoiceResult(text) => {
+            Msg::VoiceResult(text, restart) => {
                 if let Some(o) = self.overlay.as_mut() {
-                    if let super::overlays::Kind::Voice { result, .. } = &mut o.kind {
-                        *result = text;
-                    }
+                    o.voice_result(text, restart);
+                }
+                if restart {
+                    self.set_state("listening");
+                }
+            }
+            Msg::VoiceIntro => {
+                if self.overlay.is_none() {
+                    let wake = if self.info.say.ru { "ривер" } else { "reever" };
+                    self.open_overlay(super::overlays::Kind::Voice { words: 0, result: String::new(), recording: true, wake: wake.into(), intro: true });
+                    self.set_state("listening");
+                    (self.host)(Act::VoiceStart);
                 }
             }
             Msg::SettingsPlacing(on) => self.settings_tab.set_placing(on),
@@ -1007,6 +1018,27 @@ impl MainView {
         }
         self.scene.flush(cx);
         dotted_hline(cx, body.x, top + h, body.w, ACC_4);
+        // .pack-warn: включён язык без скачанного пакета (renderPackWarning)
+        if let Some(text) = self.pack_warning() {
+            let st = TextStyle { wrap: true, direction: self.dir(), ..ui(13.0, 400, 1.4) };
+            if let Some(l) = self.text(cx, &text, &st, body.w - 20.0) {
+                let r = Rect::new(body.x, top + h + 12.0 - 4.0, body.w, l.height + 12.0);
+                let mut dx = r.x;
+                while dx < r.x + r.w {
+                    cx.fill_rect(Rect::new(dx, r.y, 1.0, 1.0), ACC_4);
+                    cx.fill_rect(Rect::new(dx, r.y + r.h - 1.0, 1.0, 1.0), ACC_4);
+                    dx += 2.0;
+                }
+                let mut dy = r.y;
+                while dy < r.y + r.h {
+                    cx.fill_rect(Rect::new(r.x, dy, 1.0, 1.0), ACC_4);
+                    cx.fill_rect(Rect::new(r.x + r.w - 1.0, dy, 1.0, 1.0), ACC_4);
+                    dy += 2.0;
+                }
+                self.scene.text(&l, r.x + 10.0, r.y + 6.0, ACC_HOT, Glow::None);
+                h += r.h - 4.0 + 12.0;
+            }
+        }
         // .grammar-heading: заголовок слева, «Изменить» справа (редактор пока в веб-версии)
         let mut y = top + h + 12.0;
         let general = self.editor.as_ref().is_some_and(|e| e.open == "general");
@@ -1096,6 +1128,38 @@ impl MainView {
         }
     }
 
+    /// Языки без скачанного пакета: строка для «Главной» или None.
+    fn pack_warning(&self) -> Option<String> {
+        let s = &self.info.settings;
+        let packs = s.models.get("languages")?;
+        let installed: Vec<&str> = s.models.get("installed")?.as_array()?.iter().filter_map(|v| v.as_str()).collect();
+        let chosen = s.settings.get("languages")?.as_array()?;
+        let mut pack = None;
+        let missing: Vec<&str> = chosen
+            .iter()
+            .filter_map(|c| c.as_str())
+            .filter(|c| {
+                let p = packs.get(*c).and_then(|p| p.as_str());
+                let miss = p.is_some_and(|p| !installed.contains(&p));
+                if miss && pack.is_none() {
+                    pack = p.map(String::from);
+                }
+                miss
+            })
+            .collect();
+        if missing.is_empty() {
+            return None;
+        }
+        let names: Vec<&str> = missing.iter().map(|c| super::settings_tab::language_name(c)).collect();
+        let pack = match pack.as_deref() {
+            Some("european") => "Parakeet v3".to_string(),
+            Some("asian") => "SenseVoice".to_string(),
+            Some(p) => p.to_string(),
+            None => String::new(),
+        };
+        Some(crate::ui_text::t(&self.locale, "home.packMissing", &[("languages", &names.join(", ")), ("pack", &pack)]))
+    }
+
     /// Форма редактора под строкой (.grammar-editor: отступ 34, черта слева, 10 до полей).
     fn draw_editor(&mut self, cx: &mut RenderCx<'_>, body: Rect, y: f32) -> f32 {
         let x = body.x + 34.0;
@@ -1181,14 +1245,16 @@ impl MainView {
                 native::set_ime_caret(self.hwnd, None);
             }
             OverlayOut::VoiceDone => {
+                let mut intro = false;
                 if let Some(o) = self.overlay.as_mut() {
-                    if let Kind::Voice { recording, result, .. } = &mut o.kind {
+                    if let Kind::Voice { recording, result, intro: i, .. } = &mut o.kind {
                         *recording = false;
                         *result = crate::ui_text::t(&self.locale, "voiceAdapt.working", &[]);
+                        intro = *i;
                     }
                 }
                 self.set_state("idle");
-                (self.host)(Act::VoiceFinish);
+                (self.host)(Act::VoiceFinish(intro));
             }
             OverlayOut::AddScanned(apps) => {
                 (self.host)(Act::AddScanned(apps));
@@ -1205,7 +1271,7 @@ impl MainView {
     fn settings_out(&mut self, out: super::settings_tab::SettingsOut) {
         if out == super::settings_tab::SettingsOut::VoiceStart {
             let wake = if self.info.say.ru { "ривер" } else { "reever" };
-            self.open_overlay(super::overlays::Kind::Voice { words: 0, result: String::new(), recording: true, wake: wake.into() });
+            self.open_overlay(super::overlays::Kind::Voice { words: 0, result: String::new(), recording: true, wake: wake.into(), intro: false });
             // пока окно открыто, линза слушает (Skin.setState('listening'))
             self.set_state("listening");
             (self.host)(Act::VoiceStart);

@@ -51,7 +51,8 @@ pub enum Act {
     ListApps,
     VoiceStart,
     VoiceCancel,
-    VoiceFinish,
+    /// `intro` — обязательная подстройка первого запуска
+    VoiceFinish(bool),
     Scan,
     AddScanned(Vec<overlays::ScanApp>),
 }
@@ -254,6 +255,57 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
     send(Msg::SettingsMsg(msg));
 }
 
+/// Отметка «знакомство показано» (у веб-окна — localStorage): файл в папке настроек.
+fn intro_flag(app: &AppHandle, what: &str) -> Option<std::path::PathBuf> {
+    app.path().app_config_dir().ok().map(|d| d.join(format!("native-intro-{what}.txt")))
+}
+
+fn mark_intro(app: &AppHandle, what: &str) {
+    if let Some(p) = intro_flag(app, what) {
+        let _ = std::fs::write(p, "1");
+    }
+}
+
+/// Первый запуск (maybeMascotIntro / maybeVoiceIntro в app.js): маскот рассказывает о себе,
+/// потом — обязательная подстройка под голос. У кого подстройка уже есть, тому — ни того, ни
+/// другого. Звать в своём потоке: ждёт конца рассказа маскота.
+fn first_run(app: &AppHandle) {
+    if crate::main_demo::active() {
+        return;
+    }
+    let status = app
+        .try_state::<crate::config::LiveConfig>()
+        .and_then(|_| crate::commands_api::voice_adapt_status(app.clone(), app.state()))
+        .unwrap_or_default();
+    let adapted = status.get("report").is_some_and(|r| !r.is_null());
+    let collected = status.get("passive").and_then(|p| p.get("collected")).and_then(|c| c.as_u64()).unwrap_or(0) > 0;
+    let pending = crate::commands_api::voice_intro_pending();
+    let seen = |what: &str| intro_flag(app, what).is_some_and(|p| p.is_file());
+    if !seen("mascot") && !adapted && !collected {
+        mark_intro(app, "mascot");
+        let locale = crate::uilang::current().to_string();
+        let ru = locale == "ru";
+        let params = [
+            ("wake", if ru { "ривер" } else { "reever" }.to_string()),
+            ("settings", crate::ui_text::t(&locale, "nav.settings", &[])),
+            ("section", crate::ui_text::t(&locale, "settings.group.mascot", &[])),
+        ];
+        let p: Vec<(&str, &str)> = params.iter().map(|(k, v)| (*k, v.as_str())).collect();
+        let lines: Vec<String> = (1..=4).map(|n| crate::ui_text::t(&locale, &format!("mascotIntro.{n}"), &p)).collect();
+        let (tx, rx) = std::sync::mpsc::channel::<()>();
+        let id = app.listen_any("reever://mascot-intro-done", move |_| {
+            let _ = tx.send(());
+        });
+        if crate::mascot::mascot_intro(app.clone(), lines) {
+            let _ = rx.recv_timeout(std::time::Duration::from_secs(45));
+        }
+        app.unlisten(id);
+    }
+    if pending || (!seen("voice") && !adapted) {
+        send(Msg::VoiceIntro);
+    }
+}
+
 /// Обновить экраны из Rust (пауза, индекс, действия, настройки) — после действий и раз в пару секунд.
 pub fn refresh(app: &AppHandle) {
     if is_open() {
@@ -391,7 +443,7 @@ fn act(app: &AppHandle, a: Act) {
             }
             refresh(app);
         }
-        Act::VoiceFinish => {
+        Act::VoiceFinish(intro) => {
             let locale = crate::uilang::current().to_string();
             let wake = if locale == "ru" { "ривер" } else { "reever" };
             let r = tauri::async_runtime::block_on(crate::commands_api::finish_voice_adapt(app.clone(), app.state(), app.state()));
@@ -404,12 +456,28 @@ fn act(app: &AppHandle, a: Act) {
                 ),
                 Ok(v) => crate::ui_text::t(&locale, "voiceAdapt.noGain", &[("heard", &n(&v, "heard_before")), ("words", &n(&v, "words"))]),
                 Err(e) => match e.strip_prefix("tooFew:") {
-                    Some(count) => crate::ui_text::t(&locale, "voiceAdapt.tooFew", &[("count", count), ("min", "5"), ("wake", wake)]),
+                    Some(count) => {
+                        let text = crate::ui_text::t(&locale, "voiceAdapt.tooFew", &[("count", count), ("min", "5"), ("wake", wake)]);
+                        // первая подстройка не кончается, пока слова не разобраны: запись — заново
+                        if intro {
+                            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                                let _ = crate::commands_api::start_voice_adapt(state);
+                            }
+                            send(Msg::VoiceResult(text, true));
+                            return;
+                        }
+                        text
+                    }
                     None => crate::ui_text::t(&locale, "voiceAdapt.failed", &[("error", &e)]),
                 },
             };
+            // подстройка не применилась из-за ошибки — всё равно отпускаем, иначе программа заперта
+            if intro {
+                crate::commands_api::voice_intro_done();
+                mark_intro(app, "voice");
+            }
             refresh(app);
-            send(Msg::VoiceResult(text));
+            send(Msg::VoiceResult(text, false));
         }
         Act::ResetGrammar => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
@@ -442,6 +510,15 @@ fn placement() -> (i32, i32, f32) {
 /// Показать окно (создать, если его нет) и отдать ему фокус.
 pub fn show(app: &AppHandle) {
     init(app);
+    // знакомство первого запуска (ждёт, пока окно появится: поток окон рисует его раньше)
+    static FIRST_RUN: Once = Once::new();
+    let app_fr = app.clone();
+    FIRST_RUN.call_once(move || {
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(1500));
+            first_run(&app_fr);
+        });
+    });
     // в режиме проверки окно не забирает фокус: человек за компьютером может печатать
     let demo = crate::main_demo::active();
     if let Some((_, hwnd)) = WIN.lock().ok().and_then(|w| *w) {
