@@ -90,6 +90,8 @@ features = [
   "Win32_Graphics_Dxgi_Common",
   "Win32_Graphics_Direct3D",
   "Win32_Graphics_Direct3D11",
+  # mascot_native/: линза глаза — пиксельный шейдер, компилируется при запуске (d3dcompiler_47)
+  "Win32_Graphics_Direct3D_Fxc",
 ]
 
 [profile.release]
