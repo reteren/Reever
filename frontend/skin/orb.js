@@ -133,6 +133,47 @@
     let scale = 1, dpr = 1;
     const rnd = (a, b) => a + Math.random() * (b - a);
 
+    // Пачки: сотни штрихов с разной прозрачностью и толщиной не рисуются по одному, а
+    // раскладываются по ступеням (прозрачность — 10 ступеней, толщина — ×1,3) и рисуются одним
+    // stroke/fill на ступень. Строки цвета создаются один раз на ступень, а не в каждом кадре.
+    const A_STEPS = 10, W_BASE = Math.log(1.3);
+    const COLORS = [ACC.join(','), '225,255,246', '215,255,242'];
+    const ACCENT = 0, TIP = 1, CORE = 2;
+    const batches = new Map(), styles = new Map();
+    let batchFrame = 0;
+    function bucket(kind, color, a, w) {
+      const ai = Math.round(Math.min(1, a) * A_STEPS);
+      if (ai <= 0) return null;
+      const wi = w > 0 ? Math.max(-12, Math.min(19, Math.round(Math.log(w) / W_BASE))) + 12 : 0;
+      const key = ((kind * 4 + color) * 16 + ai) * 32 + wi;
+      let b = batches.get(key);
+      if (!b) {
+        const sk = color * 16 + ai;
+        let style = styles.get(sk);
+        if (!style) { style = `rgba(${COLORS[color]},${(ai / A_STEPS).toFixed(2)})`; styles.set(sk, style); }
+        b = { kind, style, width: Math.exp((wi - 12) * W_BASE), path: null, frame: -1 };
+        batches.set(key, b);
+      }
+      if (b.frame !== batchFrame) { b.frame = batchFrame; b.path = new Path2D(); }
+      return b.path;
+    }
+    function line(color, a, w, x0, y0, x1, y1) {
+      const path = bucket(0, color, a, w);
+      if (path) { path.moveTo(x0, y0); path.lineTo(x1, y1); }
+    }
+    function dot(color, a, x, y, r) {
+      const path = bucket(1, color, a, 0);
+      if (path) { path.moveTo(x + r, y); path.arc(x, y, r, 0, 6.283); }
+    }
+    function flush() {
+      for (const b of batches.values()) {
+        if (b.frame !== batchFrame) continue;
+        if (b.kind === 0) { ctx.strokeStyle = b.style; ctx.lineWidth = b.width; ctx.stroke(b.path); }
+        else { ctx.fillStyle = b.style; ctx.fill(b.path); }
+        b.path = null;
+      }
+    }
+
     function spawn(mode) {
       if (mode === 'ember') {
         const a = rnd(Math.PI * 0.15, Math.PI * 0.85);
@@ -155,6 +196,7 @@
       ctx.clearRect(0, 0, size, size);
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
+      batchFrame++;
 
       // сколько частиц нужно в этом состоянии
       const want = st.mode === 'orbit' ? Math.round(150 + st.level * 160) : st.mode === 'collapse' ? 230 : st.mode === 'ember' ? 22 : 0;
@@ -174,9 +216,7 @@
         if (st.burst > 0 && p.kind === 'orbit') p.vr += st.burst * 2600 * dt;
         if (p.kind === 'ember') {
           p.x += (p.vx + Math.sin(p.life * 2 + p.ph) * 8) * dt; p.y += p.vy * dt;
-          const a = 0.55 * fade;
-          ctx.fillStyle = `rgba(${ACC[0]},${ACC[1]},${ACC[2]},${a})`;
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 6.283); ctx.fill();
+          dot(ACCENT, 0.55 * fade, p.x, p.y, p.size);
           continue;
         }
         if (st.mode === 'collapse') { p.r -= (55 + 3000 / Math.max(p.r - orbR + 8, 6)) * dt; if (p.r < orbR * 0.86) { p.r = orbR + rnd(70, 110); p.px = null; } }
@@ -195,14 +235,10 @@
           const near = 0.55 + 0.45 * Math.max(-1, Math.min(1, depth / rr));
           const a = Math.min(1, fade * near * (0.5 + st.energy * 0.8));
           const lw = p.size * near * (1 + st.level * 0.9);
-          // мягкое гало — широкий бледный штрих, потом яркое ядро
-          ctx.strokeStyle = `rgba(${ACC[0]},${ACC[1]},${ACC[2]},${a * 0.22})`;
-          ctx.lineWidth = lw * 4.5;
-          ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(x, y); ctx.stroke();
-          ctx.strokeStyle = `rgba(${ACC[0]},${ACC[1]},${ACC[2]},${a})`;
-          ctx.lineWidth = lw;
-          ctx.stroke();
-          if (p.size > 1.1) { ctx.fillStyle = `rgba(215,255,242,${a})`; ctx.beginPath(); ctx.arc(x, y, p.size * 0.75, 0, 6.283); ctx.fill(); }
+          // мягкое гало — широкий бледный штрих, поверх — яркое ядро
+          line(ACCENT, a * 0.22, lw * 4.5, p.px, p.py, x, y);
+          line(ACCENT, a, lw, p.px, p.py, x, y);
+          if (p.size > 1.1) dot(CORE, a, x, y, p.size * 0.75);
         }
         // след длиннее на скорости: держим старую точку чуть дольше
         if (p.px == null || Math.hypot(x - p.px, y - p.py) > 2.5 + st.level * 8) { p.px = x; p.py = y; }
@@ -215,20 +251,20 @@
         if (th.on < 0.01) continue;
         th.a += th.w * dt * (1 + st.level * 2);
         const steps = 34, span = th.len * (0.6 + 0.4 * th.on);
-        let prev = null;
+        let px = 0, py = 0;
         for (let k = 0; k <= steps; k++) {
           const t = k / steps, a = th.a - span * t;
           const ox = Math.cos(a) * th.r, oy = Math.sin(a) * th.r * Math.cos(th.tilt);
           const x = C + ox, y = C + oy;
-          if (prev) {
+          if (k > 0) {
             const al = Math.min(1, (1 - t) * (1 - t) * th.on * (0.8 + st.level * 0.8));
-            ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(x, y);
-            ctx.strokeStyle = `rgba(${ACC.join(',')},${al * 0.25})`; ctx.lineWidth = 9 * (1 - t) + 1; ctx.stroke();
-            ctx.strokeStyle = `rgba(${k < 3 ? '225,255,246' : ACC.join(',')},${al})`; ctx.lineWidth = 2.6 * (1 - t) + 0.4; ctx.stroke();
+            line(ACCENT, al * 0.25, 9 * (1 - t) + 1, px, py, x, y);
+            line(k < 3 ? TIP : ACCENT, al, 2.6 * (1 - t) + 0.4, px, py, x, y);
           }
-          prev = [x, y];
+          px = x; py = y;
         }
       }
+      flush();
       ctx.globalCompositeOperation = 'source-over';
     }
     return {
