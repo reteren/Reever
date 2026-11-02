@@ -61,7 +61,7 @@ use actions::SharedState;
 use config::{LiveConfig, ReeverConfig};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::WebviewWindowBuilder;
-use tauri::{Manager, RunEvent, WebviewWindow, WindowEvent};
+use tauri::{Emitter, Manager, RunEvent, WebviewWindow, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -164,9 +164,23 @@ fn show_main(app: &tauri::AppHandle) {
     });
 }
 
+/// Окно таскают: странице — не чаще раза в 100 мс (skin/shell.js держит анимации, пока сигналы
+/// идут). Подписка страницы на каждое `tauri://move` при резком рывке гнала в неё сотни
+/// вызовов в секунду, и перетаскивание подтормаживало уже от них.
+const MOVE_SIGNAL_MS: u64 = 100;
+
 fn attach_main_window(app: &tauri::AppHandle, window: &WebviewWindow) {
     let handle = app.clone();
+    let last_move_signal = std::sync::Mutex::new(None::<std::time::Instant>);
     window.on_window_event(move |event| match event {
+        WindowEvent::Moved(_) => {
+            let now = std::time::Instant::now();
+            let Ok(mut last) = last_move_signal.lock() else { return };
+            if last.map_or(true, |at| now.duration_since(at).as_millis() as u64 >= MOVE_SIGNAL_MS) {
+                *last = Some(now);
+                let _ = handle.emit_to("main", "reever://moving", ());
+            }
+        }
         WindowEvent::CloseRequested { api, .. } => {
             api.prevent_close();
             let handle = handle.clone();

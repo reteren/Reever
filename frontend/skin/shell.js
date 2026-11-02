@@ -506,7 +506,8 @@
   // уничтожает целиком (send_to_tray), там останавливать нечего.
   $('#winMin')?.addEventListener('click', () => stop());
   // пока окно перетаскивают, анимации стоят (skin/fps.js) и продолжаются через 0,25 с после
-  win?.onMoved?.(() => { window.ReeverFps?.pause(250); wakeLoop(); }).catch?.(() => {});
+  // (сигнал reever://moving шлёт Rust не чаще раза в 100 мс, lib.rs)
+  listen('reever://moving', () => window.ReeverFps?.pause(250));
   window.addEventListener('focus', () => {
     if (running || document.hidden) return;
     start(); if (booted) { powerOn(true); sweepNow(0.7, 0.9); }

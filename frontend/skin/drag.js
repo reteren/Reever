@@ -41,6 +41,8 @@
     if (e.button !== 0 || e.defaultPrevented || !draggable(e)) return;
     // фокус из поля уходит, как при клике по пустому месту
     if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) document.activeElement.blur();
+    // анимации встают сразу, до первого сдвига (skin/fps.js); дальше их держит reever://moving
+    window.ReeverFps?.pause(300);
     win.startDragging().catch(() => {});
   });
 })();
