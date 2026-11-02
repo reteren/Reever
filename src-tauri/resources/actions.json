@@ -787,5 +787,206 @@
       "settings",
       "параметры"
     ]
+  },
+  {
+    "id": "site_twitter",
+    "label": "X (Twitter)",
+    "kind": "url",
+    "target": "https://x.com",
+    "verbs": [],
+    "phrases": [
+      "твиттер",
+      "твитер",
+      "икс твиттер",
+      "twitter"
+    ]
+  },
+  {
+    "id": "site_reddit",
+    "label": "Reddit",
+    "kind": "url",
+    "target": "https://www.reddit.com",
+    "verbs": [],
+    "phrases": [
+      "реддит",
+      "редит",
+      "reddit"
+    ]
+  },
+  {
+    "id": "site_twitch",
+    "label": "Twitch",
+    "kind": "url",
+    "target": "https://www.twitch.tv",
+    "verbs": [],
+    "phrases": [
+      "твич",
+      "twitch"
+    ]
+  },
+  {
+    "id": "site_netflix",
+    "label": "Netflix",
+    "kind": "url",
+    "target": "https://www.netflix.com",
+    "verbs": [],
+    "phrases": [
+      "нетфликс",
+      "netflix"
+    ]
+  },
+  {
+    "id": "site_outlook",
+    "label": "Outlook",
+    "kind": "url",
+    "target": "https://outlook.live.com/mail/",
+    "verbs": [],
+    "phrases": [
+      "аутлук",
+      "outlook"
+    ]
+  },
+  {
+    "id": "site_drive",
+    "label": "Google Drive",
+    "kind": "url",
+    "target": "https://drive.google.com",
+    "verbs": [],
+    "phrases": [
+      "гугл диск",
+      "google drive"
+    ]
+  },
+  {
+    "id": "site_docs",
+    "label": "Google Docs",
+    "kind": "url",
+    "target": "https://docs.google.com/document/",
+    "verbs": [],
+    "phrases": [
+      "гугл документы",
+      "гугл доки",
+      "google docs"
+    ]
+  },
+  {
+    "id": "site_sheets",
+    "label": "Google Sheets",
+    "kind": "url",
+    "target": "https://docs.google.com/spreadsheets/",
+    "verbs": [],
+    "phrases": [
+      "гугл таблицы",
+      "таблицы",
+      "google sheets"
+    ]
+  },
+  {
+    "id": "site_calendar",
+    "label": "Google Calendar",
+    "kind": "url",
+    "target": "https://calendar.google.com",
+    "verbs": [],
+    "phrases": [
+      "календарь",
+      "гугл календарь",
+      "google calendar",
+      "calendar"
+    ]
+  },
+  {
+    "id": "site_translate",
+    "label": "Google Translate",
+    "kind": "url",
+    "target": "https://translate.google.com",
+    "verbs": [],
+    "phrases": [
+      "переводчик",
+      "гугл переводчик",
+      "google translate",
+      "translator"
+    ]
+  },
+  {
+    "id": "site_github",
+    "label": "GitHub",
+    "kind": "url",
+    "target": "https://github.com",
+    "verbs": [],
+    "phrases": [
+      "гитхаб",
+      "гит хаб",
+      "github"
+    ]
+  },
+  {
+    "id": "site_maps",
+    "label": "Google Maps",
+    "kind": "url",
+    "target": "https://www.google.com/maps",
+    "verbs": [],
+    "phrases": [
+      "карты",
+      "гугл карты",
+      "google maps",
+      "maps"
+    ]
+  },
+  {
+    "id": "site_wikipedia",
+    "label": "Wikipedia",
+    "kind": "url",
+    "target": "https://www.wikipedia.org",
+    "verbs": [],
+    "phrases": [
+      "википедия",
+      "wikipedia"
+    ]
+  },
+  {
+    "id": "site_aliexpress",
+    "label": "AliExpress",
+    "kind": "url",
+    "target": "https://www.aliexpress.com",
+    "verbs": [],
+    "phrases": [
+      "алиэкспресс",
+      "али экспресс",
+      "aliexpress"
+    ]
+  },
+  {
+    "id": "site_pinterest",
+    "label": "Pinterest",
+    "kind": "url",
+    "target": "https://www.pinterest.com",
+    "verbs": [],
+    "phrases": [
+      "пинтерест",
+      "pinterest"
+    ]
+  },
+  {
+    "id": "site_chess",
+    "label": "Chess.com",
+    "kind": "url",
+    "target": "https://www.chess.com",
+    "verbs": [],
+    "phrases": [
+      "шахматы",
+      "chess"
+    ]
+  },
+  {
+    "id": "site_temu",
+    "label": "Temu",
+    "kind": "url",
+    "target": "https://www.temu.com",
+    "verbs": [],
+    "phrases": [
+      "тему",
+      "тэму",
+      "temu"
+    ]
   }
 ]

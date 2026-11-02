@@ -801,11 +801,7 @@ fn watch_cursor(window: Win) {
             tick = tick.wrapping_add(1);
             if tick % TOPMOST_CHECK_TICKS == 0 && SHOWN.load(Ordering::Relaxed) && keep_on_top(&window) {
                 // пузырь стоит над маскотом и должен остаться над ним
-                if let Some(bubble) = window.app_handle().get_webview_window("bubble") {
-                    if let Ok(h) = bubble.hwnd() {
-                        raise_topmost(HWND(h.0 as _));
-                    }
-                }
+                bubble::raise(window.app_handle());
             }
             let (Some(position), Some(size)) = (window.outer_position(), window.outer_size()) else { return };
             let native = matches!(window, Win::Native(..));

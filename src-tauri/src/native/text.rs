@@ -13,7 +13,7 @@
 // выравнивание «к началу» у них — вправо. Сама форма арабских букв и порядок смешанного
 // текста (bidi) — забота DirectWrite.
 
-use windows::core::{Result, HSTRING};
+use windows::core::{Interface, Result, HSTRING};
 use windows::Win32::Graphics::DirectWrite::{
     DWriteCreateFactory, IDWriteFactory6, IDWriteFontCollection2, IDWriteFontSetBuilder1, IDWriteInMemoryFontFileLoader,
     IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_AXIS_TAG, DWRITE_FONT_AXIS_VALUE,
@@ -21,6 +21,9 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_READING_DIRECTION_LEFT_TO_RIGHT, DWRITE_READING_DIRECTION_RIGHT_TO_LEFT,
     DWRITE_TEXT_ALIGNMENT, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_LEADING,
     DWRITE_TEXT_ALIGNMENT_TRAILING, DWRITE_TEXT_METRICS, DWRITE_WORD_WRAPPING_NO_WRAP,
+    IDWriteFontCollection, IDWriteTextLayout1, DWRITE_FONT_METRICS, DWRITE_FONT_STRETCH_NORMAL,
+    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_TEXT_RANGE,
+    DWRITE_WORD_WRAPPING_EMERGENCY_BREAK,
     DWRITE_WORD_WRAPPING_WRAP,
 };
 
@@ -85,6 +88,12 @@ pub struct TextStyle {
     /// Оси переменного шрифта, как font-variation-settings: [(*b"ELSH", 2.0), (*b"ELGR", 1.0)].
     /// Насыщенность задаётся полем `weight`, а не осью wght.
     pub axes: Vec<([u8; 4], f32)>,
+    /// Высота строки как CSS line-height (доля кегля); None — по метрикам шрифта.
+    pub line_height: Option<f32>,
+    /// Разрядка как CSS letter-spacing, DIP.
+    pub letter_spacing: f32,
+    /// Ломать слова, не влезающие в строку (CSS overflow-wrap: anywhere).
+    pub break_words: bool,
 }
 
 impl Default for TextStyle {
@@ -98,6 +107,9 @@ impl Default for TextStyle {
             wrap: true,
             locale: String::new(),
             axes: Vec::new(),
+            line_height: None,
+            letter_spacing: 0.0,
+            break_words: false,
         }
     }
 }
@@ -191,11 +203,61 @@ impl Text {
             })?;
             format.SetTextAlignment(text_alignment(style.align))?;
             format.SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR)?;
-            format.SetWordWrapping(if style.wrap { DWRITE_WORD_WRAPPING_WRAP } else { DWRITE_WORD_WRAPPING_NO_WRAP })?;
+            format.SetWordWrapping(if !style.wrap {
+                DWRITE_WORD_WRAPPING_NO_WRAP
+            } else if style.break_words {
+                DWRITE_WORD_WRAPPING_EMERGENCY_BREAK
+            } else {
+                DWRITE_WORD_WRAPPING_WRAP
+            })?;
+            if let Some(mult) = style.line_height {
+                // как в CSS: строка высотой mult × кегль, недостающее до неё делится поровну
+                // сверху и снизу (half-leading); базовая линия — от метрик основного шрифта
+                let (ascent, descent) = self.font_extent(style).unwrap_or((0.8, 0.2));
+                let line = mult * style.size;
+                let baseline = (line - (ascent + descent) * style.size) / 2.0 + ascent * style.size;
+                let f0: windows::Win32::Graphics::DirectWrite::IDWriteTextFormat = format.cast()?;
+                f0.SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, line, baseline)?;
+            }
             let layout = self.factory.CreateTextLayout(&wide, &format, max_width.max(1.0), f32::MAX)?;
+            if style.letter_spacing != 0.0 && !wide.is_empty() {
+                let l1: IDWriteTextLayout1 = layout.cast()?;
+                l1.SetCharacterSpacing(0.0, style.letter_spacing, 0.0, DWRITE_TEXT_RANGE { startPosition: 0, length: wide.len() as u32 })?;
+            }
             let mut m = DWRITE_TEXT_METRICS::default();
             layout.GetMetrics(&mut m)?;
             Ok(TextLayout { layout, width: m.widthIncludingTrailingWhitespace, height: m.height, rtl, lines: m.lineCount })
+        }
+    }
+}
+
+impl Text {
+    /// Подъём и спуск основного шрифта стиля, в долях кегля.
+    fn font_extent(&self, style: &TextStyle) -> Option<(f32, f32)> {
+        unsafe {
+            let family = HSTRING::from(style.font.family());
+            let (mut index, mut exists) = (0u32, windows::Win32::Foundation::BOOL(0));
+            let collection: IDWriteFontCollection = if style.font.embedded() {
+                self.collection.cast().ok()?
+            } else {
+                let mut c = None;
+                let f0: windows::Win32::Graphics::DirectWrite::IDWriteFactory = self.factory.cast().ok()?;
+                f0.GetSystemFontCollection(&mut c, false).ok()?;
+                c?
+            };
+            collection.FindFamilyName(&family, &mut index, &mut exists).ok()?;
+            if !exists.as_bool() {
+                return None;
+            }
+            let font = collection
+                .GetFontFamily(index)
+                .ok()?
+                .GetFirstMatchingFont(DWRITE_FONT_WEIGHT(style.weight as i32), DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL)
+                .ok()?;
+            let mut m = DWRITE_FONT_METRICS::default();
+            font.GetMetrics(&mut m);
+            let em = m.designUnitsPerEm.max(1) as f32;
+            Some((m.ascent as f32 / em, m.descent as f32 / em))
         }
     }
 }

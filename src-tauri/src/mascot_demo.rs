@@ -32,6 +32,11 @@ fn wait(d: f32) {
     std::thread::sleep(Duration::from_secs_f32(d));
 }
 
+/// reever://partial — текст по ходу речи (пузырь, веб или нативный, слушает событие сам).
+fn partial(app: &AppHandle, text: &str) {
+    let _ = app.emit("reever://partial", text);
+}
+
 /// Голос: громкость синусом 2 Гц около −30…−10 дБFS, `secs` секунд.
 fn voice(app: &AppHandle, secs: f32) {
     let t0 = Instant::now();
@@ -65,7 +70,18 @@ pub fn start(app: &AppHandle) {
         wait(4.0);
         step(&app, started, "listening");
         events::set_state(&app, "listening");
-        voice(&app, 5.0);
+        voice(&app, 1.5);
+        // пузырь: короткая и длинная фраза, арабский (справа налево) и японский
+        for (name, text) in [
+            ("bubble-short", "открой браузер"),
+            ("bubble-long", "ривер напиши письмо Ане что я задержусь на полчаса и приду к семи вечера, пусть не ждёт с ужином"),
+            ("bubble-ar", "مرحبا بالعالم، افتح المتصفح من فضلك"),
+            ("bubble-ja", "こんにちは世界、ブラウザを開いてください"),
+        ] {
+            step(&app, started, name);
+            partial(&app, text);
+            voice(&app, 2.5);
+        }
         step(&app, started, "heard");
         let _ = app.emit("reever://heard", "ривер открой браузер");
         mascot::heard("ривер открой браузер");

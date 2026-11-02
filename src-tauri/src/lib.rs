@@ -38,6 +38,7 @@ pub mod models;
 #[cfg(windows)]
 pub mod ortopt;
 pub mod bubble;
+pub mod bubble_native;
 pub mod mascot;
 pub mod picker;
 pub mod procs;

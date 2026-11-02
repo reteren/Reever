@@ -35,7 +35,8 @@ fn log(app: &AppHandle, text: String) {
     crate::events::ui_log(app, text);
 }
 
-fn ui(app: &AppHandle) -> Option<Arc<UiThread>> {
+/// Поток окон — общий для маскота и пузыря (bubble_native).
+pub(crate) fn ui(app: &AppHandle) -> Option<Arc<UiThread>> {
     let mut slot = UI.lock().ok()?;
     if let Some(ui) = slot.as_ref().filter(|u| u.is_running()) {
         return Some(ui.clone());

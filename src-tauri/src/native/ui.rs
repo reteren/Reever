@@ -305,7 +305,17 @@ impl Ui {
     }
 
     /// Есть ли что рисовать: (нужен кадр сейчас, есть анимации на паузе).
-    fn pending(&self, now: Instant) -> (bool, bool) {
+    /// Ближайший срок `wake_at` среди видимых окон.
+    fn next_wake(&self) -> Option<Instant> {
+        self.windows.iter().filter(|w| w.visible).filter_map(|w| w.handler.wake_at()).min()
+    }
+
+    fn pending(&mut self, now: Instant) -> (bool, bool) {
+        for w in self.windows.iter_mut().filter(|w| w.visible) {
+            if w.handler.wake_at().is_some_and(|t| t <= now) {
+                w.dirty = true;
+            }
+        }
         let paused = self.clock.is_paused(now);
         let mut need = false;
         let mut paused_anim = false;
@@ -431,6 +441,10 @@ impl Ui {
             self.clock.paused_until()
         } else {
             None
+        };
+        let deadline = match (deadline, self.next_wake().filter(|_| !need)) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
         };
         unsafe {
             match deadline {

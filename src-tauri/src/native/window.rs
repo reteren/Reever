@@ -509,7 +509,7 @@ impl NativeWindow {
         let dc = &gfx.dc;
         {
             let context = unsafe { gfx.d3d.GetImmediateContext()? };
-            let gpu = GpuCx { d3d: &gfx.d3d, context: &context, dc, generation: gfx.generation, scale, now };
+            let gpu = GpuCx { d3d: &gfx.d3d, context: &context, dc, generation: gfx.generation, scale, now, text };
             self.handler.prepare(&gpu);
         }
         let surface = self.surface.as_mut().expect("surface");

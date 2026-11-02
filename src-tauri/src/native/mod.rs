@@ -141,6 +141,8 @@ pub struct GpuCx<'a> {
     pub generation: u64,
     pub scale: f32,
     pub now: Instant,
+    /// DirectWrite — разметить текст до кадра (например, записать его в список команд для эффектов).
+    pub text: &'a Text,
 }
 
 /// Содержимое окна. Живёт в потоке окон.
@@ -154,6 +156,11 @@ pub trait WindowHandler: std::any::Any {
     /// Окно анимируется: кадры идут сами, с лимитом частоты.
     fn animating(&self) -> bool {
         false
+    }
+    /// Перерисоваться к этому сроку, даже если не анимируется (мигание каретки, задержки):
+    /// поток окон спит до него без кадров в промежутке.
+    fn wake_at(&self) -> Option<Instant> {
+        None
     }
     /// Шаг анимации перед кадром (`dt` — время с прошлого шага, не больше 100 мс).
     fn advance(&mut self, _dt: Duration) {}
