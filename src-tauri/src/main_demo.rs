@@ -146,6 +146,14 @@ pub fn start(app: &AppHandle) {
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "settings");
         crate::main_native::send(crate::main_native::Msg::Tab("home".into()));
+        // редактор «Что можно сказать»: общий (wake-слова) и под строкой диктовки
+        crate::main_native::send(crate::main_native::Msg::EditGrammar("general".into()));
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "grammar-general");
+        crate::main_native::send(crate::main_native::Msg::EditGrammar("dictate".into()));
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "grammar-dictate");
+        crate::main_native::send(crate::main_native::Msg::GrammarDone(None));
         step(started, "paused");
         events::set_state(&app, "paused");
         std::thread::sleep(Duration::from_millis(1200));

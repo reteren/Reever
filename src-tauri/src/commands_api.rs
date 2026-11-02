@@ -68,6 +68,11 @@ pub fn inactive_cancel_words(state: State<'_, Arc<SharedState>>) -> Vec<String> 
 /// Проверить и применить грамматику сразу, затем сохранить её для следующего запуска.
 #[tauri::command]
 pub fn save_grammar(state: State<'_, Arc<SharedState>>, grammar: Grammar) -> Result<(), String> {
+    save_grammar_in(&state, grammar)
+}
+
+/// То же, что команда `save_grammar` (нативное главное окно зовёт напрямую).
+pub fn save_grammar_in(state: &SharedState, grammar: Grammar) -> Result<(), String> {
     grammar.validate().map_err(|errors| errors.join("\n"))?;
     let previous = {
         let mut current = state.grammar.lock().map_err(|error| error.to_string())?;
@@ -90,6 +95,11 @@ pub fn save_grammar(state: State<'_, Arc<SharedState>>, grammar: Grammar) -> Res
 /// Восстановить встроенные значения, сохранить их и уведомить аудио-воркер о версии.
 #[tauri::command]
 pub fn reset_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
+    reset_grammar_in(&state)
+}
+
+/// То же, что команда `reset_grammar`.
+pub fn reset_grammar_in(state: &SharedState) -> Grammar {
     let grammar = Grammar::defaults();
     match state.grammar.lock() {
         Ok(mut current) => {

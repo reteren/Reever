@@ -20,6 +20,9 @@ pub struct SayRow {
 pub struct SayList {
     pub hint: String,
     pub rows: Vec<SayRow>,
+    /// wake-слово в примерах и язык примеров (русский?) — для редактора
+    pub wake: String,
+    pub ru: bool,
 }
 
 fn is_cyrillic(s: &str) -> bool {
@@ -129,8 +132,13 @@ impl Ctx<'_> {
     }
 }
 
+/// Подпись команды на языке интерфейса (intentLabel в app.js).
+pub fn intent_label(locale: &str, intent: &Intent) -> String {
+    Ctx { locale, ru: false, langs: &[] }.label(intent)
+}
+
 /// Подпись по умолчанию (или старая подпись по умолчанию из прежних версий grammar.json).
-fn is_default_label(intent: &Intent) -> bool {
+pub fn is_default_label(intent: &Intent) -> bool {
     let defaults = Grammar::defaults();
     let Some(builtin) = defaults.intents.iter().find(|i| i.id == intent.id).map(|i| i.label.clone()) else {
         return false;
@@ -160,7 +168,7 @@ pub fn build(g: &Grammar, locale: &str, langs: &[&str]) -> SayList {
     rows.push(SayRow { command: format!("{wake} {shutdown}"), desc: cx.t("example.shutdown", &[]), key: None, off: false });
     let cancel = cx.pick(&cx.heard_cancel_words(&g.cancel_words), if cx.ru { "отмена" } else { "cancel" });
     rows.push(SayRow { command: format!("{wake} {cancel}"), desc: cx.t("example.cancel", &[]), key: Some("cancel".into()), off: false });
-    SayList { hint, rows }
+    SayList { hint, rows, wake, ru: cx.ru }
 }
 
 #[cfg(test)]

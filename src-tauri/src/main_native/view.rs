@@ -20,13 +20,14 @@ use super::Act;
 use crate::mascot_native::lens::{Lens, LensParams};
 use crate::mascot_native::{Msg as MascotMsg, MascotView};
 use crate::native::controls::button::{Button, ButtonKind, Lunka, Press};
+use crate::native::controls::form::Form;
 use crate::native::controls::tooltip::Tooltip;
 use crate::native::controls::{
     data, dotted_hline, fill_round, lcd, lcd_background, lcd_overlay, ui, with_alpha, Glow, Scene, ACC, ACC_2, ACC_3,
     ACC_4, ACC_5, ACC_HOT,
 };
 use crate::native::{
-    self, set_cursor, Align, Color, Cursor, Direction, GpuCx, ImageId, Images, MouseButton, MouseEvent, MouseKind, Rect,
+    self, set_cursor, Align, Color, Cursor, Direction, GpuCx, ImageId, Images, KeyEvent, MouseButton, MouseEvent, MouseKind, Rect,
     RenderCx, TextStyle, WindowHandler,
 };
 
@@ -67,6 +68,10 @@ pub enum Msg {
     Orb(String),
     /// Открыть вкладку (проверка main_demo.rs)
     Tab(String),
+    /// Грамматика сохранена (None) или ошибка сохранения.
+    GrammarDone(Option<String>),
+    /// Раскрыть редактор «Что можно сказать» (id команды, `cancel`, `general`; проверка)
+    EditGrammar(String),
 }
 
 /// Сведения для экранов, которые не приходят событиями.
@@ -79,6 +84,9 @@ pub struct Info {
     pub hotkey: String,
     pub version: String,
     pub say: super::say::SayList,
+    /// грамматика для редактора и встроенные фразы языков, которые не распознаются
+    pub grammar: crate::grammar::Grammar,
+    pub hidden_triggers: Vec<String>,
 }
 
 /// Картинки скина.
@@ -244,6 +252,8 @@ enum Target {
     Pause,
     Orb,
     Web,
+    /// строка «Что можно сказать» с редактором
+    Row(usize),
 }
 
 struct Springs {
@@ -300,6 +310,13 @@ pub struct MainView {
     /// строки списка на экране (с учётом прокрутки) и строка под курсором
     say_rects: Vec<Rect>,
     say_hover: Option<usize>,
+    /// редактор «Что можно сказать» и его форма; срок следующего мигания каретки
+    editor: Option<super::grammar_edit::GrammarEditor>,
+    form: Form,
+    form_blink: Option<Instant>,
+    /// раскрытую форму прокрутить в поле зрения (scrollIntoView nearest); где она в содержимом
+    reveal: bool,
+    editor_span: (f32, f32),
     status: serde_json::Value,
     info: Info,
     woke_until: Option<Instant>,
@@ -385,6 +402,11 @@ impl MainView {
             home_max_scroll: 0.0,
             say_rects: Vec::new(),
             say_hover: None,
+            editor: None,
+            form: Form::new(0, crate::ui_text::direction(locale) == "rtl"),
+            form_blink: None,
+            reveal: false,
+            editor_span: (0.0, 0.0),
             status: snapshot.status.unwrap_or_default(),
             info,
             woke_until: None,
@@ -531,6 +553,19 @@ impl MainView {
             }
             Msg::Info(i) => self.info = i,
             Msg::Orb(_) => {}
+            Msg::GrammarDone(err) => match err {
+                None => self.close_editor(),
+                Some(e) => {
+                    if let Some(ed) = self.editor.as_mut() {
+                        ed.errors = e.lines().filter(|l| !l.trim().is_empty()).map(String::from).collect();
+                    }
+                    self.rebuild_form();
+                }
+            },
+            Msg::EditGrammar(key) => {
+                self.tab = 0;
+                self.open_editor(&key);
+            }
             Msg::Tab(t) => {
                 if let Some(i) = TABS.iter().position(|x| *x == t) {
                     self.tab = i;
@@ -858,7 +893,8 @@ impl MainView {
         dotted_hline(cx, body.x, top + h, body.w, ACC_4);
         // .grammar-heading: заголовок слева, «Изменить» справа (редактор пока в веб-версии)
         let mut y = top + h + 12.0;
-        self.web.label = self.t("grammar.edit");
+        let general = self.editor.as_ref().is_some_and(|e| e.open == "general");
+        self.web.label = self.t(if general { "grammar.closeEditor" } else { "grammar.edit" });
         let edit_w = self.web.natural_width(&mut self.scene, cx);
         self.web.rect = Rect::new(body.x + body.w - edit_w, y, edit_w, 28.0);
         let h2 = self.t("grammar.heading").to_uppercase();
@@ -868,6 +904,11 @@ impl MainView {
         self.scene.flush(cx);
         self.web.draw(&mut self.scene, cx);
         y += 28.0 + 6.0;
+        if general {
+            let start = y;
+            y = self.draw_editor(cx, body, y);
+            self.editor_span = (start - top, y - top);
+        }
         // строки: номер, команда, что произойдёт — сетка 26px | auto | 1fr, по базовой линии
         let rows = self.info.say.rows.clone();
         self.say_rects.clear();
@@ -886,7 +927,8 @@ impl MainView {
             let bottom = items.iter().flatten().map(|l| line_base - l.baseline() + l.height).fold(0.0f32, f32::max);
             let rh = bottom + 6.0;
             let rect = Rect::new(body.x, y, body.w, rh);
-            let hover = self.say_hover == Some(i);
+            let open = row.key.is_some() && self.editor.as_ref().is_some_and(|e| Some(&e.open) == row.key.as_ref());
+            let hover = self.say_hover == Some(i) || open;
             if hover {
                 fill_round(cx, rect, 4.0, ACC_5);
             }
@@ -902,10 +944,29 @@ impl MainView {
                 self.scene.text_alpha(l, desc_x, ty(l), if hover { ACC_2 } else { ACC_3 }, Glow::G1, alpha);
             }
             self.say_rects.push(rect);
+            let row_top = y;
             y += rh;
+            if open {
+                y = self.draw_editor(cx, body, y);
+                self.editor_span = (row_top - top, y - top);
+            }
         }
         self.home_max_scroll = (y + self.home_scroll - body.y + 4.0 - body.h).max(0.0);
         self.home_scroll = self.home_scroll.min(self.home_max_scroll);
+        if std::mem::take(&mut self.reveal) && self.editor.is_some() {
+            let (a, b) = self.editor_span;
+            let mut s = self.home_scroll;
+            if b - a > body.h || a < s {
+                s = a;
+            } else if b > s + body.h {
+                s = b - body.h;
+            }
+            let s = s.clamp(0.0, self.home_max_scroll);
+            if s != self.home_scroll {
+                self.home_scroll = s;
+                self.static_dirty = true; // ещё кадр с новой прокруткой
+            }
+        }
         self.scene.flush(cx);
         self.scene.set_clip(None);
         unsafe { cx.dc().PopAxisAlignedClip() };
@@ -917,6 +978,75 @@ impl MainView {
             let ty = track.y + (track.h - th) * self.home_scroll / self.home_max_scroll;
             fill_round(cx, Rect::new(track.x, ty, track.w, th), 1.5, ACC_4);
         }
+    }
+
+    /// Форма редактора под строкой (.grammar-editor: отступ 34, черта слева, 10 до полей).
+    fn draw_editor(&mut self, cx: &mut RenderCx<'_>, body: Rect, y: f32) -> f32 {
+        let x = body.x + 34.0;
+        let top = y + 4.0;
+        let h = self.form.draw(&mut self.scene, cx, x + 11.0, top, body.w - 34.0 - 11.0);
+        cx.fill_rect(Rect::new(x, top, 1.0, h), ACC_4);
+        self.form_blink = self.form.next_blink(cx.now);
+        top + h + 10.0
+    }
+
+    fn open_editor(&mut self, key: &str) {
+        if self.editor.as_ref().is_some_and(|e| e.open == key) {
+            self.close_editor();
+            return;
+        }
+        let say = &self.info.say;
+        self.editor = Some(super::grammar_edit::GrammarEditor::new(
+            key,
+            &self.info.grammar,
+            &self.info.hidden_triggers,
+            &self.locale,
+            &say.wake,
+            say.ru,
+        ));
+        self.form.set_items(Vec::new());
+        self.rebuild_form();
+        self.reveal = true;
+    }
+
+    fn close_editor(&mut self) {
+        self.editor = None;
+        self.form.set_items(Vec::new());
+        self.form_blink = None;
+        native::set_ime_caret(self.hwnd, None);
+        self.static_dirty = true;
+    }
+
+    fn rebuild_form(&mut self) {
+        if let Some(ed) = &self.editor {
+            self.form.set_items(ed.items());
+        }
+        self.touch_static();
+    }
+
+    fn editor_event(&mut self, r: native::controls::form::FormResult) -> bool {
+        use super::grammar_edit::EditorOut;
+        let redraw = r.redraw;
+        if let (Some(ev), Some(ed)) = (r.event, self.editor.as_mut()) {
+            match ed.on_event(ev) {
+                EditorOut::None => {}
+                EditorOut::Rebuild => self.rebuild_form(),
+                EditorOut::Save(g) => (self.host)(Act::SaveGrammar(g)),
+                EditorOut::Close => self.close_editor(),
+                EditorOut::Reset => (self.host)(Act::ResetGrammar),
+            }
+            self.touch_static();
+            return true;
+        }
+        if redraw {
+            self.touch_static();
+        }
+        redraw
+    }
+
+    /// Точка над видимой частью «Главной» (ниже бегущей строки).
+    fn over_home(&self, x: f32, y: f32) -> bool {
+        TABS[self.tab] == "home" && native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0
     }
 
     /// Строка «Что можно сказать» под курсором (только видимая часть «Главной»).
@@ -1162,6 +1292,8 @@ impl MainView {
                 }
             }
             self.static_dirty = false;
+            let k = self.k;
+            native::set_ime_caret(self.hwnd, self.form.ime_caret().map(|(x, y, h)| (x * k, y * k, h * k)));
         }
         true
     }
@@ -1193,6 +1325,11 @@ impl MainView {
         if dx * dx + dy * dy <= ORB.2 * ORB.2 {
             return Some(Target::Orb);
         }
+        if let Some(i) = self.say_row_at(x, y) {
+            if self.info.say.rows.get(i).is_some_and(|r| r.key.is_some()) {
+                return Some(Target::Row(i));
+            }
+        }
         None
     }
 
@@ -1212,6 +1349,9 @@ impl MainView {
                     self.log_scroll = 0.0;
                     self.home_scroll = 0.0;
                     self.say_hover = None;
+                    if self.editor.is_some() {
+                        self.close_editor();
+                    }
                     self.static_dirty = true;
                     (self.host)(Act::Tab(TABS[i].to_string()));
                 }
@@ -1222,7 +1362,20 @@ impl MainView {
                 self.static_dirty = true;
                 (self.host)(Act::TogglePause);
             }
+            Target::Web if TABS[self.tab] == "home" => {
+                let general = self.editor.as_ref().is_some_and(|e| e.open == "general");
+                if general {
+                    self.close_editor();
+                } else {
+                    self.open_editor("general");
+                }
+            }
             Target::Web => (self.host)(Act::OpenWeb),
+            Target::Row(i) => {
+                if let Some(key) = self.info.say.rows.get(i).and_then(|r| r.key.clone()) {
+                    self.open_editor(&key);
+                }
+            }
         }
     }
 }
@@ -1230,9 +1383,14 @@ impl MainView {
 impl WindowHandler for MainView {
     fn attached(&mut self, hwnd: isize) {
         self.hwnd = hwnd;
+        self.form = Form::new(hwnd, self.rtl);
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
+        if self.form_blink.is_some_and(|b| gpu.now >= b) {
+            self.form_blink = None;
+            self.static_dirty = true;
+        }
         // шаг осьминога — по часам, а не в advance: кадр по wake_at (покой окна) рисуется без
         // advance, и срок пробуждения застревал бы в прошлом — окно крутилось бы на частоте монитора
         if let Some(orb) = self.orb.as_mut() {
@@ -1387,6 +1545,9 @@ impl WindowHandler for MainView {
 
     fn wake_at(&self) -> Option<Instant> {
         let mut at = self.tooltip.wake_at();
+        if let Some(b) = self.form_blink {
+            at = Some(at.map_or(b, |a| a.min(b)));
+        }
         if self.orb.as_ref().is_some_and(|o| o.visible()) {
             let next = self.orb_last + Duration::from_millis(34);
             at = Some(at.map_or(next, |a| a.min(next)));
@@ -1497,7 +1658,7 @@ impl WindowHandler for MainView {
                     touched = true;
                 }
                 touched |= self.pause.press.set_hover(t == Some(Target::Pause), 0.12);
-                let row = if t.is_none() { self.say_row_at(x, y) } else { None };
+                let row = if t.is_none() || matches!(t, Some(Target::Row(_))) { self.say_row_at(x, y) } else { None };
                 if row != self.say_hover {
                     self.say_hover = row;
                     touched = true;
@@ -1518,7 +1679,20 @@ impl WindowHandler for MainView {
                     _ => None,
                 };
                 redraw |= self.tooltip.hover(tip);
-                set_cursor(self.hwnd, if t.is_some() { Cursor::Hand } else { Cursor::Arrow });
+                let mut cursor = if t.is_some() { Cursor::Hand } else { Cursor::Arrow };
+                if self.editor.is_some() {
+                    let over = self.over_home(x, y);
+                    let r = self.form.mouse(MouseEvent { kind: MouseKind::Move, x, y });
+                    redraw |= self.editor_event(r);
+                    if over {
+                        match self.form.hover_kind(x, y) {
+                            Some(true) => cursor = Cursor::Hand,
+                            Some(false) => cursor = Cursor::Text,
+                            None => {}
+                        }
+                    }
+                }
+                set_cursor(self.hwnd, cursor);
                 redraw
             }
             MouseKind::Leave => {
@@ -1533,9 +1707,20 @@ impl WindowHandler for MainView {
                 self.touch_static();
                 r | self.pause.press.set_hover(false, 0.12) | self.web.press.set_hover(false, 0.12) | self.tooltip.hide() | true
             }
+            MouseKind::Down(MouseButton::Left) | MouseKind::DoubleClick if self.editor.is_some() && self.over_home(x, y) && self.form.hover_kind(x, y).is_some() => {
+                self.tooltip.hide();
+                let r = self.form.mouse(MouseEvent { kind: ev.kind, x, y });
+                self.editor_event(r);
+                true
+            }
             MouseKind::Down(MouseButton::Left) => {
                 self.tooltip.hide();
                 self.touch_static();
+                if self.editor.is_some() {
+                    // щелчок мимо полей снимает их фокус
+                    let r = self.form.mouse(MouseEvent { kind: MouseKind::Down(MouseButton::Left), x: -1.0, y: -1.0 });
+                    self.editor_event(r);
+                }
                 let t = self.target_at(x, y);
                 self.pressed = t;
                 match t {
@@ -1554,6 +1739,14 @@ impl WindowHandler for MainView {
             }
             MouseKind::Up(MouseButton::Left) => {
                 self.touch_static();
+                if self.editor.is_some() {
+                    let r = self.form.mouse(MouseEvent { kind: MouseKind::Up(MouseButton::Left), x, y });
+                    if r.event.is_some() {
+                        self.pressed = None;
+                        self.editor_event(r);
+                        return true;
+                    }
+                }
                 let t = self.target_at(x, y);
                 let p = self.pressed.take();
                 for l in self.lunki.iter_mut() {
@@ -1568,6 +1761,28 @@ impl WindowHandler for MainView {
             }
             _ => false,
         }
+    }
+
+    fn key(&mut self, ev: KeyEvent) -> bool {
+        if self.editor.is_none() {
+            return false;
+        }
+        let r = self.form.key(ev);
+        self.editor_event(r)
+    }
+
+    fn char_input(&mut self, c: char) -> bool {
+        if self.editor.is_none() {
+            return false;
+        }
+        let r = self.form.char_input(c);
+        self.editor_event(r)
+    }
+
+    fn focus(&mut self, focused: bool) -> bool {
+        self.form.window_focus(focused);
+        self.static_dirty = true;
+        true
     }
 
     fn wheel(&mut self, x: f32, y: f32, delta: f32) -> bool {

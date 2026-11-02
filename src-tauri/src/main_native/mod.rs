@@ -11,6 +11,7 @@
 
 mod frame;
 mod fx;
+mod grammar_edit;
 mod say;
 mod view;
 
@@ -37,6 +38,8 @@ pub enum Act {
     TogglePause,
     OpenWeb,
     Tab(String),
+    SaveGrammar(crate::grammar::Grammar),
+    ResetGrammar,
 }
 
 /// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
@@ -124,7 +127,8 @@ fn info(app: &AppHandle) -> Info {
         .and_then(|s| s.grammar.lock().ok().map(|g| g.clone()))
         .unwrap_or_else(crate::grammar::Grammar::defaults);
     let say = say::build(&grammar, &crate::uilang::current().to_string(), &langs);
-    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say }
+    let hidden_triggers = grammar.inactive_triggers_for(Some(&langs.iter().map(|l| l.to_string()).collect::<Vec<_>>()));
+    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers }
 }
 
 /// Обновить экраны из Rust (пауза, индекс, действия, настройки) — после действий и раз в пару секунд.
@@ -152,6 +156,21 @@ fn act(app: &AppHandle, a: Act) {
         }
         Act::Tab(tab) => {
             let _ = crate::events::set_ui_tab(tab);
+        }
+        Act::SaveGrammar(g) => {
+            let r = match app.try_state::<Arc<crate::actions::SharedState>>() {
+                Some(state) => crate::commands_api::save_grammar_in(&state, g),
+                None => Err(crate::ui_text::t(&crate::uilang::current().to_string(), "grammar.saveFailed", &[])),
+            };
+            refresh(app);
+            send(Msg::GrammarDone(r.err()));
+        }
+        Act::ResetGrammar => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                crate::commands_api::reset_grammar_in(&state);
+            }
+            refresh(app);
+            send(Msg::GrammarDone(None));
         }
     }
 }

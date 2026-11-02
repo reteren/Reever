@@ -1239,7 +1239,7 @@ impl Grammar {
         self.cancel_words.iter().filter(|w| !cancel_word_active(w, &active)).cloned().collect()
     }
 
-    fn inactive_triggers_for(&self, active: Option<&[String]>) -> Vec<String> {
+    pub(crate) fn inactive_triggers_for(&self, active: Option<&[String]>) -> Vec<String> {
         let mut hidden = Vec::new();
         for trigger in self.intents.iter().flat_map(|intent| &intent.triggers) {
             if !trigger.trim().is_empty()
