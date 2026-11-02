@@ -157,7 +157,10 @@ fn info(app: &AppHandle) -> Info {
         .try_state::<Arc<crate::actions::SharedState>>()
         .map(crate::commands_api::inactive_action_phrases)
         .unwrap_or_default();
-    let hidden_triggers = grammar.inactive_triggers_for(Some(&langs.iter().map(|l| l.to_string()).collect::<Vec<_>>()));
+    let lang_list: Vec<String> = langs.iter().map(|l| l.to_string()).collect();
+    // встроенные фразы, слова отмены и конца диктовки языков, которые не распознаются
+    let mut hidden_triggers = grammar.inactive_triggers_for(Some(&lang_list));
+    hidden_triggers.extend(grammar.inactive_words_for(&lang_list));
     Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers, action_list, hidden_phrases, settings: settings_info(app) }
 }
 

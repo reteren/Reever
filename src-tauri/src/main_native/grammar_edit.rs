@@ -147,6 +147,11 @@ impl GrammarEditor {
         i.triggers.iter().filter(|v| !v.trim().is_empty() && !self.hidden.contains(*v)).cloned().collect()
     }
 
+    /// Слова без скрытых (языков, которые не распознаются).
+    fn visible_words(&self, words: &[String]) -> Vec<String> {
+        words.iter().filter(|w| !self.hidden.contains(*w)).cloned().collect()
+    }
+
     fn words_group(&self, items: &mut Vec<Item>, legend: &str, hint: &str, id: &str, values: Vec<String>, add: &str) {
         items.push(Item::GroupBegin { legend: self.t(legend), icon: None });
         items.push(Item::Note(self.notes.get(id).cloned().unwrap_or_else(|| self.t(hint))));
@@ -213,13 +218,13 @@ impl GrammarEditor {
                 });
             }
             "cancel" => {
-                self.words_group(&mut items, "grammar.cancelLegend", "grammar.cancelHint", "cancel", self.draft.cancel_words.clone(), "grammar.addCancel");
+                self.words_group(&mut items, "grammar.cancelLegend", "grammar.cancelHint", "cancel", self.visible_words(&self.draft.cancel_words), "grammar.addCancel");
             }
             id => {
                 if let Some(i) = self.draft.intents.iter().find(|i| i.id == id) {
                     self.intent_group(&mut items, i);
                     if i.kind == IntentKind::Dictate {
-                        self.words_group(&mut items, "grammar.stopLegend", "grammar.stopHint", "stop", self.draft.dictation_stop.clone(), "grammar.addStop");
+                        self.words_group(&mut items, "grammar.stopLegend", "grammar.stopHint", "stop", self.visible_words(&self.draft.dictation_stop), "grammar.addStop");
                     }
                 }
             }
@@ -244,8 +249,8 @@ impl GrammarEditor {
     fn chips(&self, id: &str) -> Option<(Vec<String>, usize, &'static str)> {
         Some(match id {
             "wake" => (self.draft.wake_words.clone(), 1, "grammar.keepOneWake"),
-            "cancel" => (self.draft.cancel_words.clone(), 0, "grammar.keepOnePhrase"),
-            "stop" => (self.draft.dictation_stop.clone(), 1, "grammar.keepOnePhrase"),
+            "cancel" => (self.visible_words(&self.draft.cancel_words), 0, "grammar.keepOnePhrase"),
+            "stop" => (self.visible_words(&self.draft.dictation_stop), 1, "grammar.keepOnePhrase"),
             _ => {
                 let iid = id.strip_prefix("trig:")?;
                 let i = self.draft.intents.iter().find(|i| i.id == iid)?;
@@ -257,8 +262,15 @@ impl GrammarEditor {
     fn set_chips(&mut self, id: &str, values: Vec<String>) {
         match id {
             "wake" => self.draft.wake_words = values,
-            "cancel" => self.draft.cancel_words = values,
-            "stop" => self.draft.dictation_stop = values,
+            // скрытые слова остаются в грамматике — вернутся, когда язык включат
+            "cancel" => {
+                let kept: Vec<String> = self.draft.cancel_words.iter().filter(|w| self.hidden.contains(*w)).cloned().collect();
+                self.draft.cancel_words = values.into_iter().chain(kept).collect();
+            }
+            "stop" => {
+                let kept: Vec<String> = self.draft.dictation_stop.iter().filter(|w| self.hidden.contains(*w)).cloned().collect();
+                self.draft.dictation_stop = values.into_iter().chain(kept).collect();
+            }
             _ => {
                 let Some(iid) = id.strip_prefix("trig:") else { return };
                 let hidden = self.hidden.clone();
@@ -429,6 +441,16 @@ mod tests {
         // фраза «поиск» новой команды не должна совпадать с другой
         let r = e.on_event(FormEvent::Click("save".into()));
         assert!(matches!(r, EditorOut::Save(_)) || !e.errors.iter().any(|m| m.contains("{q}")));
+    }
+
+    #[test]
+    fn hidden_cancel_words_are_not_shown_but_kept() {
+        let mut g = Grammar::defaults();
+        g.cancel_words = vec!["cancel".into(), "abbrechen".into()];
+        let mut e = GrammarEditor::new("cancel", &g, &["abbrechen".to_string()], "en", "reever", false);
+        assert!(e.items().iter().any(|i| matches!(i, Item::Chips { values, .. } if values == &["cancel"])));
+        e.on_event(FormEvent::Add("cancel+".into(), "stop it".into()));
+        assert_eq!(e.draft.cancel_words, ["cancel", "stop it", "abbrechen"]);
     }
 
     #[test]

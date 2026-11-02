@@ -424,9 +424,12 @@ let grammar=defaultGrammarPreview(), grammarDraft=null, grammarOpen=null;
 // Встроенные фразы языков, которые сейчас не распознаются: в редакторе не видны, но не
 // удаляются (grammar.rs: inactive_triggers).
 let hiddenTriggers=new Set();
-// Слова отмены языков, которые не распознаются («abbrechen» без немецкого): в примерах их нет.
+// Слова отмены и фразы конца диктовки языков, которые не распознаются («abbrechen» без
+// немецкого): в примерах и редакторе их нет, но из грамматики они не удаляются.
 let hiddenCancel=new Set();
 const heardCancelWords=()=>(grammar?.cancel_words||[]).filter(word=>!hiddenCancel.has(word));
+const shownWords=words=>(words||[]).filter(word=>!hiddenCancel.has(word));
+const keepHidden=(words,shown)=>[...shown,...(words||[]).filter(word=>hiddenCancel.has(word))];
 async function loadHiddenCancel(){
   try{ hiddenCancel=new Set(await invoke('inactive_cancel_words')||[]); }catch(e){ return; }
   renderGrammarExamples();
@@ -495,7 +498,7 @@ function grammarExample(intent,wake,russian){
   }
   if(intent.kind==='web_chat') return [`${wake} ${trigger} X`,t('example.chat',{label:intentLabel(intent)||t('example.chatDefault')})];
   if(intent.kind==='dictate'){
-    const stop=pickPhrase(grammar.dictation_stop,russian?'стоп ввод':'stop typing');
+    const stop=pickPhrase(shownWords(grammar.dictation_stop),russian?'стоп ввод':'stop typing');
     // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs: is_dictation_stop).
     const end=russian?'стоп':'stop';
     const cancel=pickPhrase(heardCancelWords().filter(word=>!['стоп','stop','хватит','остановись'].includes(String(word).trim().toLowerCase())),russian?'отмена':'cancel');
@@ -656,12 +659,12 @@ function renderGrammarEditor(){
     };
     grammarEditor.append(addSearch,addChat);
   }else if(open==='cancel'){
-    grammarEditor.append(grammarWordsGroup('grammar.cancelLegend','grammar.cancelHint',()=>grammarDraft.cancel_words||[],values=>grammarDraft.cancel_words=values,'cancel',0));
+    grammarEditor.append(grammarWordsGroup('grammar.cancelLegend','grammar.cancelHint',()=>shownWords(grammarDraft.cancel_words),values=>grammarDraft.cancel_words=keepHidden(grammarDraft.cancel_words,values),'cancel',0));
   }else{
     const intent=(grammarDraft.intents||[]).find(item=>item.id===open);
     if(!intent){openGrammar(null);return;}
     grammarEditor.append(grammarIntentFieldset(intent));
-    if(intent.kind==='dictate') grammarEditor.append(grammarWordsGroup('grammar.stopLegend','grammar.stopHint',()=>grammarDraft.dictation_stop||[],values=>grammarDraft.dictation_stop=values,'stop',1));
+    if(intent.kind==='dictate') grammarEditor.append(grammarWordsGroup('grammar.stopLegend','grammar.stopHint',()=>shownWords(grammarDraft.dictation_stop),values=>grammarDraft.dictation_stop=keepHidden(grammarDraft.dictation_stop,values),'stop',1));
   }
   const actions=el('div',{className:'grammar-actions'});
   const save=el('button',{type:'button',className:'default',textContent:t('common.save')});

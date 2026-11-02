@@ -111,7 +111,7 @@ impl Ctx<'_> {
                 (x, self.t("example.chat", &[("label", &label)]))
             }
             IntentKind::Dictate => {
-                let stop = self.pick(&g.dictation_stop, if ru { "стоп ввод" } else { "stop typing" });
+                let stop = self.pick(&self.heard_cancel_words(&g.dictation_stop), if ru { "стоп ввод" } else { "stop typing" });
                 // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs)
                 let end = if ru { "стоп" } else { "stop" };
                 let cancel_words: Vec<String> = self
