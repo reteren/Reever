@@ -25,6 +25,14 @@ pub fn path(name: &str) -> Option<&'static str> {
         "search" => "M10.5 4.5a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM15 15l5 5",
         "warn" => "M12 3.5l9.5 17h-19zM12 10v4.5M12 17.2v.3",
         "x" => "M6.5 6.5l11 11M17.5 6.5l-11 11",
+        // главное окно (index.html): вкладки, кнопки окна, микрофон; круг <circle r=7.5> — двумя дугами
+        "orb" => "M4.5 12a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0-15 0zM5.6 14.2c2.3 1.8 10.5 1.8 12.8 0M12 4.5v2M12 17.5v2",
+        "stack" => "M4 6.5h3M10 6.5h10M4 12h3M10 12h10M4 17.5h3M10 17.5h7",
+        "tune" => "M4 7h7M15 7h5M13 4.5v5M4 17h3M11 17h9M9 14.5v5M4 12h12M18 12h2",
+        "term" => "M3.5 5h17v14h-17zM7.5 9.5l3 2.5-3 2.5M12.5 15h4",
+        "min" => "M6.5 12h11",
+        "shade" => "M6 8.5h12M8 12l4 3.5 4-3.5",
+        "mic" => "M12 3.5a3 3 0 013 3V12a3 3 0 01-6 0V6.5a3 3 0 013-3zM6.5 11.5a5.5 5.5 0 0011 0M12 17v3.5",
         _ => return None,
     })
 }
@@ -106,8 +114,15 @@ pub fn parse(d: &str) -> Vec<(char, Vec<f32>)> {
         }
     };
     for ch in d.chars() {
+        // флаги дуги (4-е и 5-е число из семи) — одна цифра, их пишут слитно: «a3 3 0 013 3»
+        let arc_flag = matches!(out.last(), Some(('A' | 'a', args)) if matches!(args.len() % 7, 3 | 4)) && num.is_empty();
+        if arc_flag && (ch == '0' || ch == '1') {
+            num.push(ch);
+            flush(&mut num, &mut out);
+            continue;
+        }
         match ch {
-            'M' | 'm' | 'L' | 'l' | 'H' | 'h' | 'V' | 'v' | 'A' | 'a' | 'Z' | 'z' => {
+            'M' | 'm' | 'L' | 'l' | 'H' | 'h' | 'V' | 'v' | 'A' | 'a' | 'C' | 'c' | 'Z' | 'z' => {
                 flush(&mut num, &mut out);
                 out.push((ch, Vec::new()));
             }
@@ -201,6 +216,21 @@ fn build(d: &str) -> Option<ID2D1Geometry> {
                         y = ny;
                     }
                 }
+                'C' => {
+                    for c in args.chunks(6) {
+                        if c.len() < 6 {
+                            break;
+                        }
+                        let (ox, oy) = if rel { (x, y) } else { (0.0, 0.0) };
+                        sink.AddBezier(&windows::Win32::Graphics::Direct2D::Common::D2D1_BEZIER_SEGMENT {
+                            point1: pt(ox + c[0], oy + c[1]),
+                            point2: pt(ox + c[2], oy + c[3]),
+                            point3: pt(ox + c[4], oy + c[5]),
+                        });
+                        x = ox + c[4];
+                        y = oy + c[5];
+                    }
+                }
                 'Z' => {
                     if open {
                         sink.EndFigure(D2D1_FIGURE_END_CLOSED);
@@ -232,11 +262,15 @@ mod tests {
         assert_eq!(p[3], ('l', vec![11.0, 11.0]));
         let a = parse("a6 6 0 1 1 0 12-4-4");
         assert_eq!(a[0].1, vec![6.0, 6.0, 0.0, 1.0, 1.0, 0.0, 12.0, -4.0, -4.0]);
+        // слитные флаги дуги и кривая Безье
+        let m = parse("M12 3.5a3 3 0 013 3c2.3 1.8 10.5 1.8 12.8 0");
+        assert_eq!(m[1].1, vec![3.0, 3.0, 0.0, 0.0, 1.0, 3.0, 3.0]);
+        assert_eq!(m[2], ('c', vec![2.3, 1.8, 10.5, 1.8, 12.8, 0.0]));
     }
 
     #[test]
     fn all_icons_build() {
-        for name in ["tray", "play", "folder", "file", "search", "warn", "x"] {
+        for name in ["tray", "play", "folder", "file", "search", "warn", "x", "orb", "stack", "tune", "term", "min", "shade", "mic"] {
             assert!(geometry(name).is_some(), "{name}");
         }
     }
