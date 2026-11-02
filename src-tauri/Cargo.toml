@@ -22,6 +22,9 @@ intl_pluralrules = "7.0.2"
 unic-langid = "0.9"
 anyhow     = "1"
 strsim     = "0.11"
+# native/: специальные возможности нативных окон (UI Automation через сырой HWND)
+accesskit         = "0.25"
+accesskit_windows = "0.35"
 
 # audio
 cpal   = "0.15"
