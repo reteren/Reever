@@ -12,13 +12,20 @@ use windows::Win32::Graphics::Gdi::{
 
 #[tauri::command]
 pub fn set_window_shape(window: tauri::WebviewWindow, rects: Vec<[f64; 4]>) -> Result<(), String> {
-    let hwnd = HWND(window.hwnd().map_err(|e| e.to_string())?.0 as _);
+    let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as isize;
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    apply_region(hwnd, &rects, scale)
+}
+
+/// Обрезать окно по прямоугольникам (`[x0, y0, x1, y1]` в DIP, `scale` — масштаб монитора).
+/// Пустой список — обычное прямоугольное окно. Общая часть веб-окна и нативного (main_native).
+pub fn apply_region(hwnd: isize, rects: &[[f64; 4]], scale: f64) -> Result<(), String> {
+    let hwnd = HWND(hwnd as _);
     if rects.is_empty() {
         // Пустой список — вернуть обычное прямоугольное окно.
         unsafe { SetWindowRgn(hwnd, None, true) };
         return Ok(());
     }
-    let scale = window.scale_factor().map_err(|e| e.to_string())?;
     let mut bound = RECT { left: i32::MAX, top: i32::MAX, right: i32::MIN, bottom: i32::MIN };
     let phys: Vec<RECT> = rects
         .iter()

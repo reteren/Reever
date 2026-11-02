@@ -159,6 +159,17 @@ impl Images {
         Ok(AlphaMask { w, h, alpha })
     }
 
+    /// Пиксели картинки в размере w×h: BGRA, premultiplied (как у битмапов кэша) — для своих
+    /// текстур D3D11 (шейдер рамки главного окна) и масок формы окна.
+    pub fn pixels(&self, id: ImageId, w: u32, h: u32) -> Result<Vec<u8>> {
+        let (w, h) = (w.max(1), h.max(1));
+        let source = self.entry(id)?.source.clone();
+        let src = self.converted(&source, w, h)?;
+        let mut px = vec![0u8; (w * h * 4) as usize];
+        unsafe { src.CopyPixels(std::ptr::null(), w * 4, &mut px)? };
+        Ok(px)
+    }
+
     /// Бюджет кэша в байтах; лишнее вытесняется сразу.
     pub fn set_budget(&mut self, bytes: usize) {
         self.budget = bytes;
