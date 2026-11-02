@@ -122,6 +122,8 @@ pub enum SettingsOut {
     MascotPin(bool),
     MascotUnpin,
     VoiceReset,
+    /// открыть окно записи голоса
+    VoiceStart,
     /// «Что можно сказать» → Изменить
     OpenGrammar,
 }
@@ -406,7 +408,11 @@ impl SettingsTab {
                 }
                 let can_reset = report.is_some() || n(passive, "collected") != "0";
                 let id = if can_reset { "vareset" } else { "!vareset" };
-                items.push(Item::Buttons { buttons: vec![(id.into(), self.t("settings.voice_adapt.reset"), ButtonKind::Plain)], top: 4.0, bottom: 0.0 });
+                items.push(Item::Buttons {
+                    buttons: vec![("vastart".into(), self.t("settings.voice_adapt.start"), ButtonKind::Plain), (id.into(), self.t("settings.voice_adapt.reset"), ButtonKind::Plain)],
+                    top: 4.0,
+                    bottom: 0.0,
+                });
                 items.push(Item::Help { text, indent: false });
                 if let Some(h) = help {
                     items.push(Item::Help { text: h, indent: false });
@@ -748,6 +754,7 @@ impl SettingsTab {
                 Some(SettingsOut::MascotUnpin)
             }
             FormEvent::Click(id) if id == "vareset" => Some(SettingsOut::VoiceReset),
+            FormEvent::Click(id) if id == "vastart" => Some(SettingsOut::VoiceStart),
             FormEvent::Remove(id, _) if id.starts_with("rl:") => {
                 let code = &id[3..];
                 let codes: Vec<String> = self.recognition_enabled().into_iter().filter(|c| c != code).collect();

@@ -74,6 +74,14 @@ pub enum Msg {
     EditGrammar(String),
     /// Итог изменения настройки — строкой под формой.
     SettingsMsg(String),
+    /// Открыть окно поверх для проверки: `calibration`, `voice`, `apps`, `close`.
+    TestOverlay(String),
+    /// Программы Windows для выбора (list_apps).
+    Apps(Vec<(String, String)>),
+    /// Подстройка под голос: сколько слов услышано.
+    VoiceWords(u32),
+    /// Подстройка под голос закончилась: итог строкой.
+    VoiceResult(String),
     /// Расстановка маскота не началась (он выключен).
     SettingsPlacing(bool),
     /// Прокрутить вкладку «Настройки» (проверка)
@@ -328,6 +336,8 @@ pub struct MainView {
     form_blink: Option<Instant>,
     actions_tab: super::actions_tab::ActionsTab,
     settings_tab: super::settings_tab::SettingsTab,
+    /// окно поверх (калибровка, голос, выбор программы)
+    overlay: Option<super::overlays::Overlay>,
     /// раскрытую форму прокрутить в поле зрения (scrollIntoView nearest); где она в содержимом
     reveal: bool,
     editor_span: (f32, f32),
@@ -422,6 +432,7 @@ impl MainView {
             form_blink: None,
             actions_tab: super::actions_tab::ActionsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             settings_tab: super::settings_tab::SettingsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
+            overlay: None,
             reveal: false,
             editor_span: (0.0, 0.0),
             status: snapshot.status.unwrap_or_default(),
@@ -572,6 +583,15 @@ impl MainView {
             }
             Msg::Info(i) => {
                 self.actions_tab.sync(i.action_list.clone(), i.hidden_phrases.clone());
+                if let Some(o) = self.overlay.as_mut() {
+                    if let super::overlays::Kind::Calibration { id, label, count, last } = &mut o.kind {
+                        if let Some((l, phrases)) = self.actions_tab.shown_phrases(id) {
+                            *label = l;
+                            *count = phrases.len();
+                            *last = phrases.last().cloned();
+                        }
+                    }
+                }
                 self.settings_tab.sync(i.settings.clone());
                 self.info = i;
             }
@@ -586,6 +606,43 @@ impl MainView {
                 }
             },
             Msg::SettingsMsg(m) => self.settings_tab.msg = m,
+            Msg::TestOverlay(which) => match which.as_str() {
+                "calibration" => {
+                    let id = self.info.action_list.first().map(|a| a.id.clone()).unwrap_or_default();
+                    let (label, phrases) = self.actions_tab.shown_phrases(&id).unwrap_or_default();
+                    self.open_overlay(super::overlays::Kind::Calibration { id, label, count: phrases.len(), last: phrases.last().cloned() });
+                }
+                "voice" => self.open_overlay(super::overlays::Kind::Voice { words: 6, result: String::new(), recording: true, wake: "reever".into() }),
+                "apps" => {
+                    self.open_overlay(super::overlays::Kind::Apps { list: None });
+                    (self.host)(Act::ListApps);
+                }
+                _ => self.overlay = None,
+            },
+            Msg::Apps(list) => {
+                if let Some(o) = self.overlay.as_mut() {
+                    if let super::overlays::Kind::Apps { list: l } = &mut o.kind {
+                        *l = Some(list);
+                    }
+                }
+            }
+            Msg::VoiceWords(n) => {
+                if let Some(o) = self.overlay.as_mut() {
+                    if let super::overlays::Kind::Voice { words, recording: true, .. } = &mut o.kind {
+                        if n > *words {
+                            self.flash = 0.8; // вспышка шарика: слово засчитано (Skin.pulse)
+                        }
+                        *words = n;
+                    }
+                }
+            }
+            Msg::VoiceResult(text) => {
+                if let Some(o) = self.overlay.as_mut() {
+                    if let super::overlays::Kind::Voice { result, .. } = &mut o.kind {
+                        *result = text;
+                    }
+                }
+            }
             Msg::SettingsPlacing(on) => self.settings_tab.set_placing(on),
             Msg::ScrollSettings(d) => {
                 self.settings_tab.scroll_by(d);
@@ -1086,7 +1143,53 @@ impl MainView {
         redraw
     }
 
+    fn open_overlay(&mut self, kind: super::overlays::Kind) {
+        self.overlay = Some(super::overlays::Overlay::new(kind, &self.locale, self.hwnd));
+        self.touch_static();
+    }
+
+    fn overlay_out(&mut self, out: super::overlays::OverlayOut) {
+        use super::overlays::{Kind, OverlayOut};
+        match out {
+            OverlayOut::Close => {
+                match self.overlay.as_ref().map(|o| &o.kind) {
+                    Some(Kind::Calibration { .. }) => (self.host)(Act::CancelCalibration),
+                    Some(Kind::Voice { recording: true, .. }) => {
+                        (self.host)(Act::VoiceCancel);
+                        self.set_state("idle");
+                    }
+                    _ => {}
+                }
+                self.overlay = None;
+                native::set_ime_caret(self.hwnd, None);
+            }
+            OverlayOut::VoiceDone => {
+                if let Some(o) = self.overlay.as_mut() {
+                    if let Kind::Voice { recording, result, .. } = &mut o.kind {
+                        *recording = false;
+                        *result = crate::ui_text::t(&self.locale, "voiceAdapt.working", &[]);
+                    }
+                }
+                self.set_state("idle");
+                (self.host)(Act::VoiceFinish);
+            }
+            OverlayOut::App(name, aumid) => {
+                self.actions_tab.apply_app(&name, &aumid);
+                self.overlay = None;
+            }
+        }
+        self.touch_static();
+    }
+
     fn settings_out(&mut self, out: super::settings_tab::SettingsOut) {
+        if out == super::settings_tab::SettingsOut::VoiceStart {
+            let wake = if self.info.say.ru { "ривер" } else { "reever" };
+            self.open_overlay(super::overlays::Kind::Voice { words: 0, result: String::new(), recording: true, wake: wake.into() });
+            // пока окно открыто, линза слушает (Skin.setState('listening'))
+            self.set_state("listening");
+            (self.host)(Act::VoiceStart);
+            return;
+        }
         if out == super::settings_tab::SettingsOut::OpenGrammar {
             self.tab = 0;
             (self.host)(Act::Tab("home".into()));
@@ -1104,6 +1207,20 @@ impl MainView {
         match out {
             ActionsOut::Save(a) => (self.host)(Act::SaveAction(a)),
             ActionsOut::Delete(id) => (self.host)(Act::DeleteAction(id)),
+            ActionsOut::Calibrate(a) => {
+                let phrases = self.actions_tab.shown_phrases(&a.id).map(|(_, p)| p).unwrap_or_else(|| a.phrases.clone());
+                self.open_overlay(super::overlays::Kind::Calibration {
+                    id: a.id.clone(),
+                    label: a.label.clone(),
+                    count: phrases.len(),
+                    last: phrases.last().cloned(),
+                });
+                (self.host)(Act::Calibrate(a));
+            }
+            ActionsOut::PickApp => {
+                self.open_overlay(super::overlays::Kind::Apps { list: None });
+                (self.host)(Act::ListApps);
+            }
         }
     }
 
@@ -1313,6 +1430,11 @@ impl MainView {
             l.draw(&mut self.scene, cx);
         }
         self.scene.flush(cx);
+        if let Some(o) = self.overlay.as_mut() {
+            o.draw(&mut self.scene, cx, (SKIN_W, SKIN_H), cx.now);
+            self.scene.flush(cx);
+            self.form_blink = o.next_blink(cx.now);
+        }
     }
 
     /// Обновить статичный слой, если нужно. false — слоя нет (рисовать напрямую).
@@ -1356,11 +1478,11 @@ impl MainView {
             }
             self.static_dirty = false;
             let k = self.k;
-            let caret = match TABS[self.tab] {
+            let caret = if let Some(o) = &self.overlay { o.ime_caret() } else { match TABS[self.tab] {
                 "actions" => self.actions_tab.ime_caret(),
                 "settings" => self.settings_tab.form.ime_caret(),
                 _ => self.form.ime_caret(),
-            };
+            } };
             native::set_ime_caret(self.hwnd, caret.map(|(x, y, h)| (x * k, y * k, h * k)));
         }
         true
@@ -1461,6 +1583,9 @@ impl WindowHandler for MainView {
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
+        if self.overlay.as_ref().is_some_and(|o| o.animating()) {
+            self.static_dirty = true;
+        }
         if let Some(out) = self.settings_tab.take_due(gpu.now) {
             (self.host)(Act::Settings(out));
         }
@@ -1617,6 +1742,7 @@ impl WindowHandler for MainView {
             || self.eq.iter().any(|v| *v > 0.001)
             || self.active()
             || self.tooltip.animating(Instant::now())
+            || self.overlay.as_ref().is_some_and(|o| o.animating())
             || Instant::now() < self.static_live_until
     }
 
@@ -1711,6 +1837,19 @@ impl WindowHandler for MainView {
 
     fn mouse(&mut self, ev: MouseEvent) -> bool {
         let (x, y) = (ev.x / self.k, ev.y / self.k);
+        if self.overlay.is_some() {
+            let (redraw, out) = self.overlay.as_mut().map(|o| o.mouse(MouseEvent { kind: ev.kind, x, y })).unwrap_or_default();
+            if let Some(out) = out {
+                self.overlay_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            if ev.kind == MouseKind::Move {
+                set_cursor(self.hwnd, Cursor::Arrow);
+            }
+            return redraw;
+        }
         if TABS[self.tab] == "settings" {
             let over = native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0;
             let skin = MouseEvent { kind: ev.kind, x, y };
@@ -1905,6 +2044,16 @@ impl WindowHandler for MainView {
     }
 
     fn key(&mut self, ev: KeyEvent) -> bool {
+        if let Some(o) = self.overlay.as_mut() {
+            let (redraw, out) = o.key(ev);
+            if let Some(out) = out {
+                self.overlay_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if TABS[self.tab] == "settings" {
             let (redraw, out) = self.settings_tab.key(ev);
             if let Some(out) = out {
@@ -1933,6 +2082,13 @@ impl WindowHandler for MainView {
     }
 
     fn char_input(&mut self, c: char) -> bool {
+        if let Some(o) = self.overlay.as_mut() {
+            let r = o.char_input(c);
+            if r {
+                self.touch_static();
+            }
+            return r;
+        }
         if TABS[self.tab] == "settings" {
             let (redraw, out) = self.settings_tab.char_input(c);
             if let Some(out) = out {
@@ -1964,12 +2120,22 @@ impl WindowHandler for MainView {
         self.form.window_focus(focused);
         self.actions_tab.window_focus(focused);
         self.settings_tab.form.window_focus(focused);
+        if let Some(o) = self.overlay.as_mut() {
+            o.window_focus(focused);
+        }
         self.static_dirty = true;
         true
     }
 
     fn wheel(&mut self, x: f32, y: f32, delta: f32) -> bool {
         let (x, y) = (x / self.k, y / self.k);
+        if let Some(o) = self.overlay.as_mut() {
+            let r = o.wheel(x, y, delta);
+            if r {
+                self.static_dirty = true;
+            }
+            return r;
+        }
         if TABS[self.tab] == "settings" && self.settings_tab.wheel(x, y, delta) {
             self.static_dirty = true;
             return true;

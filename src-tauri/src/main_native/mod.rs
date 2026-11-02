@@ -13,6 +13,7 @@ mod actions_tab;
 mod frame;
 mod fx;
 mod grammar_edit;
+mod overlays;
 mod say;
 mod settings_tab;
 mod view;
@@ -45,6 +46,12 @@ pub enum Act {
     SaveAction(crate::actions::Action),
     DeleteAction(String),
     Settings(settings_tab::SettingsOut),
+    Calibrate(crate::actions::Action),
+    CancelCalibration,
+    ListApps,
+    VoiceStart,
+    VoiceCancel,
+    VoiceFinish,
 }
 
 /// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
@@ -86,6 +93,13 @@ pub fn init(app: &AppHandle) {
             send(Msg::Status(v));
         });
         app.listen_any("mascot://orb", move |e| send(Msg::Orb(text(e.payload()))));
+        // калибровка записала фразу — список действий (и счёт в окне калибровки) заново
+        let app_c = app.clone();
+        app.listen_any("reever://calibrated", move |_| refresh(&app_c));
+        app.listen_any("reever://voice-adapt", |e| {
+            let v: serde_json::Value = serde_json::from_str(e.payload()).unwrap_or_default();
+            send(Msg::VoiceWords(v.get("words").and_then(|w| w.as_u64()).unwrap_or(0) as u32));
+        });
     });
 }
 
@@ -232,7 +246,7 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
         SettingsOut::MascotUnpin => crate::commands_api::mascot_unpin(app.clone(), app.state()).map_or_else(err, |_| saved.clone()),
         SettingsOut::VoiceReset => crate::commands_api::reset_voice_adapt(app.clone(), app.state()).map_or_else(err, |_| saved.clone()),
         SettingsOut::Fps(n) => crate::mascot::set_fps_limit(app.state(), n).map_or_else(err, |_| saved.clone()),
-        SettingsOut::OpenGrammar => return,
+        SettingsOut::OpenGrammar | SettingsOut::VoiceStart => return,
     };
     refresh(app);
     send(Msg::SettingsMsg(msg));
@@ -289,6 +303,54 @@ fn act(app: &AppHandle, a: Act) {
             refresh(app);
         }
         Act::Settings(out) => apply_setting(app, out),
+        Act::Calibrate(a) => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                let id = a.id.clone();
+                let _ = crate::commands_api::save_action(state.clone(), a);
+                let _ = crate::commands_api::start_calibration(state, id);
+            }
+            refresh(app);
+        }
+        Act::CancelCalibration => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                let _ = crate::commands_api::cancel_calibration(state);
+            }
+            refresh(app);
+        }
+        Act::ListApps => {
+            let apps = crate::commands_api::list_apps().into_iter().map(|a| (a.name, a.aumid)).collect();
+            send(Msg::Apps(apps));
+        }
+        Act::VoiceStart => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                let _ = crate::commands_api::start_voice_adapt(state);
+            }
+        }
+        Act::VoiceCancel => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                let _ = crate::commands_api::cancel_voice_adapt(state);
+            }
+        }
+        Act::VoiceFinish => {
+            let locale = crate::uilang::current().to_string();
+            let wake = if locale == "ru" { "ривер" } else { "reever" };
+            let r = tauri::async_runtime::block_on(crate::commands_api::finish_voice_adapt(app.clone(), app.state(), app.state()));
+            let n = |v: &serde_json::Value, k: &str| v.get(k).and_then(|x| x.as_i64()).unwrap_or(0).to_string();
+            let text = match r.map(|rep| serde_json::to_value(rep).unwrap_or_default()) {
+                Ok(v) if v.get("adapted").and_then(|a| a.as_bool()) == Some(true) => crate::ui_text::t(
+                    &locale,
+                    "voiceAdapt.adapted",
+                    &[("heard", &n(&v, "heard_after")), ("words", &n(&v, "words")), ("before", &n(&v, "heard_before"))],
+                ),
+                Ok(v) => crate::ui_text::t(&locale, "voiceAdapt.noGain", &[("heard", &n(&v, "heard_before")), ("words", &n(&v, "words"))]),
+                Err(e) => match e.strip_prefix("tooFew:") {
+                    Some(count) => crate::ui_text::t(&locale, "voiceAdapt.tooFew", &[("count", count), ("min", "5"), ("wake", wake)]),
+                    None => crate::ui_text::t(&locale, "voiceAdapt.failed", &[("error", &e)]),
+                },
+            };
+            refresh(app);
+            send(Msg::VoiceResult(text));
+        }
         Act::ResetGrammar => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
                 crate::commands_api::reset_grammar_in(&state);

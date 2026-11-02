@@ -50,6 +50,10 @@ fn kind_group(kind: &str) -> &'static str {
 pub enum ActionsOut {
     Save(Action),
     Delete(String),
+    /// сохранить и начать калибровку
+    Calibrate(Action),
+    /// открыть выбор программы Windows
+    PickApp,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,6 +201,7 @@ impl ActionsTab {
             Item::Label(self.t("actions.target")),
             Item::Input { id: "target".into(), placeholder: "steam://rungameid/570".into(), value: a.target.clone() },
             Item::Note(self.t("actions.searchHint")),
+            Item::Buttons { buttons: vec![("pickapp".into(), self.t("actions.pickApp"), ButtonKind::Plain)], top: 6.0, bottom: 0.0 },
             Item::Label(t(&self.locale, "actions.phrases", &[("count", &count)])),
             Item::Chips { id: "phrases".into(), values: shown, primary_first: false },
             Item::AddRow { id: "phrases+".into(), placeholder: self.t("actions.phrasePlaceholder"), button: self.t("common.add") },
@@ -217,6 +222,7 @@ impl ActionsTab {
             None => {
                 items.push(Item::Buttons {
                     buttons: vec![
+                        ("calibrate".into(), self.t("actions.calibrate"), ButtonKind::Default),
                         ("save".into(), self.t("common.save"), ButtonKind::Default),
                         ("delete".into(), self.t("common.delete"), ButtonKind::Danger),
                     ],
@@ -245,6 +251,25 @@ impl ActionsTab {
             }
         };
         self.load_form();
+    }
+
+    /// Выбрана программа Windows: тип uwp, цель — AUMID, имя — если пустое (как openAppPicker).
+    pub fn apply_app(&mut self, name: &str, aumid: &str) {
+        if let Some(d) = self.draft.as_mut() {
+            d.kind = "uwp".into();
+            d.target = aumid.to_string();
+            if d.label.trim().is_empty() {
+                d.label = name.to_string();
+            }
+            self.dirty = true;
+            self.load_form();
+        }
+    }
+
+    /// Фразы действия, что видны (для окна калибровки).
+    pub fn shown_phrases(&self, id: &str) -> Option<(String, Vec<String>)> {
+        let a = self.actions.iter().find(|a| a.id == id)?;
+        Some((a.label.clone(), self.shown(a)))
     }
 
     /// Открыть действие по id (проверка).
@@ -630,6 +655,12 @@ impl ActionsTab {
                         return None;
                     }
                     self.commit()
+                }
+                "pickapp" => Some(ActionsOut::PickApp),
+                "calibrate" => {
+                    let a = draft.clone();
+                    self.commit();
+                    Some(ActionsOut::Calibrate(a))
                 }
                 "delete" => {
                     self.pending = Some(Pending::Delete);
