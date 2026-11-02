@@ -242,12 +242,23 @@ impl Text {
                     l2.SetFontFallback(&fb)?;
                 }
             }
-            if style.letter_spacing != 0.0 && !wide.is_empty() {
+            // разрядка не применяется к связному письму (арабскому) — как в Chromium: буквы
+            // должны оставаться соединёнными
+            if style.letter_spacing != 0.0 && !wide.is_empty() && !has_cursive(text) {
                 let l1: IDWriteTextLayout1 = layout.cast()?;
                 l1.SetCharacterSpacing(0.0, style.letter_spacing, 0.0, DWRITE_TEXT_RANGE { startPosition: 0, length: wide.len() as u32 })?;
             }
             let mut m = DWRITE_TEXT_METRICS::default();
             layout.GetMetrics(&mut m)?;
+            // «естественная» ширина (огромное поле, одна строка): поле — по тексту, иначе абзац
+            // справа налево прижимается к правому краю огромного поля и уезжает из виду
+            let layout = if max_width >= NATURAL && !style.wrap {
+                layout.SetMaxWidth(m.widthIncludingTrailingWhitespace.ceil().max(1.0))?;
+                layout.GetMetrics(&mut m)?;
+                layout
+            } else {
+                layout
+            };
             Ok(TextLayout { layout, width: m.widthIncludingTrailingWhitespace, height: m.height, rtl, lines: m.lineCount })
         }
     }
@@ -303,6 +314,14 @@ impl Text {
         }
     }
 }
+
+/// Есть ли в тексте связное письмо (арабское, сирийское, нко, монгольское).
+fn has_cursive(text: &str) -> bool {
+    text.chars().any(|c| matches!(c as u32, 0x0600..=0x08FF | 0xFB50..=0xFDFF | 0xFE70..=0xFEFF | 0x0700..=0x074F | 0x07C0..=0x07FF | 0x1800..=0x18AF))
+}
+
+/// Ширина, начиная с которой разметка считается «по тексту» (не ограниченной полем).
+pub const NATURAL: f32 = 1000.0;
 
 fn axis(tag: [u8; 4], value: f32) -> DWRITE_FONT_AXIS_VALUE {
     DWRITE_FONT_AXIS_VALUE { axisTag: DWRITE_FONT_AXIS_TAG(u32::from_le_bytes(tag)), value }

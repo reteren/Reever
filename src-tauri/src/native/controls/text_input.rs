@@ -55,6 +55,9 @@ pub struct TextInput {
     pub pad_right: f32,
     pub focused: bool,
     pub hwnd: isize,
+    /// направление страницы справа налево: короткий текст прижат к правому краю
+    pub rtl: bool,
+    align_dx: f32,
     text: Vec<char>,
     caret: usize,
     anchor: usize,
@@ -77,6 +80,8 @@ impl Default for TextInput {
             pad_right: 9.0,
             focused: false,
             hwnd: 0,
+            rtl: false,
+            align_dx: 0.0,
             text: Vec::new(),
             caret: 0,
             anchor: 0,
@@ -303,7 +308,7 @@ impl TextInput {
     }
 
     fn text_left(&self) -> f32 {
-        self.rect.x + self.pad_left - self.scroll_x
+        self.rect.x + self.pad_left - self.scroll_x + self.align_dx
     }
 
     /// Символ под точкой окна (по последней разметке).
@@ -416,6 +421,7 @@ impl TextInput {
             self.scroll_x = self.scroll_x.min((layout.width - inner.w).max(0.0)).max(0.0);
         }
         let ty = r.y + (r.h - layout.height) / 2.0;
+        self.align_dx = if self.rtl && layout.width < inner.w { inner.w - layout.width } else { 0.0 };
         let tx = self.text_left();
         let (a, b) = self.selection();
         if push_round_layer(cx, inner, 0.0, 1.0) {

@@ -207,6 +207,21 @@ impl Ui {
         }
     }
 
+    /// Снимок окна вне экрана (RGBA, пиксели) — для проверок без захвата экрана.
+    pub fn snapshot(&mut self, id: WindowId) -> Option<(u32, u32, Vec<u8>)> {
+        self.prewarm().ok()?;
+        let gfx = self.gfx.as_ref()?;
+        let brush = unsafe { gfx.dc.CreateSolidColorBrush(&D2D1_COLOR_F { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }, None).ok()? };
+        let w = self.windows.iter_mut().find(|w| w.id == id)?;
+        match w.snapshot(gfx, &mut self.images, &self.text, &brush) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                log(&format!("native: снимок окна {}: {e}", id.0));
+                None
+            }
+        }
+    }
+
     /// Проверка восстановления: пройти тот же путь, что при настоящей потере устройства.
     pub fn simulate_device_loss(&mut self) {
         self.recover_device("проверка");

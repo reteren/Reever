@@ -698,6 +698,70 @@ impl NativeWindow {
         Ok(RenderResult::Ok)
     }
 
+    /// Снимок окна без экрана: тот же кадр, нарисованный в битмап (а не в swap chain), и его
+    /// пиксели — RGBA без предумножения, `size_px`. Для проверок: экран не захватывается.
+    pub fn snapshot(
+        &mut self,
+        gfx: &Gfx,
+        images: &mut Images,
+        text: &Text,
+        brush: &ID2D1SolidColorBrush,
+    ) -> Result<(u32, u32, Vec<u8>)> {
+        let now = Instant::now();
+        let dpi = self.dpi as f32;
+        let scale = self.scale();
+        let size = self.size_dip();
+        let (w, h) = self.size_px;
+        let dc = &gfx.dc;
+        {
+            let context = unsafe { gfx.d3d.GetImmediateContext()? };
+            let gpu = GpuCx { d3d: &gfx.d3d, context: &context, dc, generation: gfx.generation, scale, now, text };
+            self.handler.prepare(&gpu);
+        }
+        let props = |options| D2D1_BITMAP_PROPERTIES1 {
+            pixelFormat: D2D1_PIXEL_FORMAT { format: DXGI_FORMAT_B8G8R8A8_UNORM, alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED },
+            dpiX: dpi,
+            dpiY: dpi,
+            bitmapOptions: options,
+            colorContext: std::mem::ManuallyDrop::new(None),
+        };
+        let size_u = windows::Win32::Graphics::Direct2D::Common::D2D_SIZE_U { width: w, height: h };
+        unsafe {
+            let target = dc.CreateBitmap(size_u, None, 0, &props(D2D1_BITMAP_OPTIONS_TARGET))?;
+            let cpu = dc.CreateBitmap(
+                size_u,
+                None,
+                0,
+                &props(windows::Win32::Graphics::Direct2D::D2D1_BITMAP_OPTIONS_CPU_READ | D2D1_BITMAP_OPTIONS_CANNOT_DRAW),
+            )?;
+            dc.SetTarget(&target);
+            dc.SetDpi(dpi, dpi);
+            dc.SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+            dc.SetTransform(&windows::Foundation::Numerics::Matrix3x2::identity());
+            dc.BeginDraw();
+            dc.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
+            let mut cx = RenderCx { dc, images, text, brush, scale, size, now };
+            self.handler.render(&mut cx);
+            let end = dc.EndDraw(None, None);
+            dc.SetTarget(None);
+            end?;
+            cpu.CopyFromBitmap(None, &target, None)?;
+            let mapped = cpu.Map(windows::Win32::Graphics::Direct2D::D2D1_MAP_OPTIONS_READ)?;
+            let mut out = vec![0u8; (w * h * 4) as usize];
+            for y in 0..h as usize {
+                let row = std::slice::from_raw_parts(mapped.bits.add(y * mapped.pitch as usize), w as usize * 4);
+                for x in 0..w as usize {
+                    let (b, g, r, a) = (row[x * 4], row[x * 4 + 1], row[x * 4 + 2], row[x * 4 + 3]);
+                    let un = |c: u8| if a == 0 { 0 } else { ((c as u32 * 255 + a as u32 / 2) / a as u32).min(255) as u8 };
+                    let o = (y * w as usize + x) * 4;
+                    out[o..o + 4].copy_from_slice(&[un(r), un(g), un(b), a]);
+                }
+            }
+            cpu.Unmap()?;
+            Ok((w, h, out))
+        }
+    }
+
     pub fn destroy(mut self) {
         self.surface = None;
         unsafe {

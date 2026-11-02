@@ -221,6 +221,12 @@ pub struct Scene {
 }
 
 impl Scene {
+    /// Начать кадр окна: фабрика геометрии — от контекста устройства, очередь пуста.
+    pub fn begin_frame(&mut self, cx: &RenderCx<'_>) {
+        icons::use_factory_of(cx.dc());
+        self.begin(self.generation);
+    }
+
     /// Начать кадр (эффекты прошлого устройства выбрасываются).
     pub fn begin(&mut self, generation: u64) {
         if generation != self.generation {
@@ -248,12 +254,13 @@ impl Scene {
         });
     }
 
-    /// Значок (штрих или заливка) в квадрате `r`.
+    /// Значок (штрих или заливка) в квадрате `r`; толщина штриха — в единицах viewBox 24×24,
+    /// как stroke-width у SVG.
     pub fn icon(&mut self, name: &str, r: Rect, stroke: f32, color: Color, fill: bool, glow: Glow) {
         let Some(g) = icons::geometry(name) else { return };
         let k = r.w / 24.0;
         let m = Matrix3x2 { M11: k, M12: 0.0, M21: 0.0, M22: k, M31: r.x, M32: r.y };
-        self.queue.push(Queued { item: Item::Icon { geometry: g, m, stroke: stroke / k, color, fill, opacity: 1.0 }, glow, clip: self.clip });
+        self.queue.push(Queued { item: Item::Icon { geometry: g, m, stroke, color, fill, opacity: 1.0 }, glow, clip: self.clip });
     }
 
     fn blur(&mut self, dc: &ID2D1DeviceContext, sigma: f32) -> Option<ID2D1Effect> {
@@ -408,6 +415,10 @@ pub fn dotted_hline(cx: &RenderCx<'_>, x: f32, y: f32, w: f32, color: Color) {
     unsafe {
         cx.dc().DrawLine(D2D_POINT_2F { x, y: y + 0.5 }, D2D_POINT_2F { x: x + w, y: y + 0.5 }, cx.brush(color), 1.0, style.as_ref());
     }
+}
+
+pub(crate) fn reset_dashes() {
+    DASHES.with(|d| d.borrow_mut().clear());
 }
 
 thread_local! {

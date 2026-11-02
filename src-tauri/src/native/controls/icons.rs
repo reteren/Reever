@@ -35,7 +35,9 @@ thread_local! {
     static ROUND: RefCell<Option<ID2D1StrokeStyle>> = const { RefCell::new(None) };
 }
 
-/// Фабрика Direct2D для геометрии (не зависит от устройства), одна на поток окон.
+/// Фабрика Direct2D для геометрии и штрихов. Должна быть той же, от которой контекст
+/// устройства (иначе D2DERR_WRONG_FACTORY): её задаёт `use_factory_of` из кадра окна; до
+/// первого кадра (тесты) — своя.
 pub fn factory() -> Option<ID2D1Factory1> {
     FACTORY.with(|f| {
         if f.borrow().is_none() {
@@ -43,6 +45,22 @@ pub fn factory() -> Option<ID2D1Factory1> {
         }
         f.borrow().clone()
     })
+}
+
+/// Взять фабрику контекста устройства (фабрика потока окон одна на всё время его жизни).
+/// Если раньше была другая — кэш геометрии и штрихов сбрасывается.
+pub fn use_factory_of(dc: &windows::Win32::Graphics::Direct2D::ID2D1DeviceContext) {
+    let Ok(f) = (unsafe { dc.GetFactory() }) else { return };
+    let Ok(f1) = f.cast::<ID2D1Factory1>() else { return };
+    FACTORY.with(|cur| {
+        let same = cur.borrow().as_ref().is_some_and(|c| c.as_raw() == f1.as_raw());
+        if !same {
+            *cur.borrow_mut() = Some(f1);
+            CACHE.with(|c| c.borrow_mut().clear());
+            ROUND.with(|r| *r.borrow_mut() = None);
+            super::reset_dashes();
+        }
+    });
 }
 
 /// stroke-linecap: round; stroke-linejoin: round (.ico в skin.css).
