@@ -10,6 +10,7 @@
 //! окно слушает само через `AppHandle::listen_any`, подписка — при старте программы (`init`).
 
 mod frame;
+mod fx;
 mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};

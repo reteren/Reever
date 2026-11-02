@@ -8,9 +8,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use tauri::AppHandle;
-use windows::Win32::Graphics::Direct2D::D2D1_INTERPOLATION_MODE_LINEAR;
+use windows::Win32::Graphics::Direct2D::Common::{D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT, D2D_SIZE_U};
+use windows::Win32::Graphics::Direct2D::{
+    ID2D1Bitmap1, ID2D1Image, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1, D2D1_INTERPOLATION_MODE_LINEAR,
+};
+use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
 
 use super::frame::{FrameLight, FramePixels, FrameShader};
+use super::fx::{Fx, FxState, Mode};
 use super::Act;
 use crate::mascot_native::lens::{Lens, LensParams};
 use crate::native::controls::button::{Button, ButtonKind, Lunka, Press};
@@ -293,6 +298,10 @@ pub struct MainView {
     level: f32,
     level_raw: f32,
     flash: f32,
+    burst: f32,
+    fx: Fx,
+    /// угли в покое — только первые 1,1 с после открытия (idleEmbersUntil в shell.js)
+    embers_until: Instant,
     eq: Vec<f32>,
     eq_acc: f32,
     t0: Instant,
@@ -304,6 +313,14 @@ pub struct MainView {
     tab_hover: Option<usize>,
     orb_hover: bool,
     pressed: Option<Target>,
+    // статичный слой (экраны, текст, рамка) — перерисовывается только когда что-то изменилось
+    static_layer: Option<(ID2D1Bitmap1, (u32, u32), u64)>,
+    static_dirty: bool,
+    /// пока идут переходы наведения кнопок — слой обновляется каждый кадр
+    static_live_until: Instant,
+    gpu_generation: u64,
+    /// фаза мигания точки состояния в прошлом кадре
+    blink_phase: bool,
 }
 
 impl MainView {
@@ -357,6 +374,9 @@ impl MainView {
             level: 0.0,
             level_raw: 0.0,
             flash: 0.0,
+            burst: 0.0,
+            fx: Fx::new((ORB.0, ORB.1), ORB.2),
+            embers_until: Instant::now() + Duration::from_millis(1100),
             eq: vec![0.0; ((EQ.w - 16.0) / 9.0) as usize],
             eq_acc: 0.0,
             t0: Instant::now(),
@@ -379,6 +399,11 @@ impl MainView {
             tab_hover: None,
             orb_hover: false,
             pressed: None,
+            static_layer: None,
+            static_dirty: true,
+            static_live_until: Instant::now(),
+            gpu_generation: 0,
+            blink_phase: true,
             assets,
         };
         // кнопка в вебе сжата flex-колонкой до ~17 px и стоит под строкой «Хоткей»
@@ -399,6 +424,9 @@ impl MainView {
 
     fn set_state(&mut self, name: &str) {
         let was = std::mem::replace(&mut self.state, name.to_string());
+        if matches!(name, "idle" | "paused") {
+            self.embers_until = Instant::now();
+        }
         if matches!(name, "listening" | "busy") {
             self.woke_until = None;
         } else if name == "paused" || matches!(was.as_str(), "listening" | "busy") {
@@ -420,6 +448,10 @@ impl MainView {
     }
 
     pub fn on_msg(&mut self, msg: Msg) {
+        // уровень и wake меняют только живой слой (линза, рой, эквалайзер)
+        if !matches!(msg, Msg::Level(_) | Msg::Wake(_)) {
+            self.static_dirty = true;
+        }
         match msg {
             Msg::State(s) => self.set_state(&s),
             Msg::Partial(p) => self.partial = p,
@@ -428,6 +460,7 @@ impl MainView {
                 if !h.is_empty() {
                     self.heard = Some(h);
                     self.flash = 1.0;
+                    self.burst = 1.0;
                 }
             }
             Msg::Log(line) => {
@@ -538,18 +571,12 @@ impl MainView {
         lcd_overlay(cx, r, 8.0);
     }
 
-    fn pill(&self, key: &str) -> String {
-        self.t(key)
-    }
-
-    fn draw_status(&mut self, cx: &mut RenderCx<'_>) {
+    /// Точка состояния: мигает при «слушаю»/«выполняю».
+    fn draw_dot(&mut self, cx: &mut RenderCx<'_>) {
         let r = STATUS;
-        lcd_background(cx, r, 12.0);
-        let (x0, x1) = (r.x + 12.0, r.x + r.w - 12.0);
         let now = Instant::now();
         let blink = |period: f32| ((now.duration_since(self.t0).as_secs_f32() / (period / 2.0)) as i64) % 2 == 0;
-        // точка состояния и подпись
-        let dot = Rect::new(x0, r.y + 20.0 + 7.0, 10.0, 10.0);
+        let dot = Rect::new(r.x + 12.0, r.y + 20.0 + 7.0, 10.0, 10.0);
         let (dot_c, glow_r, show) = match self.state.as_str() {
             "listening" => (ACC, 8.0, blink(1.0)),
             "busy" => (ACC_HOT, 10.0, blink(0.35)),
@@ -560,6 +587,18 @@ impl MainView {
             self.scene.flush(cx);
             fill_round(cx, dot, 5.0, dot_c);
         }
+    }
+
+    fn pill(&self, key: &str) -> String {
+        self.t(key)
+    }
+
+    fn draw_status(&mut self, cx: &mut RenderCx<'_>) {
+        let r = STATUS;
+        lcd_background(cx, r, 12.0);
+        let (x0, x1) = (r.x + 12.0, r.x + r.w - 12.0);
+        // точка состояния: мигает — слой обновляется на каждом переключении (advance)
+        self.draw_dot(cx);
         let key = match self.state.as_str() {
             s @ ("listening" | "busy" | "loading" | "paused" | "error") => format!("mic.{s}"),
             _ => "mic.idle".into(),
@@ -829,6 +868,8 @@ impl MainView {
         self.scene.set_clip(None);
     }
 
+    /// Эквалайзер: лента громкости меняется ~22 раза в секунду (шаг 45 мс), поэтому он в
+    /// статичном слое, который обновляется на каждом шаге ленты, а не каждый кадр.
     fn draw_eq(&mut self, cx: &mut RenderCx<'_>) {
         let r = EQ;
         lcd_background(cx, r, 10.0);
@@ -879,6 +920,71 @@ impl MainView {
         }
     }
 
+    /// Статичная часть окна: экраны с текстом и рамка (в статическом режиме света).
+    fn draw_static(&mut self, cx: &mut RenderCx<'_>) {
+        self.draw_title(cx);
+        self.draw_status(cx);
+        self.draw_rail(cx);
+        self.draw_screen(cx);
+        self.draw_eq(cx);
+        self.draw_frame(cx);
+        // лунки в покое не меняются; наведение и нажатие обновляют слой (touch_static)
+        for l in self.lunki.iter() {
+            l.draw(&mut self.scene, cx);
+        }
+        self.scene.flush(cx);
+    }
+
+    /// Обновить статичный слой, если нужно. false — слоя нет (рисовать напрямую).
+    fn render_static(&mut self, cx: &mut RenderCx<'_>, dpi: (f32, f32)) -> bool {
+        let size = ((SKIN_W * cx.scale).round().max(1.0) as u32, (SKIN_H * cx.scale).round().max(1.0) as u32);
+        let fits = self.static_layer.as_ref().is_some_and(|(_, sz, gen)| *sz == size && *gen == self.gpu_generation);
+        if !fits {
+            let props = D2D1_BITMAP_PROPERTIES1 {
+                pixelFormat: D2D1_PIXEL_FORMAT { format: DXGI_FORMAT_B8G8R8A8_UNORM, alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED },
+                dpiX: dpi.0,
+                dpiY: dpi.1,
+                bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
+                colorContext: std::mem::ManuallyDrop::new(None),
+            };
+            let made = unsafe { cx.dc().CreateBitmap(D2D_SIZE_U { width: size.0, height: size.1 }, None, 0, &props) };
+            match made {
+                Ok(b) => {
+                    self.static_layer = Some((b, size, self.gpu_generation));
+                    self.static_dirty = true;
+                }
+                Err(e) => {
+                    native::log(&format!("main: static layer: {e}"));
+                    self.static_layer = None;
+                    return false;
+                }
+            }
+        }
+        // рамка с живым светом меняется каждый кадр — слой тоже; пока шейдера рамки нет — тоже
+        let live = !FRAME_STATIC || Instant::now() < self.static_live_until || self.frame.is_none();
+        if self.static_dirty || live {
+            let Some((bmp, _, _)) = self.static_layer.clone() else { return false };
+            let dc = cx.dc().clone();
+            unsafe {
+                let old: Option<ID2D1Image> = dc.GetTarget().ok();
+                dc.SetTarget(&bmp);
+                dc.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
+                self.draw_static(cx);
+                if let Some(old) = old {
+                    dc.SetTarget(&old);
+                }
+            }
+            self.static_dirty = false;
+        }
+        true
+    }
+
+    /// Наведение или нажатие на текстовую кнопку/вкладку: их переходы — в статичном слое.
+    fn touch_static(&mut self) {
+        self.static_dirty = true;
+        self.static_live_until = Instant::now() + Duration::from_millis(260);
+    }
+
     fn target_at(&self, x: f32, y: f32) -> Option<Target> {
         for (i, l) in self.lunki.iter().enumerate() {
             if l.hit(x, y) {
@@ -917,12 +1023,14 @@ impl MainView {
                 if self.tab != i {
                     self.tab = i;
                     self.log_scroll = 0.0;
+                    self.static_dirty = true;
                     (self.host)(Act::Tab(TABS[i].to_string()));
                 }
             }
             Target::Pause | Target::Orb => {
                 self.flash = 0.6;
                 self.info.paused = !self.info.paused;
+                self.static_dirty = true;
                 (self.host)(Act::TogglePause);
             }
             Target::Web => (self.host)(Act::OpenWeb),
@@ -936,6 +1044,10 @@ impl WindowHandler for MainView {
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
+        if gpu.generation != self.gpu_generation {
+            self.gpu_generation = gpu.generation;
+            self.static_layer = None;
+        }
         // рамка: шейдер по картинкам, подготовленным в прошлом кадре (render)
         if !self.frame_failed {
             if let Some(px) = self.frame_px.take() {
@@ -999,17 +1111,46 @@ impl WindowHandler for MainView {
             }
         }
 
+        let prof = std::env::var_os("REEVER_MAIN_PROFILE").is_some();
+        let mut marks: Vec<(&str, Instant)> = vec![("start", Instant::now())];
+        let mut mark = |name: &'static str, cx: &RenderCx<'_>| {
+            if prof {
+                unsafe {
+                    let _ = cx.dc().Flush(None, None);
+                }
+                marks.push((name, Instant::now()));
+            }
+        };
         self.draw_core(cx);
-        self.draw_title(cx);
-        self.draw_status(cx);
-        self.draw_rail(cx);
-        self.draw_screen(cx);
-        self.draw_eq(cx);
-        self.draw_frame(cx);
-        for l in self.lunki.iter() {
-            l.draw(&mut self.scene, cx);
+        mark("core", cx);
+        if self.render_static(cx, (dpi_x * self.k, dpi_y * self.k)) {
+            if let Some((bmp, _, _)) = &self.static_layer {
+                unsafe {
+                    cx.dc().DrawBitmap(bmp, Some(&Rect::new(0.0, 0.0, SKIN_W, SKIN_H).d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+                }
+            }
+        } else {
+            // без слоя (не создался) — всё прямо в кадр
+            self.draw_static(cx);
         }
-        self.scene.flush(cx);
+        mark("static", cx);
+        self.fx.draw(cx);
+        mark("fx", cx);
+        if prof {
+            let mut acc = PROFILE.with(|p| p.take());
+            for w in marks.windows(2) {
+                let e = acc.entry(w[1].0).or_insert(0.0);
+                *e += w[1].1.duration_since(w[0].1).as_secs_f64() * 1000.0;
+            }
+            *acc.entry("frames").or_insert(0.0) += 1.0;
+            if acc["frames"] >= 300.0 {
+                let n = acc["frames"];
+                let line: Vec<String> = acc.iter().filter(|(k, _)| **k != "frames").map(|(k, v)| format!("{k} {:.3} ms", v / n)).collect();
+                eprintln!("[main-profile] per frame: {}", line.join(", "));
+                acc.clear();
+            }
+            PROFILE.with(|p| p.replace(acc));
+        }
         self.tooltip.draw(&mut self.scene, cx, (SKIN_W, SKIN_H));
         self.scene.flush(cx);
 
@@ -1025,12 +1166,15 @@ impl WindowHandler for MainView {
                 .any(|s| (s.t - s.v).abs() > 0.012 || s.vel.abs() > 0.025)
         };
         self.frame_px.is_some()
+            || self.fx.active()
+            || self.burst > 0.01
             || springs_moving
             || self.flash > 0.01
             || (self.level_raw - self.level).abs() > 0.005
             || self.eq.iter().any(|v| *v > 0.001)
             || self.active()
             || self.tooltip.animating(Instant::now())
+            || Instant::now() < self.static_live_until
     }
 
     fn wake_at(&self) -> Option<Instant> {
@@ -1070,6 +1214,23 @@ impl WindowHandler for MainView {
             sp.moving();
         }
         self.flash = (self.flash - dt * 2.6).max(0.0);
+        self.burst = (self.burst - dt * 3.0).max(0.0);
+        // рой у линзы: режим по состоянию; в покое угли — только сразу после открытия
+        let mode = match self.state.as_str() {
+            "listening" => Mode::Orbit,
+            "busy" => Mode::Collapse,
+            "paused" => Mode::None,
+            "idle" if now >= self.embers_until => Mode::None,
+            _ => Mode::Ember,
+        };
+        let fx = FxState {
+            mode,
+            level: lv,
+            energy: self.springs.energy.v.max(0.0),
+            threads: matches!(self.state.as_str(), "listening" | "busy"),
+            burst: self.burst,
+        };
+        self.fx.step(&fx, dt);
         // эквалайзер: лента громкости, справа — сейчас
         self.eq_acc += dt;
         if self.eq_acc >= 0.045 {
@@ -1079,6 +1240,18 @@ impl WindowHandler for MainView {
             if let Some(last) = self.eq.last_mut() {
                 *last = v;
             }
+            if self.eq.iter().any(|v| *v > 0.001) || v > 0.0 {
+                self.static_dirty = true;
+            }
+        }
+        let phase = match self.state.as_str() {
+            "listening" => ((time / 0.5) as i64) % 2 == 0,
+            "busy" => ((time / 0.175) as i64) % 2 == 0,
+            _ => true,
+        };
+        if phase != self.blink_phase {
+            self.blink_phase = phase;
+            self.static_dirty = true;
         }
         self.tooltip.tick(now);
     }
@@ -1094,19 +1267,29 @@ impl WindowHandler for MainView {
                 }
                 let t = self.target_at(x, y);
                 let mut redraw = false;
+                let mut lunka_hover = false;
                 for (i, l) in self.lunki.iter_mut().enumerate() {
-                    redraw |= l.set_hover(t == Some(Target::Lunka(i)));
+                    lunka_hover |= l.set_hover(t == Some(Target::Lunka(i)));
+                }
+                if lunka_hover {
+                    self.touch_static();
+                    redraw = true;
                 }
                 let tab = match t {
                     Some(Target::Tab(i)) => Some(i),
                     _ => None,
                 };
+                let mut touched = false;
                 if tab != self.tab_hover {
                     self.tab_hover = tab;
+                    touched = true;
+                }
+                touched |= self.pause.press.set_hover(t == Some(Target::Pause), 0.12);
+                touched |= self.web.press.set_hover(t == Some(Target::Web), 0.12);
+                if touched {
+                    self.touch_static();
                     redraw = true;
                 }
-                redraw |= self.pause.press.set_hover(t == Some(Target::Pause), 0.12);
-                redraw |= self.web.press.set_hover(t == Some(Target::Web), 0.12);
                 let orb = t == Some(Target::Orb);
                 if orb != self.orb_hover {
                     self.orb_hover = orb;
@@ -1129,10 +1312,12 @@ impl WindowHandler for MainView {
                 }
                 self.tab_hover = None;
                 self.orb_hover = false;
+                self.touch_static();
                 r | self.pause.press.set_hover(false, 0.12) | self.web.press.set_hover(false, 0.12) | self.tooltip.hide() | true
             }
             MouseKind::Down(MouseButton::Left) => {
                 self.tooltip.hide();
+                self.touch_static();
                 let t = self.target_at(x, y);
                 self.pressed = t;
                 match t {
@@ -1150,6 +1335,7 @@ impl WindowHandler for MainView {
                 true
             }
             MouseKind::Up(MouseButton::Left) => {
+                self.touch_static();
                 let t = self.target_at(x, y);
                 let p = self.pressed.take();
                 for l in self.lunki.iter_mut() {
@@ -1170,6 +1356,7 @@ impl WindowHandler for MainView {
         let (x, y) = (x / self.k, y / self.k);
         if TABS[self.tab] == "logs" && native::controls::inside(SCREEN, x, y) {
             self.log_scroll = (self.log_scroll + delta * 48.0).max(0.0);
+            self.static_dirty = true;
             return true;
         }
         false
@@ -1183,6 +1370,7 @@ impl WindowHandler for MainView {
         }
         self.frame = None;
         self.frame_px = None;
+        self.static_layer = None;
     }
 }
 
@@ -1217,4 +1405,8 @@ mod tests {
         }
         assert_eq!(s.v, 1.0);
     }
+}
+
+thread_local! {
+    static PROFILE: std::cell::RefCell<std::collections::BTreeMap<&'static str, f64>> = std::cell::RefCell::new(Default::default());
 }
