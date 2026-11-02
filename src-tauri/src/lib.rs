@@ -29,6 +29,7 @@ pub mod langid;
 pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
+pub mod native;
 pub mod models;
 #[cfg(windows)]
 pub mod ortopt;
