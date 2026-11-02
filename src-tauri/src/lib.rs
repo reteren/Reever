@@ -8,6 +8,7 @@ pub mod apps;
 pub mod appscan;
 pub mod asr;
 pub mod audio;
+pub mod autostart;
 pub mod bilingual;
 pub mod blackbox;
 pub mod calc;
@@ -22,6 +23,7 @@ pub mod engine;
 pub mod events;
 pub mod find;
 pub mod grammar;
+pub mod hotkeys;
 pub mod input_thread;
 pub mod keys;
 pub mod kws;
@@ -55,7 +57,6 @@ pub mod wake;
 pub mod webchat;
 pub mod winutil;
 
-use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -64,8 +65,6 @@ use config::{LiveConfig, ReeverConfig};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{Emitter, Manager, RunEvent, WebviewWindow, WindowEvent};
-use tauri_plugin_autostart::MacosLauncher;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 /// Показывать главное окно только после отрисовки рамки; счётчик сбрасывается при пересоздании.
 static WINDOW_SHOWN: AtomicBool = AtomicBool::new(false);
@@ -312,7 +311,6 @@ fn is_test_build() -> bool {
 /// умолчание уже применено, — `autostart-default.txt` рядом с настройками. Dev- и тестовая
 /// сборка автозапуск не трогают: в Run попал бы путь к временному exe.
 fn enable_autostart_by_default(app: &tauri::AppHandle) {
-    use tauri_plugin_autostart::ManagerExt;
     if cfg!(debug_assertions) || is_test_build() {
         return;
     }
@@ -321,7 +319,7 @@ fn enable_autostart_by_default(app: &tauri::AppHandle) {
     if marker.exists() {
         return;
     }
-    match app.autolaunch().enable() {
+    match autostart::set(app, true) {
         Ok(()) => {
             let _ = std::fs::create_dir_all(&dir);
             let _ = std::fs::write(&marker, "1");
@@ -375,36 +373,6 @@ pub fn run() {
     }
 
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec!["--hidden"]),
-        ))
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, shortcut, event| {
-                    if event.state() != ShortcutState::Pressed {
-                        return;
-                    }
-                    let Some(state) = app.try_state::<Arc<SharedState>>() else {
-                        return;
-                    };
-                    // Mute-хоткей? — мгновенно глушим/включаем микрофон (panic-mute).
-                    let mute = state.mute_hotkey.lock().ok().map(|g| g.clone()).unwrap_or_default();
-                    let is_mute = !mute.trim().is_empty()
-                        && Shortcut::from_str(&mute).map(|m| &m == shortcut).unwrap_or(false);
-                    if is_mute {
-                        let now = !state.paused.load(Ordering::Relaxed);
-                        state.paused.store(now, Ordering::Relaxed);
-                        events::set_state(app, if now { "paused" } else { "idle" });
-                        events::ui_log(app, if now { crate::msg!("log.mic.mutedHotkey") } else { crate::msg!("log.mic.onHotkey") });
-                    } else {
-                        // иначе — push-to-talk
-                        show_main(app);
-                        state.force_listen.store(true, Ordering::Relaxed);
-                    }
-                })
-                .build(),
-        )
         .setup(|app| {
             let cfg = Arc::new(ReeverConfig::resolve(app.handle())?);
             if let Some(dir) = cfg.settings_path.parent() {
@@ -418,6 +386,7 @@ pub fn run() {
 
             app.manage(LiveConfig::new(cfg.clone()));
             app.manage(shared.clone());
+            app.manage(hotkeys::Hotkeys::start(app.handle().clone()).map_err(std::io::Error::other)?);
             let index_dir = app.path().app_config_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
             let index = local_index::IndexManager::new(index_dir.join("index-v1.bin"));
             index.set_enabled(cfg.settings.local_index);
@@ -462,16 +431,19 @@ pub fn run() {
             // источник правды для пере-регистрации на лету (set_hotkey / set_mute_hotkey)
             if let Ok(mut g) = shared.ptt_hotkey.lock() { *g = cfg.settings.hotkey.clone(); }
             if let Ok(mut g) = shared.mute_hotkey.lock() { *g = cfg.settings.mute_hotkey.clone(); }
-            let gs = app.global_shortcut();
-            if cfg.settings.activation_mode != "wake" && !cfg.settings.hotkey.trim().is_empty() {
-                if let Err(e) = gs.register(cfg.settings.hotkey.as_str()) {
-                    eprintln!("[reever] hotkey register failed ({}): {e}", cfg.settings.hotkey);
-                }
+            let hotkeys = app.state::<hotkeys::Hotkeys>();
+            let mut main_hotkey = cfg.settings.hotkey.as_str();
+            if let Err(e) = hotkeys.configure(&cfg.settings.activation_mode, main_hotkey, "") {
+                let message = format!("горячая клавиша недоступна ({}): {e}", cfg.settings.hotkey);
+                eprintln!("[reever] {message}");
+                events::ui_log(app.handle(), message);
+                main_hotkey = "";
             }
-            if !cfg.settings.mute_hotkey.trim().is_empty() {
-                if let Err(e) = gs.register(cfg.settings.mute_hotkey.as_str()) {
-                    eprintln!("[reever] mute hotkey register failed ({}): {e}", cfg.settings.mute_hotkey);
-                }
+            // Занятый основной хоткей не мешает регистрации mute.
+            if let Err(e) = hotkeys.configure(&cfg.settings.activation_mode, main_hotkey, &cfg.settings.mute_hotkey) {
+                let message = format!("клавиша mute недоступна ({}): {e}", cfg.settings.mute_hotkey);
+                eprintln!("[reever] {message}");
+                events::ui_log(app.handle(), message);
             }
 
             // --- проверка окна выбора без микрофона: REEVER_FIND_DEMO="запрос" ---

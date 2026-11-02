@@ -3,8 +3,6 @@ use std::sync::Arc;
 
 use serde_json::json;
 use tauri::{AppHandle, Manager, State};
-use tauri_plugin_autostart::ManagerExt;
-use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 use crate::actions::{Action, SharedState};
 use crate::apps::{self, AppEntry};
@@ -645,17 +643,12 @@ pub fn get_paused(state: State<'_, Arc<SharedState>>) -> bool {
 /// Автозапуск с Windows.
 #[tauri::command]
 pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
-    let m = app.autolaunch();
-    if on {
-        m.enable().map_err(|e| e.to_string())
-    } else {
-        m.disable().map_err(|e| e.to_string())
-    }
+    crate::autostart::set(&app, on)
 }
 
 #[tauri::command]
 pub fn get_autostart(app: AppHandle) -> bool {
-    app.autolaunch().is_enabled().unwrap_or(false)
+    crate::autostart::is_enabled(&app)
 }
 
 /// Обои Frutiger Aero как data-URL (фон вебвью). Пользователь может заменить
@@ -702,18 +695,9 @@ fn b64(data: &[u8]) -> String {
     out
 }
 
-/// Пере-регистрация ОБОИХ хоткеев (ptt + mute) разом — иначе unregister_all
-/// сбрасывает и второй. Источник правды — поля SharedState.
+/// Пере-регистрация обоих хоткеев разом; при ошибке прежние сочетания остаются активны.
 fn reapply_hotkeys(app: &AppHandle, mode: &str, ptt: &str, mute: &str) -> Result<(), String> {
-    let gs = app.global_shortcut();
-    let _ = gs.unregister_all();
-    if mode != "wake" && !ptt.trim().is_empty() {
-        gs.register(ptt).map_err(|e| e.to_string())?;
-    }
-    if !mute.trim().is_empty() {
-        gs.register(mute).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    app.state::<crate::hotkeys::Hotkeys>().configure(mode, ptt, mute)
 }
 
 fn persist_hotkey(config: &ReeverConfig, key: &str, hotkey: &str) -> Result<(), String> {
