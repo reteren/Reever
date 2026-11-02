@@ -13,7 +13,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     VK_BACK, VK_DOWN, VK_END, VK_ESCAPE, VK_HOME, VK_NEXT, VK_PRIOR, VK_RETURN, VK_SPACE, VK_TAB, VK_UP,
 };
 
-use super::{close_button, dir, draw_frame, draw_title, load_skin, locale, t, tp, Skin, SCREEN, WIN_H, WIN_W};
+use super::{close_button, dir, draw_close, draw_frame, draw_plate, draw_title, load_skin, locale, t, tp, Skin, SCREEN, WIN_H, WIN_W};
 use crate::find::{FindItem, FindScope};
 use crate::native::controls::button::{Button, ButtonKind, Chip, Lunka};
 use crate::native::controls::list::ListView;
@@ -624,6 +624,7 @@ impl WindowHandler for PickerView {
 
     fn render(&mut self, cx: &mut RenderCx<'_>) {
         self.scene.begin_frame(cx);
+        draw_plate(cx);
         if self.relayout {
             self.layout(cx);
         }
@@ -632,7 +633,7 @@ impl WindowHandler for PickerView {
         draw_title(&mut self.scene, cx, "play", true, &title, rtl);
         self.draw_screen(cx);
         draw_frame(cx, &self.skin);
-        self.close.draw(&mut self.scene, cx);
+        draw_close(&mut self.scene, cx, &self.close);
         self.tooltip.draw(&mut self.scene, cx, (WIN_W, WIN_H));
     }
 

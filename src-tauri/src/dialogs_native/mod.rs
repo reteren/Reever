@@ -48,9 +48,40 @@ pub fn load_skin(app: &AppHandle, images: &mut Images) -> Skin {
     }
 }
 
-/// Купол закрытия в (568, 57), --d: 30px.
+/// Лёгкий вид (lite_ui): стальная пластина вместо хромового обода (lite.css). Ставится, когда
+/// окна включаются (`enabled`).
+static LITE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn lite() -> bool {
+    LITE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Купол закрытия в (568, 57), --d: 30px; в лёгком виде — клавиша 36×32 в (540, 41).
 pub fn close_button(skin: &Skin, icon: &'static str, tip: &str) -> Lunka {
-    Lunka { center: (568.0, 57.0), box_size: 44.0, dome: 30.0, icon, off: skin.close_off, on: skin.close_on, press: Press::default(), tip: tip.to_string() }
+    let (center, box_size) = if lite() { ((558.0, 57.0), 36.0) } else { ((568.0, 57.0), 44.0) };
+    Lunka { center, box_size, dome: 30.0, icon, off: skin.close_off, on: skin.close_on, press: Press::default(), tip: tip.to_string() }
+}
+
+/// Кнопка закрытия: купол или клавиша лёгкого вида.
+pub fn draw_close(scene: &mut Scene, cx: &mut RenderCx<'_>, l: &Lunka) {
+    if lite() {
+        let h = l.press.hover_t.value(cx.now);
+        crate::native::controls::lite::key(scene, cx, Rect::new(540.0, 41.0, 36.0, 32.0), l.icon, h, l.press.pressed && l.press.hover);
+    } else {
+        l.draw(scene, cx);
+    }
+}
+
+/// Пластина лёгкого вида под экранами (#pk::before, #cf::before) — рисовать первой.
+pub fn draw_plate(cx: &mut RenderCx<'_>) {
+    if lite() {
+        crate::native::controls::lite::metal_panel(cx, Rect::new(24.0, 22.0, WIN_W - 48.0, WIN_H - 44.0), 18.0);
+    }
+}
+
+/// Табло заголовка: в лёгком виде шире (#pkTitle { width: 488px }).
+fn title_rect() -> Rect {
+    if lite() { Rect::new(TITLE.x, TITLE.y, 488.0, TITLE.h) } else { TITLE }
 }
 
 /// Язык интерфейса сейчас и направление письма.
@@ -74,7 +105,7 @@ pub fn dir(rtl: bool) -> Direction {
 
 /// Табло заголовка (#pkTitle/#cfTitle): значок 14px, текст 21px, обрезка многоточием.
 pub fn draw_title(scene: &mut Scene, cx: &mut RenderCx<'_>, icon: &'static str, filled: bool, text: &str, rtl: bool) {
-    let r = TITLE;
+    let r = title_rect();
     lcd_background(cx, r, 11.0);
     let inner = Rect::new(r.x + 14.0, r.y, r.w - 28.0, r.h);
     let icon_r = crate::native::controls::mirror(inner, Rect::new(inner.x, r.y + (r.h - 14.0) / 2.0, 14.0, 14.0), rtl);
@@ -90,8 +121,13 @@ pub fn draw_title(scene: &mut Scene, cx: &mut RenderCx<'_>, icon: &'static str, 
     let _ = ACC;
 }
 
-/// Хромовая рамка поверх экранов (z-index 3).
+/// Хромовая рамка поверх экранов (z-index 3); в лёгком виде — гнёзда экранов в металле.
 pub fn draw_frame(cx: &mut RenderCx<'_>, skin: &Skin) {
+    if lite() {
+        crate::native::controls::lite::recess(cx, title_rect(), 11.0, false);
+        crate::native::controls::lite::recess(cx, SCREEN, 13.0, false);
+        return;
+    }
     cx.draw_image(skin.frame, Rect::new(0.0, 0.0, WIN_W, WIN_H), 1.0);
 }
 
@@ -116,7 +152,8 @@ pub fn enabled(app: &AppHandle) -> bool {
     use tauri::Manager;
     app.try_state::<crate::config::LiveConfig>().is_some_and(|c| {
         let s = &c.get().settings;
-        s.native_dialogs && !s.lite_ui
+        LITE.store(s.lite_ui, std::sync::atomic::Ordering::Relaxed);
+        s.native_dialogs
     })
 }
 

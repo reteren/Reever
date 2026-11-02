@@ -4,7 +4,8 @@
 //! выбора с примером списка, длинный список и вопрос «Выключить компьютер?». Работает и с веб-,
 //! и с нативными окнами (`native_dialogs`) — так их и сравнивают. Шаги и время показа окна
 //! печатаются в stderr (`[dialog-demo] …`). `REEVER_DIALOG_DEMO_WARM=1` — первое окно после
-//! прогрева в начале команды (как при «ривер найди …»).
+//! прогрева в начале команды (как при «ривер найди …»). `REEVER_DIALOG_DEMO_NATIVE=1` — нативные
+//! окна, `REEVER_DIALOG_DEMO_LITE=1` — лёгкий вид (в памяти, без записи в settings.json).
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -155,6 +156,18 @@ fn shoot_dpi(app: &AppHandle, what: &str, name: &str) {
 }
 
 pub fn start(app: &AppHandle) {
+    // REEVER_DIALOG_DEMO_NATIVE=1 — нативные окна, REEVER_DIALOG_DEMO_LITE=1 — лёгкий вид
+    // (только в памяти, settings.json проверки не меняется)
+    if let Some(config) = app.try_state::<crate::config::LiveConfig>() {
+        let mut fresh = (*config.get()).clone();
+        if std::env::var_os("REEVER_DIALOG_DEMO_NATIVE").is_some() {
+            fresh.settings.native_dialogs = true;
+        }
+        if std::env::var_os("REEVER_DIALOG_DEMO_LITE").is_some() {
+            fresh.settings.lite_ui = true;
+        }
+        config.set(Arc::new(fresh));
+    }
     let app = app.clone();
     std::thread::spawn(move || {
         let started = Instant::now();

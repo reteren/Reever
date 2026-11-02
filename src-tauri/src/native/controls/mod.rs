@@ -11,6 +11,7 @@ pub mod anim;
 pub mod button;
 pub mod form;
 pub mod icons;
+pub mod lite;
 pub mod list;
 pub mod text_input;
 pub mod tooltip;
@@ -468,6 +469,11 @@ pub fn push_round_layer(cx: &RenderCx<'_>, r: Rect, radius: f32, opacity: f32) -
 
 pub fn pop_layer(cx: &RenderCx<'_>) {
     unsafe { cx.dc().PopLayer() };
+}
+
+/// Радиальный градиент (для лёгкого вида и экранов).
+pub(crate) fn radial_brush(cx: &RenderCx<'_>, center: (f32, f32), radius: (f32, f32), stops: &[(f32, Color)]) -> Option<windows::Win32::Graphics::Direct2D::ID2D1RadialGradientBrush> {
+    radial(cx, center, radius, stops)
 }
 
 fn radial(cx: &RenderCx<'_>, center: (f32, f32), radius: (f32, f32), stops: &[(f32, Color)]) -> Option<windows::Win32::Graphics::Direct2D::ID2D1RadialGradientBrush> {

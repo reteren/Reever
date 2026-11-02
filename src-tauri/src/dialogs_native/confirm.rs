@@ -10,7 +10,7 @@ use tauri::AppHandle;
 use windows::Win32::Graphics::DirectWrite::{DWRITE_FONT_WEIGHT, DWRITE_TEXT_RANGE};
 use windows::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_LEFT, VK_RETURN, VK_RIGHT, VK_SPACE, VK_TAB};
 
-use super::{close_button, dir, draw_frame, draw_title, load_skin, locale, t, tp, Skin, SCREEN, WIN_H, WIN_W};
+use super::{close_button, dir, draw_close, draw_frame, draw_plate, draw_title, load_skin, locale, t, tp, Skin, SCREEN, WIN_H, WIN_W};
 use crate::native::controls::button::{Button, ButtonKind, Lunka};
 use crate::native::controls::tooltip::Tooltip;
 use crate::native::controls::{fill_round, lcd, lcd_background, lcd_overlay, stroke_round, ui, Glow, Scene, ACC, ACC_2, ACC_3, ACC_4, ACC_5, ACC_HOT};
@@ -280,11 +280,12 @@ impl WindowHandler for ConfirmView {
 
     fn render(&mut self, cx: &mut RenderCx<'_>) {
         self.scene.begin_frame(cx);
+        draw_plate(cx);
         let (_, rtl) = locale();
         draw_title(&mut self.scene, cx, "warn", false, &t("confirm.title"), rtl);
         self.draw_screen(cx);
         draw_frame(cx, &self.skin);
-        self.close.draw(&mut self.scene, cx);
+        draw_close(&mut self.scene, cx, &self.close);
         self.tooltip.draw(&mut self.scene, cx, (WIN_W, WIN_H));
     }
 
