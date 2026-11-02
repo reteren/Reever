@@ -241,6 +241,8 @@ pub struct MascotView {
     glow_generation: u64,
     masks: HashMap<ImageId, Arc<AlphaMask>>,
     rng: u64,
+    /// осьминог в сфере главного окна (orb_layout): своя раскладка, без проверки попадания
+    in_orb: bool,
 }
 
 impl MascotView {
@@ -287,6 +289,7 @@ impl MascotView {
             glow_generation: 0,
             masks: HashMap::new(),
             rng: seed,
+            in_orb: false,
         };
         v.set_state(state);
         v
@@ -622,6 +625,40 @@ impl MascotView {
     }
 
     // ── раскладка (resize в mascot.html) ────────────────────────────
+    /// Осьминог в сфере главного окна (startOrbMascot в shell.js): холст линзы `size` DIP —
+    /// это 0,95 исходного размера маскота, спрайт чуть ниже центра.
+    pub fn orb_layout(&mut self, size: f32) {
+        const OM: f32 = 0.95;
+        const DY: f32 = 4.0;
+        let w = size / OM;
+        self.in_orb = true;
+        self.gw = w;
+        self.gh = w;
+        self.k = OM;
+        self.spr = [(w - SPR_W) / 2.0, (w - SPR_H) / 2.0 + DY, SPR_W, SPR_H];
+        self.fly = [(w - FLY_W) / 2.0, (w - FLY_H) / 2.0 + DY, FLY_W, FLY_H];
+        self.laid_for = (size, size);
+    }
+
+    /// mascot://orb в сфере: arrive / depart / present / absent.
+    pub fn orb_action(&mut self, action: &str) {
+        match action {
+            "arrive" => self.arrive(),
+            "depart" => self.depart(),
+            "present" => {
+                self.mode = Mode::Gone;
+                self.present();
+            }
+            "absent" => self.absent(),
+            _ => {}
+        }
+    }
+
+    /// Виден ли осьминог (не ушёл).
+    pub fn visible(&self) -> bool {
+        self.mode != Mode::Gone || !self.sparks.is_empty()
+    }
+
     fn relayout(&mut self, size_dip: (f32, f32)) {
         let (_, big, _) = crate::mascot::mascot_layout();
         let big = if big > 0.0 { big as f32 } else { 2.0 };
@@ -846,7 +883,7 @@ impl WindowHandler for MascotView {
     }
 
     fn render(&mut self, cx: &mut RenderCx<'_>) {
-        if self.laid_for != cx.size {
+        if self.laid_for != cx.size && !self.in_orb {
             self.relayout(cx.size);
         }
         let k = self.k;
@@ -870,7 +907,9 @@ impl WindowHandler for MascotView {
             }
             _ => None,
         };
-        super::publish_hit(hit);
+        if !self.in_orb {
+            super::publish_hit(hit);
+        }
 
         let mut cur = cur;
         let mut pull: Option<(f32, f32, f32, f32)> = None; // x, y (DIP), масштаб, поворот

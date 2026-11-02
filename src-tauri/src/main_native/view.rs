@@ -18,6 +18,7 @@ use super::frame::{FrameLight, FramePixels, FrameShader};
 use super::fx::{Fx, FxState, Mode};
 use super::Act;
 use crate::mascot_native::lens::{Lens, LensParams};
+use crate::mascot_native::{Msg as MascotMsg, MascotView};
 use crate::native::controls::button::{Button, ButtonKind, Lunka, Press};
 use crate::native::controls::tooltip::Tooltip;
 use crate::native::controls::{
@@ -321,6 +322,12 @@ pub struct MainView {
     gpu_generation: u64,
     /// фаза мигания точки состояния в прошлом кадре
     blink_phase: bool,
+    // осьминог в сфере: свой вид маскота, рисуется в битмап линзы не чаще 30 раз в секунду
+    orb: Option<MascotView>,
+    orb_layer: Option<(ID2D1Bitmap1, (u32, u32), u64)>,
+    orb_acc: f32,
+    orb_dirty: bool,
+    orb_last: Instant,
 }
 
 impl MainView {
@@ -404,6 +411,11 @@ impl MainView {
             static_live_until: Instant::now(),
             gpu_generation: 0,
             blink_phase: true,
+            orb: None,
+            orb_layer: None,
+            orb_acc: 0.0,
+            orb_dirty: true,
+            orb_last: Instant::now(),
             assets,
         };
         // кнопка в вебе сжата flex-колонкой до ~17 px и стоит под строкой «Хоткей»
@@ -416,6 +428,14 @@ impl MainView {
 
     fn t(&self, key: &str) -> String {
         crate::ui_text::t(&self.locale, key, &[])
+    }
+
+    /// Осьминог в сфере (вид маскота с раскладкой линзы); `inside` — сидит ли он там сейчас.
+    pub fn set_orb_mascot(&mut self, mut view: MascotView, inside: bool) {
+        view.orb_layout(CORE.w);
+        view.orb_action(if inside { "present" } else { "absent" });
+        self.orb = Some(view);
+        self.orb_dirty = true;
     }
 
     pub fn set_shape(&mut self, shape: Vec<[f64; 4]>) {
@@ -451,6 +471,23 @@ impl MainView {
         // уровень и wake меняют только живой слой (линза, рой, эквалайзер)
         if !matches!(msg, Msg::Level(_) | Msg::Wake(_)) {
             self.static_dirty = true;
+        }
+        if let Some(orb) = self.orb.as_mut() {
+            let m = match &msg {
+                Msg::State(s) => Some(MascotMsg::State(s.clone())),
+                Msg::Wake(true) => Some(MascotMsg::Wake),
+                Msg::Wake(false) => Some(MascotMsg::WakeRejected),
+                Msg::Level(v) => Some(MascotMsg::Level(*v)),
+                Msg::Heard(h) if !h.trim().is_empty() => Some(MascotMsg::Heard),
+                _ => None,
+            };
+            if let Some(m) = m {
+                orb.on_msg(m);
+            }
+            if let Msg::Orb(action) = &msg {
+                orb.orb_action(action);
+                self.orb_dirty = true;
+            }
         }
         match msg {
             Msg::State(s) => self.set_state(&s),
@@ -920,6 +957,76 @@ impl MainView {
         }
     }
 
+    /// Осьминог в сфере: вид маскота рисуется в свой битмап размером с линзу (как в своё окно),
+    /// битмап кладётся в круг линзы — как холст #orbMascot с clip по кругу.
+    fn draw_orb_mascot(&mut self, cx: &mut RenderCx<'_>, dpi: (f32, f32)) {
+        let Some(orb) = self.orb.as_ref() else { return };
+        if !orb.visible() {
+            return;
+        }
+        let size = ((CORE.w * cx.scale).round().max(1.0) as u32, (CORE.h * cx.scale).round().max(1.0) as u32);
+        let fits = self.orb_layer.as_ref().is_some_and(|(_, sz, gen)| *sz == size && *gen == self.gpu_generation);
+        if !fits {
+            let props = D2D1_BITMAP_PROPERTIES1 {
+                pixelFormat: D2D1_PIXEL_FORMAT { format: DXGI_FORMAT_B8G8R8A8_UNORM, alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED },
+                dpiX: dpi.0,
+                dpiY: dpi.1,
+                bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
+                colorContext: std::mem::ManuallyDrop::new(None),
+            };
+            match unsafe { cx.dc().CreateBitmap(D2D_SIZE_U { width: size.0, height: size.1 }, None, 0, &props) } {
+                Ok(b) => {
+                    self.orb_layer = Some((b, size, self.gpu_generation));
+                    self.orb_dirty = true;
+                }
+                Err(e) => {
+                    native::log(&format!("main: orb mascot layer: {e}"));
+                    self.orb = None;
+                    return;
+                }
+            }
+        }
+        let Some((bmp, _, _)) = self.orb_layer.clone() else { return };
+        if self.orb_dirty {
+            self.orb_dirty = false;
+            let dc = cx.dc().clone();
+            unsafe {
+                let old: Option<ID2D1Image> = dc.GetTarget().ok();
+                dc.SetTarget(&bmp);
+                dc.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
+                {
+                    let mut sub = RenderCx {
+                        dc: cx.dc,
+                        images: &mut *cx.images,
+                        text: cx.text,
+                        brush: cx.brush,
+                        scale: cx.scale,
+                        size: (CORE.w, CORE.h),
+                        now: cx.now,
+                    };
+                    if let Some(orb) = self.orb.as_mut() {
+                        orb.render(&mut sub);
+                    }
+                }
+                // вид маскота ставит свою матрицу и DPI — вернуть кадру главного окна
+                dc.SetTransform(&windows::Foundation::Numerics::Matrix3x2::identity());
+                dc.SetDpi(dpi.0, dpi.1);
+                dc.SetPrimitiveBlend(windows::Win32::Graphics::Direct2D::D2D1_PRIMITIVE_BLEND_SOURCE_OVER);
+                if let Some(old) = old {
+                    dc.SetTarget(&old);
+                }
+            }
+        }
+        // круг линзы: r = 100 вокруг центра сферы
+        let clip = Rect::new(ORB.0 - ORB.2, ORB.1 - ORB.2, ORB.2 * 2.0, ORB.2 * 2.0);
+        if native::controls::push_round_layer(cx, clip, ORB.2, 1.0) {
+            unsafe {
+                cx.dc().DrawBitmap(&bmp, Some(&CORE.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+            }
+            native::controls::pop_layer(cx);
+        }
+    }
+
     /// Статичная часть окна: экраны с текстом и рамка (в статическом режиме света).
     fn draw_static(&mut self, cx: &mut RenderCx<'_>) {
         self.draw_title(cx);
@@ -1067,6 +1174,13 @@ impl WindowHandler for MainView {
                 }
             }
         }
+        if self.orb_dirty {
+            if let Some(orb) = self.orb.as_mut() {
+                if orb.visible() {
+                    orb.prepare(gpu);
+                }
+            }
+        }
         // линза: та же, что глаз маскота
         if !self.lens_failed {
             let size = (CORE.w * self.k * gpu.scale).round().max(2.0) as u32;
@@ -1122,6 +1236,7 @@ impl WindowHandler for MainView {
             }
         };
         self.draw_core(cx);
+        self.draw_orb_mascot(cx, (dpi_x * self.k, dpi_y * self.k));
         mark("core", cx);
         if self.render_static(cx, (dpi_x * self.k, dpi_y * self.k)) {
             if let Some((bmp, _, _)) = &self.static_layer {
@@ -1179,6 +1294,10 @@ impl WindowHandler for MainView {
 
     fn wake_at(&self) -> Option<Instant> {
         let mut at = self.tooltip.wake_at();
+        if self.orb.as_ref().is_some_and(|o| o.visible()) {
+            let next = self.orb_last + Duration::from_millis(34);
+            at = Some(at.map_or(next, |a| a.min(next)));
+        }
         if let Some(w) = self.woke_until {
             at = Some(at.map_or(w, |a| a.min(w)));
         }
@@ -1242,6 +1361,17 @@ impl WindowHandler for MainView {
             }
             if self.eq.iter().any(|v| *v > 0.001) || v > 0.0 {
                 self.static_dirty = true;
+            }
+        }
+        if let Some(orb) = self.orb.as_mut() {
+            if orb.visible() {
+                self.orb_acc += dt;
+                if self.orb_acc >= 1.0 / 30.0 {
+                    orb.advance(Duration::from_secs_f32(self.orb_acc.min(0.1)));
+                    self.orb_acc = 0.0;
+                    self.orb_dirty = true;
+                    self.orb_last = now;
+                }
             }
         }
         let phase = match self.state.as_str() {
@@ -1371,6 +1501,7 @@ impl WindowHandler for MainView {
         self.frame = None;
         self.frame_px = None;
         self.static_layer = None;
+        self.orb_layer = None;
     }
 }
 

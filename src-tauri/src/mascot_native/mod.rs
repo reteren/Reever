@@ -19,7 +19,8 @@ use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
 use crate::native::{self, Loader, UiThread, WindowId, WindowSpec};
 pub use view::Msg;
-use view::{Assets, HitFrame, MascotView, ALPHA_HIT};
+pub(crate) use view::MascotView;
+use view::{Assets, HitFrame, ALPHA_HIT};
 
 /// Поток окон: создаётся при первом нативном маскоте и живёт до выхода (без окон он спит и
 /// устройство отпускает — см. `destroy`).
@@ -101,6 +102,29 @@ struct EyeJson {
 struct PortalJson {
     portal_in: Vec<[f32; 3]>,
     portal_out: Vec<[f32; 3]>,
+}
+
+/// Кадры и разметка маскота (anim.json) — для окна маскота и для осьминога в сфере
+/// главного окна. Звать в потоке окон.
+pub(crate) fn load_assets(app: &AppHandle, images: &mut native::Images) -> Option<Assets> {
+    let anim = app
+        .asset_resolver()
+        .get("mascot/anim.json".into())
+        .and_then(|a| serde_json::from_slice::<AnimJson>(&a.bytes).ok())?;
+    let mut set = |name: &str, count: usize| -> Vec<native::ImageId> {
+        (1..=count).map(|i| images.add_loader(asset_loader(app, format!("mascot/{name}_{i:04}.webp")))).collect()
+    };
+    Some(Assets {
+        grab: set("grab", 84),
+        idle: set("idle", 96),
+        portal_in: set("portal_in", 58),
+        portal_gate: set("portal_gate", 58),
+        eye_grab: anim.eye.grab,
+        eye_idle: anim.eye.idle,
+        eye_portal_in: anim.eye.portal_in,
+        portal_at_in: anim.portal.portal_in,
+        portal_at_out: anim.portal.portal_out,
+    })
 }
 
 /// Создать окно (блокирует до готовности, ~35 мс после prewarm). `x`, `y` — экранные пиксели

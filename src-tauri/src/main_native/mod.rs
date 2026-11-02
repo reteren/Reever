@@ -201,8 +201,14 @@ pub fn show(app: &AppHandle) {
             };
             let id = ui.create_window(spec, Box::new(view))?;
             let (hwnd, scale) = ui.info(id).map(|i| (i.hwnd, i.scale)).unwrap_or((0, 1.0));
+            // осьминог в сфере: свой вид маскота (кадры общие с окном маскота через кэш картинок)
+            let orb = crate::mascot_native::load_assets(&app3, ui.images())
+                .map(|a| crate::mascot_native::MascotView::new(a, &crate::events::current_state()));
             if let Some(v) = ui.handler_mut::<MainView>(id) {
                 v.set_shape(shape.clone());
+                if let Some(orb) = orb {
+                    v.set_orb_mascot(orb, crate::mascot::mascot_orb());
+                }
             }
             let scaled: Vec<[f64; 4]> = shape.iter().map(|r| r.map(|v| v * k as f64)).collect();
             if let Err(e) = crate::skin::apply_region(hwnd, &scaled, scale as f64) {
