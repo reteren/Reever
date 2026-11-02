@@ -1,8 +1,7 @@
 //! Вкладка «Настройки» (#p-settings, GROUPS/fieldEl/renderSettings в frontend/app.js).
 //! «Сохранить» нет: каждое изменение применяется сразу; правки подряд склеиваются в одно
 //! сохранение (числа — после паузы в наборе: «0.» посреди набора не должно стать порогом).
-//! Пока не перенесены: языки распознавания (скачивание пакетов), языки интерфейса, подстройка
-//! под голос и место маскота — для них остаётся веб-версия.
+//! Запись голоса для подстройки (окно поверх) пока не перенесена: здесь — её состояние и сброс.
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -19,10 +18,22 @@ use crate::ui_text::t;
 
 /// Группы и поля — как GROUPS в app.js (без ещё не перенесённых).
 const GROUPS: &[(&str, &[(&str, &str)])] = &[
-    ("interface", &[("lite_ui", "lite_ui"), ("fps_limit", "fps"), ("native_mascot", "native"), ("native_dialogs", "native"), ("native_main", "native"), ("ui_language", "ui_language")]),
-    ("mascot", &[("mascot_mode", "mascot_mode"), ("mascot_scale", "mascot_scale"), ("mascot_bubble", "mascot_bubble")]),
-    ("activation", &[("activation_mode", "select"), ("voice_passive", "bool"), ("hotkey", "hotkey"), ("mute_hotkey", "hotkey")]),
+    (
+        "interface",
+        &[
+            ("lite_ui", "lite_ui"),
+            ("fps_limit", "fps"),
+            ("native_mascot", "native"),
+            ("native_dialogs", "native"),
+            ("native_main", "native"),
+            ("ui_language", "ui_language"),
+            ("ui_languages", "ui_languages"),
+        ],
+    ),
+    ("mascot", &[("mascot_mode", "mascot_mode"), ("mascot_scale", "mascot_scale"), ("mascot_position", "mascot_position"), ("mascot_bubble", "mascot_bubble")]),
+    ("activation", &[("activation_mode", "select"), ("voice_adapt", "voice_adapt"), ("voice_passive", "bool"), ("hotkey", "hotkey"), ("mute_hotkey", "hotkey")]),
     ("privacy", &[("private_log", "bool"), ("offline_mode", "bool")]),
+    ("languages", &[("languages", "languages")]),
     (
         "recognition",
         &[
@@ -104,7 +115,13 @@ pub enum SettingsOut {
     Hotkey { mute: bool, combo: String, mode: String },
     Mascot { mode: String, scale: u32, bubble: bool },
     UiLanguage(String),
+    /// Языки интерфейса (ui_languages); `language` — выбранный язык, если его убрали — `auto`.
+    UiLanguages { codes: Vec<String>, language: String },
     Fps(u32),
+    MascotPlace,
+    MascotPin(bool),
+    MascotUnpin,
+    VoiceReset,
     /// «Что можно сказать» → Изменить
     OpenGrammar,
 }
@@ -119,6 +136,10 @@ pub struct SettingsInfo {
     pub ui_languages: Vec<String>,
     /// во что раскрывается «как в Windows»
     pub auto_language: String,
+    /// language_models: { languages: код → пакет, installed: [пакеты] }
+    pub models: Value,
+    /// voice_adapt_status
+    pub voice: Value,
 }
 
 pub struct SettingsTab {
@@ -129,6 +150,10 @@ pub struct SettingsTab {
     flush_at: Option<Instant>,
     recording: Option<String>,
     hotkey_note: Option<(String, String)>,
+    /// раскрытое меню «+ Добавить язык» (`rl` — распознавания, `ul` — интерфейса)
+    menu: Option<&'static str>,
+    /// маскот расставляется мышью
+    pub placing: bool,
     pub msg: String,
     pub form: Form,
     scroll: f32,
@@ -147,6 +172,8 @@ impl SettingsTab {
             flush_at: None,
             recording: None,
             hotkey_note: None,
+            menu: None,
+            placing: false,
             msg: String::new(),
             form: Form::new(hwnd, rtl),
             scroll: 0.0,
@@ -322,6 +349,70 @@ impl SettingsTab {
                 let v = self.num(key).map_or(NEVER_UNLOAD, |n| n.round() as f32).clamp(0.0, NEVER_UNLOAD);
                 items.push(Item::Slider { id: key.into(), min: 0.0, max: NEVER_UNLOAD, step: 1.0, value: v, text: self.unload_text(v) });
             }
+            "languages" => {
+                self.languages_field(items);
+                if let Some(h) = help {
+                    items.push(Item::Help { text: h, indent: false });
+                }
+                return;
+            }
+            "ui_languages" => {
+                self.ui_languages_field(items);
+                return;
+            }
+            "mascot_position" => {
+                let pinned = !self.get(key).is_null();
+                let mut buttons = vec![(
+                    "mpplace".to_string(),
+                    self.t(if self.placing { "settings.mascot_position.save" } else { "settings.mascot_position.place" }),
+                    ButtonKind::Plain,
+                )];
+                if !self.placing && pinned {
+                    buttons.push(("mpreset".into(), self.t("settings.mascot_position.reset"), ButtonKind::Plain));
+                }
+                items.push(Item::Buttons { buttons, top: 0.0, bottom: 0.0 });
+                let about = if self.placing {
+                    "settings.mascot_position.placing"
+                } else if pinned {
+                    "settings.mascot_position.pinned"
+                } else {
+                    "settings.mascot_position.corner"
+                };
+                items.push(Item::Help { text: self.t(about), indent: false });
+                return;
+            }
+            "voice_adapt" => {
+                let v = &self.info.voice;
+                let report = v.get("report").filter(|r| !r.is_null());
+                let passive = v.get("passive").filter(|p| !p.is_null());
+                let n = |x: Option<&Value>, k: &str| x.and_then(|x| x.get(k)).and_then(Value::as_i64).unwrap_or(0).to_string();
+                let mut text = match report {
+                    Some(r) => t(
+                        &self.locale,
+                        "settings.voice_adapt.on",
+                        &[("heard", &n(Some(r), "heard_after")), ("words", &n(Some(r), "words")), ("before", &n(Some(r), "heard_before"))],
+                    ),
+                    None => self.t("settings.voice_adapt.off"),
+                };
+                if passive.is_some() && self.get("voice_passive") != Value::Bool(false) {
+                    let (count, goal) = (n(passive, "collected"), n(passive, "goal"));
+                    let done = count.parse::<i64>().unwrap_or(0) >= goal.parse::<i64>().unwrap_or(1);
+                    text.push(' ');
+                    text.push_str(&if done {
+                        t(&self.locale, "settings.voice_passive.done", &[("goal", &goal)])
+                    } else {
+                        t(&self.locale, "settings.voice_passive.progress", &[("count", &count), ("goal", &goal)])
+                    });
+                }
+                let can_reset = report.is_some() || n(passive, "collected") != "0";
+                let id = if can_reset { "vareset" } else { "!vareset" };
+                items.push(Item::Buttons { buttons: vec![(id.into(), self.t("settings.voice_adapt.reset"), ButtonKind::Plain)], top: 4.0, bottom: 0.0 });
+                items.push(Item::Help { text, indent: false });
+                if let Some(h) = help {
+                    items.push(Item::Help { text: h, indent: false });
+                }
+                return;
+            }
             "hotkey" => {
                 let rec = self.recording.as_deref() == Some(key);
                 let label = match (&self.hotkey_note, rec) {
@@ -342,6 +433,98 @@ impl SettingsTab {
         if let Some(h) = help {
             items.push(Item::Help { text: h, indent: false });
         }
+    }
+
+    fn pack_name(pack: &str) -> &str {
+        match pack {
+            "european" => "Parakeet v3",
+            "asian" => "SenseVoice",
+            p => p,
+        }
+    }
+
+    /// Языки распознавания (languagesEditor): строка на язык с его пакетом, «+ Добавить язык».
+    fn languages_field(&self, items: &mut Vec<Item>) {
+        let enabled = self.recognition_enabled();
+        let packs = self.info.models.get("languages");
+        let installed: Vec<&str> = self.info.models.get("installed").and_then(Value::as_array).map_or(Vec::new(), |a| a.iter().filter_map(Value::as_str).collect());
+        let pack_of = |c: &str| packs.and_then(|p| p.get(c)).and_then(Value::as_str).unwrap_or("").to_string();
+        let ready = |c: &str| installed.contains(&pack_of(c).as_str());
+        for code in &enabled {
+            let (note, missing, removable) = if code == "en" {
+                (self.t("settings.languages.always"), false, false)
+            } else if ready(code) {
+                (Self::pack_name(&pack_of(code)).to_string(), false, true)
+            } else {
+                (self.t("settings.languages.notDownloaded"), true, true)
+            };
+            items.push(Item::LangRow { id: format!("rl:{code}"), name: language_name(code).into(), note, missing, removable });
+        }
+        let addable: Vec<&str> = crate::config::RECOGNITION_LANGUAGES.iter().copied().filter(|c| !enabled.iter().any(|e| e == c)).collect();
+        let add = format!("+ {}", self.t("settings.languages.add"));
+        items.push(Item::Buttons { buttons: vec![(if addable.is_empty() { "!addrl" } else { "addrl" }.into(), add, ButtonKind::Plain)], top: 0.0, bottom: 0.0 });
+        if self.menu == Some("rl") {
+            let buttons = addable
+                .iter()
+                .map(|c| {
+                    let ok = ready(c);
+                    let label = if ok { language_name(c).to_string() } else { format!("{} - {}", language_name(c), self.t("settings.languages.notDownloaded")) };
+                    (format!("{}rl+:{c}", if ok { "" } else { "!" }), label, ButtonKind::Plain)
+                })
+                .collect();
+            items.push(Item::Buttons { buttons, top: 6.0, bottom: 0.0 });
+        }
+        if addable.is_empty() {
+            items.push(Item::Help { text: self.t("settings.languages.noMore"), indent: false });
+        }
+        let mut used: Vec<String> = enabled.iter().filter(|c| ready(c)).map(|c| pack_of(c)).collect();
+        used.sort();
+        used.dedup();
+        if used.len() > 1 && !installed.contains(&"lid") {
+            items.push(Item::Help { text: self.t("settings.languages.needLid"), indent: false });
+        }
+        if addable.iter().any(|c| !ready(c)) {
+            items.push(Item::Help { text: self.t("settings.languages.installer"), indent: false });
+        }
+    }
+
+    /// Включённые языки распознавания по порядку RECOGNITION_LANGUAGES, английский — всегда.
+    fn recognition_enabled(&self) -> Vec<String> {
+        let chosen = self.recognition_languages();
+        crate::config::RECOGNITION_LANGUAGES.iter().filter(|c| **c == "en" || chosen.iter().any(|x| x == *c)).map(|c| c.to_string()).collect()
+    }
+
+    /// Языки интерфейса (uiLanguagesEditor).
+    fn ui_languages_field(&self, items: &mut Vec<Item>) {
+        let enabled = &self.info.ui_languages;
+        for code in enabled {
+            let en = code == "en";
+            items.push(Item::LangRow {
+                id: format!("ul:{code}"),
+                name: language_name(code).into(),
+                note: if en { self.t("settings.languages.always") } else { String::new() },
+                missing: false,
+                removable: !en,
+            });
+        }
+        let addable: Vec<&str> = crate::uilang::SUPPORTED.iter().copied().filter(|c| !enabled.iter().any(|e| e == c)).collect();
+        let add = format!("+ {}", self.t("settings.languages.add"));
+        items.push(Item::Buttons { buttons: vec![(if addable.is_empty() { "!addul" } else { "addul" }.into(), add, ButtonKind::Plain)], top: 0.0, bottom: 0.0 });
+        if self.menu == Some("ul") {
+            let buttons = addable.iter().map(|c| (format!("ul+:{c}"), language_name(c).to_string(), ButtonKind::Plain)).collect();
+            items.push(Item::Buttons { buttons, top: 6.0, bottom: 0.0 });
+        }
+    }
+
+    fn set_ui_languages(&mut self, codes: Vec<String>) -> Option<SettingsOut> {
+        let current = {
+            let c = self.text_of("ui_language");
+            if c.is_empty() { "auto".to_string() } else { c }
+        };
+        let language = if current != "auto" && !codes.contains(&current) { "auto".to_string() } else { current };
+        self.info.ui_languages = crate::uilang::SUPPORTED.iter().filter(|c| **c == "en" || codes.iter().any(|x| x == *c)).map(|c| c.to_string()).collect();
+        self.rebuild();
+        Some(SettingsOut::UiLanguages { codes, language })
     }
 
     fn rebuild(&mut self) {
@@ -409,6 +592,11 @@ impl SettingsTab {
             let ty = track.y + (track.h - th) * self.scroll / self.max_scroll;
             fill_round(cx, Rect::new(track.x, ty, track.w, th), 1.5, ACC_4);
         }
+    }
+
+    pub fn set_placing(&mut self, on: bool) {
+        self.placing = on;
+        self.rebuild();
     }
 
     /// Прокрутить на `d` DIP (проверка; граница — после следующего кадра).
@@ -528,6 +716,50 @@ impl SettingsTab {
     fn on_event(&mut self, ev: FormEvent) -> Option<SettingsOut> {
         match ev {
             FormEvent::Click(id) if id == "grammar" => Some(SettingsOut::OpenGrammar),
+            FormEvent::Click(id) if id == "addrl" || id == "addul" => {
+                let m = if id == "addrl" { "rl" } else { "ul" };
+                self.menu = if self.menu == Some(m) { None } else { Some(m) };
+                self.rebuild();
+                None
+            }
+            FormEvent::Click(id) if id.starts_with("rl+:") => {
+                let mut codes = self.recognition_enabled();
+                codes.push(id[4..].to_string());
+                self.menu = None;
+                self.save("languages", Value::from(codes), Duration::from_millis(300));
+                self.rebuild();
+                None
+            }
+            FormEvent::Click(id) if id.starts_with("ul+:") => {
+                let mut codes = self.info.ui_languages.clone();
+                codes.push(id[4..].to_string());
+                self.menu = None;
+                self.set_ui_languages(codes)
+            }
+            FormEvent::Click(id) if id == "mpplace" => {
+                let out = if self.placing { SettingsOut::MascotPin(true) } else { SettingsOut::MascotPlace };
+                self.placing = !self.placing;
+                self.rebuild();
+                Some(out)
+            }
+            FormEvent::Click(id) if id == "mpreset" => {
+                self.set_local("mascot_position", Value::Null);
+                self.rebuild();
+                Some(SettingsOut::MascotUnpin)
+            }
+            FormEvent::Click(id) if id == "vareset" => Some(SettingsOut::VoiceReset),
+            FormEvent::Remove(id, _) if id.starts_with("rl:") => {
+                let code = &id[3..];
+                let codes: Vec<String> = self.recognition_enabled().into_iter().filter(|c| c != code).collect();
+                self.save("languages", Value::from(codes), Duration::from_millis(300));
+                self.rebuild();
+                None
+            }
+            FormEvent::Remove(id, _) if id.starts_with("ul:") => {
+                let code = &id[3..];
+                let codes: Vec<String> = self.info.ui_languages.iter().filter(|c| *c != code).cloned().collect();
+                self.set_ui_languages(codes)
+            }
             FormEvent::Click(id) => {
                 let key = id.strip_prefix("hk:")?.to_string();
                 self.recording = if self.recording.as_deref() == Some(key.as_str()) { None } else { Some(key) };
@@ -622,6 +854,7 @@ mod tests {
             sound_packs: vec!["classic".into()],
             ui_languages: vec!["en".into(), "ru".into()],
             auto_language: "en".into(),
+            ..Default::default()
         });
         t
     }
@@ -661,6 +894,26 @@ mod tests {
         let t = tab();
         assert_eq!(t.unload_text(121.0), t.t("settings.models_unload_after_s.never"));
         assert_eq!(t.unload_text(0.0), t.t("settings.models_unload_after_s.now"));
+    }
+
+    #[test]
+    fn recognition_language_without_a_pack_cannot_be_added() {
+        let mut t = tab();
+        t.info.models = serde_json::json!({ "languages": { "ru": "european", "ja": "asian" }, "installed": ["european"] });
+        t.on_event(FormEvent::Click("addrl".into()));
+        t.rebuild();
+        t.on_event(FormEvent::Click("rl+:ru".into()));
+        assert_eq!(t.patch.get("languages"), Some(&serde_json::json!(["en", "ru"])));
+        t.on_event(FormEvent::Remove("rl:ru".into(), 0));
+        assert_eq!(t.patch.get("languages"), Some(&serde_json::json!(["en"])));
+    }
+
+    #[test]
+    fn removing_the_current_interface_language_falls_back_to_auto() {
+        let mut t = tab();
+        t.set_local("ui_language", Value::String("ru".into()));
+        let out = t.on_event(FormEvent::Remove("ul:ru".into(), 0));
+        assert_eq!(out, Some(SettingsOut::UiLanguages { codes: vec!["en".into()], language: "auto".into() }));
     }
 
     #[test]

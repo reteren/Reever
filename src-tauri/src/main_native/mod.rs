@@ -152,6 +152,8 @@ fn settings_info(app: &AppHandle) -> settings_tab::SettingsInfo {
         sound_packs: crate::commands_api::list_sound_packs(app.state()),
         ui_languages: enabled.iter().map(|c| c.to_string()).collect(),
         auto_language: crate::uilang::resolve_enabled("auto", &enabled).to_string(),
+        models: crate::commands_api::language_models(app.clone()),
+        voice: crate::commands_api::voice_adapt_status(app.clone(), app.state()).unwrap_or_default(),
     }
 }
 
@@ -200,6 +202,35 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
             }
             Err(e) => err(e),
         },
+        SettingsOut::UiLanguages { codes, language } => {
+            let mut patch = serde_json::Map::new();
+            patch.insert("ui_languages".into(), serde_json::Value::from(codes));
+            if let Err(e) = crate::commands_api::save_settings(app.clone(), app.state(), app.state(), serde_json::Value::Object(patch)) {
+                err(e)
+            } else {
+                // язык окна сменился (выбранный убрали, «как в Windows» раскрылось иначе) — пересоздать
+                let before = crate::uilang::current();
+                match crate::commands_api::set_ui_language(app.state(), language) {
+                    Ok(code) if code != before => {
+                        crate::switch_main(app);
+                        return;
+                    }
+                    Ok(_) => saved.clone(),
+                    Err(e) => err(e),
+                }
+            }
+        }
+        SettingsOut::MascotPlace => {
+            if crate::commands_api::mascot_place(app.clone()) {
+                saved.clone()
+            } else {
+                send(Msg::SettingsPlacing(false));
+                tr("settings.mascot_position.unavailable", &[])
+            }
+        }
+        SettingsOut::MascotPin(save) => crate::commands_api::mascot_pin(app.clone(), app.state(), save).map_or_else(err, |_| saved.clone()),
+        SettingsOut::MascotUnpin => crate::commands_api::mascot_unpin(app.clone(), app.state()).map_or_else(err, |_| saved.clone()),
+        SettingsOut::VoiceReset => crate::commands_api::reset_voice_adapt(app.clone(), app.state()).map_or_else(err, |_| saved.clone()),
         SettingsOut::Fps(n) => crate::mascot::set_fps_limit(app.state(), n).map_or_else(err, |_| saved.clone()),
         SettingsOut::OpenGrammar => return,
     };

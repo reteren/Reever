@@ -74,6 +74,8 @@ pub enum Msg {
     EditGrammar(String),
     /// Итог изменения настройки — строкой под формой.
     SettingsMsg(String),
+    /// Расстановка маскота не началась (он выключен).
+    SettingsPlacing(bool),
     /// Прокрутить вкладку «Настройки» (проверка)
     ScrollSettings(f32),
     /// Выбрать действие на вкладке «Действия» (проверка)
@@ -584,6 +586,7 @@ impl MainView {
                 }
             },
             Msg::SettingsMsg(m) => self.settings_tab.msg = m,
+            Msg::SettingsPlacing(on) => self.settings_tab.set_placing(on),
             Msg::ScrollSettings(d) => {
                 self.settings_tab.scroll_by(d);
             }
@@ -1410,6 +1413,10 @@ impl MainView {
             Target::Lunka(_) => {}
             Target::Tab(i) => {
                 if self.tab != i {
+                    if self.settings_tab.placing {
+                        self.settings_tab.set_placing(false);
+                        (self.host)(Act::Settings(super::settings_tab::SettingsOut::MascotPin(false)));
+                    }
                     self.tab = i;
                     self.log_scroll = 0.0;
                     self.home_scroll = 0.0;

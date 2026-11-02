@@ -50,6 +50,9 @@ pub enum Item {
     Link { id: String, prefix: String, link: String, suffix: String },
     /// Отступ по вертикали.
     Gap(f32),
+    /// Строка языка (.lang-row): название шириной 90, пометка (пакет, «всегда»; `missing` —
+    /// ярче, как .lang-missing) и крестик — [`FormEvent::Remove`] с индексом 0.
+    LangRow { id: String, name: String, note: String, missing: bool, removable: bool },
     /// Ряд кнопок с отступами сверху и снизу.
     Buttons { buttons: Vec<(String, String, ButtonKind)>, top: f32, bottom: f32 },
     /// Ошибки — строками с маркером.
@@ -465,6 +468,28 @@ impl Form {
                     y += h;
                 }
                 Item::Gap(g) => y += g,
+                Item::LangRow { id, name, note, missing, removable } => {
+                    let st = ui(13.0, 400, 1.2);
+                    let h = 22.0;
+                    if let Some(l) = scene.cache.get(cx.text(), name, &st, 90.0) {
+                        scene.text(&l, cx0, y + (h - l.height) / 2.0, ACC, Glow::G1);
+                    }
+                    let mut px = cx0 + 90.0 + 8.0;
+                    if !note.is_empty() {
+                        if let Some(l) = scene.cache.get(cx.text(), note, &ui(11.0, 400, 1.2), 10_000.0) {
+                            scene.text(&l, px, y + (h - l.height) / 2.0, if *missing { ACC_HOT } else { ACC_3 }, Glow::G1);
+                            px += l.width + 8.0;
+                        }
+                    }
+                    if *removable {
+                        let xr = Rect::new(px, y + 2.0, 18.0, 18.0);
+                        let hit = Hit::Remove(id.clone(), 0);
+                        let hot = self.hover.as_ref() == Some(&hit);
+                        scene.icon("x", Rect::new(xr.x + 2.0, xr.y + 2.0, 14.0, 14.0), 1.6, if hot { ACC_HOT } else { ACC }, false, if hot { Glow::G3 } else { Glow::G2 });
+                        self.hits.push((xr, hit));
+                    }
+                    y += h + 6.0;
+                }
                 Item::Check { id, label, on } => {
                     y += 9.0;
                     let st = TextStyle { wrap: true, direction: self.dir(), ..ui(13.0, 400, 1.45) };
@@ -501,7 +526,9 @@ impl Form {
                         }
                         b.rect = Rect::new(px, y, bw, 28.0);
                         let br = b.rect;
-                        self.hits.push((br, Hit::Button(id.clone())));
+                        if !id.starts_with('!') {
+                            self.hits.push((br, Hit::Button(id.clone())));
+                        }
                         px += bw + 8.0;
                         row_h = 28.0;
                     }
@@ -533,14 +560,29 @@ impl Form {
             }
         }
         scene.flush(cx);
-        let shown: Vec<String> = self
+        let mut shown: Vec<String> = self
             .hits
             .iter()
             .filter_map(|(_, h)| if let Hit::Button(b) = h { Some(b.clone()) } else { None })
             .collect();
+        // неактивные (button:disabled { opacity: .35 })
+        for it in &items {
+            if let Item::Buttons { buttons, .. } = it {
+                shown.extend(buttons.iter().filter(|(id, _, _)| id.starts_with('!')).map(|(id, _, _)| id.clone()));
+            }
+        }
         for id in shown {
             if let Some(b) = self.buttons.get(&id) {
-                b.draw(scene, cx);
+                if id.starts_with('!') {
+                    scene.flush(cx);
+                    if super::push_round_layer(cx, Rect::new(b.rect.x - 2.0, b.rect.y - 2.0, b.rect.w + 4.0, b.rect.h + 4.0), 0.0, 0.35) {
+                        b.draw(scene, cx);
+                        scene.flush(cx);
+                        super::pop_layer(cx);
+                    }
+                } else {
+                    b.draw(scene, cx);
+                }
             }
         }
         scene.flush(cx);
