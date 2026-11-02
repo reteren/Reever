@@ -23,7 +23,8 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_TEXT_ALIGNMENT_TRAILING, DWRITE_TEXT_METRICS, DWRITE_WORD_WRAPPING_NO_WRAP,
     IDWriteFontCollection, IDWriteTextLayout1, DWRITE_FONT_METRICS, DWRITE_FONT_STRETCH_NORMAL,
     DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_TEXT_RANGE,
-    DWRITE_WORD_WRAPPING_EMERGENCY_BREAK,
+    DWRITE_WORD_WRAPPING_EMERGENCY_BREAK, IDWriteFactory2, IDWriteFontFallback, IDWriteTextLayout2,
+    DWRITE_UNICODE_RANGE,
     DWRITE_WORD_WRAPPING_WRAP,
 };
 
@@ -94,6 +95,10 @@ pub struct TextStyle {
     pub letter_spacing: f32,
     /// Ломать слова, не влезающие в строку (CSS overflow-wrap: anywhere).
     pub break_words: bool,
+    /// Запасные системные семейства до системного подбора — как хвост CSS font-family
+    /// ("Segoe UI", "Microsoft YaHei UI", …): буква, которой нет в основном шрифте, берётся из
+    /// первого семейства списка, где она есть.
+    pub fallback: Vec<String>,
 }
 
 impl Default for TextStyle {
@@ -110,6 +115,7 @@ impl Default for TextStyle {
             line_height: None,
             letter_spacing: 0.0,
             break_words: false,
+            fallback: Vec::new(),
         }
     }
 }
@@ -126,6 +132,7 @@ pub struct TextLayout {
 pub struct Text {
     factory: IDWriteFactory6,
     collection: IDWriteFontCollection2,
+    fallbacks: std::cell::RefCell<std::collections::HashMap<String, IDWriteFontFallback>>,
     _loader: IDWriteInMemoryFontFileLoader,
 }
 
@@ -150,7 +157,7 @@ impl Text {
             }
             let set = builder.CreateFontSet()?;
             let collection = factory.CreateFontCollectionFromFontSet(&set, DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC)?;
-            Ok(Self { factory, collection, _loader: loader })
+            Ok(Self { factory, collection, fallbacks: Default::default(), _loader: loader })
         }
     }
 
@@ -220,6 +227,12 @@ impl Text {
                 f0.SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, line, baseline)?;
             }
             let layout = self.factory.CreateTextLayout(&wide, &format, max_width.max(1.0), f32::MAX)?;
+            if !style.fallback.is_empty() {
+                if let Some(fb) = self.fallback(&style.fallback) {
+                    let l2: IDWriteTextLayout2 = layout.cast()?;
+                    l2.SetFontFallback(&fb)?;
+                }
+            }
             if style.letter_spacing != 0.0 && !wide.is_empty() {
                 let l1: IDWriteTextLayout1 = layout.cast()?;
                 l1.SetCharacterSpacing(0.0, style.letter_spacing, 0.0, DWRITE_TEXT_RANGE { startPosition: 0, length: wide.len() as u32 })?;
@@ -232,6 +245,26 @@ impl Text {
 }
 
 impl Text {
+    /// Цепочка запасных семейств + системный подбор (кэшируется по списку).
+    fn fallback(&self, families: &[String]) -> Option<IDWriteFontFallback> {
+        let key = families.join("|");
+        if let Some(fb) = self.fallbacks.borrow().get(&key) {
+            return Some(fb.clone());
+        }
+        let fb = unsafe {
+            let f2: IDWriteFactory2 = self.factory.cast().ok()?;
+            let builder = f2.CreateFontFallbackBuilder().ok()?;
+            let names: Vec<HSTRING> = families.iter().map(|f| HSTRING::from(f.as_str())).collect();
+            let ptrs: Vec<*const u16> = names.iter().map(|n| n.as_ptr()).collect();
+            let all = [DWRITE_UNICODE_RANGE { first: 0, last: 0x10FFFF }];
+            builder.AddMapping(&all, &ptrs, None, None, None, 1.0).ok()?;
+            builder.AddMappings(&f2.GetSystemFontFallback().ok()?).ok()?;
+            builder.CreateFontFallback().ok()?
+        };
+        self.fallbacks.borrow_mut().insert(key, fb.clone());
+        Some(fb)
+    }
+
     /// Подъём и спуск основного шрифта стиля, в долях кегля.
     fn font_extent(&self, style: &TextStyle) -> Option<(f32, f32)> {
         unsafe {
