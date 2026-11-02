@@ -170,6 +170,13 @@ pub struct Settings {
     /// включён, маскота нет при любом `mascot_mode` (сам выбор сохраняется на потом).
     #[serde(default)]
     pub lite_ui: bool,
+    /// Окно маскота нативное (Direct2D, без WebView2) вместо frontend/mascot.html.
+    #[serde(default)]
+    pub native_mascot: bool,
+    /// «Плавность»: 0 — как у монитора, 60 или 30 кадров. Веб-окна хранят выбор в
+    /// localStorage (skin/fps.js) и присылают его сюда — для нативных окон.
+    #[serde(default)]
+    pub fps_limit: u32,
 }
 
 fn default_dictation_english_level() -> u8 {
@@ -492,6 +499,8 @@ fn parse_settings(text: &str) -> Settings {
     restore!("mascot_bubble", mascot_bubble, bool);
     restore!("mascot_position", mascot_position, Option<[i32; 2]>);
     restore!("lite_ui", lite_ui, bool);
+    restore!("native_mascot", native_mascot, bool);
+    restore!("fps_limit", fps_limit, u32);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -545,6 +554,8 @@ impl Default for Settings {
             mascot_bubble: true,
             mascot_position: None,
             lite_ui: false,
+            native_mascot: false,
+            fps_limit: 0,
         }
     }
 }
