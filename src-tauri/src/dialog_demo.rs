@@ -3,7 +3,8 @@
 //! не регистрирует горячие клавиши и держит конфиги во временной папке, а сам показывает окно
 //! выбора с примером списка, длинный список и вопрос «Выключить компьютер?». Работает и с веб-,
 //! и с нативными окнами (`native_dialogs`) — так их и сравнивают. Шаги и время показа окна
-//! печатаются в stderr (`[dialog-demo] …`).
+//! печатаются в stderr (`[dialog-demo] …`). `REEVER_DIALOG_DEMO_WARM=1` — первое окно после
+//! прогрева в начале команды (как при «ривер найди …»).
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -158,7 +159,18 @@ pub fn start(app: &AppHandle) {
     std::thread::spawn(move || {
         let started = Instant::now();
         let shared = app.state::<Arc<SharedState>>().inner().clone();
-        std::thread::sleep(Duration::from_secs(3));
+        // REEVER_DIALOG_DEMO_WARM=1: команда начинается как настоящая — состояние «слушаю»
+        // (events::set_state прогревает графическое устройство), окно — через 1 с, как после
+        // распознавания. Без переменной первое окно открывается холодным.
+        if std::env::var_os("REEVER_DIALOG_DEMO_WARM").is_some() {
+            std::thread::sleep(Duration::from_secs(2));
+            step("listening (warm-up)", started);
+            crate::events::set_state(&app, "listening");
+            std::thread::sleep(Duration::from_secs(1));
+            crate::events::set_state(&app, "idle");
+        } else {
+            std::thread::sleep(Duration::from_secs(3));
+        }
         step("picker", started);
         asked("picker");
         crate::picker::show(&app, &shared, "project vsta", "project vsta", FindScope::Any, &sample());

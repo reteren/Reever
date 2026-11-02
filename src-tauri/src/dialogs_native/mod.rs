@@ -147,6 +147,27 @@ pub fn set_native_dialogs(config: tauri::State<'_, crate::config::LiveConfig>, e
     Ok(())
 }
 
+/// Команда началась (слушаю после «ривер» или горячей клавиши): создать графическое
+/// устройство заранее, если его нет. Окно выбора открывается только после распознавания
+/// команды — к этому времени устройство уже готово, и первое окно не ждёт 0,3 с на D3D11.
+/// Неиспользованное устройство отпускается через минуту, как после закрытия окна.
+pub fn warm(app: &AppHandle) {
+    if !enabled(app) {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let Some(ui) = crate::mascot_native::ui(&app) else { return };
+        let fresh = ui.call(|ui| {
+            let fresh = !ui.has_device();
+            fresh && ui.prewarm().is_ok()
+        });
+        if fresh.unwrap_or(false) {
+            release_later(ui);
+        }
+    });
+}
+
 /// Отпустить графическое устройство через минуту, если к тому времени окон не останется.
 pub fn release_later(ui: Arc<crate::native::UiThread>) {
     std::thread::spawn(move || {

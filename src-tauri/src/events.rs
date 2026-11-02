@@ -108,6 +108,9 @@ pub fn set_state(app: &AppHandle, s: &str) {
     }
     let _ = app.emit("reever://state", s);
     crate::mascot::on_state(app, s);
+    if s == "listening" {
+        crate::dialogs_native::warm(app);
+    }
 }
 
 pub fn current_state() -> String {
