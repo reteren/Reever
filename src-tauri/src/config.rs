@@ -711,6 +711,24 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::
 /// dev — `src-tauri/resources/<name>` (бандлится в инсталлер при сборке);
 /// release — `%APPDATA%/<identifier>/<name>` (writable), сид из бандла при первом запуске.
 pub fn user_config_path(app: &AppHandle, name: &str) -> PathBuf {
+    // Проверка маскота (REEVER_MASCOT_DEMO): свои копии конфигов во временной папке, чтобы
+    // прогоны не меняли ни src-tauri/resources, ни настройки установленного Reever.
+    if crate::mascot_demo::active() {
+        let dir = std::env::temp_dir().join("reever-mascot-demo");
+        let _ = std::fs::create_dir_all(&dir);
+        let p = dir.join(name);
+        if !p.exists() {
+            let seed = if cfg!(debug_assertions) {
+                Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources").join(name))
+            } else {
+                bundled(app, name)
+            };
+            if let Some(seed) = seed.filter(|s| s.exists()) {
+                let _ = std::fs::copy(&seed, &p);
+            }
+        }
+        return p;
+    }
     if cfg!(debug_assertions) {
         return PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("resources")
