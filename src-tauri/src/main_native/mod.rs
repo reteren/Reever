@@ -708,3 +708,15 @@ pub fn frames(app: &AppHandle) -> Option<u64> {
 pub fn shade_for_test(app: &AppHandle, on: bool) {
     set_shade(app, on);
 }
+
+/// Сдвиг прокрутки, чтобы `r` (уже со сдвигом) попал в `view` с полями 12 DIP.
+pub(crate) fn reveal_delta(r: crate::native::Rect, view: crate::native::Rect) -> f32 {
+    let pad = 12.0;
+    if r.y < view.y + pad {
+        r.y - view.y - pad
+    } else if r.y + r.h > view.y + view.h - pad {
+        (r.y + r.h - (view.y + view.h - pad)).min(r.y - view.y - pad)
+    } else {
+        0.0
+    }
+}

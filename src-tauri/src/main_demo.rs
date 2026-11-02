@@ -168,6 +168,32 @@ pub fn start(app: &AppHandle) {
             shoot(&app, &format!("overlay-{which}"));
         }
         crate::main_native::send(crate::main_native::Msg::TestOverlay("close".into()));
+        // клавиатура: Tab по окну (без настоящего ввода — окно фокус не берёт)
+        let key = |k: u32, shift: bool| crate::main_native::send(crate::main_native::Msg::Key(k, shift));
+        crate::main_native::send(crate::main_native::Msg::Tab("home".into()));
+        std::thread::sleep(Duration::from_millis(500));
+        // Tab: вкладки рельса (с текущей), «Пауза», «Изменить», строки
+        for _ in 0..6 {
+            key(0x09, false);
+        }
+        std::thread::sleep(Duration::from_millis(300));
+        shoot(&app, "kbd-home");
+        key(0x09, false); // первая строка «Что можно сказать»
+        key(0x28, false); // ↓ — вторая
+        key(0x0D, false); // Enter — раскрыть её редактор
+        key(0x09, false); // в редактор: флажок «Включено»
+        key(0x09, false); // поле подписи
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "kbd-editor");
+        key(0x1B, false);
+        crate::main_native::send(crate::main_native::Msg::GrammarDone(None));
+        crate::main_native::send(crate::main_native::Msg::Tab("settings".into()));
+        std::thread::sleep(Duration::from_millis(500));
+        for _ in 0..6 {
+            key(0x09, false);
+        }
+        std::thread::sleep(Duration::from_millis(300));
+        shoot(&app, "kbd-settings");
         crate::main_native::send(crate::main_native::Msg::Tab("home".into()));
         // компактный режим: полоска, бегущая строка, обратно
         crate::main_native::shade_for_test(&app, true);

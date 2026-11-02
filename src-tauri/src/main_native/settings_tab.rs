@@ -161,6 +161,8 @@ pub struct SettingsTab {
     scroll: f32,
     max_scroll: f32,
     view: Rect,
+    /// элемент в фокусе, к которому уже прокрутили
+    revealed: Option<(i32, i32)>,
     locale: String,
     rtl: bool,
 }
@@ -181,6 +183,7 @@ impl SettingsTab {
             scroll: 0.0,
             max_scroll: 0.0,
             view: Rect::new(0.0, 0.0, 0.0, 0.0),
+            revealed: None,
             locale: locale.to_string(),
             rtl,
         }
@@ -577,6 +580,14 @@ impl SettingsTab {
         }
         let h = self.form.draw(scene, cx, body.x, y, body.w);
         y += h;
+        // фокус ушёл на другой элемент (Tab) — прокрутить к нему
+        if let Some(r) = self.form.focus_rect() {
+            let key = ((r.x) as i32, (r.y + self.scroll) as i32);
+            if self.revealed != Some(key) {
+                self.revealed = Some(key);
+                self.scroll = (self.scroll + super::reveal_delta(r, body)).max(0.0);
+            }
+        }
         // .msg: min-height 18, margin-top 8
         y += 8.0;
         if !self.msg.is_empty() {
@@ -628,6 +639,12 @@ impl SettingsTab {
     /// Кликабельное (рука), поле (текстовый курсор) или ничего.
     pub fn cursor(&self, x: f32, y: f32) -> Option<bool> {
         self.form.hover_kind(x, y)
+    }
+
+    /// Действие диктора над элементом формы настроек.
+    pub fn a11y_action(&mut self, base: u64, req: &accesskit::ActionRequest) -> Option<(bool, Option<SettingsOut>)> {
+        let r = self.form.a11y_action(base, req)?;
+        Some(self.form_result(r))
     }
 
     pub fn recording(&self) -> bool {

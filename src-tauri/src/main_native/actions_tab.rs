@@ -18,6 +18,7 @@ use crate::native::controls::text_input::TextInput;
 use crate::native::controls::{
     data, fill_round, inside, lcd, stroke_round, ui, Glow, Scene, ACC, ACC_2, ACC_3, ACC_4, ACC_5, GLASS,
 };
+use windows::Win32::UI::Input::KeyboardAndMouse::{VK_DOWN, VK_RETURN, VK_SPACE, VK_UP};
 use crate::native::{Align, Color, Direction, KeyEvent, MouseButton, MouseEvent, MouseKind, Rect, RenderCx, TextLayout, TextStyle};
 use crate::ui_text::t;
 
@@ -65,6 +66,27 @@ enum Pending {
     Delete,
 }
 
+/// Фокус клавиатуры во вкладке.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum KFocus {
+    None,
+    Search,
+    Create,
+    Scan,
+    Filter(usize),
+    /// список: стрелки выбирают действие
+    List,
+    /// редактор справа (форма)
+    Form,
+}
+
+/// Итог клавиши во вкладке.
+pub enum Kbd {
+    /// Tab ушёл за край вкладки (`true` — назад)
+    Leave(bool),
+    Handled(bool, Option<ActionsOut>),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum Hover {
     Row(String),
@@ -84,6 +106,9 @@ pub struct ActionsTab {
     filter: usize,
     search: TextInput,
     search_focus: bool,
+    kfocus: KFocus,
+    swallow: bool,
+    revealed: Option<(i32, i32)>,
     create: Button,
     scan: Button,
     scan_tip: Button,
@@ -120,6 +145,9 @@ impl ActionsTab {
             filter: 0,
             search,
             search_focus: false,
+            kfocus: KFocus::None,
+            swallow: false,
+            revealed: None,
             create: Button::new(&t(locale, "actions.create", &[]), ButtonKind::Plain),
             scan: Button::new(&t(locale, "actions.scan", &[]), ButtonKind::Plain),
             scan_tip: Button::new(&t(locale, "actions.scan", &[]), ButtonKind::Plain),
@@ -416,6 +444,17 @@ impl ActionsTab {
         scene.flush(cx);
         self.create.draw(scene, cx);
         self.scan.draw(scene, cx);
+        // :focus-visible
+        let ring = match self.kfocus {
+            KFocus::Create => Some(self.create.rect),
+            KFocus::Scan => Some(self.scan.rect),
+            KFocus::Filter(i) => self.filters.get(i).copied(),
+            KFocus::List => self.sel.as_ref().and_then(|id| self.rows.iter().find(|(_, r)| r == id).map(|(r, _)| *r)).or(Some(self.list_rect)),
+            _ => None,
+        };
+        if let Some(r) = ring {
+            stroke_round(cx, Rect::new(r.x - 3.0, r.y - 3.0, r.w + 6.0, r.h + 6.0), 6.0, ACC_2, 1.0, true);
+        }
         if self.scan_tip.rect.w > 0.0 && inside(list, self.scan_tip.rect.x, self.scan_tip.rect.y + 27.0) {
             self.scan_tip.draw(scene, cx);
         }
@@ -445,6 +484,13 @@ impl ActionsTab {
         unsafe { cx.dc().PushAxisAlignedClip(&clip.d2d(), D2D1_ANTIALIAS_MODE_ALIASED) };
         let h = self.form.draw(scene, cx, edit.x, edit.y - self.edit_scroll, edit.w);
         self.edit_max = (h - edit.h).max(0.0);
+        if let Some(r) = self.form.focus_rect() {
+            let key = (r.x as i32, (r.y + self.edit_scroll) as i32);
+            if self.revealed != Some(key) {
+                self.revealed = Some(key);
+                self.edit_scroll = (self.edit_scroll + super::reveal_delta(r, edit)).clamp(0.0, self.edit_max);
+            }
+        }
         scene.set_clip(None);
         unsafe { cx.dc().PopAxisAlignedClip() };
     }
@@ -541,6 +587,7 @@ impl ActionsTab {
                 (true, None)
             }
             MouseKind::Down(MouseButton::Left) | MouseKind::DoubleClick => {
+                self.kfocus = if self.over_form(x, y) { KFocus::Form } else { KFocus::None };
                 if self.over_form(x, y) {
                     self.set_search_focus(false);
                     let r = self.form.mouse(ev);
@@ -599,6 +646,234 @@ impl ActionsTab {
         }
     }
 
+    /// Видимые строки списка по порядку (id).
+    fn visible_ids(&self) -> Vec<String> {
+        self.actions.iter().filter(|a| self.visible(a)).map(|a| a.id.clone()).collect()
+    }
+
+    fn kfocus_set(&mut self, f: KFocus, last: bool) {
+        self.kfocus = f;
+        self.set_search_focus(f == KFocus::Search);
+        if f == KFocus::Form {
+            self.form.focus_edge(last);
+        } else {
+            self.form.blur();
+        }
+    }
+
+    /// Порядок Tab во вкладке.
+    fn order(&self) -> Vec<KFocus> {
+        let mut o = vec![KFocus::Search, KFocus::Create, KFocus::Scan];
+        o.extend((0..FILTERS.len()).map(KFocus::Filter));
+        o.push(KFocus::List);
+        if self.draft.is_some() {
+            o.push(KFocus::Form);
+        }
+        o
+    }
+
+    /// Tab пришёл во вкладку снаружи: первый элемент (или последний — Shift+Tab).
+    pub fn kbd_enter(&mut self, last: bool) {
+        let o = self.order();
+        let f = if last { *o.last().unwrap_or(&KFocus::Search) } else { o[0] };
+        self.kfocus_set(f, last);
+    }
+
+    pub fn kbd_leave(&mut self) {
+        self.kfocus_set(KFocus::None, false);
+    }
+
+    pub fn kbd_active(&self) -> bool {
+        self.kfocus != KFocus::None || self.search_focus
+    }
+
+    pub fn kbd_key(&mut self, ev: KeyEvent) -> Kbd {
+        let k = ev.key as u16;
+        let tab = k == VK_TAB.0 && !ev.ctrl && !ev.alt;
+        if self.kfocus == KFocus::None && self.search_focus {
+            self.kfocus = KFocus::Search;
+        }
+        if tab {
+            // из формы — только когда она на краю
+            if self.kfocus == KFocus::Form && !self.form.at_edge(!ev.shift) {
+                let r = self.form.key(ev);
+                let (redraw, out) = self.form_result(r);
+                return Kbd::Handled(redraw, out);
+            }
+            let o = self.order();
+            let i = o.iter().position(|f| *f == self.kfocus).unwrap_or(0);
+            if (ev.shift && i == 0) || (!ev.shift && i + 1 >= o.len()) {
+                self.kbd_leave();
+                return Kbd::Leave(ev.shift);
+            }
+            let next = if ev.shift { o[i - 1] } else { o[i + 1] };
+            self.kfocus_set(next, ev.shift);
+            return Kbd::Handled(true, None);
+        }
+        match self.kfocus {
+            KFocus::Search | KFocus::Form | KFocus::None => {
+                let (redraw, out) = self.key(ev);
+                Kbd::Handled(redraw, out)
+            }
+            KFocus::Create | KFocus::Scan | KFocus::Filter(_) if k == VK_RETURN.0 || k == VK_SPACE.0 => {
+                self.swallow = k == VK_SPACE.0;
+                match self.kfocus {
+                    KFocus::Create => self.go(None),
+                    KFocus::Scan => return Kbd::Handled(true, Some(ActionsOut::Scan)),
+                    KFocus::Filter(i) => {
+                        self.filter = i;
+                        self.scroll = 0.0;
+                    }
+                    _ => {}
+                }
+                Kbd::Handled(true, None)
+            }
+            KFocus::List if k == VK_DOWN.0 || k == VK_UP.0 => {
+                let ids = self.visible_ids();
+                let cur = self.sel.as_ref().and_then(|s| ids.iter().position(|i| i == s));
+                let next = match (cur, k == VK_DOWN.0) {
+                    (None, _) => 0,
+                    (Some(i), true) => (i + 1).min(ids.len().saturating_sub(1)),
+                    (Some(i), false) => i.saturating_sub(1),
+                };
+                if let Some(id) = ids.get(next).cloned() {
+                    self.go(Some(id));
+                    // выбранная строка — в поле зрения
+                    if let Some((r, _)) = self.rows.iter().find(|(_, i)| *i == ids[next]) {
+                        if r.y < self.list_rect.y {
+                            self.scroll = (self.scroll - (self.list_rect.y - r.y)).max(0.0);
+                        } else if r.y + r.h > self.list_rect.y + self.list_rect.h {
+                            self.scroll = (self.scroll + (r.y + r.h - self.list_rect.y - self.list_rect.h)).min(self.max_scroll + r.h);
+                        }
+                    }
+                }
+                Kbd::Handled(true, None)
+            }
+            _ => Kbd::Handled(false, None),
+        }
+    }
+
+    /// Узлы вкладки для диктора: поиск, кнопки, фильтры, список, редактор (форма — от `base + 1000`).
+    pub fn a11y(&self, base: u64, scale: f32) -> (Vec<(accesskit::NodeId, accesskit::Node)>, Vec<accesskit::NodeId>, Option<accesskit::NodeId>) {
+        use accesskit::{Action, Node, NodeId, Role, Toggled};
+        let b = |r: Rect| crate::native::a11y::bounds(r.x, r.y, r.w, r.h, scale);
+        let mut nodes = Vec::new();
+        let mut kids = Vec::new();
+        let mut q = Node::new(Role::SearchInput);
+        q.set_label(self.search.placeholder.clone());
+        q.set_value(self.search.text());
+        q.set_bounds(b(self.search.rect));
+        q.add_action(Action::Focus);
+        q.add_action(Action::SetValue);
+        nodes.push((NodeId(base), q));
+        kids.push(NodeId(base));
+        for (i, btn) in [(1u64, &self.create), (2, &self.scan)] {
+            let mut n = Node::new(Role::Button);
+            n.set_label(btn.label.clone());
+            n.set_bounds(b(btn.rect));
+            n.add_action(Action::Click);
+            n.add_action(Action::Focus);
+            nodes.push((NodeId(base + i), n));
+            kids.push(NodeId(base + i));
+        }
+        for (i, (_, key)) in FILTERS.iter().enumerate() {
+            let mut n = Node::new(Role::RadioButton);
+            n.set_label(self.t(key));
+            n.set_toggled(if i == self.filter { Toggled::True } else { Toggled::False });
+            if let Some(r) = self.filters.get(i) {
+                n.set_bounds(b(*r));
+            }
+            n.add_action(Action::Click);
+            n.add_action(Action::Focus);
+            nodes.push((NodeId(base + 10 + i as u64), n));
+            kids.push(NodeId(base + 10 + i as u64));
+        }
+        let ids = self.visible_ids();
+        let mut list = Node::new(Role::ListBox);
+        list.set_label(self.t("nav.actions"));
+        list.set_bounds(b(self.list_rect));
+        let mut items = Vec::new();
+        for (i, id) in ids.iter().enumerate().take(400) {
+            let Some(a) = self.actions.iter().find(|a| &a.id == id) else { continue };
+            let nid = NodeId(base + 100 + i as u64);
+            let mut n = Node::new(Role::ListBoxOption);
+            let label = if a.label.trim().is_empty() { self.t("actions.unnamed") } else { a.label.clone() };
+            n.set_label(format!("{label}, {}", t(&self.locale, "actions.phraseCount", &[("count", &self.shown(a).len().to_string())])));
+            n.set_selected(self.sel.as_deref() == Some(id.as_str()));
+            n.set_position_in_set(i + 1);
+            n.set_size_of_set(ids.len());
+            if let Some((r, _)) = self.rows.iter().find(|(_, x)| x == id) {
+                n.set_bounds(b(*r));
+            }
+            n.add_action(Action::Click);
+            n.add_action(Action::Focus);
+            nodes.push((nid, n));
+            items.push(nid);
+        }
+        list.set_children(items);
+        nodes.push((NodeId(base + 50), list));
+        kids.push(NodeId(base + 50));
+        let mut focus = match self.kfocus {
+            KFocus::Search => Some(NodeId(base)),
+            KFocus::Create => Some(NodeId(base + 1)),
+            KFocus::Scan => Some(NodeId(base + 2)),
+            KFocus::Filter(i) => Some(NodeId(base + 10 + i as u64)),
+            KFocus::List => self.sel.as_ref().and_then(|s| ids.iter().position(|i| i == s)).map(|i| NodeId(base + 100 + i as u64)).or(Some(NodeId(base + 50))),
+            _ => None,
+        };
+        if self.search_focus {
+            focus = Some(NodeId(base));
+        }
+        if self.draft.is_some() {
+            let (fnodes, fkids, ffocus) = self.form.a11y(base + 1000, scale);
+            nodes.extend(fnodes);
+            kids.extend(fkids);
+            if self.kfocus == KFocus::Form || ffocus.is_some() && focus.is_none() {
+                focus = ffocus.or(focus);
+            }
+        }
+        (nodes, kids, focus)
+    }
+
+    /// Действие диктора; false — узел не этой вкладки.
+    pub fn a11y_action(&mut self, base: u64, req: &accesskit::ActionRequest) -> Option<(bool, Option<ActionsOut>)> {
+        use accesskit::{Action, ActionData};
+        let id = req.target_node.0;
+        if id >= base + 1000 {
+            let r = self.form.a11y_action(base + 1000, req)?;
+            self.kfocus = KFocus::Form;
+            return Some(self.form_result(r));
+        }
+        let rel = id.checked_sub(base)?;
+        let ids = self.visible_ids();
+        match (rel, req.action) {
+            (0, Action::Focus) => self.kfocus_set(KFocus::Search, false),
+            (0, Action::SetValue) => {
+                if let Some(ActionData::Value(v)) = &req.data {
+                    self.search.set_text(v);
+                    self.scroll = 0.0;
+                }
+            }
+            (1, Action::Click) => self.go(None),
+            (2, Action::Click) => return Some((true, Some(ActionsOut::Scan))),
+            (1, Action::Focus) => self.kfocus_set(KFocus::Create, false),
+            (2, Action::Focus) => self.kfocus_set(KFocus::Scan, false),
+            (10..=14, Action::Click) => {
+                self.filter = (rel - 10) as usize;
+                self.scroll = 0.0;
+            }
+            (10..=14, Action::Focus) => self.kfocus_set(KFocus::Filter((rel - 10) as usize), false),
+            (r, Action::Click | Action::Focus) if r >= 100 => {
+                if let Some(aid) = ids.get((r - 100) as usize).cloned() {
+                    self.go(Some(aid));
+                }
+                self.kfocus_set(KFocus::List, false);
+            }
+            _ => return None,
+        }
+        Some((true, None))
+    }
+
     fn set_search_focus(&mut self, on: bool) {
         self.search_focus = on;
         self.search.set_focus(on);
@@ -634,6 +909,9 @@ impl ActionsTab {
     }
 
     pub fn char_input(&mut self, c: char) -> (bool, Option<ActionsOut>) {
+        if std::mem::take(&mut self.swallow) {
+            return (false, None);
+        }
         if self.search_focus {
             let r = self.search.char_input(c);
             if r.changed {

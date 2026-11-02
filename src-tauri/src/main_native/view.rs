@@ -50,6 +50,10 @@ const RAIL: Rect = Rect::new(1045.0, 174.0, 69.0, 506.0);
 const SCREEN: Rect = Rect::new(465.0, 174.0, 560.0, 506.0);
 const EQ: Rect = Rect::new(190.0, 700.0, 924.0, 46.0);
 const TABS: [&str; 4] = ["home", "actions", "settings", "logs"];
+#[path = "access.rs"]
+mod access;
+use access::KFocus;
+
 const TAB_ICONS: [&str; 4] = ["orb", "stack", "tune", "term"];
 const TAB_KEYS: [&str; 4] = ["nav.home", "nav.actions", "nav.settings", "nav.log"];
 const LOG_LIMIT: usize = 250;
@@ -73,6 +77,8 @@ pub enum Msg {
     GrammarDone(Option<String>),
     /// Раскрыть редактор «Что можно сказать» (id команды, `cancel`, `general`; проверка)
     EditGrammar(String),
+    /// Нажать клавишу (проверка: без настоящего ввода и фокуса окна): код VK и Shift.
+    Key(u32, bool),
     /// Итог изменения настройки — строкой под формой.
     SettingsMsg(String),
     /// Открыть окно поверх для проверки: `calibration`, `voice`, `apps`, `close`.
@@ -348,6 +354,12 @@ pub struct MainView {
     shade: Option<super::shade::Shade>,
     shaded: bool,
     shade_pressed: Option<super::shade::ShadeHit>,
+    // клавиатура и диктор (access.rs)
+    kfocus: KFocus,
+    home_revealed: Option<(i32, i32)>,
+    kvisible: bool,
+    kswallow: bool,
+    a11y_dirty: bool,
     // анимации экранов: включение (crtOn), смена канала (chOut/chIn), вспышка «принято»
     power_from: Instant,
     power_quick: bool,
@@ -455,6 +467,11 @@ impl MainView {
             shade: None,
             shaded: false,
             shade_pressed: None,
+            kfocus: KFocus::None,
+            home_revealed: None,
+            kvisible: false,
+            kswallow: false,
+            a11y_dirty: true,
             power_from: Instant::now(),
             power_quick: false,
             channel: None,
@@ -680,6 +697,13 @@ impl MainView {
                 }
             },
             Msg::SettingsMsg(m) => self.settings_tab.msg = m,
+            Msg::Key(key, shift) => {
+                let ev = KeyEvent { key, ctrl: false, shift, alt: false, repeat: false };
+                let handled = <Self as WindowHandler>::key(self, ev);
+                if crate::main_demo::active() {
+                    eprintln!("[main-demo] key {key:#x} shift={shift} -> {handled}, focus {:?}, tab {}", self.kfocus, self.tab);
+                }
+            }
             Msg::TestOverlay(which) => match which.as_str() {
                 "calibration" => {
                     let id = self.info.action_list.first().map(|a| a.id.clone()).unwrap_or_default();
@@ -1231,6 +1255,24 @@ impl MainView {
         }
         self.home_max_scroll = (y + self.home_scroll - body.y + 4.0 - body.h).max(0.0);
         self.home_scroll = self.home_scroll.min(self.home_max_scroll);
+        // фокус клавиатуры (строка или поле редактора) — в поле зрения
+        let focus_rect = match self.kfocus {
+            KFocus::Row(i) => self.say_rects.get(i).copied(),
+            KFocus::Web => Some(self.web.rect),
+            KFocus::Editor => self.form.focus_rect(),
+            _ => None,
+        };
+        if let Some(r) = focus_rect {
+            let key = (r.x as i32, (r.y + self.home_scroll) as i32);
+            if self.home_revealed != Some(key) {
+                self.home_revealed = Some(key);
+                let d = super::reveal_delta(r, body);
+                if d != 0.0 {
+                    self.home_scroll = (self.home_scroll + d).clamp(0.0, self.home_max_scroll);
+                    self.static_dirty = true;
+                }
+            }
+        }
         if std::mem::take(&mut self.reveal) && self.editor.is_some() {
             let (a, b) = self.editor_span;
             let mut s = self.home_scroll;
@@ -1320,6 +1362,17 @@ impl MainView {
     }
 
     fn close_editor(&mut self) {
+        // фокус клавиатуры был в редакторе — вернуть на его строку (или на «Изменить»)
+        if self.kfocus == KFocus::Editor {
+            let open = self.editor.as_ref().map(|e| e.open.clone()).unwrap_or_default();
+            self.kfocus = self
+                .info
+                .say
+                .rows
+                .iter()
+                .position(|r| r.key.as_deref() == Some(open.as_str()))
+                .map_or(KFocus::Web, KFocus::Row);
+        }
         self.editor = None;
         self.form.set_items(Vec::new());
         self.form_blink = None;
@@ -1742,6 +1795,7 @@ impl MainView {
             l.draw(&mut self.scene, cx);
         }
         self.scene.flush(cx);
+        self.draw_focus_ring(cx);
         if let Some(o) = self.overlay.as_mut() {
             o.draw(&mut self.scene, cx, (SKIN_W, SKIN_H), cx.now);
             self.scene.flush(cx);
@@ -1843,6 +1897,7 @@ impl MainView {
                 }
             }
             self.static_dirty = false;
+            self.a11y_dirty = true;
             let k = self.k;
             let caret = if let Some(o) = &self.overlay { o.ime_caret() } else { match TABS[self.tab] {
                 "actions" => self.actions_tab.ime_caret(),
@@ -2267,6 +2322,13 @@ impl WindowHandler for MainView {
 
     fn mouse(&mut self, ev: MouseEvent) -> bool {
         let (x, y) = (ev.x / self.k, ev.y / self.k);
+        // щелчок мышью — рамка фокуса клавиатуры больше не нужна
+        if matches!(ev.kind, MouseKind::Down(_) | MouseKind::DoubleClick) && (self.kvisible || self.kfocus != KFocus::None) {
+            self.kfocus = KFocus::None;
+            self.kvisible = false;
+            self.static_dirty = true;
+            self.a11y_dirty = true;
+        }
         if self.shaded && self.shade.is_some() {
             return self.shade_mouse(ev.kind, x, y);
         }
@@ -2487,6 +2549,12 @@ impl WindowHandler for MainView {
             }
             return redraw;
         }
+        if self.shaded {
+            return false;
+        }
+        if let Some(r) = self.kbd(ev) {
+            return r;
+        }
         if TABS[self.tab] == "settings" {
             let (redraw, out) = self.settings_tab.key(ev);
             if let Some(out) = out {
@@ -2515,6 +2583,9 @@ impl WindowHandler for MainView {
     }
 
     fn char_input(&mut self, c: char) -> bool {
+        if std::mem::take(&mut self.kswallow) {
+            return false;
+        }
         if let Some(o) = self.overlay.as_mut() {
             let r = o.char_input(c);
             if r {
@@ -2592,6 +2663,14 @@ impl WindowHandler for MainView {
             }
         }
         false
+    }
+
+    fn a11y_tree(&mut self, scale: f32) -> Option<accesskit::TreeUpdate> {
+        self.build_a11y(scale)
+    }
+
+    fn a11y_action(&mut self, req: accesskit::ActionRequest) -> bool {
+        self.a11y_do(req)
     }
 
     fn dpi_changed(&mut self, scale: f32) {

@@ -5,6 +5,11 @@
 //! колонке и превращает мышь и клавиатуру в [`FormEvent`]. Состояние полей ввода (каретка,
 //! выделение, отмена) живёт в форме по id и переживает пересборку списка.
 //!
+//! Клавиатура: Tab и Shift+Tab ходят по всем элементам по порядку (поля, кнопки, флажки,
+//! списки, ползунки, крестики фишек, ссылки), Enter и пробел нажимают, стрелки листают список
+//! и двигают ползунок; рамка фокуса — пунктиром, как :focus-visible. Для экранного диктора
+//! форма отдаёт свои элементы узлами UI Automation (`a11y`) и принимает его действия.
+//!
 //! Первым пользуется редактор «Что можно сказать» главного окна; дальше — «Действия» и
 //! «Настройки».
 
@@ -12,7 +17,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use windows::Win32::Graphics::Direct2D::D2D1_ANTIALIAS_MODE_ALIASED;
-use windows::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_RETURN, VK_TAB};
+use windows::Win32::UI::Input::KeyboardAndMouse::{VK_DOWN, VK_END, VK_ESCAPE, VK_HOME, VK_LEFT, VK_RETURN, VK_RIGHT, VK_SPACE, VK_TAB, VK_UP};
 
 use super::button::{Button, ButtonKind};
 use super::text_input::TextInput;
@@ -73,7 +78,7 @@ pub enum FormEvent {
     Escape,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Hit {
     Button(String),
     Remove(String, usize),
@@ -124,6 +129,14 @@ pub struct Form {
     /// дорожки ползунков (id → x, ширина, min, max, step) и какой тянут
     sliders: HashMap<String, (f32, f32, f32, f32, f32)>,
     sliding: Option<String>,
+    /// все элементы по порядку для Tab и диктора, их подписи
+    nav: Vec<Hit>,
+    labels: HashMap<Hit, String>,
+    /// фокус клавиатуры не на поле (кнопка, флажок, список…) и видна ли рамка фокуса
+    kfocus: Option<Hit>,
+    focus_visible: bool,
+    /// пробел нажал кнопку — следующий символ (тот же пробел) не печатать
+    swallow_char: bool,
 }
 
 fn input_style() -> TextStyle {
@@ -170,7 +183,93 @@ impl Form {
         if self.focus.as_ref().is_some_and(|f| !keep.contains(f)) {
             self.focus = None;
         }
+        let (nav, labels) = Self::navigation(&items);
+        // фокус на исчезнувшем (убрали фишку) — на соседа слева, иначе снять
+        if let Some(k) = self.kfocus.clone() {
+            if !nav.contains(&k) {
+                self.kfocus = match k {
+                    Hit::Remove(id, i) if i > 0 && nav.contains(&Hit::Remove(id.clone(), i - 1)) => Some(Hit::Remove(id, i - 1)),
+                    _ => None,
+                };
+            }
+        }
+        self.nav = nav;
+        self.labels = labels;
         self.items = items;
+    }
+
+    /// Порядок элементов для Tab и их подписи (для диктора).
+    fn navigation(items: &[Item]) -> (Vec<Hit>, HashMap<Hit, String>) {
+        let mut nav = Vec::new();
+        let mut labels = HashMap::new();
+        let mut last = String::new();
+        for it in items {
+            match it {
+                Item::Label(t) => last = t.clone(),
+                Item::Chips { id, values, .. } => {
+                    for (i, v) in values.iter().enumerate() {
+                        let h = Hit::Remove(id.clone(), i);
+                        labels.insert(h.clone(), format!("✕ {v}"));
+                        nav.push(h);
+                    }
+                }
+                Item::AddRow { id, placeholder, button } => {
+                    let h = Hit::Input(id.clone());
+                    labels.insert(h.clone(), placeholder.clone());
+                    nav.push(h);
+                    let b = Hit::Button(format!("add:{id}"));
+                    labels.insert(b.clone(), button.clone());
+                    nav.push(b);
+                }
+                Item::Input { id, placeholder, .. } => {
+                    let h = Hit::Input(id.clone());
+                    labels.insert(h.clone(), if last.is_empty() { placeholder.clone() } else { last.clone() });
+                    nav.push(h);
+                }
+                Item::InputSelect { id, placeholder, select, .. } => {
+                    let h = Hit::Input(id.clone());
+                    labels.insert(h.clone(), placeholder.clone());
+                    nav.push(h);
+                    let sh = Hit::Select(select.clone());
+                    labels.insert(sh.clone(), placeholder.clone());
+                    nav.push(sh);
+                }
+                Item::Check { id, label, .. } => {
+                    let h = Hit::Check(id.clone());
+                    labels.insert(h.clone(), label.clone());
+                    nav.push(h);
+                }
+                Item::Buttons { buttons, .. } => {
+                    for (id, label, _) in buttons.iter().filter(|(id, _, _)| !id.starts_with('!')) {
+                        let h = Hit::Button(id.clone());
+                        labels.insert(h.clone(), label.clone());
+                        nav.push(h);
+                    }
+                }
+                Item::Select { id, .. } => {
+                    let h = Hit::Select(id.clone());
+                    labels.insert(h.clone(), last.clone());
+                    nav.push(h);
+                }
+                Item::Slider { id, .. } => {
+                    let h = Hit::Slider(id.clone());
+                    labels.insert(h.clone(), last.clone());
+                    nav.push(h);
+                }
+                Item::Link { id, link, .. } => {
+                    let h = Hit::Link(id.clone());
+                    labels.insert(h.clone(), link.clone());
+                    nav.push(h);
+                }
+                Item::LangRow { id, name, removable: true, .. } => {
+                    let h = Hit::Remove(id.clone(), 0);
+                    labels.insert(h.clone(), format!("✕ {name}"));
+                    nav.push(h);
+                }
+                _ => {}
+            }
+        }
+        (nav, labels)
     }
 
     pub fn value(&self, id: &str) -> Option<String> {
@@ -190,7 +289,53 @@ impl Form {
     }
 
     pub fn has_focus(&self) -> bool {
-        self.focus.is_some()
+        self.focus.is_some() || self.kfocus.is_some()
+    }
+
+    /// Снять фокус клавиатуры (Tab ушёл из формы дальше по окну).
+    pub fn blur(&mut self) {
+        self.set_focus(None);
+        self.kfocus = None;
+        self.open_select = None;
+    }
+
+    /// Поставить фокус на первый (или последний — `last`) элемент формы с клавиатуры.
+    pub fn focus_edge(&mut self, last: bool) -> bool {
+        let Some(h) = (if last { self.nav.last() } else { self.nav.first() }).cloned() else { return false };
+        self.focus_visible = true;
+        self.focus_hit(h);
+        true
+    }
+
+    /// Где элемент в фокусе (координаты последнего рисования) — чтобы прокрутить к нему.
+    pub fn focus_rect(&self) -> Option<Rect> {
+        let cur = self.current()?;
+        self.hits.iter().find(|(_, h)| *h == cur).map(|(r, _)| *r)
+    }
+
+    /// Фокус на последнем (`last`) или первом элементе — Tab дальше уходит из формы.
+    pub fn at_edge(&self, last: bool) -> bool {
+        let Some(cur) = self.current() else { return true };
+        let edge = if last { self.nav.last() } else { self.nav.first() };
+        edge == Some(&cur)
+    }
+
+    fn focus_hit(&mut self, h: Hit) {
+        if let Hit::Input(id) = &h {
+            let id = id.clone();
+            self.kfocus = None;
+            self.set_focus(Some(id.clone()));
+            if let Some(i) = self.inputs.get_mut(&id) {
+                i.select_all();
+            }
+        } else {
+            self.set_focus(None);
+            self.kfocus = Some(h);
+        }
+    }
+
+    fn current(&self) -> Option<Hit> {
+        self.focus.clone().map(Hit::Input).or_else(|| self.kfocus.clone())
     }
 
     fn set_focus(&mut self, id: Option<String>) {
@@ -622,6 +767,15 @@ impl Form {
             }
             scene.flush(cx);
         }
+        // :focus-visible — пунктир вокруг элемента в фокусе (у полей своя рамка)
+        if self.focus_visible && self.window_focused {
+            if let Some(k) = self.kfocus.clone() {
+                if let Some((r, _)) = self.hits.iter().find(|(_, h)| *h == k) {
+                    let ring = Rect::new(r.x - 3.0, r.y - 3.0, r.w + 6.0, r.h + 6.0);
+                    stroke_round(cx, ring, 6.0, ACC_2, 1.0, true);
+                }
+            }
+        }
         let _ = (mix, with_alpha, inside);
         y - y0
     }
@@ -691,6 +845,8 @@ impl Form {
             }
             MouseKind::Down(MouseButton::Left) | MouseKind::DoubleClick => {
                 let h = self.hit_at(x, y);
+                self.focus_visible = false;
+                self.kfocus = None;
                 match &h {
                     Some(Hit::Input(id)) => {
                         let id = id.clone();
@@ -809,23 +965,53 @@ impl Form {
             return FormResult::event(FormEvent::Escape);
         }
         if k == VK_TAB.0 && !ev.ctrl && !ev.alt {
-            if self.order.is_empty() {
+            if self.nav.is_empty() {
                 return FormResult::default();
             }
-            let n = self.order.len();
-            let cur = self.focus.as_ref().and_then(|f| self.order.iter().position(|o| o == f));
+            self.open_select = None;
+            self.focus_visible = true;
+            let n = self.nav.len();
+            let cur = self.current().and_then(|f| self.nav.iter().position(|o| *o == f));
             let next = match (cur, ev.shift) {
                 (None, false) => 0,
                 (None, true) => n - 1,
                 (Some(i), false) => (i + 1) % n,
                 (Some(i), true) => (i + n - 1) % n,
             };
-            let id = self.order[next].clone();
-            self.set_focus(Some(id.clone()));
-            if let Some(i) = self.inputs.get_mut(&id) {
-                i.select_all();
-            }
+            let h = self.nav[next].clone();
+            self.focus_hit(h);
             return FormResult::redraw();
+        }
+        // открытый список: стрелки по вариантам, Enter — выбрать
+        if let Some(sel) = self.open_select.clone() {
+            let opts = self.options(&sel);
+            let cur = match &self.hover {
+                Some(Hit::Option(_, v)) => opts.iter().position(|o| o == v),
+                _ => None,
+            };
+            if k == VK_DOWN.0 || k == VK_UP.0 {
+                let n = opts.len().max(1);
+                let i = match (cur, k == VK_DOWN.0) {
+                    (None, _) => 0,
+                    (Some(i), true) => (i + 1) % n,
+                    (Some(i), false) => (i + n - 1) % n,
+                };
+                if let Some(v) = opts.get(i) {
+                    self.hover = Some(Hit::Option(sel, v.clone()));
+                }
+                return FormResult::redraw();
+            }
+            if k == VK_RETURN.0 || k == VK_SPACE.0 {
+                self.swallow_char = k == VK_SPACE.0;
+                self.open_select = None;
+                if let (Some(i), true) = (cur, true) {
+                    return FormResult::event(FormEvent::Select(sel, opts[i].clone()));
+                }
+                return FormResult::redraw();
+            }
+        }
+        if let Some(h) = self.kfocus.clone() {
+            return self.key_on(h, ev);
         }
         let Some(f) = self.focus.clone() else { return FormResult::default() };
         if k == VK_RETURN.0 {
@@ -842,6 +1028,9 @@ impl Form {
     }
 
     pub fn char_input(&mut self, c: char) -> FormResult {
+        if std::mem::take(&mut self.swallow_char) {
+            return FormResult::default();
+        }
         let Some(f) = self.focus.clone() else { return FormResult::default() };
         if c == '\r' || c == '\t' || c == '\u{1b}' {
             return FormResult::default();
@@ -851,6 +1040,241 @@ impl Form {
         let text = i.text();
         let event = (r.changed && !self.is_add_row(&f)).then(|| FormEvent::Edited(f, text));
         FormResult { redraw: r.redraw, event }
+    }
+
+    /// Значения вариантов выпадающего списка `id`.
+    fn options(&self, id: &str) -> Vec<String> {
+        for it in &self.items {
+            match it {
+                Item::Select { id: i, options, .. } | Item::InputSelect { select: i, options, .. } if i == id => {
+                    return options.iter().map(|(v, _)| v.clone()).collect();
+                }
+                _ => {}
+            }
+        }
+        Vec::new()
+    }
+
+    fn selected_of(&self, id: &str) -> Option<String> {
+        self.items.iter().find_map(|it| match it {
+            Item::Select { id: i, selected, .. } | Item::InputSelect { select: i, selected, .. } if i == id => Some(selected.clone()),
+            _ => None,
+        })
+    }
+
+    fn slider_of(&self, id: &str) -> Option<(f32, f32, f32, f32)> {
+        self.items.iter().find_map(|it| match it {
+            Item::Slider { id: i, min, max, step, value, .. } if i == id => Some((*min, *max, *step, *value)),
+            _ => None,
+        })
+    }
+
+    /// Нажать элемент (Enter, пробел, диктор): то же, что щелчок.
+    fn activate(&mut self, h: Hit) -> FormResult {
+        match h {
+            Hit::Button(id) => {
+                if let Some(field) = id.strip_prefix("add:") {
+                    return self.add(field);
+                }
+                FormResult::event(FormEvent::Click(id))
+            }
+            Hit::Remove(id, i) => FormResult::event(FormEvent::Remove(id, i)),
+            Hit::Check(id) => FormResult::event(FormEvent::Toggle(id)),
+            Hit::Link(id) => FormResult::event(FormEvent::Click(id)),
+            Hit::Select(id) => {
+                let sel = self.selected_of(&id);
+                self.hover = sel.map(|v| Hit::Option(id.clone(), v));
+                self.open_select = Some(id);
+                FormResult::redraw()
+            }
+            Hit::Input(id) => {
+                self.focus_hit(Hit::Input(id));
+                FormResult::redraw()
+            }
+            _ => FormResult::default(),
+        }
+    }
+
+    /// Клавиша на элементе, который не поле ввода.
+    fn key_on(&mut self, h: Hit, ev: KeyEvent) -> FormResult {
+        let k = ev.key as u16;
+        if k == VK_RETURN.0 || k == VK_SPACE.0 {
+            self.swallow_char = k == VK_SPACE.0;
+            return self.activate(h);
+        }
+        let dir: i32 = if k == VK_DOWN.0 || k == VK_RIGHT.0 {
+            1
+        } else if k == VK_UP.0 || k == VK_LEFT.0 {
+            -1
+        } else {
+            0
+        };
+        match h {
+            // закрытый список: стрелки сразу меняют выбор
+            Hit::Select(id) if dir != 0 => {
+                let opts = self.options(&id);
+                let cur = self.selected_of(&id).and_then(|v| opts.iter().position(|o| *o == v)).unwrap_or(0);
+                let next = (cur as i32 + dir).clamp(0, opts.len() as i32 - 1) as usize;
+                match opts.get(next) {
+                    Some(v) if next != cur => FormResult::event(FormEvent::Select(id, v.clone())),
+                    _ => FormResult::default(),
+                }
+            }
+            Hit::Slider(id) => {
+                let Some((min, max, step, value)) = self.slider_of(&id) else { return FormResult::default() };
+                let v = if k == VK_HOME.0 {
+                    min
+                } else if k == VK_END.0 {
+                    max
+                } else if dir != 0 {
+                    (value + step.max(1e-3) * dir as f32).clamp(min, max)
+                } else {
+                    return FormResult::default();
+                };
+                FormResult::event(FormEvent::SlideEnd(id, v))
+            }
+            _ => FormResult::default(),
+        }
+    }
+
+    /// Элементы формы для экранного диктора: узлы с id от `base` (по порядку Tab), подписи и
+    /// тексты (подсказки, ошибки) — от `base + 5000`. Возвращает узлы, детей по порядку и узел
+    /// в фокусе.
+    pub fn a11y(&self, base: u64, scale: f32) -> (Vec<(accesskit::NodeId, accesskit::Node)>, Vec<accesskit::NodeId>, Option<accesskit::NodeId>) {
+        use accesskit::{Action, Node, NodeId, Role, Toggled};
+        let b = |r: Rect| crate::native::a11y::bounds(r.x, r.y, r.w, r.h, scale);
+        let rect_of = |h: &Hit| self.hits.iter().find(|(_, x)| x == h).map(|(r, _)| *r);
+        let mut nodes = Vec::new();
+        let mut kids = Vec::new();
+        let mut text_id = base + 5000;
+        let mut push_text = |nodes: &mut Vec<(NodeId, Node)>, kids: &mut Vec<NodeId>, t: &str| {
+            if t.trim().is_empty() {
+                return;
+            }
+            let mut n = Node::new(Role::Label);
+            n.set_value(t.to_string());
+            nodes.push((NodeId(text_id), n));
+            kids.push(NodeId(text_id));
+            text_id += 1;
+        };
+        let mut nav_i = 0usize;
+        for it in &self.items {
+            match it {
+                Item::GroupBegin { legend, .. } => push_text(&mut nodes, &mut kids, legend),
+                Item::Note(t) | Item::Help { text: t, .. } => push_text(&mut nodes, &mut kids, t),
+                Item::Errors(list) => {
+                    for e in list {
+                        push_text(&mut nodes, &mut kids, e);
+                    }
+                }
+                _ => {}
+            }
+            // элементы этого пункта — следующие в nav
+            let count = Self::navigation(std::slice::from_ref(it)).0.len();
+            for h in self.nav.iter().skip(nav_i).take(count) {
+                let id = NodeId(base + nav_i as u64);
+                nav_i += 1;
+                let label = self.labels.get(h).cloned().unwrap_or_default();
+                let mut n = match h {
+                    Hit::Input(fid) => {
+                        let mut n = Node::new(Role::TextInput);
+                        n.set_value(self.value(fid).unwrap_or_default());
+                        n.add_action(Action::SetValue);
+                        n
+                    }
+                    Hit::Check(cid) => {
+                        let on = self.items.iter().any(|it| matches!(it, Item::Check { id, on: true, .. } if id == cid));
+                        let mut n = Node::new(Role::CheckBox);
+                        n.set_toggled(if on { Toggled::True } else { Toggled::False });
+                        n.add_action(Action::Click);
+                        n
+                    }
+                    Hit::Select(sid) => {
+                        let mut n = Node::new(Role::ComboBox);
+                        let sel = self.selected_of(sid).unwrap_or_default();
+                        let shown = self.items.iter().find_map(|it| match it {
+                            Item::Select { id, options, .. } | Item::InputSelect { select: id, options, .. } if id == sid => {
+                                options.iter().find(|(v, _)| *v == sel).map(|(_, l)| l.clone())
+                            }
+                            _ => None,
+                        });
+                        n.set_value(shown.unwrap_or(sel));
+                        n.add_action(Action::Click);
+                        n
+                    }
+                    Hit::Slider(sid) => {
+                        let mut n = Node::new(Role::Slider);
+                        if let Some((min, max, step, value)) = self.slider_of(sid) {
+                            n.set_numeric_value(value as f64);
+                            n.set_min_numeric_value(min as f64);
+                            n.set_max_numeric_value(max as f64);
+                            n.set_numeric_value_step(step as f64);
+                        }
+                        let text = self.items.iter().find_map(|it| match it {
+                            Item::Slider { id, text, .. } if id == sid => Some(text.clone()),
+                            _ => None,
+                        });
+                        if let Some(t) = text {
+                            n.set_value(t);
+                        }
+                        n.add_action(Action::Increment);
+                        n.add_action(Action::Decrement);
+                        n
+                    }
+                    Hit::Link(_) => {
+                        let mut n = Node::new(Role::Link);
+                        n.add_action(Action::Click);
+                        n
+                    }
+                    _ => {
+                        let mut n = Node::new(Role::Button);
+                        n.add_action(Action::Click);
+                        n
+                    }
+                };
+                n.set_label(label);
+                n.add_action(Action::Focus);
+                if let Some(r) = rect_of(h) {
+                    n.set_bounds(b(r));
+                }
+                nodes.push((id, n));
+                kids.push(id);
+            }
+        }
+        let focus = self.current().and_then(|f| self.nav.iter().position(|h| *h == f)).map(|i| NodeId(base + i as u64));
+        (nodes, kids, focus)
+    }
+
+    /// Действие диктора над элементом формы (id из `a11y`). None — узел не формы.
+    pub fn a11y_action(&mut self, base: u64, req: &accesskit::ActionRequest) -> Option<FormResult> {
+        use accesskit::{Action, ActionData};
+        let i = req.target_node.0.checked_sub(base)? as usize;
+        let h = self.nav.get(i)?.clone();
+        Some(match req.action {
+            Action::Focus => {
+                self.focus_visible = true;
+                self.focus_hit(h);
+                FormResult::redraw()
+            }
+            Action::Click => self.activate(h),
+            Action::SetValue => match (&h, &req.data) {
+                (Hit::Input(id), Some(ActionData::Value(v))) => {
+                    let id = id.clone();
+                    self.set_value(&id, v);
+                    if self.is_add_row(&id) {
+                        FormResult::redraw()
+                    } else {
+                        FormResult::event(FormEvent::Edited(id, v.to_string()))
+                    }
+                }
+                _ => FormResult::default(),
+            },
+            Action::Increment | Action::Decrement => {
+                let key = if req.action == Action::Increment { VK_RIGHT.0 } else { VK_LEFT.0 };
+                self.key_on(h, KeyEvent { key: key as u32, ctrl: false, shift: false, alt: false, repeat: false })
+            }
+            _ => FormResult::default(),
+        })
     }
 
     /// Нажатая кнопка формы ещё анимируется (переход наведения).
@@ -889,6 +1313,45 @@ mod tests {
         let r = f.key(KeyEvent { key: VK_RETURN.0 as u32, ctrl: false, shift: false, alt: false, repeat: false });
         assert_eq!(r.event, Some(FormEvent::Add("w".into(), "hi".into())));
         assert_eq!(f.value("w").as_deref(), Some(""));
+    }
+
+    fn key(k: u16, shift: bool) -> KeyEvent {
+        KeyEvent { key: k as u32, ctrl: false, shift, alt: false, repeat: false }
+    }
+
+    #[test]
+    fn tab_walks_every_control_and_space_presses_without_typing() {
+        let mut f = Form::new(0, false);
+        f.set_items(vec![
+            Item::Input { id: "a".into(), placeholder: String::new(), value: String::new() },
+            Item::Check { id: "c".into(), label: "C".into(), on: false },
+            Item::Buttons { buttons: vec![("ok".into(), "OK".into(), ButtonKind::Default)], top: 0.0, bottom: 0.0 },
+        ]);
+        f.key(key(VK_TAB.0, false));
+        assert_eq!(f.current(), Some(Hit::Input("a".into())));
+        f.key(key(VK_TAB.0, false));
+        let r = f.key(key(VK_SPACE.0, false));
+        assert_eq!(r.event, Some(FormEvent::Toggle("c".into())));
+        assert!(f.char_input(' ').event.is_none());
+        f.key(key(VK_TAB.0, false));
+        assert_eq!(f.key(key(VK_RETURN.0, false)).event, Some(FormEvent::Click("ok".into())));
+        f.key(key(VK_TAB.0, true));
+        assert_eq!(f.current(), Some(Hit::Check("c".into())));
+    }
+
+    #[test]
+    fn arrows_change_a_closed_select_and_step_a_slider() {
+        let mut f = Form::new(0, false);
+        let opts = vec![("0".to_string(), "Zero".to_string()), ("60".to_string(), "Sixty".to_string())];
+        f.set_items(vec![
+            Item::Select { id: "fps".into(), options: opts, selected: "0".into() },
+            Item::Slider { id: "s".into(), min: 1.0, max: 5.0, step: 1.0, value: 3.0, text: "3 / 5".into() },
+        ]);
+        f.key(key(VK_TAB.0, false));
+        assert_eq!(f.key(key(VK_DOWN.0, false)).event, Some(FormEvent::Select("fps".into(), "60".into())));
+        f.key(key(VK_TAB.0, false));
+        assert_eq!(f.key(key(VK_RIGHT.0, false)).event, Some(FormEvent::SlideEnd("s".into(), 4.0)));
+        assert_eq!(f.key(key(VK_HOME.0, false)).event, Some(FormEvent::SlideEnd("s".into(), 1.0)));
     }
 
     #[test]

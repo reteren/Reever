@@ -122,6 +122,17 @@ impl Overlay {
         }
     }
 
+    /// Заголовок окна (для диктора).
+    pub fn title(&self) -> String {
+        let key = match self.kind {
+            Kind::Calibration { .. } => "calibration.title",
+            Kind::Voice { .. } => "voiceAdapt.title",
+            Kind::Apps { .. } => "appPicker.title",
+            Kind::Scan { .. } => "scan.title",
+        };
+        self.t(key, &[])
+    }
+
     fn typing(&self) -> bool {
         matches!(self.kind, Kind::Apps { .. } | Kind::Scan { .. })
     }
