@@ -139,8 +139,10 @@ pub fn intent_label(locale: &str, intent: &Intent) -> String {
 
 /// Подпись по умолчанию (или старая подпись по умолчанию из прежних версий grammar.json).
 pub fn is_default_label(intent: &Intent) -> bool {
-    let defaults = Grammar::defaults();
-    let Some(builtin) = defaults.intents.iter().find(|i| i.id == intent.id).map(|i| i.label.clone()) else {
+    // подписи по умолчанию — один раз: Grammar::defaults() собирает всю грамматику
+    static DEFAULTS: std::sync::OnceLock<std::collections::HashMap<String, String>> = std::sync::OnceLock::new();
+    let defaults = DEFAULTS.get_or_init(|| Grammar::defaults().intents.into_iter().map(|i| (i.id, i.label)).collect());
+    let Some(builtin) = defaults.get(&intent.id).cloned() else {
         return false;
     };
     let label = intent.label.trim();
