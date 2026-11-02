@@ -838,6 +838,130 @@ impl WindowHandler for PickerView {
     fn close_requested(&mut self) {
         self.close_window();
     }
+
+    fn a11y_tree(&mut self, scale: f32) -> Option<crate::native::a11y::accesskit::TreeUpdate> {
+        use crate::native::a11y::accesskit::{Action, Node, NodeId, Role, Toggled, TreeId, TreeInfo, TreeUpdate};
+        use crate::native::a11y::bounds;
+        let b = |r: Rect| bounds(r.x, r.y, r.w, r.h, scale);
+        let mut nodes = Vec::new();
+        let mut root = Node::new(Role::Window);
+        root.set_label(self.title.clone());
+        let mut kids = vec![NodeId(2), NodeId(3), NodeId(4), NodeId(5), NodeId(6), NodeId(7), NodeId(8), NodeId(9)];
+        let mut close = Node::new(Role::Button);
+        close.set_label(t("common.close"));
+        close.set_description(self.close.tip.clone());
+        close.set_bounds(b(self.close.rect()));
+        close.add_action(Action::Click);
+        close.add_action(Action::Focus);
+        nodes.push((NodeId(2), close));
+        let mut q = Node::new(Role::SearchInput);
+        q.set_label(t("picker.searchLabel"));
+        q.set_value(self.query.text());
+        q.set_placeholder(self.query.placeholder.clone());
+        q.set_bounds(b(self.query.rect));
+        q.add_action(Action::Focus);
+        q.add_action(Action::SetValue);
+        nodes.push((NodeId(3), q));
+        for (i, c) in self.chips.iter().enumerate() {
+            let mut n = Node::new(Role::RadioButton);
+            n.set_label(c.label.clone());
+            n.set_toggled(if c.on { Toggled::True } else { Toggled::False });
+            n.set_bounds(b(c.rect));
+            n.add_action(Action::Click);
+            n.add_action(Action::Focus);
+            nodes.push((NodeId(4 + i as u64), n));
+        }
+        let mut list = Node::new(Role::ListBox);
+        list.set_label(t("picker.list"));
+        list.set_bounds(b(self.list.viewport));
+        list.set_size_of_set(self.items.len());
+        let now = Instant::now();
+        let mut items = Vec::new();
+        for (e, entry) in self.entries.iter().enumerate() {
+            if let Entry::Item(i) = entry {
+                let id = NodeId(100 + *i as u64);
+                let mut n = Node::new(Role::ListBoxOption);
+                n.set_label(format!("{} — {}", self.items[*i].name, self.items[*i].path));
+                n.set_selected(*i == self.selected);
+                n.set_position_in_set(*i + 1);
+                n.set_size_of_set(self.items.len());
+                n.set_bounds(b(self.list.row_rect(e, now)));
+                n.add_action(Action::Click);
+                n.add_action(Action::Focus);
+                nodes.push((id, n));
+                items.push(id);
+            }
+        }
+        list.set_children(items);
+        nodes.push((NodeId(7), list));
+        for (id, btn) in [(8u64, &self.cancel), (9, &self.open)] {
+            let mut n = Node::new(Role::Button);
+            n.set_label(btn.label.clone());
+            n.set_bounds(b(btn.rect));
+            n.add_action(Action::Click);
+            n.add_action(Action::Focus);
+            nodes.push((NodeId(id), n));
+        }
+        let mut count = Node::new(Role::Label);
+        count.set_value(tp("picker.count", &[("count", &self.items.len().to_string())]));
+        nodes.push((NodeId(10), count));
+        kids.push(NodeId(10));
+        root.set_children(kids);
+        root.set_bounds(bounds(0.0, 0.0, WIN_W, WIN_H, scale));
+        nodes.push((NodeId(1), root));
+        let focus = match self.focus {
+            Focus::Close => NodeId(2),
+            Focus::Query => NodeId(3),
+            Focus::Chip(i) => NodeId(4 + i as u64),
+            Focus::List if !self.items.is_empty() => NodeId(100 + self.selected as u64),
+            Focus::List => NodeId(7),
+            Focus::Cancel => NodeId(8),
+            Focus::Open => NodeId(9),
+        };
+        Some(TreeUpdate { nodes, tree: Some(TreeInfo::new(NodeId(1))), tree_id: TreeId::ROOT, focus })
+    }
+
+    fn a11y_action(&mut self, req: crate::native::a11y::accesskit::ActionRequest) -> bool {
+        use crate::native::a11y::accesskit::{Action, ActionData};
+        let id = req.target_node.0;
+        let focus = match id {
+            2 => Some(Focus::Close),
+            3 => Some(Focus::Query),
+            4..=6 => Some(Focus::Chip((id - 4) as usize)),
+            7 => Some(Focus::List),
+            8 => Some(Focus::Cancel),
+            9 => Some(Focus::Open),
+            n if n >= 100 => Some(Focus::List),
+            _ => None,
+        };
+        match req.action {
+            Action::Focus => {
+                if let Some(f) = focus {
+                    if id >= 100 {
+                        self.selected = (id - 100) as usize;
+                        self.mark();
+                    }
+                    self.set_focus(f, true);
+                }
+            }
+            Action::Click => match id {
+                2 => self.activate(Target::Close),
+                4..=6 => self.activate(Target::Chip((id - 4) as usize)),
+                8 => self.activate(Target::Cancel),
+                9 => self.activate(Target::Open),
+                n if n >= 100 => self.choose((n - 100) as usize),
+                _ => {}
+            },
+            Action::SetValue if id == 3 => {
+                if let Some(ActionData::Value(v)) = req.data {
+                    self.query.set_text(&v);
+                    self.schedule_search(Duration::from_millis(120));
+                }
+            }
+            _ => return false,
+        }
+        true
+    }
 }
 
 fn ui_thread(app: &AppHandle) -> Option<std::sync::Arc<UiThread>> {

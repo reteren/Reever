@@ -44,7 +44,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, SetFocus, TrackMouseEvent, TME_LEAVE, TRACKMOUSEEVENT, VK_CONTROL,
     VK_SHIFT,
 };
-use windows::Win32::UI::WindowsAndMessaging::{WM_IME_STARTCOMPOSITION, WM_KILLFOCUS, WM_SETFOCUS};
+use windows::Win32::UI::WindowsAndMessaging::{WM_GETOBJECT, WM_IME_STARTCOMPOSITION, WM_KILLFOCUS, WM_SETFOCUS};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, RegisterClassExW,
     SetWindowLongPtrW, SetWindowPos, ShowWindow, CREATESTRUCTW, GWLP_USERDATA, HTCLIENT,
@@ -79,6 +79,8 @@ pub(crate) enum WinEventKind {
     Focus(bool),
     /// Alt+F4, крестик в панели задач и т.п. — окно не закрывается само
     Close,
+    /// действие экранного диктора
+    A11y(super::a11y::accesskit::ActionRequest),
     Paint,
     Destroyed,
     DisplayChange,
@@ -219,6 +221,8 @@ struct WndShared {
     ime_caret: Cell<Option<(f32, f32, f32)>>,
     /// старшая половина суррогатной пары из прошлого WM_CHAR
     high_surrogate: Cell<u16>,
+    /// UI Automation: адаптер accesskit (если окно отдаёт дерево)
+    a11y: RefCell<Option<super::a11y::A11y>>,
     scale: Cell<f32>,
     tracking: Cell<bool>,
 }
@@ -317,6 +321,23 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
         WM_KILLFOCUS => push(hwnd, WinEventKind::Focus(false)),
         WM_CLOSE => {
             push(hwnd, WinEventKind::Close);
+            return LRESULT(0);
+        }
+        WM_GETOBJECT => {
+            if let Some(s) = shared {
+                if let Ok(mut a) = s.a11y.try_borrow_mut() {
+                    if let Some(a) = a.as_mut() {
+                        if let Some(r) = a.get_object(wp.0, lp.0) {
+                            return LRESULT(r);
+                        }
+                    }
+                }
+            }
+        }
+        m if m == super::a11y::WM_A11Y_ACTION => {
+            for req in super::a11y::take_actions(hwnd.0 as isize) {
+                push(hwnd, WinEventKind::A11y(req));
+            }
             return LRESULT(0);
         }
         WM_IME_STARTCOMPOSITION => {
@@ -480,6 +501,7 @@ impl NativeWindow {
             activate: !spec.no_activate,
             ime_caret: Cell::new(None),
             high_surrogate: Cell::new(0),
+            a11y: RefCell::new(None),
             scale: Cell::new(dx as f32 / 96.0),
             tracking: Cell::new(false),
         }));
@@ -759,6 +781,39 @@ impl NativeWindow {
             }
             cpu.Unmap()?;
             Ok((w, h, out))
+        }
+    }
+
+    /// Отдать дерево элементов адаптеру UI Automation (создать адаптер при первом дереве).
+    pub fn update_a11y(&mut self) {
+        let scale = self.scale();
+        let Some(tree) = self.handler.a11y_tree(scale) else { return };
+        let events = unsafe {
+            let shared = &*self.shared;
+            let Ok(mut slot) = shared.a11y.try_borrow_mut() else { return };
+            match slot.as_mut() {
+                Some(a) => a.update(tree),
+                None => {
+                    *slot = Some(super::a11y::A11y::new(self.hwnd.0 as isize, tree));
+                    None
+                }
+            }
+        };
+        // события — вне заимствования: диктор может сразу спросить окно снова
+        if let Some(e) = events {
+            e.raise();
+        }
+    }
+
+    /// Фокус окна — адаптеру (диктор объявляет элемент в фокусе).
+    pub fn focus_a11y(&self, focused: bool) {
+        let events = unsafe {
+            let shared = &*self.shared;
+            let Ok(mut slot) = shared.a11y.try_borrow_mut() else { return };
+            slot.as_mut().and_then(|a| a.focus(focused))
+        };
+        if let Some(e) = events {
+            e.raise();
         }
     }
 

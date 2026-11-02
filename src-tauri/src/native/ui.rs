@@ -326,7 +326,13 @@ impl Ui {
                     }
                 }
                 WinEventKind::Focus(f) => {
+                    w.focus_a11y(f);
                     if w.handler.focus(f) {
+                        w.dirty = true;
+                    }
+                }
+                WinEventKind::A11y(req) => {
+                    if w.handler.a11y_action(req) {
                         w.dirty = true;
                     }
                 }
@@ -422,7 +428,7 @@ impl Ui {
                     w.handler.advance(dt);
                 }
                 match w.render(gfx, &mut self.images, &self.text, &brush, now) {
-                    Ok(RenderResult::Ok) => {}
+                    Ok(RenderResult::Ok) => w.update_a11y(),
                     Ok(RenderResult::DeviceLost) => {
                         lost = true;
                         break;

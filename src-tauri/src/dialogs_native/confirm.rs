@@ -373,6 +373,69 @@ impl WindowHandler for ConfirmView {
         // Alt+F4 по плашке — то же, что «Нет»
         self.answer(false);
     }
+
+    fn a11y_tree(&mut self, scale: f32) -> Option<crate::native::a11y::accesskit::TreeUpdate> {
+        use crate::native::a11y::accesskit::{Action, Node, NodeId, Role, TreeId, TreeInfo, TreeUpdate};
+        use crate::native::a11y::bounds;
+        let b = |r: Rect| bounds(r.x, r.y, r.w, r.h, scale);
+        let mut nodes = Vec::new();
+        let mut root = Node::new(Role::AlertDialog);
+        root.set_label(t("confirm.title"));
+        root.set_description(self.question_text());
+        root.set_bounds(bounds(0.0, 0.0, WIN_W, WIN_H, scale));
+        root.set_children(vec![NodeId(2), NodeId(5), NodeId(6), NodeId(3), NodeId(4), NodeId(7)]);
+        let mut close = Node::new(Role::Button);
+        close.set_label(t("confirm.no"));
+        close.set_description(self.close.tip.clone());
+        close.set_bounds(b(self.close.rect()));
+        close.add_action(Action::Click);
+        close.add_action(Action::Focus);
+        nodes.push((NodeId(2), close));
+        for (id, btn) in [(3u64, &self.yes), (4, &self.no)] {
+            let mut n = Node::new(Role::Button);
+            n.set_label(btn.label.clone());
+            n.set_bounds(b(btn.rect));
+            n.add_action(Action::Click);
+            n.add_action(Action::Focus);
+            nodes.push((NodeId(id), n));
+        }
+        let mut q = Node::new(Role::Label);
+        q.set_value(self.question_text());
+        nodes.push((NodeId(5), q));
+        let mut voice = Node::new(Role::Label);
+        voice.set_value(strip_strong(&t("confirm.voice")).0);
+        nodes.push((NodeId(6), voice));
+        let left = self.total().saturating_sub(Instant::now().saturating_duration_since(self.shown_at));
+        let mut bar = Node::new(Role::ProgressIndicator);
+        bar.set_label(tp("confirm.left", &[("seconds", &((left.as_millis() as f32 / 1000.0).ceil() as u64).to_string())]));
+        bar.set_numeric_value(left.as_secs_f64());
+        bar.set_min_numeric_value(0.0);
+        bar.set_max_numeric_value(self.total().as_secs_f64());
+        nodes.push((NodeId(7), bar));
+        nodes.push((NodeId(1), root));
+        let focus = match self.focus {
+            Focus::Close => NodeId(2),
+            Focus::Yes => NodeId(3),
+            Focus::No => NodeId(4),
+        };
+        Some(TreeUpdate { nodes, tree: Some(TreeInfo::new(NodeId(1))), tree_id: TreeId::ROOT, focus })
+    }
+
+    fn a11y_action(&mut self, req: crate::native::a11y::accesskit::ActionRequest) -> bool {
+        use crate::native::a11y::accesskit::Action;
+        let target = match req.target_node.0 {
+            2 => (Focus::Close, Target::Close),
+            3 => (Focus::Yes, Target::Yes),
+            4 => (Focus::No, Target::No),
+            _ => return false,
+        };
+        match req.action {
+            Action::Focus => self.set_focus(target.0, true),
+            Action::Click => self.activate(target.1),
+            _ => return false,
+        }
+        true
+    }
 }
 
 /// Показать вопрос (создать окно, если его нет) и отдать ему фокус.

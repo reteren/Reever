@@ -317,7 +317,7 @@ impl Text {
 
 /// Есть ли в тексте связное письмо (арабское, сирийское, нко, монгольское).
 fn has_cursive(text: &str) -> bool {
-    text.chars().any(|c| matches!(c as u32, 0x0600..=0x08FF | 0xFB50..=0xFDFF | 0xFE70..=0xFEFF | 0x0700..=0x074F | 0x07C0..=0x07FF | 0x1800..=0x18AF))
+    text.chars().any(|c| matches!(c as u32, 0x0600..=0x08FF | 0xFB50..=0xFDFF | 0xFE70..=0xFEFF | 0x1800..=0x18AF))
 }
 
 /// Ширина, начиная с которой разметка считается «по тексту» (не ограниченной полем).

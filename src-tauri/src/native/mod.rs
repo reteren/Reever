@@ -16,6 +16,7 @@
 //! `Ui::set_fps_limit` (0/60/30) и стоят во время `Ui::pause_animations`.
 //! Tauri живёт рядом в своём потоке: этот модуль его цикл не трогает.
 
+pub mod a11y;
 pub mod controls;
 mod device;
 mod frame;
@@ -202,6 +203,15 @@ pub trait WindowHandler: std::any::Any {
     }
     /// Окно просят закрыть (Alt+F4) — решает обработчик.
     fn close_requested(&mut self) {}
+    /// Дерево элементов для экранного диктора (UI Automation); None — окно без него.
+    /// Зовётся после каждого кадра; границы — в физических пикселях окна (`a11y::bounds`).
+    fn a11y_tree(&mut self, _scale: f32) -> Option<a11y::accesskit::TreeUpdate> {
+        None
+    }
+    /// Действие диктора (нажать, перевести фокус); true — нужна перерисовка.
+    fn a11y_action(&mut self, _req: a11y::accesskit::ActionRequest) -> bool {
+        false
+    }
 }
 
 /// Цвет без предумножения альфы, 0..1.
