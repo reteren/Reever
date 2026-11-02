@@ -521,6 +521,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands_api::list_actions,
+            commands_api::inactive_action_phrases,
             commands_api::list_apps,
             commands_api::scan_apps,
             commands_api::scan_app_icons,

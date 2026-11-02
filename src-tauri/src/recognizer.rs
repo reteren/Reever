@@ -260,6 +260,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     engine.set_english_primary(true);
     log_languages(app, cfg);
     crate::grammar::set_active_languages(&cfg.models.languages());
+    // окно прячет встроенные фразы действий на выключенных языках — пусть пересчитает
+    let _ = app.emit("reever://active-languages", ());
     if !lazy_loading {
         install_anglicisms(app, cfg, &mut engine, load_anglicisms(cfg));
     }
@@ -1143,8 +1145,11 @@ impl Worker<'_> {
         use std::hash::{Hash, Hasher};
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         let mut count = 0usize;
+        let active = crate::grammar::active_languages();
+        active.hash(&mut hasher);
         for action in actions.iter() {
-            for target in action.phrases.iter().chain(std::iter::once(&action.label)) {
+            let phrases = action.phrases.iter().filter(|p| action.phrase_active(p, active.as_deref()));
+            for target in phrases.chain(std::iter::once(&action.label)) {
                 target.hash(&mut hasher);
                 action.id.hash(&mut hasher);
                 count += 1;
@@ -1161,6 +1166,7 @@ impl Worker<'_> {
                 action
                     .phrases
                     .iter()
+                    .filter(|p| action.phrase_active(p, active.as_deref()))
                     .chain(std::iter::once(&action.label))
                     .map(|target| (target.clone(), action.id.clone()))
             })

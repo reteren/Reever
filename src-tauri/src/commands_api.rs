@@ -18,6 +18,25 @@ pub fn list_actions(state: State<'_, Arc<SharedState>>) -> Vec<Action> {
     state.actions.lock().map(|a| a.clone()).unwrap_or_default()
 }
 
+/// Встроенные фразы действий на языках, которые сейчас не распознаются: id → фразы.
+/// Окно их не показывает; из действий они не удаляются и вернутся, когда язык включат.
+#[tauri::command]
+pub fn inactive_action_phrases(
+    state: State<'_, Arc<SharedState>>,
+) -> std::collections::HashMap<String, Vec<String>> {
+    state
+        .actions
+        .lock()
+        .map(|actions| {
+            actions
+                .iter()
+                .map(|action| (action.id.clone(), action.inactive_phrases()))
+                .filter(|(_, phrases)| !phrases.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Вернуть текущую редактируемую грамматику для раздела «Что можно сказать».
 #[tauri::command]
 pub fn get_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use strsim::jaro_winkler;
 
 use crate::commands::ReeverCommand;
-use crate::textnorm::comparison_forms;
+use crate::textnorm::{comparison_forms, normalize};
 
 /// Одно пользовательское действие (программа/папка-шорткат), которое юзер
 /// определяет сам и калибрует голосом.
@@ -36,8 +36,9 @@ fn default_kind() -> String {
 impl Action {
     /// Лучшая похожесть фраз действия на любого из кандидатов (0..1).
     pub fn score(&self, candidates: &[String]) -> f64 {
+        let active = crate::grammar::active_languages();
         let mut best = 0.0_f64;
-        for p in &self.phrases {
+        for p in self.phrases.iter().filter(|p| self.phrase_active(p, active.as_deref())) {
             let phrase_forms = scoring_forms(p);
             for c in candidates {
                 let candidate_forms = scoring_forms(c);
@@ -46,6 +47,63 @@ impl Action {
         }
         best
     }
+
+    /// Сравнивается ли фраза: своя фраза пользователя — всегда, встроенная фраза встроенного
+    /// действия или сайта — пока её язык распознаётся (`active`; `None` — все языки).
+    pub fn phrase_active(&self, phrase: &str, active: Option<&[String]>) -> bool {
+        let Some(active) = active else {
+            return true;
+        };
+        builtin_phrase_languages(&self.id, phrase)
+            .is_none_or(|languages| languages.iter().any(|language| active.iter().any(|a| a == language)))
+    }
+
+    /// Встроенные фразы этого действия на языках, которые сейчас не распознаются.
+    pub fn inactive_phrases(&self) -> Vec<String> {
+        let active = crate::grammar::active_languages();
+        self.phrases
+            .iter()
+            .filter(|phrase| !self.phrase_active(phrase, active.as_deref()))
+            .cloned()
+            .collect()
+    }
+}
+
+/// Языки встроенной фразы встроенного действия (`None` — фраза не встроенная, а своя).
+/// Русские и английские фразы действий и сайтов размечаются по письму: кириллица — русский.
+fn builtin_phrase_languages(id: &str, phrase: &str) -> Option<&'static [&'static str]> {
+    use std::collections::HashMap;
+    static BY_PHRASE: std::sync::OnceLock<HashMap<(String, String), Vec<&'static str>>> =
+        std::sync::OnceLock::new();
+    let map = BY_PHRASE.get_or_init(|| {
+        let mut map: HashMap<(String, String), Vec<&'static str>> = HashMap::new();
+        let mut add = |id: &str, phrase: &str, language: &'static str| {
+            let languages = map.entry((id.to_string(), normalize(phrase))).or_default();
+            if !languages.contains(&language) {
+                languages.push(language);
+            }
+        };
+        for action in default_actions().into_iter().chain(default_sites()) {
+            for phrase in &action.phrases {
+                let cyrillic = phrase.chars().any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
+                add(&action.id, phrase, if cyrillic { "ru" } else { "en" });
+            }
+        }
+        for (id, phrases) in crate::grammar::ENGLISH_SYSTEM_PHRASES {
+            for phrase in *phrases {
+                add(id, phrase, "en");
+            }
+        }
+        for (id, phrases) in crate::grammar::LANGUAGE_SYSTEM_PHRASES {
+            for (languages, phrase) in *phrases {
+                for language in languages.split(' ') {
+                    add(id, phrase, language);
+                }
+            }
+        }
+        map
+    });
+    map.get(&(id.to_string(), normalize(phrase))).map(Vec::as_slice)
 }
 
 /// Добавляет цель, если в фразе явно произнесён глагол команды. Так score работает и
@@ -409,6 +467,35 @@ mod tests {
         for heard in ["at me no", "let me or no", "at me a no"] {
             assert!(shutdown.score(&[heard.to_string()]) < 0.7, "{heard}");
         }
+    }
+
+    #[test]
+    fn builtin_phrases_of_disabled_languages_are_hidden_and_not_matched() {
+        let mut restart = super::default_actions()
+            .into_iter()
+            .find(|action| action.id == "sys_restart")
+            .unwrap();
+        crate::grammar::append_language_system_phrases_for_test(std::slice::from_mut(&mut restart));
+        restart.phrases.push("моя фраза".into());
+        let english = vec!["en".to_string()];
+        let russian = vec!["en".to_string(), "ru".to_string()];
+        let slovak = vec!["en".to_string(), "sk".to_string()];
+        assert!(restart.phrase_active("restart computer", Some(&english)));
+        assert!(!restart.phrase_active("перезагрузи пк", Some(&english)));
+        assert!(restart.phrase_active("перезагрузи пк", Some(&russian)));
+        assert!(!restart.phrase_active("redémarre l'ordinateur", Some(&russian)));
+        assert!(!restart.phrase_active("перезавантаж комп'ютер", Some(&russian)));
+        assert!(restart.phrase_active("reštartuj počítač", Some(&slovak)));
+        assert!(restart.phrase_active("моя фраза", Some(&english)), "своя фраза видна всегда");
+        assert!(restart.phrase_active("redémarre l'ordinateur", None));
+        let shutdown = super::act("sys_shutdown", "", "system", "", &["vypni počítač"]);
+        assert!(shutdown.phrase_active("vypni počítač", Some(&slovak)), "общая фраза чешского и словацкого");
+        let chess = super::default_sites().into_iter().find(|site| site.id == "site_chess").unwrap();
+        assert!(!chess.phrase_active("шахматы", Some(&english)));
+        assert!(chess.phrase_active("chess", Some(&english)));
+        // та же фраза у своего действия человека — его собственная
+        let own = super::act("act_x", "", "url", "", &["шахматы"]);
+        assert!(own.phrase_active("шахматы", Some(&english)));
     }
 
     #[test]

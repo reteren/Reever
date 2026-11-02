@@ -100,6 +100,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'add_scanned_apps': return (commandArgs.apps||[]).length;
     case 'list_sound_packs': return ['classic'];
     case 'inactive_triggers': return [];
+    case 'inactive_action_phrases': return {};
     case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
     case 'mascot_place': return true;
@@ -202,7 +203,10 @@ subscribe('reever://heard', e=>{ const v=String(e.payload||'').trim(); if(v){ co
 subscribe('reever://status', e=>applyStatus(e.payload));
 subscribe('reever://log', e=>appendLog(String(e.payload)));
 let calId=null;
-function renderCalCount(){ if(!calId) return; const a=actions.find(x=>x.id===calId); const ph=a&&a.phrases?a.phrases:[]; $('#calHeading').textContent=t('calibration.heading',{label:a?.label||calId}); $('#calCount').textContent=t('calibration.count',{count:ph.length}); $('#calLast').textContent=ph.length?t('calibration.last',{phrase:ph[ph.length-1]}):''; }
+function renderCalCount(){ if(!calId) return; const a=actions.find(x=>x.id===calId); const ph=a?shownPhrases(a):[]; $('#calHeading').textContent=t('calibration.heading',{label:a?.label||calId}); $('#calCount').textContent=t('calibration.count',{count:ph.length}); $('#calLast').textContent=ph.length?t('calibration.last',{phrase:ph[ph.length-1]}):''; }
+// Языки распознавания сменились (или распознавание только что запустилось) — какие
+// встроенные фразы прятать, считается заново; несохранённое в редакторе не трогаем.
+subscribe('reever://active-languages', async ()=>{ try{ hiddenPhrases=await invoke('inactive_action_phrases')||{}; }catch(e){ return; } renderRows(); if(!editorDirty) renderEditor(); });
 subscribe('reever://calibrated', async ()=>{ await loadActions(); renderCalCount(); });
 
 function appendLog(t){ const d=el('div',{className:'l',textContent:t}); const L=$('#log'); L.append(d); while(L.childNodes.length>250)L.removeChild(L.firstChild); L.scrollTop=L.scrollHeight; }
@@ -218,7 +222,11 @@ function applyStatus(payload){
 }
 
 let actions=[], selId=null, filter='all', query='', editorDirty=false;
-async function loadActions(){ actions=await invoke('list_actions'); editorDirty=false; $('#t-count').textContent=actions.length; renderRows(); renderEditor(); }
+// Встроенные фразы действий на языках, которые сейчас не распознаются (actions.rs:
+// inactive_phrases): в списке не видны и не считаются, но из действия не удаляются.
+let hiddenPhrases={};
+const shownPhrases=a=>(a.phrases||[]).filter(p=>!(hiddenPhrases[a.id]||[]).includes(p));
+async function loadActions(){ actions=await invoke('list_actions'); try{ hiddenPhrases=await invoke('inactive_action_phrases')||{}; }catch(e){ hiddenPhrases={}; reportError('inactiveTriggers',e); } editorDirty=false; $('#t-count').textContent=actions.length; renderRows(); renderEditor(); }
 async function confirmDiscardActionEdits(){
   if(!editorDirty) return true;
   if(!await ask(t('actions.confirmDiscard'))) return false;
@@ -236,7 +244,7 @@ document.querySelectorAll('#filters .chip').forEach(c=>{
 
 function visible(a){
   if(filter!=='all' && KIND_GROUP[a.kind||'shell']!==filter) return false;
-  if(query && !((a.label||'').toLowerCase().includes(query) || (a.phrases||[]).some(p=>p.includes(query)))) return false;
+  if(query && !((a.label||'').toLowerCase().includes(query) || shownPhrases(a).some(p=>p.includes(query)))) return false;
   return true;
 }
 function renderRows(){
@@ -252,7 +260,7 @@ function renderRows(){
     const row=el('div',{className:'arow'+(a.id===selId?' sel':'')});
     row.append(el('div',{className:'ai'},[icon(KIND_ICON[a.kind||'shell']||'play')]));
     row.append(el('div',{className:'an',textContent:a.label||t('actions.unnamed')}));
-    row.append(el('div',{className:'ac',textContent:t('actions.phraseCount',{count:(a.phrases||[]).length})}));
+    row.append(el('div',{className:'ac',textContent:t('actions.phraseCount',{count:shownPhrases(a).length})}));
     row.onclick=async()=>{
       if(a.id===selId) return;
       if(!await confirmDiscardActionEdits()) return;
@@ -276,9 +284,9 @@ function renderEditor(){
   E.append(el('div',{className:'hint',style:'margin-top:3px;',textContent:t('actions.searchHint')}));
   const pick=el('button',{className:'sm',textContent:t('actions.pickApp')}); pick.style.marginTop='6px'; pick.onclick=()=>openAppPicker(a,target); E.append(pick);
 
-  E.append(el('label',{className:'fld',textContent:t('actions.phrases',{count:(a.phrases||[]).length})}));
+  E.append(el('label',{className:'fld',textContent:t('actions.phrases',{count:shownPhrases(a).length})}));
   const chips=el('div',{className:'phrases'});
-  for(const p of (a.phrases||[])){ const x=el('b',{title:t('actions.removePhrase')},[icon('x')]); x.onclick=async()=>{if(!await confirmDiscardActionEdits())return;await invoke('remove_phrase',{id:a.id,phrase:p});await loadActions();}; chips.append(el('span',{className:'pchip'},[document.createTextNode(p),x])); }
+  for(const p of shownPhrases(a)){ const x=el('b',{title:t('actions.removePhrase')},[icon('x')]); x.onclick=async()=>{if(!await confirmDiscardActionEdits())return;await invoke('remove_phrase',{id:a.id,phrase:p});await loadActions();}; chips.append(el('span',{className:'pchip'},[document.createTextNode(p),x])); }
   E.append(chips);
   const addRow=el('div',{className:'editrow',style:'margin-top:7px;'});
   const pInp=el('input',{placeholder:t('actions.phrasePlaceholder')}); pInp.className='grow';
