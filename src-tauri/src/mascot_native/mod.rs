@@ -13,7 +13,7 @@ mod view;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
@@ -44,6 +44,11 @@ pub(crate) fn ui(app: &AppHandle) -> Option<Arc<UiThread>> {
     }
     match UiThread::spawn() {
         Ok(ui) => {
+            // «Плавность» — сразу, кто бы ни открыл первое окно (маскот, главное, выбор)
+            if let Some(config) = app.try_state::<crate::config::LiveConfig>() {
+                let limit = config.get().settings.fps_limit;
+                ui.post(move |ui| ui.set_fps_limit(limit));
+            }
             let ui = Arc::new(ui);
             *slot = Some(ui.clone());
             Some(ui)

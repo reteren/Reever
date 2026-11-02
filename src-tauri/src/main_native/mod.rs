@@ -284,3 +284,15 @@ pub fn set_native_main(app: AppHandle, config: tauri::State<'_, crate::config::L
     }
     Ok(())
 }
+
+/// Кэш картинок потока окон: (картинок, байт, декодирований всего) — для проверок.
+pub fn image_stats(app: &AppHandle) -> Option<(usize, usize, u64)> {
+    let ui = crate::mascot_native::ui(app)?;
+    ui.call(|ui| ui.images().stats())
+}
+
+/// Кадров потока окон всего — для проверок.
+pub fn frames(app: &AppHandle) -> Option<u64> {
+    let ui = crate::mascot_native::ui(app)?;
+    ui.call(|ui| ui.frames())
+}

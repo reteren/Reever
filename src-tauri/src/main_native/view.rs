@@ -325,7 +325,6 @@ pub struct MainView {
     // осьминог в сфере: свой вид маскота, рисуется в битмап линзы не чаще 30 раз в секунду
     orb: Option<MascotView>,
     orb_layer: Option<(ID2D1Bitmap1, (u32, u32), u64)>,
-    orb_acc: f32,
     orb_dirty: bool,
     orb_last: Instant,
 }
@@ -413,7 +412,6 @@ impl MainView {
             blink_phase: true,
             orb: None,
             orb_layer: None,
-            orb_acc: 0.0,
             orb_dirty: true,
             orb_last: Instant::now(),
             assets,
@@ -1151,6 +1149,16 @@ impl WindowHandler for MainView {
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
+        // шаг осьминога — по часам, а не в advance: кадр по wake_at (покой окна) рисуется без
+        // advance, и срок пробуждения застревал бы в прошлом — окно крутилось бы на частоте монитора
+        if let Some(orb) = self.orb.as_mut() {
+            let elapsed = gpu.now.saturating_duration_since(self.orb_last);
+            if orb.visible() && elapsed >= Duration::from_secs_f32(1.0 / 30.0) {
+                orb.advance(elapsed.min(Duration::from_millis(100)));
+                self.orb_dirty = true;
+                self.orb_last = gpu.now;
+            }
+        }
         if gpu.generation != self.gpu_generation {
             self.gpu_generation = gpu.generation;
             self.static_layer = None;
@@ -1236,8 +1244,9 @@ impl WindowHandler for MainView {
             }
         };
         self.draw_core(cx);
-        self.draw_orb_mascot(cx, (dpi_x * self.k, dpi_y * self.k));
         mark("core", cx);
+        self.draw_orb_mascot(cx, (dpi_x * self.k, dpi_y * self.k));
+        mark("orb", cx);
         if self.render_static(cx, (dpi_x * self.k, dpi_y * self.k)) {
             if let Some((bmp, _, _)) = &self.static_layer {
                 unsafe {
@@ -1361,17 +1370,6 @@ impl WindowHandler for MainView {
             }
             if self.eq.iter().any(|v| *v > 0.001) || v > 0.0 {
                 self.static_dirty = true;
-            }
-        }
-        if let Some(orb) = self.orb.as_mut() {
-            if orb.visible() {
-                self.orb_acc += dt;
-                if self.orb_acc >= 1.0 / 30.0 {
-                    orb.advance(Duration::from_secs_f32(self.orb_acc.min(0.1)));
-                    self.orb_acc = 0.0;
-                    self.orb_dirty = true;
-                    self.orb_last = now;
-                }
             }
         }
         let phase = match self.state.as_str() {

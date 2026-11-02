@@ -662,6 +662,7 @@ impl NativeWindow {
         brush: &ID2D1SolidColorBrush,
         now: Instant,
     ) -> Result<RenderResult> {
+        let t0 = Instant::now();
         self.ensure_surface(gfx)?;
         let dpi = self.dpi as f32;
         let scale = self.scale();
@@ -672,6 +673,7 @@ impl NativeWindow {
             let gpu = GpuCx { d3d: &gfx.d3d, context: &context, dc, generation: gfx.generation, scale, now, text };
             self.handler.prepare(&gpu);
         }
+        let t1 = Instant::now();
         let surface = self.surface.as_mut().expect("surface");
         if surface.target.is_none() {
             let buffer: IDXGISurface = unsafe { surface.swap.GetBuffer(0)? };
@@ -698,7 +700,9 @@ impl NativeWindow {
             dc.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
             let mut cx = RenderCx { dc, images, text, brush, scale, size, now };
             self.handler.render(&mut cx);
+            let t2 = Instant::now();
             let end = dc.EndDraw(None, None);
+            frame_profile(1, t2);
             dc.SetTarget(None);
             end
         };
@@ -708,7 +712,11 @@ impl NativeWindow {
             }
             return Err(e);
         }
+        let t3 = Instant::now();
         let hr = unsafe { surface.swap.Present(1, DXGI_PRESENT(0)) };
+        frame_profile(0, t0);
+        frame_profile(2, t1);
+        frame_profile(3, t3);
         if hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET {
             return Ok(RenderResult::DeviceLost);
         }
@@ -823,4 +831,32 @@ impl NativeWindow {
             let _ = DestroyWindow(self.hwnd);
         }
     }
+}
+
+/// `REEVER_FRAME_PROFILE=1`: время частей кадра окна (prepare+surface, запись+EndDraw, EndDraw,
+/// Present) в среднем за 300 кадров — в stderr.
+fn frame_profile(slot: usize, since: Instant) {
+    thread_local! {
+        static ACC: std::cell::RefCell<([f64; 4], u32)> = const { std::cell::RefCell::new(([0.0; 4], 0)) };
+    }
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !*ON.get_or_init(|| std::env::var_os("REEVER_FRAME_PROFILE").is_some()) {
+        return;
+    }
+    let ms = since.elapsed().as_secs_f64() * 1000.0;
+    ACC.with(|a| {
+        let mut a = a.borrow_mut();
+        a.0[slot] += ms;
+        if slot == 3 {
+            a.1 += 1;
+            if a.1 >= 300 {
+                let n = a.1 as f64;
+                eprintln!(
+                    "[frame-profile] whole(from start to after Present) {:.3} ms, end_draw {:.3} ms, record+end {:.3} ms, present {:.3} ms",
+                    a.0[0] / n, a.0[1] / n, a.0[2] / n, a.0[3] / n
+                );
+                *a = ([0.0; 4], 0);
+            }
+        }
+    });
 }

@@ -56,6 +56,10 @@ pub fn start(app: &AppHandle) {
         let mut fresh = (*config.get()).clone();
         fresh.settings.native_main = true;
         fresh.settings.lite_ui = false;
+        // REEVER_MAIN_DEMO_FPS=60|30 — «Плавность» (по умолчанию без лимита, частота монитора)
+        if let Some(fps) = std::env::var("REEVER_MAIN_DEMO_FPS").ok().and_then(|v| v.parse().ok()) {
+            fresh.settings.fps_limit = fps;
+        }
         config.set(Arc::new(fresh));
     }
     let app = app.clone();
@@ -83,13 +87,33 @@ pub fn start(app: &AppHandle) {
         std::thread::sleep(Duration::from_millis(1500));
         shoot(&app, "home-idle");
         memory(started, "idle, window open");
+        let images0 = crate::main_native::image_stats(&app);
+        let frames0 = crate::main_native::frames(&app);
         let cpu = crate::native::stats::CpuMeter::start();
         std::thread::sleep(Duration::from_secs(3));
         eprintln!("[main-demo] cpu idle 3 s: {:?}", cpu.finish());
+        eprintln!(
+            "[main-demo] idle 3 s: frames {:?}, images (count, bytes, decodes) {:?} -> {:?}",
+            crate::main_native::frames(&app).zip(frames0).map(|(a, b)| a - b),
+            images0,
+            crate::main_native::image_stats(&app)
+        );
+        // кадры осьминога в сфере декодируются при первом проходе (~4 с) — покой после прогрева
+        std::thread::sleep(Duration::from_secs(2));
+        let images0 = crate::main_native::image_stats(&app);
+        let cpu = crate::native::stats::CpuMeter::start();
+        std::thread::sleep(Duration::from_secs(3));
+        eprintln!("[main-demo] cpu idle after warm-up 3 s: {:?}", cpu.finish());
+        eprintln!("[main-demo] images {:?} -> {:?}", images0, crate::main_native::image_stats(&app));
 
+        // веб-окно маскота при загрузке шлёт свою «Плавность» (skin/fps.js) — лимит проверки здесь
+        if let Some(fps) = std::env::var("REEVER_MAIN_DEMO_FPS").ok().and_then(|v| v.parse().ok()) {
+            crate::mascot_native::set_fps_limit(fps);
+        }
         step(started, "listening");
         events::set_state(&app, "listening");
         let _ = app.emit("reever://partial", "открой блокнот");
+        let frames0 = crate::main_native::frames(&app);
         let cpu = crate::native::stats::CpuMeter::start();
         let t = Instant::now();
         while t.elapsed() < Duration::from_secs(3) {
@@ -100,6 +124,11 @@ pub fn start(app: &AppHandle) {
         }
         shoot(&app, "home-listening");
         eprintln!("[main-demo] cpu listening 3 s: {:?}", cpu.finish());
+        eprintln!(
+            "[main-demo] listening 3 s: frames {:?}, fps limit {:?}",
+            crate::main_native::frames(&app).zip(frames0).map(|(a, b)| a - b),
+            crate::mascot_native::ui(&app).and_then(|ui| ui.call(|ui| ui.fps_limit()))
+        );
         let _ = app.emit("reever://heard", "открой блокнот");
         events::set_state(&app, "busy");
         std::thread::sleep(Duration::from_millis(900));
