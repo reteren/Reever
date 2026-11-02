@@ -402,6 +402,8 @@ impl BubbleView {
             line_height: Some(LINE_HEIGHT),
             letter_spacing: LETTER,
             break_words: true,
+            // --f-lcd: 'Handjet', 'Segoe UI', 'Microsoft YaHei UI', 'Yu Gothic UI', sans-serif
+            fallback: vec!["Segoe UI".into(), "Microsoft YaHei UI".into(), "Yu Gothic UI".into()],
             ..Default::default()
         }
     }

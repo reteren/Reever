@@ -97,6 +97,8 @@ fn enabled() -> bool {
 }
 
 pub fn configure(app: &AppHandle, on: bool) {
+    // подписка нативного пузыря на события — сразу при старте (mascot::spawn), см. init
+    bubble_native::init(app);
     ENABLED.store(on, Ordering::Relaxed);
     sync(app);
 }
@@ -181,14 +183,22 @@ pub fn place(app: &AppHandle) {
     }
 }
 
+/// Нативный пузырь уже создаётся (окна ещё нет, а sync могут позвать снова).
+static CREATING: AtomicBool = AtomicBool::new(false);
+
 fn create(app: &AppHandle) {
     if mascot::native_enabled() {
+        if CREATING.swap(true, Ordering::SeqCst) {
+            return;
+        }
         // нативное окно — в своём потоке: поток окон мог ещё не прогреться
         let app = app.clone();
         std::thread::spawn(move || {
             // у маскота — чтобы окно сразу получило DPI его монитора
             let (x, y) = mascot::geometry(&app).map_or((0, 0), |(p, _, _, _)| (p.x, p.y));
-            if bubble_native::create(&app, x, y).is_none() {
+            let made = bubble_native::create(&app, x, y);
+            CREATING.store(false, Ordering::SeqCst);
+            if made.is_none() {
                 return;
             }
             if !mascot::native_enabled() {

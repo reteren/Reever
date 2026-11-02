@@ -22,7 +22,12 @@ static WIN: Mutex<Option<(WindowId, isize)>> = Mutex::new(None);
 static LISTEN: Once = Once::new();
 static APP: OnceLock<AppHandle> = OnceLock::new();
 
-fn listen(app: &AppHandle) {
+/// Подписаться на события распознавания. Звать при старте программы, до первых событий:
+/// если подписка регистрируется в тот момент, когда другой поток шлёт событие, Tauri
+/// откладывает это событие и доставляет его вместе со следующим — не по порядку (так
+/// «idle» из начала приходило пузырю после «listening» и гасило его).
+pub fn init(app: &AppHandle) {
+    let _ = APP.set(app.clone());
     LISTEN.call_once(|| {
         let text = |payload: &str| serde_json::from_str::<String>(payload).unwrap_or_default();
         app.listen_any("reever://state", move |e| send(Msg::State(text(e.payload()))));
@@ -34,8 +39,7 @@ fn listen(app: &AppHandle) {
 
 /// Создать окно пузыря (блокирует до готовности). `x`, `y` — экранные пиксели.
 pub fn create(app: &AppHandle, x: i32, y: i32) -> Option<isize> {
-    let _ = APP.set(app.clone());
-    listen(app);
+    init(app);
     let ui = crate::mascot_native::ui(app)?;
     let locale = crate::uilang::current().to_string();
     let state = crate::events::current_state();
