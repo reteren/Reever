@@ -7,7 +7,7 @@
   const read = () => {
     try { const v = Number(localStorage.getItem(KEY)); return ALLOWED.includes(v) ? v : 0; } catch { return 0; }
   };
-  let limit = read();
+  let limit = read(), pausedUntil = 0;
   addEventListener('storage', (e) => { if (e.key === KEY) limit = read(); });
   window.ReeverFps = {
     get limit() { return limit; },
@@ -15,6 +15,10 @@
       limit = ALLOWED.includes(Number(value)) ? Number(value) : 0;
       try { localStorage.setItem(KEY, String(limit)); } catch { }
     },
+    // Окно таскают: анимации стоят, пока оно движется, — перерисовка прозрачного окна на каждом
+    // шаге перетаскивания и была рывками (shell.js зовёт pause на каждое событие сдвига).
+    pause(ms) { pausedUntil = Math.max(pausedUntil, performance.now() + ms); },
+    paused(now = performance.now()) { return now < pausedUntil; },
     // наименьший промежуток между кадрами, мс; запас 2 мс — чтобы дрожание кадров не роняло 60 до 30
     minMs() { return limit ? 1000 / limit - 2 : 0; },
   };

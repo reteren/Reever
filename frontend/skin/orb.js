@@ -199,7 +199,7 @@
       batchFrame++;
 
       // сколько частиц нужно в этом состоянии
-      const want = st.mode === 'orbit' ? Math.round(150 + st.level * 160) : st.mode === 'collapse' ? 230 : st.mode === 'ember' ? 22 : 0;
+      const want = st.mode === 'orbit' ? Math.round(100 + st.level * 100) : st.mode === 'collapse' ? 150 : st.mode === 'ember' ? 18 : 0;
       const kind = st.mode === 'ember' ? 'ember' : 'orbit';
       for (const p of parts) if (p.kind !== kind && !p.dying) p.dying = true;
       let alive = parts.filter(p => !p.dying).length;
@@ -250,7 +250,7 @@
         th.on += ((st.threads ? 1 : 0) - th.on) * Math.min(1, dt * 3);
         if (th.on < 0.01) continue;
         th.a += th.w * dt * (1 + st.level * 2);
-        const steps = 34, span = th.len * (0.6 + 0.4 * th.on);
+        const steps = 22, span = th.len * (0.6 + 0.4 * th.on);
         let px = 0, py = 0;
         for (let k = 0; k <= steps; k++) {
           const t = k / steps, a = th.a - span * t;

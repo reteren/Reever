@@ -74,6 +74,23 @@
     // портала с общим центром; k — масштаб базовых пикселей к CSS холста, clip — круг обрезки.
     let G = { W: 164, H: 204, spr: [22, 22, 120, 160], fly: [-82, -102, 328, 408], k: 1, clip: null };
     let dpr = 1, u = 1, drawn = null, drawnRect = null;
+    // Кадры спрайта — 384×512, а на экране осьминог обычно втрое меньше: каждый кадр заново
+    // распаковывался из webp и ужимался при рисовании. Уменьшенные копии под текущий размер
+    // готовятся один раз (createImageBitmap) и дальше рисуются без распаковки и ужатия.
+    let bitmaps = new Map();
+    function sprite(img, rect) {
+      if (rect !== G.spr || typeof createImageBitmap !== 'function') return img;
+      const hit = bitmaps.get(img);
+      if (hit) return hit === 'pending' ? img : hit;
+      const w = Math.round(rect[2] * u), h = Math.round(rect[3] * u);
+      if (w * 1.2 >= img.naturalWidth) return img;
+      bitmaps.set(img, 'pending');
+      const cache = bitmaps;
+      createImageBitmap(img, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' })
+        .then((bmp) => { if (cache === bitmaps) cache.set(img, bmp); else bmp.close?.(); })
+        .catch(() => { if (cache === bitmaps) cache.delete(img); });
+      return img;
+    }
 
     const S = {
       fill: spring(0, 46, 7.5), energy: spring(0, 30, 10), wave: spring(0, 40, 12), swirl: spring(0, 10, 6),
@@ -123,6 +140,8 @@
         c.width = Math.max(1, Math.round(w / down)); c.height = Math.max(1, Math.round(h / down));
       }
       eye?.resize(G.k * (G.eyeScale || 1));
+      for (const b of bitmaps.values()) b?.close?.();
+      bitmaps = new Map();
       drawn = null;
     }
 
@@ -268,7 +287,7 @@
           ctx.drawImage(glowNear, 0, 0, canvas.width, canvas.height);
           ctx.globalAlpha = 1;
         }
-        { const [x, y, w, h] = cur.rect; ctx.drawImage(cur.img, x * u, y * u, w * u, h * u); }
+        { const [x, y, w, h] = cur.rect; ctx.drawImage(sprite(cur.img, cur.rect), x * u, y * u, w * u, h * u); }
         // линза — по эллипсу купола; отвернувшийся глаз не светится
         const e = cur.eye;
         const facing = e ? Math.max(0, Math.min(1, (e[6] - 0.15) / 0.3)) : 0;
@@ -290,8 +309,10 @@
     let running = false, loopFrame = 0;
     function tick(t) {
       loopFrame = 0;
-      // каждый кадр монитора или не чаще ограничения из настройки «Плавность» (skin/fps.js)
-      const minMs = window.ReeverFps?.minMs() || 0;
+      // каждый кадр монитора или не чаще ограничения из настройки «Плавность» (skin/fps.js) и
+      // своего потолка (opts.maxFps); пока главное окно таскают — стоит
+      if (window.ReeverFps?.paused(t)) { last = t; loopFrame = requestAnimationFrame(tick); return; }
+      const minMs = Math.max(window.ReeverFps?.minMs() || 0, opts.maxFps ? 1000 / opts.maxFps - 2 : 0);
       if (last && minMs && t - last < minMs) { loopFrame = requestAnimationFrame(tick); return; }
       const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
       acc += dt; last = t;

@@ -289,6 +289,7 @@
   function loop(now) {
     loopFrame = 0;
     if (!running) return;
+    if (window.ReeverFps?.paused(now)) { last = now; scheduleLoop(); return; }
     const minMs = window.ReeverFps?.minMs() || 0;
     if (minMs && now - last < minMs) { scheduleLoop(); return; }
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
@@ -504,6 +505,8 @@
   // сборка WebView2 его сообщает), и просыпается, когда окно снова в фокусе. «В трей» окно
   // уничтожает целиком (send_to_tray), там останавливать нечего.
   $('#winMin')?.addEventListener('click', () => stop());
+  // пока окно перетаскивают, анимации стоят (skin/fps.js) и продолжаются через 0,25 с после
+  win?.onMoved?.(() => { window.ReeverFps?.pause(250); wakeLoop(); }).catch?.(() => {});
   window.addEventListener('focus', () => {
     if (running || document.hidden) return;
     start(); if (booted) { powerOn(true); sweepNow(0.7, 0.9); }
@@ -523,7 +526,8 @@
     const OM = 0.95;                       // осьминог в сфере — доля его исходного размера
     const W = SKIN.core.size / OM, DY = 4; // холст линзы в «пикселях маскота»; чуть ниже центра
     try {
-      const view = window.SkinMascot.create($('#orbMascot'));
+      // в сфере осьминог маленький: 30 кадров хватает (кадры спрайта и так 24 в секунду)
+      const view = window.SkinMascot.create($('#orbMascot'), { maxFps: 30 });
       view.layout({
         W, H: W, k: OM * scale,
         spr: [(W - 120) / 2, (W - 160) / 2 + DY, 120, 160],
