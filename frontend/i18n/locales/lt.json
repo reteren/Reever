@@ -1,20 +1,15 @@
-// Lietuvių (Lithuanian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('lt', {
+{
   "app.pickerTitle": "Reever - rasta",
-
   "win.minimize": "Sumažinti",
   "win.toTray": "Sumažinti į pranešimų sritį",
   "win.shade": "Kompaktiškas režimas",
   "win.expand": "Visas langas",
   "orb.toggle": "Mikrofonas įj. / išj.",
-
   "nav.sections": "Skyriai",
   "nav.home": "Pradžia",
   "nav.actions": "Veiksmai",
   "nav.settings": "Nustatymai",
   "nav.log": "Žurnalas",
-
   "mic.idle": "Laukiama…",
   "mic.listening": "Klausausi…",
   "mic.busy": "Apdorojama…",
@@ -23,7 +18,6 @@ I18N.register('lt', {
   "mic.error": "Klaida",
   "mic.pause": "Pristabdyti",
   "mic.resume": "Tęsti",
-
   "tile.mic": "Mikrofonas",
   "tile.activation": "Aktyvinimas",
   "tile.hotkey": "Spartusis klavišas",
@@ -31,7 +25,6 @@ I18N.register('lt', {
   "tile.asr": "Atpažinimas",
   "tile.model": "Modelis",
   "tile.actions": "Veiksmai",
-
   "pill.checking": "tikrinama…",
   "pill.waiting": "laukiama…",
   "pill.paused": "pristabdyta",
@@ -43,13 +36,10 @@ I18N.register('lt', {
   "pill.indexReady": "paruoštas",
   "pill.indexing": "indeksuojama…",
   "pill.unchecked": "netikrinta",
-
   "mode.both": "Žodis ir spartusis klavišas",
   "mode.wake": "Aktyvinimo žodis",
   "mode.hotkey": "Spartusis klavišas",
-
   "home.hint": "Pasakykite «{wake}» ir palaukite signalo arba sakykite viską iš karto: «{wake}, {open} …».",
-
   "grammar.heading": "Ką galima pasakyti",
   "grammar.edit": "Redaguoti",
   "grammar.closeEditor": "Uždaryti redaktorių",
@@ -84,7 +74,6 @@ I18N.register('lt', {
   "grammar.stopLegend": "Diktavimo pabaiga",
   "grammar.stopHint": "Visa frazė arba fragmento pabaigoje: «stop typing». Teksto viduryje ji lieka tekstu.",
   "grammar.reset": "Atkurti numatytuosius",
-
   "kind.launch": "Paleidimas",
   "kind.folder": "Aplankai",
   "kind.search": "Paieška",
@@ -96,7 +85,6 @@ I18N.register('lt', {
   "kind.find": "Rasti",
   "kind.find_folder": "Rasti aplanką",
   "kind.find_file": "Rasti failą",
-
   "intent.launch": "atidaryti programą ar nuorodą",
   "intent.folder": "atidaryti aplanką kompiuteryje",
   "intent.web_google": "ieškoti Google",
@@ -111,7 +99,6 @@ I18N.register('lt', {
   "intent.chat_gpt": "paklausti ChatGPT (pokalbis naršyklėje)",
   "intent.chat_claude": "paklausti Claude (pokalbis naršyklėje)",
   "intent.chat_gemini": "paklausti Gemini (pokalbis naršyklėje)",
-
   "example.launch": "{label} · tiesiog pasakykite programos pavadinimą",
   "example.close": "uždaryti atidarytą programą",
   "example.kill": "kaip „Baigti užduotį“ užduočių tvarkytuvėje",
@@ -125,8 +112,6 @@ I18N.register('lt', {
   "example.command": "Komanda",
   "example.shutdown": "sistema, su patvirtinimu",
   "example.cancel": "atšaukti komandą",
-
-
   "validation.wake": "Pridėkite bent vieną aktyvinimo žodį.",
   "validation.id": "Ketinimas turi turėti id.",
   "validation.duplicateId": "Id «{id}» kartojasi.",
@@ -135,14 +120,18 @@ I18N.register('lt', {
   "validation.needPhrase": "Pridėkite bent vieną frazę «{name}».",
   "validation.emptyPhrase": "Tuščia frazė leidžiama tik programoms paleisti («{name}»).",
   "validation.duplicatePhrase": "Frazė «{phrase}» jau naudojama «{other}».",
-
   "actions.search": "Ieškoti veiksmų…",
   "actions.newTitle": "Naujas veiksmas",
   "actions.create": "Sukurti",
   "actions.empty": "Tuščia. Sukurkite veiksmą.",
   "actions.pick": "Pasirinkite veiksmą kairėje<br />arba sukurkite naują",
   "actions.unnamed": "(be pavadinimo)",
-  "actions.phraseCount": { "one": "{count} frazė", "few": "{count} frazės", "many": "{count} frazės", "other": "{count} frazių" },
+  "actions.phraseCount": {
+    "one": "{count} frazė",
+    "few": "{count} frazės",
+    "many": "{count} frazės",
+    "other": "{count} frazių"
+  },
   "actions.confirmDiscard": "Veiksme yra neišsaugotų pakeitimų. Atmesti juos?",
   "actions.namePlaceholder": "Pavadinimas",
   "actions.target": "Tikslas - failo kelias, nuoroda, protokolas arba AUMID",
@@ -154,26 +143,22 @@ I18N.register('lt', {
   "actions.calibrate": "Kalibruoti",
   "actions.needName": "Įveskite pavadinimą",
   "actions.confirmDelete": "Ištrinti veiksmą?",
-
   "filter.all": "Visi",
   "filter.apps": "Programos",
   "filter.folder": "Aplankai",
   "filter.web": "Žiniatinklis",
   "filter.system": "Sistema",
-
   "actionKind.shell": "programa/exe",
   "actionKind.url": "nuoroda/URL",
   "actionKind.uwp": "Windows programėlė",
   "actionKind.folder": "aplankas",
   "actionKind.system": "sistema",
   "actionKind.search": "žiniatinklio paieška {q}",
-
   "calibration.title": "Kalibravimas",
   "calibration.heading": "Kalibravimas «{label}»",
   "calibration.hint": "Kartokite frazę vėl ir vėl, taip, kaip ją sakote. Kiekviena skaičiuojama - kuo daugiau, tuo tiksliau.",
   "calibration.count": "įrašyta frazių: {count}",
   "calibration.last": "paskutinė: «{phrase}»",
-
   "appPicker.title": "Pasirinkite programėlę",
   "appPicker.search": "Ieškoti programėlių…",
   "actions.scan": "Skenuoti",
@@ -202,7 +187,6 @@ I18N.register('lt', {
   "scan.mark.recent": "neseniai",
   "scan.usage": "Fokuse {minutes} min · paskutinį kartą paleista {date}",
   "scan.usage.noDate": "Fokuse {minutes} min",
-
   "common.add": "Pridėti",
   "common.save": "Išsaugoti",
   "common.delete": "Ištrinti",
@@ -214,7 +198,6 @@ I18N.register('lt', {
   "common.nothingFound": "Nieko nerasta",
   "common.on": "įj.",
   "common.off": "išj.",
-
   "settings.grammarLinkPrefix": "Aktyvinimo žodis ir frazės yra skyriuje Pradžia, ",
   "settings.grammarLink": "„Ką galima pasakyti“ → Redaguoti",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +302,11 @@ I18N.register('lt', {
   "settings.indexState.off": "išjungtas",
   "settings.indexState.scanning": "nuskaitoma",
   "settings.indexState.ready": "paruoštas",
-
   "hotkey.none": "nenustatyta",
   "hotkey.press": "paspauskite derinį… (Esc - atšaukti)",
   "hotkey.needModifier": "reikia modifikatoriaus (Ctrl/Alt/Shift)",
   "hotkey.applied": "spartusis klavišas pritaikytas: {combo}",
   "hotkey.error": "spartusis klavišas: {error}",
-
   "error.prefix": "Klaida - {context}: {message}",
   "error.window": "lango gavimas",
   "error.subscribe": "prenumerata {event}",
@@ -352,7 +333,6 @@ I18N.register('lt', {
   "error.loadWallpaper": "fono paveikslėlio įkėlimas",
   "error.loadActions": "veiksmų įkėlimas",
   "error.uiLanguage": "sąsajos kalbos keitimas",
-
   "picker.found": "Rasta",
   "picker.foundFor": "Rasta: «{title}»",
   "picker.closeTitle": "Uždaryti (Esc)",
@@ -364,7 +344,12 @@ I18N.register('lt', {
   "picker.doubleClick": "dukart spustelėti - atidaryti",
   "picker.list": "Rasti failai ir aplankai",
   "picker.openButton": "Atidaryti",
-  "picker.count": { "one": "{count} variantas", "few": "{count} variantai", "many": "{count} varianto", "other": "{count} variantų" },
+  "picker.count": {
+    "one": "{count} variantas",
+    "few": "{count} variantai",
+    "many": "{count} varianto",
+    "other": "{count} variantų"
+  },
   "picker.frequent": "Dažnai atidaromi",
   "picker.all": "Visi atitikmenys",
   "picker.searchLabel": "Ieškoti kompiuteryje",
@@ -408,4 +393,4 @@ I18N.register('lt', {
   "settings.mascot_position.pinned": "Prisegta: aštuonkojis visada pasirodo šioje vietoje.",
   "settings.mascot_position.corner": "Apatinis dešinysis ekrano kampas.",
   "settings.mascot_position.unavailable": "Talismanas išjungtas: pirmiausia pasirink, kada jį rodyti."
-});
+}

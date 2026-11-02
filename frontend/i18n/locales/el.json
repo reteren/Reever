@@ -1,20 +1,15 @@
-// Ελληνικά (Greek) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('el', {
+{
   "app.pickerTitle": "Reever - βρέθηκαν",
-
   "win.minimize": "Ελαχιστοποίηση",
   "win.toTray": "Ελαχιστοποίηση στην περιοχή ειδοποιήσεων",
   "win.shade": "Συμπαγής λειτουργία",
   "win.expand": "Πλήρες παράθυρο",
   "orb.toggle": "Μικρόφωνο ενεργό / ανενεργό",
-
   "nav.sections": "Ενότητες",
   "nav.home": "Αρχική",
   "nav.actions": "Ενέργειες",
   "nav.settings": "Ρυθμίσεις",
   "nav.log": "Αρχείο καταγραφής",
-
   "mic.idle": "Αναμονή…",
   "mic.listening": "Ακούω…",
   "mic.busy": "Επεξεργασία…",
@@ -23,7 +18,6 @@ I18N.register('el', {
   "mic.error": "Σφάλμα",
   "mic.pause": "Παύση",
   "mic.resume": "Συνέχεια",
-
   "tile.mic": "Μικρόφωνο",
   "tile.activation": "Ενεργοποίηση",
   "tile.hotkey": "Συντόμευση",
@@ -31,7 +25,6 @@ I18N.register('el', {
   "tile.asr": "Αναγνώριση",
   "tile.model": "Μοντέλο",
   "tile.actions": "Ενέργειες",
-
   "pill.checking": "έλεγχος…",
   "pill.waiting": "αναμονή…",
   "pill.paused": "σε παύση",
@@ -43,13 +36,10 @@ I18N.register('el', {
   "pill.indexReady": "έτοιμο",
   "pill.indexing": "δημιουργία ευρετηρίου…",
   "pill.unchecked": "δεν ελέγχθηκε",
-
   "mode.both": "Λέξη και συντόμευση",
   "mode.wake": "Λέξη αφύπνισης",
   "mode.hotkey": "Συντόμευση",
-
   "home.hint": "Πείτε «{wake}» και περιμένετε το σήμα ή πείτε τα όλα μαζί: «{wake}, {open} …».",
-
   "grammar.heading": "Τι μπορείτε να πείτε",
   "grammar.edit": "Επεξεργασία",
   "grammar.closeEditor": "Κλείσιμο επεξεργαστή",
@@ -84,7 +74,6 @@ I18N.register('el', {
   "grammar.stopLegend": "Τέλος υπαγόρευσης",
   "grammar.stopHint": "Ολόκληρη η φράση ή στο τέλος ενός τμήματος: «stop typing». Στη μέση του κειμένου μένει κείμενο.",
   "grammar.reset": "Επαναφορά προεπιλογών",
-
   "kind.launch": "Εκκίνηση",
   "kind.folder": "Φάκελοι",
   "kind.search": "Αναζήτηση",
@@ -96,7 +85,6 @@ I18N.register('el', {
   "kind.find": "Εύρεση",
   "kind.find_folder": "Εύρεση φακέλου",
   "kind.find_file": "Εύρεση αρχείου",
-
   "intent.launch": "άνοιγμα προγράμματος ή συνδέσμου",
   "intent.folder": "άνοιγμα φακέλου στον υπολογιστή",
   "intent.web_google": "αναζήτηση στο Google",
@@ -111,7 +99,6 @@ I18N.register('el', {
   "intent.chat_gpt": "ερώτηση στο ChatGPT (συνομιλία στο πρόγραμμα περιήγησης)",
   "intent.chat_claude": "ερώτηση στο Claude (συνομιλία στο πρόγραμμα περιήγησης)",
   "intent.chat_gemini": "ερώτηση στο Gemini (συνομιλία στο πρόγραμμα περιήγησης)",
-
   "example.launch": "{label} · απλώς πείτε το όνομα του προγράμματος",
   "example.close": "κλείσιμο ανοιχτού προγράμματος",
   "example.kill": "όπως το «Τέλος εργασίας» στη Διαχείριση εργασιών",
@@ -125,8 +112,6 @@ I18N.register('el', {
   "example.command": "Εντολή",
   "example.shutdown": "σύστημα, με επιβεβαίωση",
   "example.cancel": "ακύρωση της εντολής",
-
-
   "validation.wake": "Προσθέστε τουλάχιστον μία λέξη αφύπνισης.",
   "validation.id": "Μια πρόθεση πρέπει να έχει id.",
   "validation.duplicateId": "Το id «{id}» επαναλαμβάνεται.",
@@ -135,14 +120,16 @@ I18N.register('el', {
   "validation.needPhrase": "Προσθέστε τουλάχιστον μία φράση για «{name}».",
   "validation.emptyPhrase": "Κενή φράση επιτρέπεται μόνο για εκκίνηση προγραμμάτων («{name}»).",
   "validation.duplicatePhrase": "Η φράση «{phrase}» χρησιμοποιείται ήδη στο «{other}».",
-
   "actions.search": "Αναζήτηση ενεργειών…",
   "actions.newTitle": "Νέα ενέργεια",
   "actions.create": "Δημιουργία",
   "actions.empty": "Κενό. Δημιουργήστε μια ενέργεια.",
   "actions.pick": "Επιλέξτε μια ενέργεια αριστερά<br />ή δημιουργήστε νέα",
   "actions.unnamed": "(χωρίς όνομα)",
-  "actions.phraseCount": { "one": "{count} φράση", "other": "{count} φράσεις" },
+  "actions.phraseCount": {
+    "one": "{count} φράση",
+    "other": "{count} φράσεις"
+  },
   "actions.confirmDiscard": "Η ενέργεια έχει μη αποθηκευμένες αλλαγές. Απόρριψη;",
   "actions.namePlaceholder": "Όνομα",
   "actions.target": "Προορισμός - διαδρομή αρχείου, σύνδεσμος, πρωτόκολλο ή AUMID",
@@ -154,26 +141,22 @@ I18N.register('el', {
   "actions.calibrate": "Βαθμονόμηση",
   "actions.needName": "Εισαγάγετε όνομα",
   "actions.confirmDelete": "Διαγραφή της ενέργειας;",
-
   "filter.all": "Όλα",
   "filter.apps": "Εφαρμογές",
   "filter.folder": "Φάκελοι",
   "filter.web": "Ιστός",
   "filter.system": "Σύστημα",
-
   "actionKind.shell": "πρόγραμμα/exe",
   "actionKind.url": "σύνδεσμος/URL",
   "actionKind.uwp": "εφαρμογή Windows",
   "actionKind.folder": "φάκελος",
   "actionKind.system": "σύστημα",
   "actionKind.search": "αναζήτηση στον ιστό {q}",
-
   "calibration.title": "Βαθμονόμηση",
   "calibration.heading": "Βαθμονόμηση «{label}»",
   "calibration.hint": "Λέτε τη φράση ξανά και ξανά, όπως τη λέτε. Κάθε φορά μετράει - όσο περισσότερες, τόσο ακριβέστερα.",
   "calibration.count": "καταγραμμένες φράσεις: {count}",
   "calibration.last": "τελευταία: «{phrase}»",
-
   "appPicker.title": "Επιλογή εφαρμογής",
   "appPicker.search": "Αναζήτηση εφαρμογών…",
   "actions.scan": "Σάρωση",
@@ -202,7 +185,6 @@ I18N.register('el', {
   "scan.mark.recent": "πρόσφατα",
   "scan.usage": "Στο προσκήνιο {minutes} λεπ. · τελευταία εκκίνηση {date}",
   "scan.usage.noDate": "Στο προσκήνιο {minutes} λεπ.",
-
   "common.add": "Προσθήκη",
   "common.save": "Αποθήκευση",
   "common.delete": "Διαγραφή",
@@ -214,7 +196,6 @@ I18N.register('el', {
   "common.nothingFound": "Δεν βρέθηκε τίποτα",
   "common.on": "ενεργό",
   "common.off": "ανενεργό",
-
   "settings.grammarLinkPrefix": "Η λέξη αφύπνισης και οι φράσεις βρίσκονται στην Αρχική, ",
   "settings.grammarLink": "«Τι μπορείτε να πείτε» → Επεξεργασία",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('el', {
   "settings.indexState.off": "ανενεργό",
   "settings.indexState.scanning": "σάρωση",
   "settings.indexState.ready": "έτοιμο",
-
   "hotkey.none": "δεν έχει οριστεί",
   "hotkey.press": "πατήστε έναν συνδυασμό… (Esc - ακύρωση)",
   "hotkey.needModifier": "χρειάζεται πλήκτρο τροποποίησης (Ctrl/Alt/Shift)",
   "hotkey.applied": "η συντόμευση εφαρμόστηκε: {combo}",
   "hotkey.error": "συντόμευση: {error}",
-
   "error.prefix": "Σφάλμα - {context}: {message}",
   "error.window": "λήψη του παραθύρου",
   "error.subscribe": "εγγραφή στο {event}",
@@ -352,7 +331,6 @@ I18N.register('el', {
   "error.loadWallpaper": "φόρτωση ταπετσαρίας",
   "error.loadActions": "φόρτωση ενεργειών",
   "error.uiLanguage": "αλλαγή γλώσσας διεπαφής",
-
   "picker.found": "Βρέθηκαν",
   "picker.foundFor": "Βρέθηκαν: «{title}»",
   "picker.closeTitle": "Κλείσιμο (Esc)",
@@ -364,7 +342,10 @@ I18N.register('el', {
   "picker.doubleClick": "διπλό κλικ - άνοιγμα",
   "picker.list": "Αρχεία και φάκελοι που βρέθηκαν",
   "picker.openButton": "Άνοιγμα",
-  "picker.count": { "one": "{count} επιλογή", "other": "{count} επιλογές" },
+  "picker.count": {
+    "one": "{count} επιλογή",
+    "other": "{count} επιλογές"
+  },
   "picker.frequent": "Ανοίγονται συχνά",
   "picker.all": "Όλες οι αντιστοιχίες",
   "picker.searchLabel": "Αναζήτηση στον υπολογιστή",
@@ -408,4 +389,4 @@ I18N.register('el', {
   "settings.mascot_position.pinned": "Καρφιτσώθηκε: το χταπόδι εμφανίζεται πάντα σε αυτό το σημείο.",
   "settings.mascot_position.corner": "Κάτω δεξιά γωνία της οθόνης.",
   "settings.mascot_position.unavailable": "Η μασκότ είναι απενεργοποιημένη: διάλεξε πρώτα πότε θα εμφανίζεται."
-});
+}

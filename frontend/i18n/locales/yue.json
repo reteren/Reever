@@ -1,20 +1,15 @@
-// 粵語 (Cantonese) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('yue', {
+{
   "app.pickerTitle": "Reever - 搵到嘅項目",
-
   "win.minimize": "縮細",
   "win.toTray": "縮細去通知區",
   "win.shade": "精簡模式",
   "win.expand": "完整視窗",
   "orb.toggle": "開 / 熄咪",
-
   "nav.sections": "分區",
   "nav.home": "主頁",
   "nav.actions": "動作",
   "nav.settings": "設定",
   "nav.log": "記錄",
-
   "mic.idle": "等緊…",
   "mic.listening": "聽緊…",
   "mic.busy": "處理緊…",
@@ -23,7 +18,6 @@ I18N.register('yue', {
   "mic.error": "出錯",
   "mic.pause": "暫停",
   "mic.resume": "繼續",
-
   "tile.mic": "咪",
   "tile.activation": "啟動方式",
   "tile.hotkey": "快捷鍵",
@@ -31,7 +25,6 @@ I18N.register('yue', {
   "tile.asr": "識別",
   "tile.model": "模型",
   "tile.actions": "動作",
-
   "pill.checking": "檢查緊…",
   "pill.waiting": "等緊…",
   "pill.paused": "暫停咗",
@@ -43,13 +36,10 @@ I18N.register('yue', {
   "pill.indexReady": "就緒",
   "pill.indexing": "建立索引緊…",
   "pill.unchecked": "未檢查",
-
   "mode.both": "喚醒詞同快捷鍵",
   "mode.wake": "喚醒詞",
   "mode.hotkey": "快捷鍵",
-
   "home.hint": "講「{wake}」再等提示音，或者一口氣講晒：«{wake}, {open} …»。",
-
   "grammar.heading": "可以講啲乜",
   "grammar.edit": "修改",
   "grammar.closeEditor": "閂編輯器",
@@ -84,7 +74,6 @@ I18N.register('yue', {
   "grammar.stopLegend": "停止聽寫",
   "grammar.stopHint": "單獨講成句，或者喺一段尾講：«stop typing»。喺文字中間就當文字。",
   "grammar.reset": "還原預設",
-
   "kind.launch": "開啟",
   "kind.folder": "資料夾",
   "kind.search": "搜尋",
@@ -96,7 +85,6 @@ I18N.register('yue', {
   "kind.find": "搵",
   "kind.find_folder": "搵資料夾",
   "kind.find_file": "搵檔案",
-
   "intent.launch": "開程式或者連結",
   "intent.folder": "開電腦入面嘅資料夾",
   "intent.web_google": "喺 Google 搜尋",
@@ -111,7 +99,6 @@ I18N.register('yue', {
   "intent.chat_gpt": "問 ChatGPT（瀏覽器聊天）",
   "intent.chat_claude": "問 Claude（瀏覽器聊天）",
   "intent.chat_gemini": "問 Gemini（瀏覽器聊天）",
-
   "example.launch": "{label} · 講程式名就得",
   "example.close": "閂已經開咗嘅程式",
   "example.kill": "好似工作管理員嘅「結束工作」",
@@ -125,8 +112,6 @@ I18N.register('yue', {
   "example.command": "指令",
   "example.shutdown": "系統，要確認",
   "example.cancel": "取消指令",
-
-
   "validation.wake": "最少加一個喚醒詞。",
   "validation.id": "意圖一定要有 id。",
   "validation.duplicateId": "id「{id}」重複咗。",
@@ -135,14 +120,15 @@ I18N.register('yue', {
   "validation.needPhrase": "最少幫「{name}」加一句。",
   "validation.emptyPhrase": "淨係開程式先可以用空白句子（「{name}」）。",
   "validation.duplicatePhrase": "句子「{phrase}」已經用咗喺「{other}」。",
-
   "actions.search": "搜尋動作…",
   "actions.newTitle": "新動作",
   "actions.create": "建立",
   "actions.empty": "空嘅。建立一個動作啦。",
   "actions.pick": "喺左邊揀一個動作<br />或者建立新嘅",
   "actions.unnamed": "（冇名）",
-  "actions.phraseCount": { "other": "{count} 句" },
+  "actions.phraseCount": {
+    "other": "{count} 句"
+  },
   "actions.confirmDiscard": "呢個動作有未儲存嘅改動。要掉咗佢哋嗎？",
   "actions.namePlaceholder": "名稱",
   "actions.target": "目標 - 檔案路徑、連結、協定或者 AUMID",
@@ -154,26 +140,22 @@ I18N.register('yue', {
   "actions.calibrate": "校正",
   "actions.needName": "輸入名稱",
   "actions.confirmDelete": "刪除呢個動作？",
-
   "filter.all": "全部",
   "filter.apps": "程式",
   "filter.folder": "資料夾",
   "filter.web": "網絡",
   "filter.system": "系統",
-
   "actionKind.shell": "程式/exe",
   "actionKind.url": "連結/網址",
   "actionKind.uwp": "Windows 應用程式",
   "actionKind.folder": "資料夾",
   "actionKind.system": "系統",
   "actionKind.search": "網上搜尋 {q}",
-
   "calibration.title": "校正",
   "calibration.heading": "校正「{label}」",
   "calibration.hint": "照你平時咁講，一次又一次重複呢句。每次都計，越多越準。",
   "calibration.count": "錄咗嘅句子：{count}",
   "calibration.last": "最後一句：«{phrase}»",
-
   "appPicker.title": "揀應用程式",
   "appPicker.search": "搜尋應用程式…",
   "actions.scan": "掃描",
@@ -202,7 +184,6 @@ I18N.register('yue', {
   "scan.mark.recent": "最近",
   "scan.usage": "前台用咗 {minutes} 分鐘 · 上次開 {date}",
   "scan.usage.noDate": "前台用咗 {minutes} 分鐘",
-
   "common.add": "加",
   "common.save": "儲存",
   "common.delete": "刪除",
@@ -214,7 +195,6 @@ I18N.register('yue', {
   "common.nothingFound": "乜都搵唔到",
   "common.on": "開",
   "common.off": "熄",
-
   "settings.grammarLinkPrefix": "喚醒詞同句子喺主頁，",
   "settings.grammarLink": "「可以講啲乜」→ 修改",
   "settings.grammarLinkSuffix": "。",
@@ -319,13 +299,11 @@ I18N.register('yue', {
   "settings.indexState.off": "熄咗",
   "settings.indexState.scanning": "掃描緊",
   "settings.indexState.ready": "就緒",
-
   "hotkey.none": "未設定",
   "hotkey.press": "撳一組按鍵…（Esc - 取消）",
   "hotkey.needModifier": "要有修飾鍵（Ctrl/Alt/Shift）",
   "hotkey.applied": "快捷鍵已套用：{combo}",
   "hotkey.error": "快捷鍵：{error}",
-
   "error.prefix": "出錯 - {context}：{message}",
   "error.window": "攞視窗",
   "error.subscribe": "訂閱 {event}",
@@ -352,7 +330,6 @@ I18N.register('yue', {
   "error.loadWallpaper": "載入桌布",
   "error.loadActions": "載入動作",
   "error.uiLanguage": "轉介面語言",
-
   "picker.found": "搵到嘅項目",
   "picker.foundFor": "搵到：«{title}»",
   "picker.closeTitle": "閂（Esc）",
@@ -364,7 +341,9 @@ I18N.register('yue', {
   "picker.doubleClick": "撳兩下 - 開",
   "picker.list": "搵到嘅檔案同資料夾",
   "picker.openButton": "開",
-  "picker.count": { "other": "{count} 個選項" },
+  "picker.count": {
+    "other": "{count} 個選項"
+  },
   "picker.frequent": "成日開嘅",
   "picker.all": "全部配對",
   "picker.searchLabel": "搜尋電腦",
@@ -408,4 +387,4 @@ I18N.register('yue', {
   "settings.mascot_position.pinned": "已固定：八爪魚一定喺呢個位置出現。",
   "settings.mascot_position.corner": "螢幕右下角。",
   "settings.mascot_position.unavailable": "吉祥物已經關咗：請先揀幾時顯示佢。"
-});
+}

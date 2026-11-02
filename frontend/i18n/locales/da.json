@@ -1,20 +1,15 @@
-// Dansk (Danish) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('da', {
+{
   "app.pickerTitle": "Reever - fundet",
-
   "win.minimize": "Minimer",
   "win.toTray": "Minimer til meddelelsesområdet",
   "win.shade": "Kompakt tilstand",
   "win.expand": "Helt vindue",
   "orb.toggle": "Mikrofon til / fra",
-
   "nav.sections": "Sektioner",
   "nav.home": "Hjem",
   "nav.actions": "Handlinger",
   "nav.settings": "Indstillinger",
   "nav.log": "Log",
-
   "mic.idle": "Venter…",
   "mic.listening": "Lytter…",
   "mic.busy": "Behandler…",
@@ -23,7 +18,6 @@ I18N.register('da', {
   "mic.error": "Fejl",
   "mic.pause": "Pause",
   "mic.resume": "Fortsæt",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktivering",
   "tile.hotkey": "Genvejstast",
@@ -31,7 +25,6 @@ I18N.register('da', {
   "tile.asr": "Genkendelse",
   "tile.model": "Model",
   "tile.actions": "Handlinger",
-
   "pill.checking": "kontrollerer…",
   "pill.waiting": "venter…",
   "pill.paused": "på pause",
@@ -43,13 +36,10 @@ I18N.register('da', {
   "pill.indexReady": "klar",
   "pill.indexing": "indekserer…",
   "pill.unchecked": "ikke kontrolleret",
-
   "mode.both": "Ord og genvejstast",
   "mode.wake": "Vækkeord",
   "mode.hotkey": "Genvejstast",
-
   "home.hint": "Sig «{wake}» og vent på signalet, eller sig det hele på én gang: «{wake}, {open} …».",
-
   "grammar.heading": "Hvad du kan sige",
   "grammar.edit": "Rediger",
   "grammar.closeEditor": "Luk editoren",
@@ -84,7 +74,6 @@ I18N.register('da', {
   "grammar.stopLegend": "Stop diktering",
   "grammar.stopHint": "Hele sætningen eller i slutningen af et stykke: «stop typing». Midt i teksten forbliver den tekst.",
   "grammar.reset": "Nulstil til standard",
-
   "kind.launch": "Start",
   "kind.folder": "Mapper",
   "kind.search": "Søgning",
@@ -96,7 +85,6 @@ I18N.register('da', {
   "kind.find": "Find",
   "kind.find_folder": "Find mappe",
   "kind.find_file": "Find fil",
-
   "intent.launch": "åbn et program eller et link",
   "intent.folder": "åbn en mappe på computeren",
   "intent.web_google": "søg på Google",
@@ -111,7 +99,6 @@ I18N.register('da', {
   "intent.chat_gpt": "spørg ChatGPT (chat i browseren)",
   "intent.chat_claude": "spørg Claude (chat i browseren)",
   "intent.chat_gemini": "spørg Gemini (chat i browseren)",
-
   "example.launch": "{label} · sig bare programmets navn",
   "example.close": "luk et åbent program",
   "example.kill": "som ”Afslut job” i Jobliste",
@@ -125,8 +112,6 @@ I18N.register('da', {
   "example.command": "Kommando",
   "example.shutdown": "system, med bekræftelse",
   "example.cancel": "annuller kommandoen",
-
-
   "validation.wake": "Tilføj mindst ét vækkeord.",
   "validation.id": "En hensigt skal have et id.",
   "validation.duplicateId": "Id'et «{id}» gentages.",
@@ -135,14 +120,16 @@ I18N.register('da', {
   "validation.needPhrase": "Tilføj mindst én sætning til «{name}».",
   "validation.emptyPhrase": "En tom sætning er kun tilladt til at starte programmer («{name}»).",
   "validation.duplicatePhrase": "Sætningen «{phrase}» bruges allerede i «{other}».",
-
   "actions.search": "Søg i handlinger…",
   "actions.newTitle": "Ny handling",
   "actions.create": "Opret",
   "actions.empty": "Tomt. Opret en handling.",
   "actions.pick": "Vælg en handling til venstre<br />eller opret en ny",
   "actions.unnamed": "(unavngivet)",
-  "actions.phraseCount": { "one": "{count} sætning", "other": "{count} sætninger" },
+  "actions.phraseCount": {
+    "one": "{count} sætning",
+    "other": "{count} sætninger"
+  },
   "actions.confirmDiscard": "Handlingen har ændringer, der ikke er gemt. Vil du kassere dem?",
   "actions.namePlaceholder": "Navn",
   "actions.target": "Mål - filsti, link, protokol eller AUMID",
@@ -154,26 +141,22 @@ I18N.register('da', {
   "actions.calibrate": "Kalibrer",
   "actions.needName": "Indtast et navn",
   "actions.confirmDelete": "Slet handlingen?",
-
   "filter.all": "Alle",
   "filter.apps": "Apps",
   "filter.folder": "Mapper",
   "filter.web": "Web",
   "filter.system": "System",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "Windows-app",
   "actionKind.folder": "mappe",
   "actionKind.system": "system",
   "actionKind.search": "websøgning {q}",
-
   "calibration.title": "Kalibrering",
   "calibration.heading": "Kalibrering «{label}»",
   "calibration.hint": "Sig sætningen igen og igen, som du siger den. Hver gang tæller - jo flere, jo mere præcist.",
   "calibration.count": "optagne sætninger: {count}",
   "calibration.last": "seneste: «{phrase}»",
-
   "appPicker.title": "Vælg en app",
   "appPicker.search": "Søg efter apps…",
   "actions.scan": "Scan",
@@ -202,7 +185,6 @@ I18N.register('da', {
   "scan.mark.recent": "for nylig",
   "scan.usage": "I fokus {minutes} min · sidst startet {date}",
   "scan.usage.noDate": "I fokus {minutes} min",
-
   "common.add": "Tilføj",
   "common.save": "Gem",
   "common.delete": "Slet",
@@ -214,7 +196,6 @@ I18N.register('da', {
   "common.nothingFound": "Intet fundet",
   "common.on": "til",
   "common.off": "fra",
-
   "settings.grammarLinkPrefix": "Vækkeordet og sætningerne findes på Hjem, ",
   "settings.grammarLink": "”Hvad du kan sige” → Rediger",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('da', {
   "settings.indexState.off": "fra",
   "settings.indexState.scanning": "scanner",
   "settings.indexState.ready": "klar",
-
   "hotkey.none": "ikke angivet",
   "hotkey.press": "tryk på en kombination… (Esc - annuller)",
   "hotkey.needModifier": "en ændringstast er nødvendig (Ctrl/Alt/Shift)",
   "hotkey.applied": "genvejstast anvendt: {combo}",
   "hotkey.error": "genvejstast: {error}",
-
   "error.prefix": "Fejl - {context}: {message}",
   "error.window": "hente vinduet",
   "error.subscribe": "abonnere på {event}",
@@ -352,7 +331,6 @@ I18N.register('da', {
   "error.loadWallpaper": "indlæse baggrunden",
   "error.loadActions": "indlæse handlinger",
   "error.uiLanguage": "skifte brugerfladesprog",
-
   "picker.found": "Fundet",
   "picker.foundFor": "Fundet: «{title}»",
   "picker.closeTitle": "Luk (Esc)",
@@ -364,7 +342,10 @@ I18N.register('da', {
   "picker.doubleClick": "dobbeltklik - åbn",
   "picker.list": "Fundne filer og mapper",
   "picker.openButton": "Åbn",
-  "picker.count": { "one": "{count} mulighed", "other": "{count} muligheder" },
+  "picker.count": {
+    "one": "{count} mulighed",
+    "other": "{count} muligheder"
+  },
   "picker.frequent": "Ofte åbnede",
   "picker.all": "Alle match",
   "picker.searchLabel": "Søg på computeren",
@@ -408,4 +389,4 @@ I18N.register('da', {
   "settings.mascot_position.pinned": "Fastgjort: blæksprutten dukker altid op her.",
   "settings.mascot_position.corner": "Skærmens nederste højre hjørne.",
   "settings.mascot_position.unavailable": "Maskotten er slået fra: vælg først, hvornår den skal vises."
-});
+}

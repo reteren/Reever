@@ -1,19 +1,15 @@
-// Español. Las frases entre «» son comandos de voz y se mantienen en ruso.
-I18N.register('es', {
+{
   "app.pickerTitle": "Reever - encontrado",
-
   "win.minimize": "Minimizar",
   "win.toTray": "Minimizar en la bandeja",
   "win.shade": "Modo compacto",
   "win.expand": "Ventana completa",
   "orb.toggle": "Activar / desactivar micrófono",
-
   "nav.sections": "Secciones",
   "nav.home": "Inicio",
   "nav.actions": "Acciones",
   "nav.settings": "Configuración",
   "nav.log": "Registro",
-
   "mic.idle": "En espera…",
   "mic.listening": "Escuchando…",
   "mic.busy": "Procesando…",
@@ -22,7 +18,6 @@ I18N.register('es', {
   "mic.error": "Error",
   "mic.pause": "Pausar",
   "mic.resume": "Reanudar",
-
   "tile.mic": "Micrófono",
   "tile.activation": "Activación",
   "tile.hotkey": "Atajo de teclado",
@@ -30,7 +25,6 @@ I18N.register('es', {
   "tile.asr": "Reconocimiento",
   "tile.model": "Modelo",
   "tile.actions": "Acciones",
-
   "pill.checking": "comprobando…",
   "pill.waiting": "en espera…",
   "pill.paused": "en pausa",
@@ -42,13 +36,10 @@ I18N.register('es', {
   "pill.indexReady": "listo",
   "pill.indexing": "indexando…",
   "pill.unchecked": "sin comprobar",
-
   "mode.both": "Palabra y atajo",
   "mode.wake": "Palabra de activación",
   "mode.hotkey": "Atajo de teclado",
-
   "home.hint": "Di «{wake}» y espera la señal, o dilo todo de una vez: «{wake}, {open} …».",
-
   "grammar.heading": "Qué puedes decir",
   "grammar.edit": "Editar",
   "grammar.closeEditor": "Cerrar el editor",
@@ -83,7 +74,6 @@ I18N.register('es', {
   "grammar.stopLegend": "Detener el dictado",
   "grammar.stopHint": "La frase completa o al final de un bloque: «stop typing». Si aparece en medio del texto, se queda como texto.",
   "grammar.reset": "Restablecer valores predeterminados",
-
   "kind.launch": "Abrir",
   "kind.folder": "Carpetas",
   "kind.search": "Buscar",
@@ -95,7 +85,6 @@ I18N.register('es', {
   "kind.find": "Buscar",
   "kind.find_folder": "Buscar carpeta",
   "kind.find_file": "Buscar archivo",
-
   "intent.launch": "abrir un programa o un enlace",
   "intent.folder": "abrir una carpeta del equipo",
   "intent.web_google": "buscar en Google",
@@ -110,7 +99,6 @@ I18N.register('es', {
   "intent.chat_gpt": "preguntar a ChatGPT (chat en el navegador)",
   "intent.chat_claude": "preguntar a Claude (chat en el navegador)",
   "intent.chat_gemini": "preguntar a Gemini (chat en el navegador)",
-
   "example.launch": "{label} · di solo el nombre del programa",
   "example.close": "cerrar un programa abierto",
   "example.kill": "como “Finalizar tarea” en el Administrador de tareas",
@@ -124,8 +112,6 @@ I18N.register('es', {
   "example.command": "Comando",
   "example.shutdown": "del sistema, con confirmación",
   "example.cancel": "cancelar el comando",
-
-
   "validation.wake": "Añade al menos una palabra de activación.",
   "validation.id": "La intención debe tener un id.",
   "validation.duplicateId": "El id “{id}” está repetido.",
@@ -134,14 +120,16 @@ I18N.register('es', {
   "validation.needPhrase": "Añade al menos una frase para “{name}”.",
   "validation.emptyPhrase": "Solo se permite una frase vacía para abrir programas (“{name}”).",
   "validation.duplicatePhrase": "La frase «{phrase}» ya se usa en “{other}”.",
-
   "actions.search": "Buscar acciones…",
   "actions.newTitle": "Nueva acción",
   "actions.create": "Crear",
   "actions.empty": "Está vacío. Crea una acción.",
   "actions.pick": "Elige una acción a la izquierda<br />o crea una nueva",
   "actions.unnamed": "(sin nombre)",
-  "actions.phraseCount": { "one": "{count} frase", "other": "{count} frases" },
+  "actions.phraseCount": {
+    "one": "{count} frase",
+    "other": "{count} frases"
+  },
   "actions.confirmDiscard": "La acción tiene cambios sin guardar. ¿Descartarlos?",
   "actions.namePlaceholder": "Nombre",
   "actions.target": "Destino: ruta de archivo, enlace, protocolo o AUMID",
@@ -153,26 +141,22 @@ I18N.register('es', {
   "actions.calibrate": "Calibrar",
   "actions.needName": "Escribe un nombre",
   "actions.confirmDelete": "¿Eliminar la acción?",
-
   "filter.all": "Todo",
   "filter.apps": "Aplicaciones",
   "filter.folder": "Carpetas",
   "filter.web": "Web",
   "filter.system": "Sistema",
-
   "actionKind.shell": "programa/exe",
   "actionKind.url": "enlace/URL",
   "actionKind.uwp": "aplicación de Windows",
   "actionKind.folder": "carpeta",
   "actionKind.system": "sistema",
   "actionKind.search": "búsqueda web {q}",
-
   "calibration.title": "Calibración",
   "calibration.heading": "Calibración: “{label}”",
   "calibration.hint": "Repite la frase tal como la dices. Cada repetición cuenta; cuantas más hagas, más precisa será.",
   "calibration.count": "frases capturadas: {count}",
   "calibration.last": "última: «{phrase}»",
-
   "appPicker.title": "Elegir una aplicación",
   "appPicker.search": "Buscar aplicaciones…",
   "actions.scan": "Escanear",
@@ -201,7 +185,6 @@ I18N.register('es', {
   "scan.mark.recent": "reciente",
   "scan.usage": "En primer plano {minutes} min · último inicio {date}",
   "scan.usage.noDate": "En primer plano {minutes} min",
-
   "common.add": "Añadir",
   "common.save": "Guardar",
   "common.delete": "Eliminar",
@@ -213,7 +196,6 @@ I18N.register('es', {
   "common.nothingFound": "No se encontró nada",
   "common.on": "activado",
   "common.off": "desactivado",
-
   "settings.grammarLinkPrefix": "La palabra de activación y las frases están en Inicio, ",
   "settings.grammarLink": "“Qué puedes decir” → Editar",
   "settings.grammarLinkSuffix": ".",
@@ -318,13 +300,11 @@ I18N.register('es', {
   "settings.indexState.off": "desactivado",
   "settings.indexState.scanning": "analizando",
   "settings.indexState.ready": "listo",
-
   "hotkey.none": "sin asignar",
   "hotkey.press": "pulsa una combinación… (Esc: cancelar)",
   "hotkey.needModifier": "se necesita una tecla modificadora (Ctrl/Alt/Shift)",
   "hotkey.applied": "atajo aplicado: {combo}",
   "hotkey.error": "atajo: {error}",
-
   "error.prefix": "Error - {context}: {message}",
   "error.window": "al obtener la ventana",
   "error.subscribe": "al suscribirse a {event}",
@@ -351,7 +331,6 @@ I18N.register('es', {
   "error.loadWallpaper": "al cargar el fondo de pantalla",
   "error.loadActions": "al cargar las acciones",
   "error.uiLanguage": "al cambiar el idioma de la interfaz",
-
   "picker.found": "Resultados",
   "picker.foundFor": "Resultados para: “{title}”",
   "picker.closeTitle": "Cerrar (Esc)",
@@ -363,7 +342,10 @@ I18N.register('es', {
   "picker.doubleClick": "doble clic: abrir",
   "picker.list": "Archivos y carpetas encontrados",
   "picker.openButton": "Abrir",
-  "picker.count": { "one": "{count} opción", "other": "{count} opciones" },
+  "picker.count": {
+    "one": "{count} opción",
+    "other": "{count} opciones"
+  },
   "picker.frequent": "Abiertos con frecuencia",
   "picker.all": "Todas las coincidencias",
   "picker.searchLabel": "Buscar en el equipo",
@@ -407,4 +389,4 @@ I18N.register('es', {
   "settings.mascot_position.pinned": "Fijado: el pulpo siempre aparece en este lugar.",
   "settings.mascot_position.corner": "Esquina inferior derecha de la pantalla.",
   "settings.mascot_position.unavailable": "La mascota está desactivada: primero elige cuándo mostrarla."
-});
+}

@@ -1,20 +1,15 @@
-// Nederlands (Dutch) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('nl', {
+{
   "app.pickerTitle": "Reever - gevonden",
-
   "win.minimize": "Minimaliseren",
   "win.toTray": "Minimaliseren naar systeemvak",
   "win.shade": "Compacte modus",
   "win.expand": "Volledig venster",
   "orb.toggle": "Microfoon aan / uit",
-
   "nav.sections": "Secties",
   "nav.home": "Start",
   "nav.actions": "Acties",
   "nav.settings": "Instellingen",
   "nav.log": "Logboek",
-
   "mic.idle": "Wachten…",
   "mic.listening": "Luisteren…",
   "mic.busy": "Verwerken…",
@@ -23,7 +18,6 @@ I18N.register('nl', {
   "mic.error": "Fout",
   "mic.pause": "Pauzeren",
   "mic.resume": "Hervatten",
-
   "tile.mic": "Microfoon",
   "tile.activation": "Activering",
   "tile.hotkey": "Sneltoets",
@@ -31,7 +25,6 @@ I18N.register('nl', {
   "tile.asr": "Herkenning",
   "tile.model": "Model",
   "tile.actions": "Acties",
-
   "pill.checking": "controleren…",
   "pill.waiting": "wachten…",
   "pill.paused": "gepauzeerd",
@@ -43,13 +36,10 @@ I18N.register('nl', {
   "pill.indexReady": "gereed",
   "pill.indexing": "indexeren…",
   "pill.unchecked": "niet gecontroleerd",
-
   "mode.both": "Woord en sneltoets",
   "mode.wake": "Activeringswoord",
   "mode.hotkey": "Sneltoets",
-
   "home.hint": "Zeg «{wake}» en wacht op het signaal, of zeg alles in één keer: «{wake}, {open} …».",
-
   "grammar.heading": "Wat je kunt zeggen",
   "grammar.edit": "Bewerken",
   "grammar.closeEditor": "Editor sluiten",
@@ -84,7 +74,6 @@ I18N.register('nl', {
   "grammar.stopLegend": "Dicteren stoppen",
   "grammar.stopHint": "De hele zin of aan het eind van een stuk: «stop typing». Midden in de tekst blijft het tekst.",
   "grammar.reset": "Standaard herstellen",
-
   "kind.launch": "Starten",
   "kind.folder": "Mappen",
   "kind.search": "Zoeken",
@@ -96,7 +85,6 @@ I18N.register('nl', {
   "kind.find": "Zoeken",
   "kind.find_folder": "Map zoeken",
   "kind.find_file": "Bestand zoeken",
-
   "intent.launch": "een programma of link openen",
   "intent.folder": "een map op de computer openen",
   "intent.web_google": "zoeken op Google",
@@ -111,7 +99,6 @@ I18N.register('nl', {
   "intent.chat_gpt": "ChatGPT vragen (chat in de browser)",
   "intent.chat_claude": "Claude vragen (chat in de browser)",
   "intent.chat_gemini": "Gemini vragen (chat in de browser)",
-
   "example.launch": "{label} · noem gewoon het programma",
   "example.close": "een geopend programma sluiten",
   "example.kill": "zoals „Taak beëindigen” in Taakbeheer",
@@ -125,8 +112,6 @@ I18N.register('nl', {
   "example.command": "Opdracht",
   "example.shutdown": "systeem, met bevestiging",
   "example.cancel": "de opdracht annuleren",
-
-
   "validation.wake": "Voeg minstens één activeringswoord toe.",
   "validation.id": "Een intentie moet een id hebben.",
   "validation.duplicateId": "De id «{id}» komt dubbel voor.",
@@ -135,14 +120,16 @@ I18N.register('nl', {
   "validation.needPhrase": "Voeg minstens één zin toe voor «{name}».",
   "validation.emptyPhrase": "Een lege zin mag alleen voor het starten van programma's («{name}»).",
   "validation.duplicatePhrase": "De zin «{phrase}» wordt al gebruikt in «{other}».",
-
   "actions.search": "Acties zoeken…",
   "actions.newTitle": "Nieuwe actie",
   "actions.create": "Maken",
   "actions.empty": "Leeg. Maak een actie.",
   "actions.pick": "Kies links een actie<br />of maak een nieuwe",
   "actions.unnamed": "(naamloos)",
-  "actions.phraseCount": { "one": "{count} zin", "other": "{count} zinnen" },
+  "actions.phraseCount": {
+    "one": "{count} zin",
+    "other": "{count} zinnen"
+  },
   "actions.confirmDiscard": "De actie heeft niet-opgeslagen wijzigingen. Verwerpen?",
   "actions.namePlaceholder": "Naam",
   "actions.target": "Doel - bestandspad, link, protocol of AUMID",
@@ -154,26 +141,22 @@ I18N.register('nl', {
   "actions.calibrate": "Kalibreren",
   "actions.needName": "Voer een naam in",
   "actions.confirmDelete": "De actie verwijderen?",
-
   "filter.all": "Alles",
   "filter.apps": "Apps",
   "filter.folder": "Mappen",
   "filter.web": "Web",
   "filter.system": "Systeem",
-
   "actionKind.shell": "programma/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "Windows-app",
   "actionKind.folder": "map",
   "actionKind.system": "systeem",
   "actionKind.search": "webzoekopdracht {q}",
-
   "calibration.title": "Kalibratie",
   "calibration.heading": "Kalibratie «{label}»",
   "calibration.hint": "Zeg de zin steeds opnieuw, zoals je hem zegt. Elke keer telt - hoe vaker, hoe nauwkeuriger.",
   "calibration.count": "vastgelegde zinnen: {count}",
   "calibration.last": "laatste: «{phrase}»",
-
   "appPicker.title": "Een app kiezen",
   "appPicker.search": "Apps zoeken…",
   "actions.scan": "Scannen",
@@ -202,7 +185,6 @@ I18N.register('nl', {
   "scan.mark.recent": "recent",
   "scan.usage": "Op de voorgrond {minutes} min · laatst gestart {date}",
   "scan.usage.noDate": "Op de voorgrond {minutes} min",
-
   "common.add": "Toevoegen",
   "common.save": "Opslaan",
   "common.delete": "Verwijderen",
@@ -214,7 +196,6 @@ I18N.register('nl', {
   "common.nothingFound": "Niets gevonden",
   "common.on": "aan",
   "common.off": "uit",
-
   "settings.grammarLinkPrefix": "Het activeringswoord en de zinnen staan op Start, ",
   "settings.grammarLink": "„Wat je kunt zeggen” → Bewerken",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('nl', {
   "settings.indexState.off": "uit",
   "settings.indexState.scanning": "scannen",
   "settings.indexState.ready": "gereed",
-
   "hotkey.none": "niet ingesteld",
   "hotkey.press": "druk op een combinatie… (Esc - annuleren)",
   "hotkey.needModifier": "een wijzigingstoets is nodig (Ctrl/Alt/Shift)",
   "hotkey.applied": "sneltoets toegepast: {combo}",
   "hotkey.error": "sneltoets: {error}",
-
   "error.prefix": "Fout - {context}: {message}",
   "error.window": "het venster ophalen",
   "error.subscribe": "abonneren op {event}",
@@ -352,7 +331,6 @@ I18N.register('nl', {
   "error.loadWallpaper": "de achtergrond laden",
   "error.loadActions": "acties laden",
   "error.uiLanguage": "de interfacetaal wijzigen",
-
   "picker.found": "Gevonden",
   "picker.foundFor": "Gevonden: «{title}»",
   "picker.closeTitle": "Sluiten (Esc)",
@@ -364,7 +342,10 @@ I18N.register('nl', {
   "picker.doubleClick": "dubbelklik - openen",
   "picker.list": "Gevonden bestanden en mappen",
   "picker.openButton": "Openen",
-  "picker.count": { "one": "{count} optie", "other": "{count} opties" },
+  "picker.count": {
+    "one": "{count} optie",
+    "other": "{count} opties"
+  },
   "picker.frequent": "Vaak geopend",
   "picker.all": "Alle overeenkomsten",
   "picker.searchLabel": "Zoeken op de computer",
@@ -408,4 +389,4 @@ I18N.register('nl', {
   "settings.mascot_position.pinned": "Vastgezet: de octopus verschijnt altijd op deze plek.",
   "settings.mascot_position.corner": "Rechteronderhoek van het scherm.",
   "settings.mascot_position.unavailable": "De mascotte staat uit: kies eerst wanneer hij moet verschijnen."
-});
+}

@@ -1,20 +1,15 @@
-// Polski (Polish) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('pl', {
+{
   "app.pickerTitle": "Reever - znaleziono",
-
   "win.minimize": "Minimalizuj",
   "win.toTray": "Minimalizuj do zasobnika",
   "win.shade": "Tryb kompaktowy",
   "win.expand": "Pełne okno",
   "orb.toggle": "Mikrofon wł. / wył.",
-
   "nav.sections": "Sekcje",
   "nav.home": "Start",
   "nav.actions": "Akcje",
   "nav.settings": "Ustawienia",
   "nav.log": "Dziennik",
-
   "mic.idle": "Oczekiwanie…",
   "mic.listening": "Słucham…",
   "mic.busy": "Przetwarzanie…",
@@ -23,7 +18,6 @@ I18N.register('pl', {
   "mic.error": "Błąd",
   "mic.pause": "Wstrzymaj",
   "mic.resume": "Wznów",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktywacja",
   "tile.hotkey": "Skrót",
@@ -31,7 +25,6 @@ I18N.register('pl', {
   "tile.asr": "Rozpoznawanie",
   "tile.model": "Model",
   "tile.actions": "Akcje",
-
   "pill.checking": "sprawdzanie…",
   "pill.waiting": "oczekiwanie…",
   "pill.paused": "wstrzymano",
@@ -43,13 +36,10 @@ I18N.register('pl', {
   "pill.indexReady": "gotowy",
   "pill.indexing": "indeksowanie…",
   "pill.unchecked": "niesprawdzone",
-
   "mode.both": "Słowo i skrót",
   "mode.wake": "Słowo aktywacji",
   "mode.hotkey": "Skrót",
-
   "home.hint": "Powiedz «{wake}» i poczekaj na sygnał albo powiedz wszystko naraz: «{wake}, {open} …».",
-
   "grammar.heading": "Co można powiedzieć",
   "grammar.edit": "Edytuj",
   "grammar.closeEditor": "Zamknij edytor",
@@ -84,7 +74,6 @@ I18N.register('pl', {
   "grammar.stopLegend": "Koniec dyktowania",
   "grammar.stopHint": "Cała fraza albo na końcu fragmentu: «stop typing». W środku tekstu pozostaje tekstem.",
   "grammar.reset": "Przywróć domyślne",
-
   "kind.launch": "Uruchamianie",
   "kind.folder": "Foldery",
   "kind.search": "Wyszukiwanie",
@@ -96,7 +85,6 @@ I18N.register('pl', {
   "kind.find": "Znajdź",
   "kind.find_folder": "Znajdź folder",
   "kind.find_file": "Znajdź plik",
-
   "intent.launch": "otwórz program lub link",
   "intent.folder": "otwórz folder na komputerze",
   "intent.web_google": "szukaj w Google",
@@ -111,7 +99,6 @@ I18N.register('pl', {
   "intent.chat_gpt": "zapytaj ChatGPT (czat w przeglądarce)",
   "intent.chat_claude": "zapytaj Claude (czat w przeglądarce)",
   "intent.chat_gemini": "zapytaj Gemini (czat w przeglądarce)",
-
   "example.launch": "{label} · po prostu nazwij program",
   "example.close": "zamknij otwarty program",
   "example.kill": "jak „Zakończ zadanie” w Menedżerze zadań",
@@ -125,8 +112,6 @@ I18N.register('pl', {
   "example.command": "Polecenie",
   "example.shutdown": "system, z potwierdzeniem",
   "example.cancel": "anuluj polecenie",
-
-
   "validation.wake": "Dodaj co najmniej jedno słowo aktywacji.",
   "validation.id": "Intencja musi mieć id.",
   "validation.duplicateId": "Id «{id}» się powtarza.",
@@ -135,14 +120,18 @@ I18N.register('pl', {
   "validation.needPhrase": "Dodaj co najmniej jedną frazę dla «{name}».",
   "validation.emptyPhrase": "Pusta fraza jest dozwolona tylko do uruchamiania programów («{name}»).",
   "validation.duplicatePhrase": "Fraza «{phrase}» jest już używana w «{other}».",
-
   "actions.search": "Szukaj akcji…",
   "actions.newTitle": "Nowa akcja",
   "actions.create": "Utwórz",
   "actions.empty": "Pusto. Utwórz akcję.",
   "actions.pick": "Wybierz akcję po lewej<br />lub utwórz nową",
   "actions.unnamed": "(bez nazwy)",
-  "actions.phraseCount": { "one": "{count} fraza", "few": "{count} frazy", "many": "{count} fraz", "other": "{count} frazy" },
+  "actions.phraseCount": {
+    "one": "{count} fraza",
+    "few": "{count} frazy",
+    "many": "{count} fraz",
+    "other": "{count} frazy"
+  },
   "actions.confirmDiscard": "Akcja ma niezapisane zmiany. Odrzucić je?",
   "actions.namePlaceholder": "Nazwa",
   "actions.target": "Cel - ścieżka pliku, link, protokół lub AUMID",
@@ -154,26 +143,22 @@ I18N.register('pl', {
   "actions.calibrate": "Kalibruj",
   "actions.needName": "Wpisz nazwę",
   "actions.confirmDelete": "Usunąć akcję?",
-
   "filter.all": "Wszystko",
   "filter.apps": "Programy",
   "filter.folder": "Foldery",
   "filter.web": "Sieć",
   "filter.system": "System",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "aplikacja Windows",
   "actionKind.folder": "folder",
   "actionKind.system": "system",
   "actionKind.search": "wyszukiwanie w sieci {q}",
-
   "calibration.title": "Kalibracja",
   "calibration.heading": "Kalibracja «{label}»",
   "calibration.hint": "Powtarzaj frazę raz za razem, tak jak ją mówisz. Każda się liczy - im więcej, tym dokładniej.",
   "calibration.count": "zapisane frazy: {count}",
   "calibration.last": "ostatnia: «{phrase}»",
-
   "appPicker.title": "Wybierz aplikację",
   "appPicker.search": "Szukaj aplikacji…",
   "actions.scan": "Skanuj",
@@ -202,7 +187,6 @@ I18N.register('pl', {
   "scan.mark.recent": "niedawno",
   "scan.usage": "Na pierwszym planie {minutes} min · ostatnie uruchomienie {date}",
   "scan.usage.noDate": "Na pierwszym planie {minutes} min",
-
   "common.add": "Dodaj",
   "common.save": "Zapisz",
   "common.delete": "Usuń",
@@ -214,7 +198,6 @@ I18N.register('pl', {
   "common.nothingFound": "Nic nie znaleziono",
   "common.on": "wł.",
   "common.off": "wył.",
-
   "settings.grammarLinkPrefix": "Słowo aktywacji i frazy są na stronie Start, ",
   "settings.grammarLink": "„Co można powiedzieć” → Edytuj",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +302,11 @@ I18N.register('pl', {
   "settings.indexState.off": "wyłączony",
   "settings.indexState.scanning": "skanowanie",
   "settings.indexState.ready": "gotowy",
-
   "hotkey.none": "nie ustawiono",
   "hotkey.press": "naciśnij kombinację… (Esc - anuluj)",
   "hotkey.needModifier": "potrzebny modyfikator (Ctrl/Alt/Shift)",
   "hotkey.applied": "skrót zastosowany: {combo}",
   "hotkey.error": "skrót: {error}",
-
   "error.prefix": "Błąd - {context}: {message}",
   "error.window": "pobieranie okna",
   "error.subscribe": "subskrypcja {event}",
@@ -352,7 +333,6 @@ I18N.register('pl', {
   "error.loadWallpaper": "ładowanie tapety",
   "error.loadActions": "ładowanie akcji",
   "error.uiLanguage": "zmiana języka interfejsu",
-
   "picker.found": "Znaleziono",
   "picker.foundFor": "Znaleziono: «{title}»",
   "picker.closeTitle": "Zamknij (Esc)",
@@ -364,7 +344,12 @@ I18N.register('pl', {
   "picker.doubleClick": "dwuklik - otwórz",
   "picker.list": "Znalezione pliki i foldery",
   "picker.openButton": "Otwórz",
-  "picker.count": { "one": "{count} opcja", "few": "{count} opcje", "many": "{count} opcji", "other": "{count} opcji" },
+  "picker.count": {
+    "one": "{count} opcja",
+    "few": "{count} opcje",
+    "many": "{count} opcji",
+    "other": "{count} opcji"
+  },
   "picker.frequent": "Często otwierane",
   "picker.all": "Wszystkie dopasowania",
   "picker.searchLabel": "Szukaj w komputerze",
@@ -408,4 +393,4 @@ I18N.register('pl', {
   "settings.mascot_position.pinned": "Przypięto: ośmiornica zawsze pojawia się w tym miejscu.",
   "settings.mascot_position.corner": "Prawy dolny róg ekranu.",
   "settings.mascot_position.unavailable": "Maskotka jest wyłączona: najpierw wybierz, kiedy ma się pokazywać."
-});
+}

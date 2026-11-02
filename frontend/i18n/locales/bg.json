@@ -1,20 +1,15 @@
-// Български (Bulgarian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('bg', {
+{
   "app.pickerTitle": "Reever - намерено",
-
   "win.minimize": "Минимизиране",
   "win.toTray": "Минимизиране в системната лента",
   "win.shade": "Компактен режим",
   "win.expand": "Цял прозорец",
   "orb.toggle": "Микрофон вкл. / изкл.",
-
   "nav.sections": "Раздели",
   "nav.home": "Начало",
   "nav.actions": "Действия",
   "nav.settings": "Настройки",
   "nav.log": "Дневник",
-
   "mic.idle": "Изчакване…",
   "mic.listening": "Слушам…",
   "mic.busy": "Обработка…",
@@ -23,7 +18,6 @@ I18N.register('bg', {
   "mic.error": "Грешка",
   "mic.pause": "Пауза",
   "mic.resume": "Продължи",
-
   "tile.mic": "Микрофон",
   "tile.activation": "Активиране",
   "tile.hotkey": "Клавишна комбинация",
@@ -31,7 +25,6 @@ I18N.register('bg', {
   "tile.asr": "Разпознаване",
   "tile.model": "Модел",
   "tile.actions": "Действия",
-
   "pill.checking": "проверка…",
   "pill.waiting": "изчакване…",
   "pill.paused": "пауза",
@@ -43,13 +36,10 @@ I18N.register('bg', {
   "pill.indexReady": "готов",
   "pill.indexing": "индексиране…",
   "pill.unchecked": "непроверено",
-
   "mode.both": "Дума и клавиш",
   "mode.wake": "Дума за активиране",
   "mode.hotkey": "Клавишна комбинация",
-
   "home.hint": "Кажете «{wake}» и изчакайте сигнала или кажете всичко наведнъж: «{wake}, {open} …».",
-
   "grammar.heading": "Какво може да се каже",
   "grammar.edit": "Редактиране",
   "grammar.closeEditor": "Затваряне на редактора",
@@ -84,7 +74,6 @@ I18N.register('bg', {
   "grammar.stopLegend": "Край на диктовката",
   "grammar.stopHint": "Цялата фраза или в края на откъс: «stop typing». В средата на текста остава текст.",
   "grammar.reset": "Възстановяване по подразбиране",
-
   "kind.launch": "Стартиране",
   "kind.folder": "Папки",
   "kind.search": "Търсене",
@@ -96,7 +85,6 @@ I18N.register('bg', {
   "kind.find": "Намери",
   "kind.find_folder": "Намери папка",
   "kind.find_file": "Намери файл",
-
   "intent.launch": "отвори програма или връзка",
   "intent.folder": "отвори папка на компютъра",
   "intent.web_google": "търсене в Google",
@@ -111,7 +99,6 @@ I18N.register('bg', {
   "intent.chat_gpt": "попитай ChatGPT (чат в браузъра)",
   "intent.chat_claude": "попитай Claude (чат в браузъра)",
   "intent.chat_gemini": "попитай Gemini (чат в браузъра)",
-
   "example.launch": "{label} · просто кажете името на програмата",
   "example.close": "затвори отворена програма",
   "example.kill": "като „Прекратяване на задача“ в Диспечера на задачите",
@@ -125,8 +112,6 @@ I18N.register('bg', {
   "example.command": "Команда",
   "example.shutdown": "система, с потвърждение",
   "example.cancel": "отказ от командата",
-
-
   "validation.wake": "Добавете поне една дума за активиране.",
   "validation.id": "Намерението трябва да има id.",
   "validation.duplicateId": "Id «{id}» се повтаря.",
@@ -135,14 +120,16 @@ I18N.register('bg', {
   "validation.needPhrase": "Добавете поне една фраза за «{name}».",
   "validation.emptyPhrase": "Празна фраза е разрешена само за стартиране на програми («{name}»).",
   "validation.duplicatePhrase": "Фразата «{phrase}» вече се използва в «{other}».",
-
   "actions.search": "Търсене на действия…",
   "actions.newTitle": "Ново действие",
   "actions.create": "Създаване",
   "actions.empty": "Празно. Създайте действие.",
   "actions.pick": "Изберете действие вляво<br />или създайте ново",
   "actions.unnamed": "(без име)",
-  "actions.phraseCount": { "one": "{count} фраза", "other": "{count} фрази" },
+  "actions.phraseCount": {
+    "one": "{count} фраза",
+    "other": "{count} фрази"
+  },
   "actions.confirmDiscard": "Действието има незапазени промени. Да се отхвърлят ли?",
   "actions.namePlaceholder": "Име",
   "actions.target": "Цел - път до файл, връзка, протокол или AUMID",
@@ -154,26 +141,22 @@ I18N.register('bg', {
   "actions.calibrate": "Калибриране",
   "actions.needName": "Въведете име",
   "actions.confirmDelete": "Да се изтрие ли действието?",
-
   "filter.all": "Всички",
   "filter.apps": "Програми",
   "filter.folder": "Папки",
   "filter.web": "Уеб",
   "filter.system": "Система",
-
   "actionKind.shell": "програма/exe",
   "actionKind.url": "връзка/URL",
   "actionKind.uwp": "приложение на Windows",
   "actionKind.folder": "папка",
   "actionKind.system": "система",
   "actionKind.search": "уеб търсене {q}",
-
   "calibration.title": "Калибриране",
   "calibration.heading": "Калибриране «{label}»",
   "calibration.hint": "Повтаряйте фразата отново и отново, така както я казвате. Всяка се брои - колкото повече, толкова по-точно.",
   "calibration.count": "записани фрази: {count}",
   "calibration.last": "последна: «{phrase}»",
-
   "appPicker.title": "Избор на приложение",
   "appPicker.search": "Търсене на приложения…",
   "actions.scan": "Сканирай",
@@ -202,7 +185,6 @@ I18N.register('bg', {
   "scan.mark.recent": "скоро",
   "scan.usage": "На фокус {minutes} мин · последно стартиране {date}",
   "scan.usage.noDate": "На фокус {minutes} мин",
-
   "common.add": "Добавяне",
   "common.save": "Запазване",
   "common.delete": "Изтриване",
@@ -214,7 +196,6 @@ I18N.register('bg', {
   "common.nothingFound": "Нищо не е намерено",
   "common.on": "вкл.",
   "common.off": "изкл.",
-
   "settings.grammarLinkPrefix": "Думата за активиране и фразите са на Начало, ",
   "settings.grammarLink": "„Какво може да се каже“ → Редактиране",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('bg', {
   "settings.indexState.off": "изключен",
   "settings.indexState.scanning": "сканиране",
   "settings.indexState.ready": "готов",
-
   "hotkey.none": "не е зададен",
   "hotkey.press": "натиснете комбинация… (Esc - отказ)",
   "hotkey.needModifier": "нужен е модификатор (Ctrl/Alt/Shift)",
   "hotkey.applied": "клавишът е приложен: {combo}",
   "hotkey.error": "клавиш: {error}",
-
   "error.prefix": "Грешка - {context}: {message}",
   "error.window": "получаване на прозореца",
   "error.subscribe": "абониране за {event}",
@@ -352,7 +331,6 @@ I18N.register('bg', {
   "error.loadWallpaper": "зареждане на тапета",
   "error.loadActions": "зареждане на действията",
   "error.uiLanguage": "смяна на езика на интерфейса",
-
   "picker.found": "Намерено",
   "picker.foundFor": "Намерено: «{title}»",
   "picker.closeTitle": "Затваряне (Esc)",
@@ -364,7 +342,10 @@ I18N.register('bg', {
   "picker.doubleClick": "двойно щракване - отваряне",
   "picker.list": "Намерени файлове и папки",
   "picker.openButton": "Отваряне",
-  "picker.count": { "one": "{count} вариант", "other": "{count} варианта" },
+  "picker.count": {
+    "one": "{count} вариант",
+    "other": "{count} варианта"
+  },
   "picker.frequent": "Често отваряни",
   "picker.all": "Всички съвпадения",
   "picker.searchLabel": "Търсене в компютъра",
@@ -408,4 +389,4 @@ I18N.register('bg', {
   "settings.mascot_position.pinned": "Закрепено: октоподът винаги се появява на това място.",
   "settings.mascot_position.corner": "Долният десен ъгъл на екрана.",
   "settings.mascot_position.unavailable": "Маскотът е изключен: първо избери кога да се показва."
-});
+}

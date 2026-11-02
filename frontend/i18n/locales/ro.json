@@ -1,20 +1,15 @@
-// Română (Romanian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('ro', {
+{
   "app.pickerTitle": "Reever - găsite",
-
   "win.minimize": "Minimizează",
   "win.toTray": "Minimizează în zona de notificare",
   "win.shade": "Mod compact",
   "win.expand": "Fereastră completă",
   "orb.toggle": "Microfon pornit / oprit",
-
   "nav.sections": "Secțiuni",
   "nav.home": "Acasă",
   "nav.actions": "Acțiuni",
   "nav.settings": "Setări",
   "nav.log": "Jurnal",
-
   "mic.idle": "Aștept…",
   "mic.listening": "Ascult…",
   "mic.busy": "Procesez…",
@@ -23,7 +18,6 @@ I18N.register('ro', {
   "mic.error": "Eroare",
   "mic.pause": "Pauză",
   "mic.resume": "Reia",
-
   "tile.mic": "Microfon",
   "tile.activation": "Activare",
   "tile.hotkey": "Tastă rapidă",
@@ -31,7 +25,6 @@ I18N.register('ro', {
   "tile.asr": "Recunoaștere",
   "tile.model": "Model",
   "tile.actions": "Acțiuni",
-
   "pill.checking": "se verifică…",
   "pill.waiting": "se așteaptă…",
   "pill.paused": "în pauză",
@@ -43,13 +36,10 @@ I18N.register('ro', {
   "pill.indexReady": "gata",
   "pill.indexing": "se indexează…",
   "pill.unchecked": "neverificat",
-
   "mode.both": "Cuvânt și tastă rapidă",
   "mode.wake": "Cuvânt de activare",
   "mode.hotkey": "Tastă rapidă",
-
   "home.hint": "Spune «{wake}» și așteaptă semnalul sau spune totul deodată: «{wake}, {open} …».",
-
   "grammar.heading": "Ce poți spune",
   "grammar.edit": "Editează",
   "grammar.closeEditor": "Închide editorul",
@@ -84,7 +74,6 @@ I18N.register('ro', {
   "grammar.stopLegend": "Oprirea dictării",
   "grammar.stopHint": "Toată fraza sau la finalul unui fragment: «stop typing». În mijlocul textului rămâne text.",
   "grammar.reset": "Revino la valorile implicite",
-
   "kind.launch": "Lansare",
   "kind.folder": "Foldere",
   "kind.search": "Căutare",
@@ -96,7 +85,6 @@ I18N.register('ro', {
   "kind.find": "Găsește",
   "kind.find_folder": "Găsește folder",
   "kind.find_file": "Găsește fișier",
-
   "intent.launch": "deschide un program sau un link",
   "intent.folder": "deschide un folder de pe computer",
   "intent.web_google": "caută pe Google",
@@ -111,7 +99,6 @@ I18N.register('ro', {
   "intent.chat_gpt": "întreabă ChatGPT (chat în browser)",
   "intent.chat_claude": "întreabă Claude (chat în browser)",
   "intent.chat_gemini": "întreabă Gemini (chat în browser)",
-
   "example.launch": "{label} · spune doar numele programului",
   "example.close": "închide un program deschis",
   "example.kill": "ca „Terminare activitate” în Managerul de activități",
@@ -125,8 +112,6 @@ I18N.register('ro', {
   "example.command": "Comandă",
   "example.shutdown": "sistem, cu confirmare",
   "example.cancel": "anulează comanda",
-
-
   "validation.wake": "Adaugă cel puțin un cuvânt de activare.",
   "validation.id": "O intenție trebuie să aibă un id.",
   "validation.duplicateId": "Id-ul «{id}» se repetă.",
@@ -135,14 +120,17 @@ I18N.register('ro', {
   "validation.needPhrase": "Adaugă cel puțin o frază pentru «{name}».",
   "validation.emptyPhrase": "O frază goală este permisă doar pentru lansarea programelor («{name}»).",
   "validation.duplicatePhrase": "Fraza «{phrase}» este deja folosită în «{other}».",
-
   "actions.search": "Caută acțiuni…",
   "actions.newTitle": "Acțiune nouă",
   "actions.create": "Creează",
   "actions.empty": "Gol. Creează o acțiune.",
   "actions.pick": "Alege o acțiune din stânga<br />sau creează una nouă",
   "actions.unnamed": "(fără nume)",
-  "actions.phraseCount": { "one": "{count} frază", "few": "{count} fraze", "other": "{count} de fraze" },
+  "actions.phraseCount": {
+    "one": "{count} frază",
+    "few": "{count} fraze",
+    "other": "{count} de fraze"
+  },
   "actions.confirmDiscard": "Acțiunea are modificări nesalvate. Le renunți?",
   "actions.namePlaceholder": "Nume",
   "actions.target": "Țintă - cale de fișier, link, protocol sau AUMID",
@@ -154,26 +142,22 @@ I18N.register('ro', {
   "actions.calibrate": "Calibrează",
   "actions.needName": "Introdu un nume",
   "actions.confirmDelete": "Ștergi acțiunea?",
-
   "filter.all": "Toate",
   "filter.apps": "Aplicații",
   "filter.folder": "Foldere",
   "filter.web": "Web",
   "filter.system": "Sistem",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "aplicație Windows",
   "actionKind.folder": "folder",
   "actionKind.system": "sistem",
   "actionKind.search": "căutare web {q}",
-
   "calibration.title": "Calibrare",
   "calibration.heading": "Calibrare «{label}»",
   "calibration.hint": "Repetă fraza iar și iar, așa cum o spui. Fiecare contează - cu cât mai multe, cu atât mai precis.",
   "calibration.count": "fraze înregistrate: {count}",
   "calibration.last": "ultima: «{phrase}»",
-
   "appPicker.title": "Alege o aplicație",
   "appPicker.search": "Caută aplicații…",
   "actions.scan": "Scanează",
@@ -202,7 +186,6 @@ I18N.register('ro', {
   "scan.mark.recent": "recent",
   "scan.usage": "În prim-plan {minutes} min · ultima pornire {date}",
   "scan.usage.noDate": "În prim-plan {minutes} min",
-
   "common.add": "Adaugă",
   "common.save": "Salvează",
   "common.delete": "Șterge",
@@ -214,7 +197,6 @@ I18N.register('ro', {
   "common.nothingFound": "Nu s-a găsit nimic",
   "common.on": "pornit",
   "common.off": "oprit",
-
   "settings.grammarLinkPrefix": "Cuvântul de activare și frazele sunt pe pagina Acasă, ",
   "settings.grammarLink": "„Ce poți spune” → Editează",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +301,11 @@ I18N.register('ro', {
   "settings.indexState.off": "oprit",
   "settings.indexState.scanning": "se scanează",
   "settings.indexState.ready": "gata",
-
   "hotkey.none": "nesetată",
   "hotkey.press": "apasă o combinație… (Esc - anulează)",
   "hotkey.needModifier": "e nevoie de o tastă modificatoare (Ctrl/Alt/Shift)",
   "hotkey.applied": "tastă rapidă aplicată: {combo}",
   "hotkey.error": "tastă rapidă: {error}",
-
   "error.prefix": "Eroare - {context}: {message}",
   "error.window": "obținerea ferestrei",
   "error.subscribe": "abonarea la {event}",
@@ -352,7 +332,6 @@ I18N.register('ro', {
   "error.loadWallpaper": "încărcarea imaginii de fundal",
   "error.loadActions": "încărcarea acțiunilor",
   "error.uiLanguage": "schimbarea limbii interfeței",
-
   "picker.found": "Găsite",
   "picker.foundFor": "Găsite: «{title}»",
   "picker.closeTitle": "Închide (Esc)",
@@ -364,7 +343,11 @@ I18N.register('ro', {
   "picker.doubleClick": "dublu clic - deschide",
   "picker.list": "Fișiere și foldere găsite",
   "picker.openButton": "Deschide",
-  "picker.count": { "one": "{count} opțiune", "few": "{count} opțiuni", "other": "{count} de opțiuni" },
+  "picker.count": {
+    "one": "{count} opțiune",
+    "few": "{count} opțiuni",
+    "other": "{count} de opțiuni"
+  },
   "picker.frequent": "Deschise frecvent",
   "picker.all": "Toate potrivirile",
   "picker.searchLabel": "Caută în computer",
@@ -408,4 +391,4 @@ I18N.register('ro', {
   "settings.mascot_position.pinned": "Fixat: caracatița apare mereu în acest loc.",
   "settings.mascot_position.corner": "Colțul din dreapta jos al ecranului.",
   "settings.mascot_position.unavailable": "Mascota este dezactivată: alege mai întâi când să apară."
-});
+}

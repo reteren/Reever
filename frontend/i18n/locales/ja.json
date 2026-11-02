@@ -1,19 +1,15 @@
-// 日本語。音声フレーズは Reever がロシア語音声のみ認識するため、ロシア語のまま残します。
-I18N.register('ja', {
+{
   "app.pickerTitle": "Reever - 検索結果",
-
   "win.minimize": "最小化",
   "win.toTray": "トレイに最小化",
   "win.shade": "コンパクトモード",
   "win.expand": "フルウィンドウ",
   "orb.toggle": "マイクのオン / オフ",
-
   "nav.sections": "セクション",
   "nav.home": "ホーム",
   "nav.actions": "アクション",
   "nav.settings": "設定",
   "nav.log": "ログ",
-
   "mic.idle": "待機中…",
   "mic.listening": "聴き取り中…",
   "mic.busy": "処理中…",
@@ -22,7 +18,6 @@ I18N.register('ja', {
   "mic.error": "エラー",
   "mic.pause": "一時停止",
   "mic.resume": "再開",
-
   "tile.mic": "マイク",
   "tile.activation": "起動方法",
   "tile.hotkey": "ホットキー",
@@ -30,7 +25,6 @@ I18N.register('ja', {
   "tile.asr": "音声認識",
   "tile.model": "モデル",
   "tile.actions": "アクション",
-
   "pill.checking": "確認中…",
   "pill.waiting": "待機中…",
   "pill.paused": "一時停止中",
@@ -42,13 +36,10 @@ I18N.register('ja', {
   "pill.indexReady": "準備完了",
   "pill.indexing": "インデックス作成中…",
   "pill.unchecked": "未確認",
-
   "mode.both": "起動ワードとホットキー",
   "mode.wake": "起動ワード",
   "mode.hotkey": "ホットキー",
-
   "home.hint": "«{wake}»と言って合図を待つか、«{wake}, {open} …»と続けて言います。",
-
   "grammar.heading": "音声コマンド一覧",
   "grammar.edit": "編集",
   "grammar.closeEditor": "エディターを閉じる",
@@ -83,7 +74,6 @@ I18N.register('ja', {
   "grammar.stopLegend": "音声入力を停止",
   "grammar.stopHint": "フレーズ全体を単独で言うか、音声入力の最後に言います：«stop typing»。文の途中では通常のテキストとして扱われます。",
   "grammar.reset": "既定値に戻す",
-
   "kind.launch": "起動",
   "kind.folder": "フォルダー",
   "kind.search": "検索",
@@ -95,7 +85,6 @@ I18N.register('ja', {
   "kind.find": "検索",
   "kind.find_folder": "フォルダーを検索",
   "kind.find_file": "ファイルを検索",
-
   "intent.launch": "プログラムまたはリンクを開く",
   "intent.folder": "PC内のフォルダーを開く",
   "intent.web_google": "Googleで検索",
@@ -110,7 +99,6 @@ I18N.register('ja', {
   "intent.chat_gpt": "ChatGPTに質問（ブラウザーのチャット）",
   "intent.chat_claude": "Claudeに質問（ブラウザーのチャット）",
   "intent.chat_gemini": "Geminiに質問（ブラウザーのチャット）",
-
   "example.launch": "{label} · プログラム名を言うだけ",
   "example.close": "開いているプログラムを閉じる",
   "example.kill": "タスク マネージャーの「タスクの終了」と同じ",
@@ -124,8 +112,6 @@ I18N.register('ja', {
   "example.command": "コマンド",
   "example.shutdown": "システム操作（確認あり）",
   "example.cancel": "コマンドをキャンセル",
-
-
   "validation.wake": "起動ワードを1つ以上追加してください。",
   "validation.id": "インテントには id が必要です。",
   "validation.duplicateId": "id「{id}」が重複しています。",
@@ -134,14 +120,15 @@ I18N.register('ja', {
   "validation.needPhrase": "「{name}」にフレーズを1つ以上追加してください。",
   "validation.emptyPhrase": "空のフレーズを使えるのはプログラムの起動だけです（「{name}」）。",
   "validation.duplicatePhrase": "フレーズ «{phrase}» は «{other}» ですでに使われています。",
-
   "actions.search": "アクションを検索…",
   "actions.newTitle": "新しいアクション",
   "actions.create": "作成",
   "actions.empty": "アクションがありません。作成してください。",
   "actions.pick": "左側からアクションを選ぶ<br />または新しく作成",
   "actions.unnamed": "（名前なし）",
-  "actions.phraseCount": { "other": "{count} 個のフレーズ" },
+  "actions.phraseCount": {
+    "other": "{count} 個のフレーズ"
+  },
   "actions.confirmDiscard": "アクションに未保存の変更があります。破棄しますか？",
   "actions.namePlaceholder": "名前",
   "actions.target": "Target - ファイルパス、リンク、プロトコルまたは AUMID",
@@ -153,26 +140,22 @@ I18N.register('ja', {
   "actions.calibrate": "調整",
   "actions.needName": "名前を入力してください",
   "actions.confirmDelete": "このアクションを削除しますか？",
-
   "filter.all": "すべて",
   "filter.apps": "アプリ",
   "filter.folder": "フォルダー",
   "filter.web": "ウェブ",
   "filter.system": "システム",
-
   "actionKind.shell": "プログラム/exe",
   "actionKind.url": "リンク/URL",
   "actionKind.uwp": "Windowsアプリ",
   "actionKind.folder": "フォルダー",
   "actionKind.system": "システム",
   "actionKind.search": "ウェブ検索 {q}",
-
   "calibration.title": "調整",
   "calibration.heading": "「{label}」の調整",
   "calibration.hint": "普段どおりの言い方で、フレーズを続けて話してください。回数が多いほど認識が正確になります。",
   "calibration.count": "取り込んだフレーズ：{count}",
   "calibration.last": "直近：«{phrase}»",
-
   "appPicker.title": "アプリを選択",
   "appPicker.search": "アプリを検索…",
   "actions.scan": "スキャン",
@@ -201,7 +184,6 @@ I18N.register('ja', {
   "scan.mark.recent": "最近",
   "scan.usage": "前面表示 {minutes} 分 · 最終起動 {date}",
   "scan.usage.noDate": "前面表示 {minutes} 分",
-
   "common.add": "追加",
   "common.save": "保存",
   "common.delete": "削除",
@@ -213,7 +195,6 @@ I18N.register('ja', {
   "common.nothingFound": "見つかりません",
   "common.on": "オン",
   "common.off": "オフ",
-
   "settings.grammarLinkPrefix": "起動ワードとフレーズはホームの",
   "settings.grammarLink": "「音声コマンド一覧」→ 編集",
   "settings.grammarLinkSuffix": "にあります。",
@@ -318,13 +299,11 @@ I18N.register('ja', {
   "settings.indexState.off": "オフ",
   "settings.indexState.scanning": "スキャン中",
   "settings.indexState.ready": "準備完了",
-
   "hotkey.none": "未設定",
   "hotkey.press": "キーの組み合わせを押してください…（Escでキャンセル）",
   "hotkey.needModifier": "修飾キーが必要です（Ctrl/Alt/Shift）",
   "hotkey.applied": "ホットキーを適用しました：{combo}",
   "hotkey.error": "ホットキー：{error}",
-
   "error.prefix": "エラー - {context}：{message}",
   "error.window": "ウィンドウの取得",
   "error.subscribe": "{event} の購読",
@@ -351,7 +330,6 @@ I18N.register('ja', {
   "error.loadWallpaper": "壁紙の読み込み",
   "error.loadActions": "アクションの読み込み",
   "error.uiLanguage": "インターフェイス言語の変更",
-
   "picker.found": "検索結果",
   "picker.foundFor": "検索結果：「{title}」",
   "picker.closeTitle": "閉じる（Esc）",
@@ -363,7 +341,9 @@ I18N.register('ja', {
   "picker.doubleClick": "ダブルクリックで開く",
   "picker.list": "見つかったファイルとフォルダー",
   "picker.openButton": "開く",
-  "picker.count": { "other": "{count} 件の候補" },
+  "picker.count": {
+    "other": "{count} 件の候補"
+  },
   "picker.frequent": "よく開く項目",
   "picker.all": "すべての一致項目",
   "picker.searchLabel": "コンピューターを検索",
@@ -407,4 +387,4 @@ I18N.register('ja', {
   "settings.mascot_position.pinned": "固定済み：タコはいつもこの場所に現れます。",
   "settings.mascot_position.corner": "画面の右下隅。",
   "settings.mascot_position.unavailable": "マスコットはオフです。先に表示するタイミングを選んでください。"
-});
+}

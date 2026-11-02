@@ -1,21 +1,15 @@
-// English — the reference dictionary: every other locale has exactly these keys
-// (scripts/check-i18n.mjs checks it). Text in «» is a voice phrase; phrases that
-// depend on the recognition languages come in as {placeholders} from index.html.
-I18N.register('en', {
+{
   "app.pickerTitle": "Reever - found",
-
   "win.minimize": "Minimize",
   "win.toTray": "Minimize to tray",
   "win.shade": "Compact mode",
   "win.expand": "Full window",
   "orb.toggle": "Microphone on / off",
-
   "nav.sections": "Sections",
   "nav.home": "Home",
   "nav.actions": "Actions",
   "nav.settings": "Settings",
   "nav.log": "Log",
-
   "mic.idle": "Waiting…",
   "mic.listening": "Listening…",
   "mic.busy": "Processing…",
@@ -24,7 +18,6 @@ I18N.register('en', {
   "mic.error": "Error",
   "mic.pause": "Pause",
   "mic.resume": "Resume",
-
   "tile.mic": "Microphone",
   "tile.activation": "Activation",
   "tile.hotkey": "Hotkey",
@@ -32,7 +25,6 @@ I18N.register('en', {
   "tile.asr": "Recognition",
   "tile.model": "Model",
   "tile.actions": "Actions",
-
   "pill.checking": "checking…",
   "pill.waiting": "waiting…",
   "pill.paused": "paused",
@@ -44,13 +36,10 @@ I18N.register('en', {
   "pill.indexReady": "ready",
   "pill.indexing": "indexing…",
   "pill.unchecked": "not checked",
-
   "mode.both": "Word and hotkey",
   "mode.wake": "Wake word",
   "mode.hotkey": "Hotkey",
-
   "home.hint": "Say «{wake}» and wait for the signal, or say it all at once: «{wake}, {open} …».",
-
   "grammar.heading": "What you can say",
   "grammar.edit": "Edit",
   "grammar.closeEditor": "Close editor",
@@ -85,7 +74,6 @@ I18N.register('en', {
   "grammar.stopLegend": "Stop dictation",
   "grammar.stopHint": "The whole phrase or at the end of a chunk: «stop typing». In the middle of text it stays text.",
   "grammar.reset": "Reset to defaults",
-
   "kind.launch": "Launch",
   "kind.folder": "Folders",
   "kind.search": "Search",
@@ -97,7 +85,6 @@ I18N.register('en', {
   "kind.find": "Find",
   "kind.find_folder": "Find folder",
   "kind.find_file": "Find file",
-
   "intent.launch": "open a program or link",
   "intent.folder": "open a folder on the computer",
   "intent.web_google": "search Google",
@@ -112,7 +99,6 @@ I18N.register('en', {
   "intent.chat_gpt": "ask ChatGPT (chat in the browser)",
   "intent.chat_claude": "ask Claude (chat in the browser)",
   "intent.chat_gemini": "ask Gemini (chat in the browser)",
-
   "example.launch": "{label} · just name the program",
   "example.close": "close an open program",
   "example.kill": "like “End task” in Task Manager",
@@ -126,8 +112,6 @@ I18N.register('en', {
   "example.command": "Command",
   "example.shutdown": "system, with confirmation",
   "example.cancel": "cancel the command",
-
-
   "validation.wake": "Add at least one wake word.",
   "validation.id": "An intent must have an id.",
   "validation.duplicateId": "The id «{id}» is repeated.",
@@ -136,14 +120,16 @@ I18N.register('en', {
   "validation.needPhrase": "Add at least one phrase for «{name}».",
   "validation.emptyPhrase": "An empty phrase is only allowed for launching programs («{name}»).",
   "validation.duplicatePhrase": "The phrase «{phrase}» is already used in «{other}».",
-
   "actions.search": "Search actions…",
   "actions.newTitle": "New action",
   "actions.create": "Create",
   "actions.empty": "Empty. Create an action.",
   "actions.pick": "Pick an action on the left<br />or create a new one",
   "actions.unnamed": "(unnamed)",
-  "actions.phraseCount": { "one": "{count} phrase", "other": "{count} phrases" },
+  "actions.phraseCount": {
+    "one": "{count} phrase",
+    "other": "{count} phrases"
+  },
   "actions.confirmDiscard": "The action has unsaved changes. Discard them?",
   "actions.namePlaceholder": "Name",
   "actions.target": "Target - file path, link, protocol or AUMID",
@@ -155,26 +141,22 @@ I18N.register('en', {
   "actions.calibrate": "Calibrate",
   "actions.needName": "Enter a name",
   "actions.confirmDelete": "Delete the action?",
-
   "filter.all": "All",
   "filter.apps": "Apps",
   "filter.folder": "Folders",
   "filter.web": "Web",
   "filter.system": "System",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "Windows app",
   "actionKind.folder": "folder",
   "actionKind.system": "system",
   "actionKind.search": "web search {q}",
-
   "calibration.title": "Calibration",
   "calibration.heading": "Calibration «{label}»",
   "calibration.hint": "Say the phrase again and again, the way you say it. Each one counts - the more, the more accurate.",
   "calibration.count": "phrases captured: {count}",
   "calibration.last": "last: «{phrase}»",
-
   "appPicker.title": "Choose an app",
   "appPicker.search": "Search apps…",
   "actions.scan": "Scan",
@@ -203,7 +185,6 @@ I18N.register('en', {
   "scan.mark.recent": "recent",
   "scan.usage": "In focus {minutes} min · last run {date}",
   "scan.usage.noDate": "In focus {minutes} min",
-
   "common.add": "Add",
   "common.save": "Save",
   "common.delete": "Delete",
@@ -215,7 +196,6 @@ I18N.register('en', {
   "common.nothingFound": "Nothing found",
   "common.on": "on",
   "common.off": "off",
-
   "settings.grammarLinkPrefix": "The wake word and phrases are on Home, ",
   "settings.grammarLink": "“What you can say” → Edit",
   "settings.grammarLinkSuffix": ".",
@@ -320,13 +300,11 @@ I18N.register('en', {
   "settings.indexState.off": "off",
   "settings.indexState.scanning": "scanning",
   "settings.indexState.ready": "ready",
-
   "hotkey.none": "not set",
   "hotkey.press": "press a combination… (Esc - cancel)",
   "hotkey.needModifier": "a modifier is needed (Ctrl/Alt/Shift)",
   "hotkey.applied": "hotkey applied: {combo}",
   "hotkey.error": "hotkey: {error}",
-
   "error.prefix": "Error - {context}: {message}",
   "error.window": "getting the window",
   "error.subscribe": "subscribing to {event}",
@@ -353,7 +331,6 @@ I18N.register('en', {
   "error.loadWallpaper": "loading the wallpaper",
   "error.loadActions": "loading actions",
   "error.uiLanguage": "changing the interface language",
-
   "picker.found": "Found",
   "picker.foundFor": "Found: «{title}»",
   "picker.closeTitle": "Close (Esc)",
@@ -365,7 +342,10 @@ I18N.register('en', {
   "picker.doubleClick": "double-click - open",
   "picker.list": "Found files and folders",
   "picker.openButton": "Open",
-  "picker.count": { "one": "{count} option", "other": "{count} options" },
+  "picker.count": {
+    "one": "{count} option",
+    "other": "{count} options"
+  },
   "picker.frequent": "Frequently opened",
   "picker.all": "All matches",
   "picker.searchLabel": "Search the computer",
@@ -409,4 +389,4 @@ I18N.register('en', {
   "settings.mascot_position.pinned": "Pinned: the octopus always appears at this spot.",
   "settings.mascot_position.corner": "Bottom right corner of the screen.",
   "settings.mascot_position.unavailable": "The mascot is turned off: choose when to show it first."
-});
+}

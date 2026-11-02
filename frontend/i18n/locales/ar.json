@@ -1,19 +1,15 @@
-// العربية — عبارات الأوامر الصوتية تبقى بالروسية.
-I18N.register('ar', {
+{
   "app.pickerTitle": "Reever - النتائج",
-
   "win.minimize": "تصغير",
   "win.toTray": "تصغير إلى منطقة الإعلام",
   "win.shade": "الوضع المضغوط",
   "win.expand": "النافذة الكاملة",
   "orb.toggle": "تشغيل / إيقاف الميكروفون",
-
   "nav.sections": "الأقسام",
   "nav.home": "الرئيسية",
   "nav.actions": "الإجراءات",
   "nav.settings": "الإعدادات",
   "nav.log": "السجل",
-
   "mic.idle": "في انتظارك…",
   "mic.listening": "جارٍ الاستماع…",
   "mic.busy": "جارٍ المعالجة…",
@@ -22,7 +18,6 @@ I18N.register('ar', {
   "mic.error": "خطأ",
   "mic.pause": "إيقاف مؤقت",
   "mic.resume": "استئناف",
-
   "tile.mic": "الميكروفون",
   "tile.activation": "التنشيط",
   "tile.hotkey": "مفتاح الاختصار",
@@ -30,7 +25,6 @@ I18N.register('ar', {
   "tile.asr": "التعرّف على الكلام",
   "tile.model": "النموذج",
   "tile.actions": "الإجراءات",
-
   "pill.checking": "جارٍ التحقق…",
   "pill.waiting": "في الانتظار…",
   "pill.paused": "متوقف مؤقتًا",
@@ -42,13 +36,10 @@ I18N.register('ar', {
   "pill.indexReady": "جاهز",
   "pill.indexing": "جارٍ الفهرسة…",
   "pill.unchecked": "لم يتم التحقق",
-
   "mode.both": "كلمة التنبيه ومفتاح الاختصار",
   "mode.wake": "كلمة التنبيه",
   "mode.hotkey": "مفتاح الاختصار",
-
   "home.hint": "قل «{wake}» وانتظر الإشارة، أو قل الأمر كله دفعة واحدة: «{wake}, {open} …».",
-
   "grammar.heading": "ما يمكنك قوله",
   "grammar.edit": "تحرير",
   "grammar.closeEditor": "إغلاق المحرر",
@@ -83,7 +74,6 @@ I18N.register('ar', {
   "grammar.stopLegend": "إيقاف الإملاء",
   "grammar.stopHint": "العبارة كاملة أو في نهاية مقطع: «stop typing». إذا وردت في منتصف النص، فستبقى جزءًا منه.",
   "grammar.reset": "إعادة إلى الإعدادات الافتراضية",
-
   "kind.launch": "تشغيل",
   "kind.folder": "المجلدات",
   "kind.search": "بحث",
@@ -95,7 +85,6 @@ I18N.register('ar', {
   "kind.find": "العثور على عنصر",
   "kind.find_folder": "العثور على مجلد",
   "kind.find_file": "العثور على ملف",
-
   "intent.launch": "فتح برنامج أو رابط",
   "intent.folder": "فتح مجلد على الكمبيوتر",
   "intent.web_google": "البحث عبر Google",
@@ -110,7 +99,6 @@ I18N.register('ar', {
   "intent.chat_gpt": "سؤال ChatGPT (في المتصفح)",
   "intent.chat_claude": "سؤال Claude (في المتصفح)",
   "intent.chat_gemini": "سؤال Gemini (في المتصفح)",
-
   "example.launch": "{label} · اذكر اسم البرنامج فقط",
   "example.close": "إغلاق برنامج مفتوح",
   "example.kill": "مثل الأمر “إنهاء المهمة” في إدارة المهام",
@@ -124,8 +112,6 @@ I18N.register('ar', {
   "example.command": "أمر",
   "example.shutdown": "النظام، مع تأكيد",
   "example.cancel": "إلغاء الأمر",
-
-
   "validation.wake": "أضف كلمة تنبيه واحدة على الأقل.",
   "validation.id": "يجب أن تتضمن النية معرّفًا.",
   "validation.duplicateId": "المعرّف «{id}» مكرر.",
@@ -134,14 +120,20 @@ I18N.register('ar', {
   "validation.needPhrase": "أضف عبارة واحدة على الأقل لـ “{name}”.",
   "validation.emptyPhrase": "لا يُسمح بعبارة فارغة إلا لتشغيل البرامج (“{name}”).",
   "validation.duplicatePhrase": "العبارة «{phrase}» مستخدمة بالفعل في “{other}”.",
-
   "actions.search": "البحث في الإجراءات…",
   "actions.newTitle": "إجراء جديد",
   "actions.create": "إنشاء",
   "actions.empty": "لا توجد إجراءات. أنشئ إجراءً.",
   "actions.pick": "اختر إجراءً من اليسار<br />أو أنشئ إجراءً جديدًا",
   "actions.unnamed": "(بلا اسم)",
-  "actions.phraseCount": { "zero": "{count} عبارة", "one": "{count} عبارة", "two": "{count} عبارتان", "few": "{count} عبارات", "many": "{count} عبارة", "other": "{count} عبارة" },
+  "actions.phraseCount": {
+    "zero": "{count} عبارة",
+    "one": "{count} عبارة",
+    "two": "{count} عبارتان",
+    "few": "{count} عبارات",
+    "many": "{count} عبارة",
+    "other": "{count} عبارة"
+  },
   "actions.confirmDiscard": "لدى هذا الإجراء تغييرات غير محفوظة. هل تريد تجاهلها؟",
   "actions.namePlaceholder": "الاسم",
   "actions.target": "الهدف - مسار ملف أو رابط أو بروتوكول أو AUMID",
@@ -153,26 +145,22 @@ I18N.register('ar', {
   "actions.calibrate": "معايرة",
   "actions.needName": "أدخل اسمًا",
   "actions.confirmDelete": "هل تريد حذف الإجراء؟",
-
   "filter.all": "الكل",
   "filter.apps": "التطبيقات",
   "filter.folder": "المجلدات",
   "filter.web": "الويب",
   "filter.system": "النظام",
-
   "actionKind.shell": "برنامج/EXE",
   "actionKind.url": "رابط/URL",
   "actionKind.uwp": "تطبيق Windows",
   "actionKind.folder": "مجلد",
   "actionKind.system": "النظام",
   "actionKind.search": "بحث على الويب {q}",
-
   "calibration.title": "المعايرة",
   "calibration.heading": "معايرة «{label}»",
   "calibration.hint": "كرّر العبارة بالطريقة التي تنطقها بها. تُحتسب كل مرة؛ وكلما كررتها زادت الدقة.",
   "calibration.count": "العبارات المسجلة: {count}",
   "calibration.last": "الأخيرة: «{phrase}»",
-
   "appPicker.title": "اختيار تطبيق",
   "appPicker.search": "البحث عن تطبيق…",
   "actions.scan": "فحص",
@@ -201,7 +189,6 @@ I18N.register('ar', {
   "scan.mark.recent": "مؤخرًا",
   "scan.usage": "في الواجهة {minutes} دقيقة · آخر تشغيل {date}",
   "scan.usage.noDate": "في الواجهة {minutes} دقيقة",
-
   "common.add": "إضافة",
   "common.save": "حفظ",
   "common.delete": "حذف",
@@ -213,7 +200,6 @@ I18N.register('ar', {
   "common.nothingFound": "لم يتم العثور على شيء",
   "common.on": "تشغيل",
   "common.off": "إيقاف",
-
   "settings.grammarLinkPrefix": "توجد كلمة التنبيه والعبارات في الصفحة الرئيسية، ",
   "settings.grammarLink": "“ما يمكنك قوله” → تحرير",
   "settings.grammarLinkSuffix": ".",
@@ -318,13 +304,11 @@ I18N.register('ar', {
   "settings.indexState.off": "متوقف",
   "settings.indexState.scanning": "جارٍ الفحص",
   "settings.indexState.ready": "جاهز",
-
   "hotkey.none": "غير معيّن",
   "hotkey.press": "اضغط مجموعة مفاتيح… (Esc - إلغاء)",
   "hotkey.needModifier": "يلزم مفتاح تعديل (Ctrl/Alt/Shift)",
   "hotkey.applied": "تم تطبيق مفتاح الاختصار: {combo}",
   "hotkey.error": "مفتاح الاختصار: {error}",
-
   "error.prefix": "خطأ - {context}: {message}",
   "error.window": "الحصول على النافذة",
   "error.subscribe": "الاشتراك في {event}",
@@ -351,7 +335,6 @@ I18N.register('ar', {
   "error.loadWallpaper": "تحميل الخلفية",
   "error.loadActions": "تحميل الإجراءات",
   "error.uiLanguage": "تغيير لغة الواجهة",
-
   "picker.found": "العناصر التي عُثر عليها",
   "picker.foundFor": "النتائج عن “{title}”",
   "picker.closeTitle": "إغلاق (Esc)",
@@ -363,7 +346,14 @@ I18N.register('ar', {
   "picker.doubleClick": "النقر المزدوج - فتح",
   "picker.list": "الملفات والمجلدات التي عُثر عليها",
   "picker.openButton": "فتح",
-  "picker.count": { "zero": "{count} خيار", "one": "{count} خيار", "two": "{count} خياران", "few": "{count} خيارات", "many": "{count} خيارًا", "other": "{count} خيار" },
+  "picker.count": {
+    "zero": "{count} خيار",
+    "one": "{count} خيار",
+    "two": "{count} خياران",
+    "few": "{count} خيارات",
+    "many": "{count} خيارًا",
+    "other": "{count} خيار"
+  },
   "picker.frequent": "الأكثر فتحًا",
   "picker.all": "جميع النتائج المطابقة",
   "picker.searchLabel": "البحث في الكمبيوتر",
@@ -407,4 +397,4 @@ I18N.register('ar', {
   "settings.mascot_position.pinned": "مثبّت: يظهر الأخطبوط دائمًا في هذا المكان.",
   "settings.mascot_position.corner": "الزاوية السفلية اليمنى من الشاشة.",
   "settings.mascot_position.unavailable": "التميمة متوقفة: اختر أولًا متى تظهر."
-});
+}

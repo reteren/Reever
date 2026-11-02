@@ -1,20 +1,15 @@
-// Slovenčina (Slovak) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('sk', {
+{
   "app.pickerTitle": "Reever - nájdené",
-
   "win.minimize": "Minimalizovať",
   "win.toTray": "Minimalizovať do oblasti oznámení",
   "win.shade": "Kompaktný režim",
   "win.expand": "Celé okno",
   "orb.toggle": "Mikrofón zap. / vyp.",
-
   "nav.sections": "Sekcie",
   "nav.home": "Domov",
   "nav.actions": "Akcie",
   "nav.settings": "Nastavenia",
   "nav.log": "Denník",
-
   "mic.idle": "Čakám…",
   "mic.listening": "Počúvam…",
   "mic.busy": "Spracúvam…",
@@ -23,7 +18,6 @@ I18N.register('sk', {
   "mic.error": "Chyba",
   "mic.pause": "Pozastaviť",
   "mic.resume": "Pokračovať",
-
   "tile.mic": "Mikrofón",
   "tile.activation": "Aktivácia",
   "tile.hotkey": "Klávesová skratka",
@@ -31,7 +25,6 @@ I18N.register('sk', {
   "tile.asr": "Rozpoznávanie",
   "tile.model": "Model",
   "tile.actions": "Akcie",
-
   "pill.checking": "kontrola…",
   "pill.waiting": "čakanie…",
   "pill.paused": "pozastavené",
@@ -43,13 +36,10 @@ I18N.register('sk', {
   "pill.indexReady": "pripravený",
   "pill.indexing": "indexovanie…",
   "pill.unchecked": "neskontrolované",
-
   "mode.both": "Slovo aj skratka",
   "mode.wake": "Aktivačné slovo",
   "mode.hotkey": "Klávesová skratka",
-
   "home.hint": "Povedzte «{wake}» a počkajte na signál, alebo povedzte všetko naraz: «{wake}, {open} …».",
-
   "grammar.heading": "Čo môžete povedať",
   "grammar.edit": "Upraviť",
   "grammar.closeEditor": "Zavrieť editor",
@@ -84,7 +74,6 @@ I18N.register('sk', {
   "grammar.stopLegend": "Ukončenie diktovania",
   "grammar.stopHint": "Celá fráza alebo na konci úseku: «stop typing». Uprostred textu zostane textom.",
   "grammar.reset": "Obnoviť predvolené",
-
   "kind.launch": "Spustenie",
   "kind.folder": "Priečinky",
   "kind.search": "Vyhľadávanie",
@@ -96,7 +85,6 @@ I18N.register('sk', {
   "kind.find": "Nájsť",
   "kind.find_folder": "Nájsť priečinok",
   "kind.find_file": "Nájsť súbor",
-
   "intent.launch": "otvoriť program alebo odkaz",
   "intent.folder": "otvoriť priečinok v počítači",
   "intent.web_google": "hľadať v Google",
@@ -111,7 +99,6 @@ I18N.register('sk', {
   "intent.chat_gpt": "spýtať sa ChatGPT (chat v prehliadači)",
   "intent.chat_claude": "spýtať sa Claude (chat v prehliadači)",
   "intent.chat_gemini": "spýtať sa Gemini (chat v prehliadači)",
-
   "example.launch": "{label} · stačí povedať názov programu",
   "example.close": "zavrieť otvorený program",
   "example.kill": "ako „Ukončiť úlohu“ v Správcovi úloh",
@@ -125,8 +112,6 @@ I18N.register('sk', {
   "example.command": "Príkaz",
   "example.shutdown": "systém, s potvrdením",
   "example.cancel": "zrušiť príkaz",
-
-
   "validation.wake": "Pridajte aspoň jedno aktivačné slovo.",
   "validation.id": "Zámer musí mať id.",
   "validation.duplicateId": "Id «{id}» sa opakuje.",
@@ -135,14 +120,18 @@ I18N.register('sk', {
   "validation.needPhrase": "Pridajte aspoň jednu frázu pre «{name}».",
   "validation.emptyPhrase": "Prázdna fráza je povolená len na spúšťanie programov («{name}»).",
   "validation.duplicatePhrase": "Fráza «{phrase}» sa už používa v «{other}».",
-
   "actions.search": "Hľadať akcie…",
   "actions.newTitle": "Nová akcia",
   "actions.create": "Vytvoriť",
   "actions.empty": "Prázdne. Vytvorte akciu.",
   "actions.pick": "Vyberte akciu vľavo<br />alebo vytvorte novú",
   "actions.unnamed": "(bez názvu)",
-  "actions.phraseCount": { "one": "{count} fráza", "few": "{count} frázy", "many": "{count} frázy", "other": "{count} fráz" },
+  "actions.phraseCount": {
+    "one": "{count} fráza",
+    "few": "{count} frázy",
+    "many": "{count} frázy",
+    "other": "{count} fráz"
+  },
   "actions.confirmDiscard": "Akcia má neuložené zmeny. Zahodiť ich?",
   "actions.namePlaceholder": "Názov",
   "actions.target": "Cieľ - cesta k súboru, odkaz, protokol alebo AUMID",
@@ -154,26 +143,22 @@ I18N.register('sk', {
   "actions.calibrate": "Kalibrovať",
   "actions.needName": "Zadajte názov",
   "actions.confirmDelete": "Odstrániť akciu?",
-
   "filter.all": "Všetko",
   "filter.apps": "Programy",
   "filter.folder": "Priečinky",
   "filter.web": "Web",
   "filter.system": "Systém",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "odkaz/URL",
   "actionKind.uwp": "aplikácia Windows",
   "actionKind.folder": "priečinok",
   "actionKind.system": "systém",
   "actionKind.search": "webové vyhľadávanie {q}",
-
   "calibration.title": "Kalibrácia",
   "calibration.heading": "Kalibrácia «{label}»",
   "calibration.hint": "Opakujte frázu znova a znova tak, ako ju hovoríte. Každá sa počíta - čím viac, tým presnejšie.",
   "calibration.count": "zachytené frázy: {count}",
   "calibration.last": "posledná: «{phrase}»",
-
   "appPicker.title": "Vyberte aplikáciu",
   "appPicker.search": "Hľadať aplikácie…",
   "actions.scan": "Skenovať",
@@ -202,7 +187,6 @@ I18N.register('sk', {
   "scan.mark.recent": "nedávno",
   "scan.usage": "V popredí {minutes} min · naposledy spustené {date}",
   "scan.usage.noDate": "V popredí {minutes} min",
-
   "common.add": "Pridať",
   "common.save": "Uložiť",
   "common.delete": "Odstrániť",
@@ -214,7 +198,6 @@ I18N.register('sk', {
   "common.nothingFound": "Nič sa nenašlo",
   "common.on": "zap.",
   "common.off": "vyp.",
-
   "settings.grammarLinkPrefix": "Aktivačné slovo a frázy sú na stránke Domov, ",
   "settings.grammarLink": "„Čo môžete povedať“ → Upraviť",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +302,11 @@ I18N.register('sk', {
   "settings.indexState.off": "vypnutý",
   "settings.indexState.scanning": "prehľadávanie",
   "settings.indexState.ready": "pripravený",
-
   "hotkey.none": "nenastavené",
   "hotkey.press": "stlačte kombináciu… (Esc - zrušiť)",
   "hotkey.needModifier": "je potrebný modifikátor (Ctrl/Alt/Shift)",
   "hotkey.applied": "skratka použitá: {combo}",
   "hotkey.error": "skratka: {error}",
-
   "error.prefix": "Chyba - {context}: {message}",
   "error.window": "získanie okna",
   "error.subscribe": "odber {event}",
@@ -352,7 +333,6 @@ I18N.register('sk', {
   "error.loadWallpaper": "načítanie tapety",
   "error.loadActions": "načítanie akcií",
   "error.uiLanguage": "zmena jazyka rozhrania",
-
   "picker.found": "Nájdené",
   "picker.foundFor": "Nájdené: «{title}»",
   "picker.closeTitle": "Zavrieť (Esc)",
@@ -364,7 +344,12 @@ I18N.register('sk', {
   "picker.doubleClick": "dvojklik - otvoriť",
   "picker.list": "Nájdené súbory a priečinky",
   "picker.openButton": "Otvoriť",
-  "picker.count": { "one": "{count} možnosť", "few": "{count} možnosti", "many": "{count} možnosti", "other": "{count} možností" },
+  "picker.count": {
+    "one": "{count} možnosť",
+    "few": "{count} možnosti",
+    "many": "{count} možnosti",
+    "other": "{count} možností"
+  },
   "picker.frequent": "Často otvárané",
   "picker.all": "Všetky zhody",
   "picker.searchLabel": "Hľadať v počítači",
@@ -408,4 +393,4 @@ I18N.register('sk', {
   "settings.mascot_position.pinned": "Pripnuté: chobotnica sa vždy objaví na tomto mieste.",
   "settings.mascot_position.corner": "Pravý dolný roh obrazovky.",
   "settings.mascot_position.unavailable": "Maskot je vypnutý: najprv vyber, kedy sa má zobrazovať."
-});
+}

@@ -1,20 +1,15 @@
-// Latviešu (Latvian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('lv', {
+{
   "app.pickerTitle": "Reever - atrasts",
-
   "win.minimize": "Minimizēt",
   "win.toTray": "Minimizēt uz paziņojumu apgabalu",
   "win.shade": "Kompaktais režīms",
   "win.expand": "Pilns logs",
   "orb.toggle": "Mikrofons iesl. / izsl.",
-
   "nav.sections": "Sadaļas",
   "nav.home": "Sākums",
   "nav.actions": "Darbības",
   "nav.settings": "Iestatījumi",
   "nav.log": "Žurnāls",
-
   "mic.idle": "Gaidu…",
   "mic.listening": "Klausos…",
   "mic.busy": "Apstrādāju…",
@@ -23,7 +18,6 @@ I18N.register('lv', {
   "mic.error": "Kļūda",
   "mic.pause": "Pauze",
   "mic.resume": "Turpināt",
-
   "tile.mic": "Mikrofons",
   "tile.activation": "Aktivizēšana",
   "tile.hotkey": "Īsinājumtaustiņš",
@@ -31,7 +25,6 @@ I18N.register('lv', {
   "tile.asr": "Atpazīšana",
   "tile.model": "Modelis",
   "tile.actions": "Darbības",
-
   "pill.checking": "pārbaude…",
   "pill.waiting": "gaidīšana…",
   "pill.paused": "pauzēts",
@@ -43,13 +36,10 @@ I18N.register('lv', {
   "pill.indexReady": "gatavs",
   "pill.indexing": "indeksēšana…",
   "pill.unchecked": "nav pārbaudīts",
-
   "mode.both": "Vārds un īsinājumtaustiņš",
   "mode.wake": "Aktivizēšanas vārds",
   "mode.hotkey": "Īsinājumtaustiņš",
-
   "home.hint": "Sakiet «{wake}» un gaidiet signālu vai sakiet visu uzreiz: «{wake}, {open} …».",
-
   "grammar.heading": "Ko var teikt",
   "grammar.edit": "Rediģēt",
   "grammar.closeEditor": "Aizvērt redaktoru",
@@ -84,7 +74,6 @@ I18N.register('lv', {
   "grammar.stopLegend": "Diktēšanas beigas",
   "grammar.stopHint": "Visa frāze vai fragmenta beigās: «stop typing». Teksta vidū tā paliek teksts.",
   "grammar.reset": "Atjaunot noklusējumu",
-
   "kind.launch": "Palaišana",
   "kind.folder": "Mapes",
   "kind.search": "Meklēšana",
@@ -96,7 +85,6 @@ I18N.register('lv', {
   "kind.find": "Atrast",
   "kind.find_folder": "Atrast mapi",
   "kind.find_file": "Atrast failu",
-
   "intent.launch": "atvērt programmu vai saiti",
   "intent.folder": "atvērt mapi datorā",
   "intent.web_google": "meklēt Google",
@@ -111,7 +99,6 @@ I18N.register('lv', {
   "intent.chat_gpt": "jautāt ChatGPT (tērzēšana pārlūkā)",
   "intent.chat_claude": "jautāt Claude (tērzēšana pārlūkā)",
   "intent.chat_gemini": "jautāt Gemini (tērzēšana pārlūkā)",
-
   "example.launch": "{label} · vienkārši nosauciet programmu",
   "example.close": "aizvērt atvērtu programmu",
   "example.kill": "kā „Beigt uzdevumu” uzdevumu pārvaldniekā",
@@ -125,8 +112,6 @@ I18N.register('lv', {
   "example.command": "Komanda",
   "example.shutdown": "sistēma, ar apstiprinājumu",
   "example.cancel": "atcelt komandu",
-
-
   "validation.wake": "Pievienojiet vismaz vienu aktivizēšanas vārdu.",
   "validation.id": "Nolūkam jābūt id.",
   "validation.duplicateId": "Id «{id}» atkārtojas.",
@@ -135,14 +120,17 @@ I18N.register('lv', {
   "validation.needPhrase": "Pievienojiet vismaz vienu frāzi «{name}».",
   "validation.emptyPhrase": "Tukša frāze ir atļauta tikai programmu palaišanai («{name}»).",
   "validation.duplicatePhrase": "Frāze «{phrase}» jau tiek izmantota «{other}».",
-
   "actions.search": "Meklēt darbības…",
   "actions.newTitle": "Jauna darbība",
   "actions.create": "Izveidot",
   "actions.empty": "Tukšs. Izveidojiet darbību.",
   "actions.pick": "Izvēlieties darbību pa kreisi<br />vai izveidojiet jaunu",
   "actions.unnamed": "(bez nosaukuma)",
-  "actions.phraseCount": { "zero": "{count} frāžu", "one": "{count} frāze", "other": "{count} frāzes" },
+  "actions.phraseCount": {
+    "zero": "{count} frāžu",
+    "one": "{count} frāze",
+    "other": "{count} frāzes"
+  },
   "actions.confirmDiscard": "Darbībai ir nesaglabātas izmaiņas. Atmest tās?",
   "actions.namePlaceholder": "Nosaukums",
   "actions.target": "Mērķis - faila ceļš, saite, protokols vai AUMID",
@@ -154,26 +142,22 @@ I18N.register('lv', {
   "actions.calibrate": "Kalibrēt",
   "actions.needName": "Ievadiet nosaukumu",
   "actions.confirmDelete": "Dzēst darbību?",
-
   "filter.all": "Visi",
   "filter.apps": "Lietotnes",
   "filter.folder": "Mapes",
   "filter.web": "Tīmeklis",
   "filter.system": "Sistēma",
-
   "actionKind.shell": "programma/exe",
   "actionKind.url": "saite/URL",
   "actionKind.uwp": "Windows lietotne",
   "actionKind.folder": "mape",
   "actionKind.system": "sistēma",
   "actionKind.search": "tīmekļa meklēšana {q}",
-
   "calibration.title": "Kalibrēšana",
   "calibration.heading": "Kalibrēšana «{label}»",
   "calibration.hint": "Atkārtojiet frāzi atkal un atkal tā, kā to sakāt. Katra reize skaitās - jo vairāk, jo precīzāk.",
   "calibration.count": "ierakstītas frāzes: {count}",
   "calibration.last": "pēdējā: «{phrase}»",
-
   "appPicker.title": "Izvēlieties lietotni",
   "appPicker.search": "Meklēt lietotnes…",
   "actions.scan": "Skenēt",
@@ -202,7 +186,6 @@ I18N.register('lv', {
   "scan.mark.recent": "nesen",
   "scan.usage": "Fokusā {minutes} min · pēdējoreiz palaista {date}",
   "scan.usage.noDate": "Fokusā {minutes} min",
-
   "common.add": "Pievienot",
   "common.save": "Saglabāt",
   "common.delete": "Dzēst",
@@ -214,7 +197,6 @@ I18N.register('lv', {
   "common.nothingFound": "Nekas nav atrasts",
   "common.on": "iesl.",
   "common.off": "izsl.",
-
   "settings.grammarLinkPrefix": "Aktivizēšanas vārds un frāzes ir sadaļā Sākums, ",
   "settings.grammarLink": "„Ko var teikt” → Rediģēt",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +301,11 @@ I18N.register('lv', {
   "settings.indexState.off": "izslēgts",
   "settings.indexState.scanning": "skenēšana",
   "settings.indexState.ready": "gatavs",
-
   "hotkey.none": "nav iestatīts",
   "hotkey.press": "nospiediet kombināciju… (Esc - atcelt)",
   "hotkey.needModifier": "vajadzīgs modificētājs (Ctrl/Alt/Shift)",
   "hotkey.applied": "īsinājumtaustiņš lietots: {combo}",
   "hotkey.error": "īsinājumtaustiņš: {error}",
-
   "error.prefix": "Kļūda - {context}: {message}",
   "error.window": "loga iegūšana",
   "error.subscribe": "abonēšana uz {event}",
@@ -352,7 +332,6 @@ I18N.register('lv', {
   "error.loadWallpaper": "fona attēla ielāde",
   "error.loadActions": "darbību ielāde",
   "error.uiLanguage": "saskarnes valodas maiņa",
-
   "picker.found": "Atrasts",
   "picker.foundFor": "Atrasts: «{title}»",
   "picker.closeTitle": "Aizvērt (Esc)",
@@ -364,7 +343,11 @@ I18N.register('lv', {
   "picker.doubleClick": "dubultklikšķis - atvērt",
   "picker.list": "Atrastie faili un mapes",
   "picker.openButton": "Atvērt",
-  "picker.count": { "zero": "{count} variantu", "one": "{count} variants", "other": "{count} varianti" },
+  "picker.count": {
+    "zero": "{count} variantu",
+    "one": "{count} variants",
+    "other": "{count} varianti"
+  },
   "picker.frequent": "Bieži atvērtie",
   "picker.all": "Visas atbilstības",
   "picker.searchLabel": "Meklēt datorā",
@@ -408,4 +391,4 @@ I18N.register('lv', {
   "settings.mascot_position.pinned": "Piesprausts: astoņkājis vienmēr parādās šajā vietā.",
   "settings.mascot_position.corner": "Ekrāna apakšējais labais stūris.",
   "settings.mascot_position.unavailable": "Talismans ir izslēgts: vispirms izvēlies, kad to rādīt."
-});
+}

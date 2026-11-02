@@ -1,20 +1,15 @@
-// Magyar (Hungarian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('hu', {
+{
   "app.pickerTitle": "Reever - találatok",
-
   "win.minimize": "Kis méret",
   "win.toTray": "Kis méret az értesítési területre",
   "win.shade": "Kompakt mód",
   "win.expand": "Teljes ablak",
   "orb.toggle": "Mikrofon be / ki",
-
   "nav.sections": "Szakaszok",
   "nav.home": "Kezdőlap",
   "nav.actions": "Műveletek",
   "nav.settings": "Beállítások",
   "nav.log": "Napló",
-
   "mic.idle": "Várakozás…",
   "mic.listening": "Figyelek…",
   "mic.busy": "Feldolgozás…",
@@ -23,7 +18,6 @@ I18N.register('hu', {
   "mic.error": "Hiba",
   "mic.pause": "Szünet",
   "mic.resume": "Folytatás",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktiválás",
   "tile.hotkey": "Billentyűparancs",
@@ -31,7 +25,6 @@ I18N.register('hu', {
   "tile.asr": "Felismerés",
   "tile.model": "Modell",
   "tile.actions": "Műveletek",
-
   "pill.checking": "ellenőrzés…",
   "pill.waiting": "várakozás…",
   "pill.paused": "szüneteltetve",
@@ -43,13 +36,10 @@ I18N.register('hu', {
   "pill.indexReady": "kész",
   "pill.indexing": "indexelés…",
   "pill.unchecked": "nincs ellenőrizve",
-
   "mode.both": "Szó és billentyűparancs",
   "mode.wake": "Ébresztőszó",
   "mode.hotkey": "Billentyűparancs",
-
   "home.hint": "Mondd, hogy «{wake}», és várd meg a jelzést, vagy mondj el mindent egyszerre: «{wake}, {open} …».",
-
   "grammar.heading": "Mit mondhatsz",
   "grammar.edit": "Szerkesztés",
   "grammar.closeEditor": "Szerkesztő bezárása",
@@ -84,7 +74,6 @@ I18N.register('hu', {
   "grammar.stopLegend": "Diktálás vége",
   "grammar.stopHint": "A teljes kifejezés vagy egy szakasz végén: «stop typing». A szöveg közepén szöveg marad.",
   "grammar.reset": "Alapértékek visszaállítása",
-
   "kind.launch": "Indítás",
   "kind.folder": "Mappák",
   "kind.search": "Keresés",
@@ -96,7 +85,6 @@ I18N.register('hu', {
   "kind.find": "Keresés",
   "kind.find_folder": "Mappa keresése",
   "kind.find_file": "Fájl keresése",
-
   "intent.launch": "program vagy hivatkozás megnyitása",
   "intent.folder": "mappa megnyitása a számítógépen",
   "intent.web_google": "keresés a Google-ben",
@@ -111,7 +99,6 @@ I18N.register('hu', {
   "intent.chat_gpt": "kérdés a ChatGPT-től (csevegés a böngészőben)",
   "intent.chat_claude": "kérdés Claude-tól (csevegés a böngészőben)",
   "intent.chat_gemini": "kérdés a Geminitől (csevegés a böngészőben)",
-
   "example.launch": "{label} · csak mondd ki a program nevét",
   "example.close": "megnyitott program bezárása",
   "example.kill": "mint a „Feladat befejezése” a Feladatkezelőben",
@@ -125,8 +112,6 @@ I18N.register('hu', {
   "example.command": "Parancs",
   "example.shutdown": "rendszer, megerősítéssel",
   "example.cancel": "a parancs megszakítása",
-
-
   "validation.wake": "Adj hozzá legalább egy ébresztőszót.",
   "validation.id": "A szándéknak kell id.",
   "validation.duplicateId": "A(z) «{id}» id ismétlődik.",
@@ -135,14 +120,16 @@ I18N.register('hu', {
   "validation.needPhrase": "Adj hozzá legalább egy kifejezést ehhez: «{name}».",
   "validation.emptyPhrase": "Üres kifejezés csak programok indításához engedélyezett («{name}»).",
   "validation.duplicatePhrase": "A(z) «{phrase}» kifejezés már használatban van itt: «{other}».",
-
   "actions.search": "Műveletek keresése…",
   "actions.newTitle": "Új művelet",
   "actions.create": "Létrehozás",
   "actions.empty": "Üres. Hozz létre egy műveletet.",
   "actions.pick": "Válassz műveletet a bal oldalon<br />vagy hozz létre újat",
   "actions.unnamed": "(névtelen)",
-  "actions.phraseCount": { "one": "{count} kifejezés", "other": "{count} kifejezés" },
+  "actions.phraseCount": {
+    "one": "{count} kifejezés",
+    "other": "{count} kifejezés"
+  },
   "actions.confirmDiscard": "A műveletnek nem mentett módosításai vannak. Elveted őket?",
   "actions.namePlaceholder": "Név",
   "actions.target": "Cél - fájl elérési útja, hivatkozás, protokoll vagy AUMID",
@@ -154,26 +141,22 @@ I18N.register('hu', {
   "actions.calibrate": "Kalibrálás",
   "actions.needName": "Adj meg egy nevet",
   "actions.confirmDelete": "Törlöd a műveletet?",
-
   "filter.all": "Mind",
   "filter.apps": "Alkalmazások",
   "filter.folder": "Mappák",
   "filter.web": "Web",
   "filter.system": "Rendszer",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "hivatkozás/URL",
   "actionKind.uwp": "Windows-alkalmazás",
   "actionKind.folder": "mappa",
   "actionKind.system": "rendszer",
   "actionKind.search": "webes keresés {q}",
-
   "calibration.title": "Kalibrálás",
   "calibration.heading": "Kalibrálás «{label}»",
   "calibration.hint": "Mondd el a kifejezést újra és újra, úgy, ahogy mondani szoktad. Mindegyik számít - minél több, annál pontosabb.",
   "calibration.count": "rögzített kifejezések: {count}",
   "calibration.last": "utolsó: «{phrase}»",
-
   "appPicker.title": "Alkalmazás kiválasztása",
   "appPicker.search": "Alkalmazások keresése…",
   "actions.scan": "Keresés",
@@ -202,7 +185,6 @@ I18N.register('hu', {
   "scan.mark.recent": "nemrég",
   "scan.usage": "Előtérben {minutes} perc · utoljára indítva {date}",
   "scan.usage.noDate": "Előtérben {minutes} perc",
-
   "common.add": "Hozzáadás",
   "common.save": "Mentés",
   "common.delete": "Törlés",
@@ -214,7 +196,6 @@ I18N.register('hu', {
   "common.nothingFound": "Nincs találat",
   "common.on": "be",
   "common.off": "ki",
-
   "settings.grammarLinkPrefix": "Az ébresztőszó és a kifejezések a Kezdőlapon vannak, ",
   "settings.grammarLink": "„Mit mondhatsz” → Szerkesztés",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('hu', {
   "settings.indexState.off": "ki",
   "settings.indexState.scanning": "átvizsgálás",
   "settings.indexState.ready": "kész",
-
   "hotkey.none": "nincs beállítva",
   "hotkey.press": "nyomj meg egy kombinációt… (Esc - mégse)",
   "hotkey.needModifier": "módosítóbillentyű szükséges (Ctrl/Alt/Shift)",
   "hotkey.applied": "billentyűparancs alkalmazva: {combo}",
   "hotkey.error": "billentyűparancs: {error}",
-
   "error.prefix": "Hiba - {context}: {message}",
   "error.window": "az ablak lekérése",
   "error.subscribe": "feliratkozás erre: {event}",
@@ -352,7 +331,6 @@ I18N.register('hu', {
   "error.loadWallpaper": "a háttérkép betöltése",
   "error.loadActions": "a műveletek betöltése",
   "error.uiLanguage": "a felület nyelvének módosítása",
-
   "picker.found": "Találatok",
   "picker.foundFor": "Találatok: «{title}»",
   "picker.closeTitle": "Bezárás (Esc)",
@@ -364,7 +342,10 @@ I18N.register('hu', {
   "picker.doubleClick": "dupla kattintás - megnyitás",
   "picker.list": "Talált fájlok és mappák",
   "picker.openButton": "Megnyitás",
-  "picker.count": { "one": "{count} lehetőség", "other": "{count} lehetőség" },
+  "picker.count": {
+    "one": "{count} lehetőség",
+    "other": "{count} lehetőség"
+  },
   "picker.frequent": "Gyakran megnyitott",
   "picker.all": "Minden egyezés",
   "picker.searchLabel": "Keresés a számítógépen",
@@ -408,4 +389,4 @@ I18N.register('hu', {
   "settings.mascot_position.pinned": "Rögzítve: a polip mindig ezen a helyen jelenik meg.",
   "settings.mascot_position.corner": "A képernyő jobb alsó sarka.",
   "settings.mascot_position.unavailable": "A kabala ki van kapcsolva: előbb válaszd ki, mikor jelenjen meg."
-});
+}

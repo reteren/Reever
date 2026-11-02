@@ -1,19 +1,15 @@
-// Português (Brasil) — interface traduzida; frases de voz permanecem em russo.
-I18N.register('pt', {
+{
   "app.pickerTitle": "Reever - resultados encontrados",
-
   "win.minimize": "Minimizar",
   "win.toTray": "Minimizar para a bandeja do sistema",
   "win.shade": "Modo compacto",
   "win.expand": "Janela completa",
   "orb.toggle": "Ligar / desligar microfone",
-
   "nav.sections": "Seções",
   "nav.home": "Início",
   "nav.actions": "Ações",
   "nav.settings": "Configurações",
   "nav.log": "Log",
-
   "mic.idle": "Aguardando…",
   "mic.listening": "Ouvindo…",
   "mic.busy": "Processando…",
@@ -22,7 +18,6 @@ I18N.register('pt', {
   "mic.error": "Erro",
   "mic.pause": "Pausar",
   "mic.resume": "Retomar",
-
   "tile.mic": "Microfone",
   "tile.activation": "Ativação",
   "tile.hotkey": "Atalho",
@@ -30,7 +25,6 @@ I18N.register('pt', {
   "tile.asr": "Reconhecimento",
   "tile.model": "Modelo",
   "tile.actions": "Ações",
-
   "pill.checking": "verificando…",
   "pill.waiting": "aguardando…",
   "pill.paused": "pausado",
@@ -42,13 +36,10 @@ I18N.register('pt', {
   "pill.indexReady": "pronto",
   "pill.indexing": "indexando…",
   "pill.unchecked": "não verificado",
-
   "mode.both": "Palavra de ativação e atalho",
   "mode.wake": "Palavra de ativação",
   "mode.hotkey": "Atalho",
-
   "home.hint": "Diga «{wake}» e aguarde o sinal, ou diga tudo de uma vez: «{wake}, {open} …».",
-
   "grammar.heading": "O que você pode dizer",
   "grammar.edit": "Editar",
   "grammar.closeEditor": "Fechar editor",
@@ -83,7 +74,6 @@ I18N.register('pt', {
   "grammar.stopLegend": "Parar ditado",
   "grammar.stopHint": "A frase inteira ou no fim de um trecho: «stop typing». No meio do texto, ela continua sendo texto.",
   "grammar.reset": "Restaurar padrão",
-
   "kind.launch": "Abrir",
   "kind.folder": "Pastas",
   "kind.search": "Pesquisa",
@@ -95,7 +85,6 @@ I18N.register('pt', {
   "kind.find": "Localizar",
   "kind.find_folder": "Localizar pasta",
   "kind.find_file": "Localizar arquivo",
-
   "intent.launch": "abrir um programa ou link",
   "intent.folder": "abrir uma pasta no computador",
   "intent.web_google": "pesquisar no Google",
@@ -110,7 +99,6 @@ I18N.register('pt', {
   "intent.chat_gpt": "perguntar ao ChatGPT (chat no navegador)",
   "intent.chat_claude": "perguntar ao Claude (chat no navegador)",
   "intent.chat_gemini": "perguntar ao Gemini (chat no navegador)",
-
   "example.launch": "{label} · basta dizer o nome do programa",
   "example.close": "fechar um programa aberto",
   "example.kill": "como “Encerrar tarefa” no Gerenciador de Tarefas",
@@ -124,8 +112,6 @@ I18N.register('pt', {
   "example.command": "Comando",
   "example.shutdown": "sistema, com confirmação",
   "example.cancel": "cancelar o comando",
-
-
   "validation.wake": "Adicione pelo menos uma palavra de ativação.",
   "validation.id": "A intenção precisa ter um id.",
   "validation.duplicateId": "O id “{id}” está repetido.",
@@ -134,14 +120,16 @@ I18N.register('pt', {
   "validation.needPhrase": "Adicione pelo menos uma frase para “{name}”.",
   "validation.emptyPhrase": "Uma frase vazia só é permitida para abrir programas (“{name}”).",
   "validation.duplicatePhrase": "A frase “{phrase}” já está sendo usada em “{other}”.",
-
   "actions.search": "Pesquisar ações…",
   "actions.newTitle": "Nova ação",
   "actions.create": "Criar",
   "actions.empty": "Está vazio. Crie uma ação.",
   "actions.pick": "Selecione uma ação à esquerda<br />ou crie uma nova",
   "actions.unnamed": "(sem nome)",
-  "actions.phraseCount": { "one": "{count} frase", "other": "{count} frases" },
+  "actions.phraseCount": {
+    "one": "{count} frase",
+    "other": "{count} frases"
+  },
   "actions.confirmDiscard": "A ação tem alterações não salvas. Descartá-las?",
   "actions.namePlaceholder": "Nome",
   "actions.target": "Destino - caminho do arquivo, link, protocolo ou AUMID",
@@ -153,26 +141,22 @@ I18N.register('pt', {
   "actions.calibrate": "Calibrar",
   "actions.needName": "Informe um nome",
   "actions.confirmDelete": "Excluir a ação?",
-
   "filter.all": "Tudo",
   "filter.apps": "Apps",
   "filter.folder": "Pastas",
   "filter.web": "Web",
   "filter.system": "Sistema",
-
   "actionKind.shell": "programa/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "app do Windows",
   "actionKind.folder": "pasta",
   "actionKind.system": "sistema",
   "actionKind.search": "pesquisa na web {q}",
-
   "calibration.title": "Calibração",
   "calibration.heading": "Calibração “{label}”",
   "calibration.hint": "Repita a frase do jeito que você costuma dizê-la. Cada tentativa conta - quanto mais, mais preciso.",
   "calibration.count": "frases capturadas: {count}",
   "calibration.last": "última: «{phrase}»",
-
   "appPicker.title": "Escolher um app",
   "appPicker.search": "Pesquisar apps…",
   "actions.scan": "Procurar",
@@ -201,7 +185,6 @@ I18N.register('pt', {
   "scan.mark.recent": "recente",
   "scan.usage": "Em foco {minutes} min · última abertura {date}",
   "scan.usage.noDate": "Em foco {minutes} min",
-
   "common.add": "Adicionar",
   "common.save": "Salvar",
   "common.delete": "Excluir",
@@ -213,7 +196,6 @@ I18N.register('pt', {
   "common.nothingFound": "Nada encontrado",
   "common.on": "ativado",
   "common.off": "desativado",
-
   "settings.grammarLinkPrefix": "A palavra de ativação e as frases ficam em Início, ",
   "settings.grammarLink": "“O que você pode dizer” → Editar",
   "settings.grammarLinkSuffix": ".",
@@ -318,13 +300,11 @@ I18N.register('pt', {
   "settings.indexState.off": "desativado",
   "settings.indexState.scanning": "a analisar",
   "settings.indexState.ready": "pronto",
-
   "hotkey.none": "não definido",
   "hotkey.press": "pressione uma combinação… (Esc - cancelar)",
   "hotkey.needModifier": "é preciso um modificador (Ctrl/Alt/Shift)",
   "hotkey.applied": "atalho aplicado: {combo}",
   "hotkey.error": "atalho: {error}",
-
   "error.prefix": "Erro - {context}: {message}",
   "error.window": "obtendo a janela",
   "error.subscribe": "assinando {event}",
@@ -351,7 +331,6 @@ I18N.register('pt', {
   "error.loadWallpaper": "carregando o papel de parede",
   "error.loadActions": "carregando as ações",
   "error.uiLanguage": "alterando o idioma da interface",
-
   "picker.found": "Encontrados",
   "picker.foundFor": "Encontrados: “{title}”",
   "picker.closeTitle": "Fechar (Esc)",
@@ -363,7 +342,10 @@ I18N.register('pt', {
   "picker.doubleClick": "clique duplo - abrir",
   "picker.list": "Arquivos e pastas encontrados",
   "picker.openButton": "Abrir",
-  "picker.count": { "one": "{count} opção", "other": "{count} opções" },
+  "picker.count": {
+    "one": "{count} opção",
+    "other": "{count} opções"
+  },
   "picker.frequent": "Abertos com frequência",
   "picker.all": "Todas as correspondências",
   "picker.searchLabel": "Pesquisar no computador",
@@ -407,4 +389,4 @@ I18N.register('pt', {
   "settings.mascot_position.pinned": "Fixado: o polvo sempre aparece neste lugar.",
   "settings.mascot_position.corner": "Canto inferior direito da tela.",
   "settings.mascot_position.unavailable": "O mascote está desativado: primeiro escolha quando mostrá-lo."
-});
+}

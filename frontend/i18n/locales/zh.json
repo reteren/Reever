@@ -1,19 +1,15 @@
-// 简体中文。语音短语保留俄语，因为 Reever 只识别俄语语音。
-I18N.register('zh', {
+{
   "app.pickerTitle": "Reever - 已找到",
-
   "win.minimize": "最小化",
   "win.toTray": "最小化到系统托盘",
   "win.shade": "紧凑模式",
   "win.expand": "完整窗口",
   "orb.toggle": "开 / 关麦克风",
-
   "nav.sections": "栏目",
   "nav.home": "主页",
   "nav.actions": "操作",
   "nav.settings": "设置",
   "nav.log": "日志",
-
   "mic.idle": "等待中…",
   "mic.listening": "正在聆听…",
   "mic.busy": "正在处理…",
@@ -22,7 +18,6 @@ I18N.register('zh', {
   "mic.error": "出错",
   "mic.pause": "暂停",
   "mic.resume": "继续",
-
   "tile.mic": "麦克风",
   "tile.activation": "激活方式",
   "tile.hotkey": "快捷键",
@@ -30,7 +25,6 @@ I18N.register('zh', {
   "tile.asr": "语音识别",
   "tile.model": "模型",
   "tile.actions": "操作",
-
   "pill.checking": "正在检查…",
   "pill.waiting": "等待中…",
   "pill.paused": "已暂停",
@@ -42,13 +36,10 @@ I18N.register('zh', {
   "pill.indexReady": "就绪",
   "pill.indexing": "正在索引…",
   "pill.unchecked": "未检查",
-
   "mode.both": "唤醒词和快捷键",
   "mode.wake": "唤醒词",
   "mode.hotkey": "快捷键",
-
   "home.hint": "说 «{wake}» 并等待提示音，也可以直接说完整指令：«{wake}, {open} …»。",
-
   "grammar.heading": "可以说什么",
   "grammar.edit": "编辑",
   "grammar.closeEditor": "关闭编辑器",
@@ -83,7 +74,6 @@ I18N.register('zh', {
   "grammar.stopLegend": "停止听写",
   "grammar.stopHint": "可单独说完整短语，也可放在一段内容的末尾：«stop typing»。在内容中间时会保留为文本。",
   "grammar.reset": "恢复默认值",
-
   "kind.launch": "启动",
   "kind.folder": "文件夹",
   "kind.search": "搜索",
@@ -95,7 +85,6 @@ I18N.register('zh', {
   "kind.find": "查找",
   "kind.find_folder": "查找文件夹",
   "kind.find_file": "查找文件",
-
   "intent.launch": "打开程序或链接",
   "intent.folder": "打开电脑上的文件夹",
   "intent.web_google": "通过 Google 搜索",
@@ -110,7 +99,6 @@ I18N.register('zh', {
   "intent.chat_gpt": "向 ChatGPT 提问（浏览器聊天）",
   "intent.chat_claude": "向 Claude 提问（浏览器聊天）",
   "intent.chat_gemini": "向 Gemini 提问（浏览器聊天）",
-
   "example.launch": "{label} · 直接说出程序名称",
   "example.close": "关闭已打开的程序",
   "example.kill": "类似任务管理器中的“结束任务”",
@@ -124,8 +112,6 @@ I18N.register('zh', {
   "example.command": "指令",
   "example.shutdown": "系统操作，需要确认",
   "example.cancel": "取消指令",
-
-
   "validation.wake": "请至少添加一个唤醒词。",
   "validation.id": "意图必须有 id。",
   "validation.duplicateId": "id“{id}”重复。",
@@ -134,14 +120,15 @@ I18N.register('zh', {
   "validation.needPhrase": "请至少为“{name}”添加一个短语。",
   "validation.emptyPhrase": "只有启动程序时才允许空短语（“{name}”）。",
   "validation.duplicatePhrase": "短语 «{phrase}» 已用于 «{other}»。",
-
   "actions.search": "搜索操作…",
   "actions.newTitle": "新建操作",
   "actions.create": "创建",
   "actions.empty": "列表为空。创建一个操作吧。",
   "actions.pick": "在左侧选择一个操作<br />或创建新操作",
   "actions.unnamed": "（未命名）",
-  "actions.phraseCount": { "other": "{count} 个短语" },
+  "actions.phraseCount": {
+    "other": "{count} 个短语"
+  },
   "actions.confirmDiscard": "此操作有未保存的更改。要放弃吗？",
   "actions.namePlaceholder": "名称",
   "actions.target": "Target - 文件路径、链接、协议或 AUMID",
@@ -153,26 +140,22 @@ I18N.register('zh', {
   "actions.calibrate": "校准",
   "actions.needName": "请输入名称",
   "actions.confirmDelete": "要删除此操作吗？",
-
   "filter.all": "全部",
   "filter.apps": "应用",
   "filter.folder": "文件夹",
   "filter.web": "网页",
   "filter.system": "系统",
-
   "actionKind.shell": "程序/exe",
   "actionKind.url": "链接/URL",
   "actionKind.uwp": "Windows 应用",
   "actionKind.folder": "文件夹",
   "actionKind.system": "系统",
   "actionKind.search": "网页搜索 {q}",
-
   "calibration.title": "校准",
   "calibration.heading": "校准“{label}”",
   "calibration.hint": "按平时的说法连续说这个短语。每次都会计入；次数越多，识别越准确。",
   "calibration.count": "已录入短语：{count}",
   "calibration.last": "最近一次：«{phrase}»",
-
   "appPicker.title": "选择应用",
   "appPicker.search": "搜索应用…",
   "actions.scan": "扫描",
@@ -201,7 +184,6 @@ I18N.register('zh', {
   "scan.mark.recent": "最近",
   "scan.usage": "前台使用 {minutes} 分钟 · 上次启动 {date}",
   "scan.usage.noDate": "前台使用 {minutes} 分钟",
-
   "common.add": "添加",
   "common.save": "保存",
   "common.delete": "删除",
@@ -213,7 +195,6 @@ I18N.register('zh', {
   "common.nothingFound": "未找到任何内容",
   "common.on": "开",
   "common.off": "关",
-
   "settings.grammarLinkPrefix": "唤醒词和短语位于主页的",
   "settings.grammarLink": "“可以说什么” → 编辑",
   "settings.grammarLinkSuffix": "。",
@@ -318,13 +299,11 @@ I18N.register('zh', {
   "settings.indexState.off": "关闭",
   "settings.indexState.scanning": "扫描中",
   "settings.indexState.ready": "就绪",
-
   "hotkey.none": "未设置",
   "hotkey.press": "按下快捷键组合…（Esc 取消）",
   "hotkey.needModifier": "需要修饰键（Ctrl/Alt/Shift）",
   "hotkey.applied": "快捷键已应用：{combo}",
   "hotkey.error": "快捷键：{error}",
-
   "error.prefix": "错误 - {context}：{message}",
   "error.window": "获取窗口",
   "error.subscribe": "订阅 {event}",
@@ -351,7 +330,6 @@ I18N.register('zh', {
   "error.loadWallpaper": "加载壁纸",
   "error.loadActions": "加载操作",
   "error.uiLanguage": "切换界面语言",
-
   "picker.found": "搜索结果",
   "picker.foundFor": "搜索结果：“{title}”",
   "picker.closeTitle": "关闭（Esc）",
@@ -363,7 +341,9 @@ I18N.register('zh', {
   "picker.doubleClick": "双击打开",
   "picker.list": "找到的文件和文件夹",
   "picker.openButton": "打开",
-  "picker.count": { "other": "{count} 个选项" },
+  "picker.count": {
+    "other": "{count} 个选项"
+  },
   "picker.frequent": "常用",
   "picker.all": "所有匹配项",
   "picker.searchLabel": "搜索电脑",
@@ -407,4 +387,4 @@ I18N.register('zh', {
   "settings.mascot_position.pinned": "已固定：章鱼总是在这个位置出现。",
   "settings.mascot_position.corner": "屏幕右下角。",
   "settings.mascot_position.unavailable": "吉祥物已关闭：请先选择何时显示它。"
-});
+}

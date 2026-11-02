@@ -1,20 +1,15 @@
-// Slovenščina (Slovenian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('sl', {
+{
   "app.pickerTitle": "Reever - najdeno",
-
   "win.minimize": "Pomanjšaj",
   "win.toTray": "Pomanjšaj v sistemsko vrstico",
   "win.shade": "Kompaktni način",
   "win.expand": "Celo okno",
   "orb.toggle": "Mikrofon vklop / izklop",
-
   "nav.sections": "Razdelki",
   "nav.home": "Domov",
   "nav.actions": "Dejanja",
   "nav.settings": "Nastavitve",
   "nav.log": "Dnevnik",
-
   "mic.idle": "Čakam…",
   "mic.listening": "Poslušam…",
   "mic.busy": "Obdelujem…",
@@ -23,7 +18,6 @@ I18N.register('sl', {
   "mic.error": "Napaka",
   "mic.pause": "Premor",
   "mic.resume": "Nadaljuj",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktivacija",
   "tile.hotkey": "Bližnjica",
@@ -31,7 +25,6 @@ I18N.register('sl', {
   "tile.asr": "Prepoznavanje",
   "tile.model": "Model",
   "tile.actions": "Dejanja",
-
   "pill.checking": "preverjanje…",
   "pill.waiting": "čakanje…",
   "pill.paused": "ustavljeno",
@@ -43,13 +36,10 @@ I18N.register('sl', {
   "pill.indexReady": "pripravljen",
   "pill.indexing": "indeksiranje…",
   "pill.unchecked": "ni preverjeno",
-
   "mode.both": "Beseda in bližnjica",
   "mode.wake": "Beseda za aktivacijo",
   "mode.hotkey": "Bližnjica",
-
   "home.hint": "Recite «{wake}» in počakajte na signal ali povejte vse naenkrat: «{wake}, {open} …».",
-
   "grammar.heading": "Kaj lahko rečete",
   "grammar.edit": "Uredi",
   "grammar.closeEditor": "Zapri urejevalnik",
@@ -84,7 +74,6 @@ I18N.register('sl', {
   "grammar.stopLegend": "Konec nareka",
   "grammar.stopHint": "Cela fraza ali na koncu odlomka: «stop typing». Sredi besedila ostane besedilo.",
   "grammar.reset": "Ponastavi na privzeto",
-
   "kind.launch": "Zagon",
   "kind.folder": "Mape",
   "kind.search": "Iskanje",
@@ -96,7 +85,6 @@ I18N.register('sl', {
   "kind.find": "Najdi",
   "kind.find_folder": "Najdi mapo",
   "kind.find_file": "Najdi datoteko",
-
   "intent.launch": "odpri program ali povezavo",
   "intent.folder": "odpri mapo v računalniku",
   "intent.web_google": "išči v Googlu",
@@ -111,7 +99,6 @@ I18N.register('sl', {
   "intent.chat_gpt": "vprašaj ChatGPT (klepet v brskalniku)",
   "intent.chat_claude": "vprašaj Claude (klepet v brskalniku)",
   "intent.chat_gemini": "vprašaj Gemini (klepet v brskalniku)",
-
   "example.launch": "{label} · samo izgovorite ime programa",
   "example.close": "zapri odprt program",
   "example.kill": "kot »Končaj opravilo« v upravitelju opravil",
@@ -125,8 +112,6 @@ I18N.register('sl', {
   "example.command": "Ukaz",
   "example.shutdown": "sistem, s potrditvijo",
   "example.cancel": "prekliči ukaz",
-
-
   "validation.wake": "Dodajte vsaj eno besedo za aktivacijo.",
   "validation.id": "Namen mora imeti id.",
   "validation.duplicateId": "Id «{id}» se ponavlja.",
@@ -135,14 +120,18 @@ I18N.register('sl', {
   "validation.needPhrase": "Dodajte vsaj eno frazo za «{name}».",
   "validation.emptyPhrase": "Prazna fraza je dovoljena le za zagon programov («{name}»).",
   "validation.duplicatePhrase": "Fraza «{phrase}» se že uporablja v «{other}».",
-
   "actions.search": "Išči dejanja…",
   "actions.newTitle": "Novo dejanje",
   "actions.create": "Ustvari",
   "actions.empty": "Prazno. Ustvarite dejanje.",
   "actions.pick": "Izberite dejanje na levi<br />ali ustvarite novo",
   "actions.unnamed": "(brez imena)",
-  "actions.phraseCount": { "one": "{count} fraza", "two": "{count} frazi", "few": "{count} fraze", "other": "{count} fraz" },
+  "actions.phraseCount": {
+    "one": "{count} fraza",
+    "two": "{count} frazi",
+    "few": "{count} fraze",
+    "other": "{count} fraz"
+  },
   "actions.confirmDiscard": "Dejanje ima neshranjene spremembe. Jih zavržem?",
   "actions.namePlaceholder": "Ime",
   "actions.target": "Cilj - pot do datoteke, povezava, protokol ali AUMID",
@@ -154,26 +143,22 @@ I18N.register('sl', {
   "actions.calibrate": "Kalibriraj",
   "actions.needName": "Vnesite ime",
   "actions.confirmDelete": "Izbrišem dejanje?",
-
   "filter.all": "Vse",
   "filter.apps": "Programi",
   "filter.folder": "Mape",
   "filter.web": "Splet",
   "filter.system": "Sistem",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "povezava/URL",
   "actionKind.uwp": "aplikacija Windows",
   "actionKind.folder": "mapa",
   "actionKind.system": "sistem",
   "actionKind.search": "spletno iskanje {q}",
-
   "calibration.title": "Kalibracija",
   "calibration.heading": "Kalibracija «{label}»",
   "calibration.hint": "Ponavljajte frazo znova in znova, tako kot jo izgovarjate. Vsaka šteje - več jih je, natančneje je.",
   "calibration.count": "posnetih fraz: {count}",
   "calibration.last": "zadnja: «{phrase}»",
-
   "appPicker.title": "Izberite aplikacijo",
   "appPicker.search": "Išči aplikacije…",
   "actions.scan": "Preišči",
@@ -202,7 +187,6 @@ I18N.register('sl', {
   "scan.mark.recent": "nedavno",
   "scan.usage": "V ospredju {minutes} min · zadnji zagon {date}",
   "scan.usage.noDate": "V ospredju {minutes} min",
-
   "common.add": "Dodaj",
   "common.save": "Shrani",
   "common.delete": "Izbriši",
@@ -214,7 +198,6 @@ I18N.register('sl', {
   "common.nothingFound": "Ni zadetkov",
   "common.on": "vklop",
   "common.off": "izklop",
-
   "settings.grammarLinkPrefix": "Beseda za aktivacijo in fraze so na strani Domov, ",
   "settings.grammarLink": "»Kaj lahko rečete« → Uredi",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +302,11 @@ I18N.register('sl', {
   "settings.indexState.off": "izklopljen",
   "settings.indexState.scanning": "pregledovanje",
   "settings.indexState.ready": "pripravljen",
-
   "hotkey.none": "ni nastavljeno",
   "hotkey.press": "pritisnite kombinacijo… (Esc - prekliči)",
   "hotkey.needModifier": "potrebna je spreminjevalna tipka (Ctrl/Alt/Shift)",
   "hotkey.applied": "bližnjica uveljavljena: {combo}",
   "hotkey.error": "bližnjica: {error}",
-
   "error.prefix": "Napaka - {context}: {message}",
   "error.window": "pridobivanje okna",
   "error.subscribe": "naročanje na {event}",
@@ -352,7 +333,6 @@ I18N.register('sl', {
   "error.loadWallpaper": "nalaganje ozadja",
   "error.loadActions": "nalaganje dejanj",
   "error.uiLanguage": "sprememba jezika vmesnika",
-
   "picker.found": "Najdeno",
   "picker.foundFor": "Najdeno: «{title}»",
   "picker.closeTitle": "Zapri (Esc)",
@@ -364,7 +344,12 @@ I18N.register('sl', {
   "picker.doubleClick": "dvoklik - odpri",
   "picker.list": "Najdene datoteke in mape",
   "picker.openButton": "Odpri",
-  "picker.count": { "one": "{count} možnost", "two": "{count} možnosti", "few": "{count} možnosti", "other": "{count} možnosti" },
+  "picker.count": {
+    "one": "{count} možnost",
+    "two": "{count} možnosti",
+    "few": "{count} možnosti",
+    "other": "{count} možnosti"
+  },
   "picker.frequent": "Pogosto odprto",
   "picker.all": "Vsa ujemanja",
   "picker.searchLabel": "Iskanje po računalniku",
@@ -408,4 +393,4 @@ I18N.register('sl', {
   "settings.mascot_position.pinned": "Pripeto: hobotnica se vedno prikaže na tem mestu.",
   "settings.mascot_position.corner": "Spodnji desni kot zaslona.",
   "settings.mascot_position.unavailable": "Maskota je izklopljena: najprej izberi, kdaj naj se prikaže."
-});
+}

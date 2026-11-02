@@ -1,20 +1,15 @@
-// 한국어 (Korean) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('ko', {
+{
   "app.pickerTitle": "Reever - 찾은 항목",
-
   "win.minimize": "최소화",
   "win.toTray": "알림 영역으로 최소화",
   "win.shade": "간단히 보기",
   "win.expand": "전체 창",
   "orb.toggle": "마이크 켜기 / 끄기",
-
   "nav.sections": "섹션",
   "nav.home": "홈",
   "nav.actions": "동작",
   "nav.settings": "설정",
   "nav.log": "로그",
-
   "mic.idle": "대기 중…",
   "mic.listening": "듣는 중…",
   "mic.busy": "처리 중…",
@@ -23,7 +18,6 @@ I18N.register('ko', {
   "mic.error": "오류",
   "mic.pause": "일시 중지",
   "mic.resume": "다시 시작",
-
   "tile.mic": "마이크",
   "tile.activation": "활성화",
   "tile.hotkey": "단축키",
@@ -31,7 +25,6 @@ I18N.register('ko', {
   "tile.asr": "인식",
   "tile.model": "모델",
   "tile.actions": "동작",
-
   "pill.checking": "확인 중…",
   "pill.waiting": "대기 중…",
   "pill.paused": "일시 중지됨",
@@ -43,13 +36,10 @@ I18N.register('ko', {
   "pill.indexReady": "준비됨",
   "pill.indexing": "색인 중…",
   "pill.unchecked": "확인 안 됨",
-
   "mode.both": "호출어와 단축키",
   "mode.wake": "호출어",
   "mode.hotkey": "단축키",
-
   "home.hint": "«{wake}»라고 말한 뒤 신호를 기다리거나, 한 번에 말하세요: «{wake}, {open} …».",
-
   "grammar.heading": "말할 수 있는 것",
   "grammar.edit": "편집",
   "grammar.closeEditor": "편집기 닫기",
@@ -84,7 +74,6 @@ I18N.register('ko', {
   "grammar.stopLegend": "받아쓰기 끝내기",
   "grammar.stopHint": "문구만 말하거나 한 덩어리 끝에 말하세요: «stop typing». 텍스트 중간에서는 텍스트로 남습니다.",
   "grammar.reset": "기본값으로 되돌리기",
-
   "kind.launch": "실행",
   "kind.folder": "폴더",
   "kind.search": "검색",
@@ -96,7 +85,6 @@ I18N.register('ko', {
   "kind.find": "찾기",
   "kind.find_folder": "폴더 찾기",
   "kind.find_file": "파일 찾기",
-
   "intent.launch": "프로그램이나 링크 열기",
   "intent.folder": "컴퓨터의 폴더 열기",
   "intent.web_google": "Google에서 검색",
@@ -111,7 +99,6 @@ I18N.register('ko', {
   "intent.chat_gpt": "ChatGPT에 묻기 (브라우저 채팅)",
   "intent.chat_claude": "Claude에 묻기 (브라우저 채팅)",
   "intent.chat_gemini": "Gemini에 묻기 (브라우저 채팅)",
-
   "example.launch": "{label} · 프로그램 이름만 말하세요",
   "example.close": "열려 있는 프로그램 닫기",
   "example.kill": "작업 관리자의 “작업 끝내기”처럼",
@@ -125,8 +112,6 @@ I18N.register('ko', {
   "example.command": "명령",
   "example.shutdown": "시스템, 확인 후 실행",
   "example.cancel": "명령 취소",
-
-
   "validation.wake": "호출어를 하나 이상 추가하세요.",
   "validation.id": "의도에는 id가 있어야 합니다.",
   "validation.duplicateId": "id «{id}»가 중복됩니다.",
@@ -135,14 +120,15 @@ I18N.register('ko', {
   "validation.needPhrase": "«{name}»에 문구를 하나 이상 추가하세요.",
   "validation.emptyPhrase": "빈 문구는 프로그램 실행에만 쓸 수 있습니다 («{name}»).",
   "validation.duplicatePhrase": "문구 «{phrase}»는 이미 «{other}»에서 사용 중입니다.",
-
   "actions.search": "동작 검색…",
   "actions.newTitle": "새 동작",
   "actions.create": "만들기",
   "actions.empty": "비어 있습니다. 동작을 만드세요.",
   "actions.pick": "왼쪽에서 동작을 고르거나<br />새로 만드세요",
   "actions.unnamed": "(이름 없음)",
-  "actions.phraseCount": { "other": "문구 {count}개" },
+  "actions.phraseCount": {
+    "other": "문구 {count}개"
+  },
   "actions.confirmDiscard": "동작에 저장하지 않은 변경 사항이 있습니다. 버릴까요?",
   "actions.namePlaceholder": "이름",
   "actions.target": "대상 - 파일 경로, 링크, 프로토콜 또는 AUMID",
@@ -154,26 +140,22 @@ I18N.register('ko', {
   "actions.calibrate": "보정",
   "actions.needName": "이름을 입력하세요",
   "actions.confirmDelete": "동작을 삭제할까요?",
-
   "filter.all": "전체",
   "filter.apps": "앱",
   "filter.folder": "폴더",
   "filter.web": "웹",
   "filter.system": "시스템",
-
   "actionKind.shell": "프로그램/exe",
   "actionKind.url": "링크/URL",
   "actionKind.uwp": "Windows 앱",
   "actionKind.folder": "폴더",
   "actionKind.system": "시스템",
   "actionKind.search": "웹 검색 {q}",
-
   "calibration.title": "보정",
   "calibration.heading": "보정 «{label}»",
   "calibration.hint": "평소 말하는 대로 문구를 계속 반복하세요. 한 번 한 번이 모두 반영됩니다 - 많을수록 더 정확해집니다.",
   "calibration.count": "녹음한 문구: {count}",
   "calibration.last": "마지막: «{phrase}»",
-
   "appPicker.title": "앱 선택",
   "appPicker.search": "앱 검색…",
   "actions.scan": "스캔",
@@ -202,7 +184,6 @@ I18N.register('ko', {
   "scan.mark.recent": "최근",
   "scan.usage": "포커스 {minutes}분 · 마지막 실행 {date}",
   "scan.usage.noDate": "포커스 {minutes}분",
-
   "common.add": "추가",
   "common.save": "저장",
   "common.delete": "삭제",
@@ -214,7 +195,6 @@ I18N.register('ko', {
   "common.nothingFound": "찾은 항목이 없습니다",
   "common.on": "켜짐",
   "common.off": "꺼짐",
-
   "settings.grammarLinkPrefix": "호출어와 문구는 홈에 있습니다, ",
   "settings.grammarLink": "“말할 수 있는 것” → 편집",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +299,11 @@ I18N.register('ko', {
   "settings.indexState.off": "꺼짐",
   "settings.indexState.scanning": "검사 중",
   "settings.indexState.ready": "준비됨",
-
   "hotkey.none": "설정 안 됨",
   "hotkey.press": "조합을 누르세요… (Esc - 취소)",
   "hotkey.needModifier": "보조 키가 필요합니다 (Ctrl/Alt/Shift)",
   "hotkey.applied": "단축키 적용: {combo}",
   "hotkey.error": "단축키: {error}",
-
   "error.prefix": "오류 - {context}: {message}",
   "error.window": "창 가져오기",
   "error.subscribe": "{event} 구독",
@@ -352,7 +330,6 @@ I18N.register('ko', {
   "error.loadWallpaper": "배경 화면 불러오기",
   "error.loadActions": "동작 불러오기",
   "error.uiLanguage": "인터페이스 언어 변경",
-
   "picker.found": "찾은 항목",
   "picker.foundFor": "찾은 항목: «{title}»",
   "picker.closeTitle": "닫기 (Esc)",
@@ -364,7 +341,9 @@ I18N.register('ko', {
   "picker.doubleClick": "두 번 클릭 - 열기",
   "picker.list": "찾은 파일과 폴더",
   "picker.openButton": "열기",
-  "picker.count": { "other": "옵션 {count}개" },
+  "picker.count": {
+    "other": "옵션 {count}개"
+  },
   "picker.frequent": "자주 연 항목",
   "picker.all": "모든 일치 항목",
   "picker.searchLabel": "컴퓨터 검색",
@@ -408,4 +387,4 @@ I18N.register('ko', {
   "settings.mascot_position.pinned": "고정됨: 문어가 항상 이 위치에 나타납니다.",
   "settings.mascot_position.corner": "화면 오른쪽 아래 모서리.",
   "settings.mascot_position.unavailable": "마스코트가 꺼져 있습니다. 먼저 표시할 시점을 선택하세요."
-});
+}

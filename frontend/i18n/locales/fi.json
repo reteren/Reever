@@ -1,20 +1,15 @@
-// Suomi (Finnish) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('fi', {
+{
   "app.pickerTitle": "Reever - löydetyt",
-
   "win.minimize": "Pienennä",
   "win.toTray": "Pienennä ilmaisinalueelle",
   "win.shade": "Tiivis tila",
   "win.expand": "Koko ikkuna",
   "orb.toggle": "Mikrofoni päälle / pois",
-
   "nav.sections": "Osiot",
   "nav.home": "Aloitus",
   "nav.actions": "Toiminnot",
   "nav.settings": "Asetukset",
   "nav.log": "Loki",
-
   "mic.idle": "Odotetaan…",
   "mic.listening": "Kuunnellaan…",
   "mic.busy": "Käsitellään…",
@@ -23,7 +18,6 @@ I18N.register('fi', {
   "mic.error": "Virhe",
   "mic.pause": "Tauko",
   "mic.resume": "Jatka",
-
   "tile.mic": "Mikrofoni",
   "tile.activation": "Aktivointi",
   "tile.hotkey": "Pikanäppäin",
@@ -31,7 +25,6 @@ I18N.register('fi', {
   "tile.asr": "Tunnistus",
   "tile.model": "Malli",
   "tile.actions": "Toiminnot",
-
   "pill.checking": "tarkistetaan…",
   "pill.waiting": "odotetaan…",
   "pill.paused": "tauolla",
@@ -43,13 +36,10 @@ I18N.register('fi', {
   "pill.indexReady": "valmis",
   "pill.indexing": "indeksoidaan…",
   "pill.unchecked": "tarkistamatta",
-
   "mode.both": "Sana ja pikanäppäin",
   "mode.wake": "Herätyssana",
   "mode.hotkey": "Pikanäppäin",
-
   "home.hint": "Sano «{wake}» ja odota merkkiääntä tai sano kaikki kerralla: «{wake}, {open} …».",
-
   "grammar.heading": "Mitä voit sanoa",
   "grammar.edit": "Muokkaa",
   "grammar.closeEditor": "Sulje editori",
@@ -84,7 +74,6 @@ I18N.register('fi', {
   "grammar.stopLegend": "Sanelun lopetus",
   "grammar.stopHint": "Koko fraasi tai jakson lopussa: «stop typing». Tekstin keskellä se jää tekstiksi.",
   "grammar.reset": "Palauta oletukset",
-
   "kind.launch": "Käynnistys",
   "kind.folder": "Kansiot",
   "kind.search": "Haku",
@@ -96,7 +85,6 @@ I18N.register('fi', {
   "kind.find": "Etsi",
   "kind.find_folder": "Etsi kansio",
   "kind.find_file": "Etsi tiedosto",
-
   "intent.launch": "avaa ohjelma tai linkki",
   "intent.folder": "avaa kansio tietokoneelta",
   "intent.web_google": "hae Googlesta",
@@ -111,7 +99,6 @@ I18N.register('fi', {
   "intent.chat_gpt": "kysy ChatGPT:ltä (keskustelu selaimessa)",
   "intent.chat_claude": "kysy Claudelta (keskustelu selaimessa)",
   "intent.chat_gemini": "kysy Geminiltä (keskustelu selaimessa)",
-
   "example.launch": "{label} · sano vain ohjelman nimi",
   "example.close": "sulje avoin ohjelma",
   "example.kill": "kuten ”Lopeta tehtävä” Tehtävienhallinnassa",
@@ -125,8 +112,6 @@ I18N.register('fi', {
   "example.command": "Komento",
   "example.shutdown": "järjestelmä, vahvistuksella",
   "example.cancel": "peruuta komento",
-
-
   "validation.wake": "Lisää vähintään yksi herätyssana.",
   "validation.id": "Aikomuksella on oltava id.",
   "validation.duplicateId": "Id «{id}» toistuu.",
@@ -135,14 +120,16 @@ I18N.register('fi', {
   "validation.needPhrase": "Lisää vähintään yksi fraasi kohteelle «{name}».",
   "validation.emptyPhrase": "Tyhjä fraasi on sallittu vain ohjelmien käynnistykseen («{name}»).",
   "validation.duplicatePhrase": "Fraasi «{phrase}» on jo käytössä kohteessa «{other}».",
-
   "actions.search": "Hae toimintoja…",
   "actions.newTitle": "Uusi toiminto",
   "actions.create": "Luo",
   "actions.empty": "Tyhjä. Luo toiminto.",
   "actions.pick": "Valitse toiminto vasemmalta<br />tai luo uusi",
   "actions.unnamed": "(nimetön)",
-  "actions.phraseCount": { "one": "{count} fraasi", "other": "{count} fraasia" },
+  "actions.phraseCount": {
+    "one": "{count} fraasi",
+    "other": "{count} fraasia"
+  },
   "actions.confirmDiscard": "Toiminnossa on tallentamattomia muutoksia. Hylätäänkö ne?",
   "actions.namePlaceholder": "Nimi",
   "actions.target": "Kohde - tiedostopolku, linkki, protokolla tai AUMID",
@@ -154,26 +141,22 @@ I18N.register('fi', {
   "actions.calibrate": "Kalibroi",
   "actions.needName": "Anna nimi",
   "actions.confirmDelete": "Poistetaanko toiminto?",
-
   "filter.all": "Kaikki",
   "filter.apps": "Sovellukset",
   "filter.folder": "Kansiot",
   "filter.web": "Verkko",
   "filter.system": "Järjestelmä",
-
   "actionKind.shell": "ohjelma/exe",
   "actionKind.url": "linkki/URL",
   "actionKind.uwp": "Windows-sovellus",
   "actionKind.folder": "kansio",
   "actionKind.system": "järjestelmä",
   "actionKind.search": "verkkohaku {q}",
-
   "calibration.title": "Kalibrointi",
   "calibration.heading": "Kalibrointi «{label}»",
   "calibration.hint": "Sano fraasi yhä uudelleen, niin kuin sen sanot. Jokainen lasketaan - mitä useampi, sitä tarkempi.",
   "calibration.count": "tallennettuja fraaseja: {count}",
   "calibration.last": "viimeisin: «{phrase}»",
-
   "appPicker.title": "Valitse sovellus",
   "appPicker.search": "Hae sovelluksia…",
   "actions.scan": "Skannaa",
@@ -202,7 +185,6 @@ I18N.register('fi', {
   "scan.mark.recent": "äskettäin",
   "scan.usage": "Etualalla {minutes} min · viimeksi käynnistetty {date}",
   "scan.usage.noDate": "Etualalla {minutes} min",
-
   "common.add": "Lisää",
   "common.save": "Tallenna",
   "common.delete": "Poista",
@@ -214,7 +196,6 @@ I18N.register('fi', {
   "common.nothingFound": "Mitään ei löytynyt",
   "common.on": "päällä",
   "common.off": "pois",
-
   "settings.grammarLinkPrefix": "Herätyssana ja fraasit ovat Aloitus-sivulla, ",
   "settings.grammarLink": "”Mitä voit sanoa” → Muokkaa",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('fi', {
   "settings.indexState.off": "pois",
   "settings.indexState.scanning": "skannataan",
   "settings.indexState.ready": "valmis",
-
   "hotkey.none": "ei asetettu",
   "hotkey.press": "paina yhdistelmää… (Esc - peruuta)",
   "hotkey.needModifier": "tarvitaan muokkausnäppäin (Ctrl/Alt/Shift)",
   "hotkey.applied": "pikanäppäin otettu käyttöön: {combo}",
   "hotkey.error": "pikanäppäin: {error}",
-
   "error.prefix": "Virhe - {context}: {message}",
   "error.window": "ikkunan noutaminen",
   "error.subscribe": "tapahtuman {event} tilaaminen",
@@ -352,7 +331,6 @@ I18N.register('fi', {
   "error.loadWallpaper": "taustakuvan lataus",
   "error.loadActions": "toimintojen lataus",
   "error.uiLanguage": "käyttöliittymän kielen vaihto",
-
   "picker.found": "Löydetyt",
   "picker.foundFor": "Löydetyt: «{title}»",
   "picker.closeTitle": "Sulje (Esc)",
@@ -364,7 +342,10 @@ I18N.register('fi', {
   "picker.doubleClick": "kaksoisnapsautus - avaa",
   "picker.list": "Löydetyt tiedostot ja kansiot",
   "picker.openButton": "Avaa",
-  "picker.count": { "one": "{count} vaihtoehto", "other": "{count} vaihtoehtoa" },
+  "picker.count": {
+    "one": "{count} vaihtoehto",
+    "other": "{count} vaihtoehtoa"
+  },
   "picker.frequent": "Usein avatut",
   "picker.all": "Kaikki osumat",
   "picker.searchLabel": "Hae tietokoneelta",
@@ -408,4 +389,4 @@ I18N.register('fi', {
   "settings.mascot_position.pinned": "Kiinnitetty: mustekala ilmestyy aina tähän kohtaan.",
   "settings.mascot_position.corner": "Näytön oikea alakulma.",
   "settings.mascot_position.unavailable": "Maskotti on pois päältä: valitse ensin, milloin se näytetään."
-});
+}

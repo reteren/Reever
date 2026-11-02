@@ -1,5 +1,5 @@
-// Перевод интерфейса без сборки: словари — обычные скрипты в i18n/locales/,
-// каждый вызывает I18N.register(код, словарь). Английский — эталон и запасной
+// Перевод интерфейса без сборки: JSON-словари в i18n/locales/ читаются синхронно
+// до первого кадра. Английский — эталон и запасной
 // вариант: нет строки в выбранном языке — берётся английская, нет и её — ключ.
 //
 // Разметка переводится атрибутами:
@@ -23,9 +23,9 @@
   };
   const RTL = new Set(['ar']);
   const dictionaries = {};
+  const localeBase = new URL('locales/', document.currentScript.src);
   let locale = 'en';
-  let dictionary = {};
-  let request = 0;
+  let dictionary = load('en');
   // Включённые языки интерфейса (settings.ui_languages); null — все.
   let enabled = null;
 
@@ -34,19 +34,20 @@
     return SUPPORTED.includes(language) ? language : 'en';
   }
 
-  function register(code, entries) {
-    dictionaries[code] = entries;
-  }
-
   function load(code) {
-    if (dictionaries[code]) return Promise.resolve();
-    return new Promise(resolve => {
-      const script = document.createElement('script');
-      script.src = `i18n/locales/${code}.js`;
-      // Нет файла — не беда: останется английский.
-      script.onload = script.onerror = () => resolve();
-      document.head.append(script);
-    });
+    if (dictionaries[code]) return dictionaries[code];
+    const request = new XMLHttpRequest();
+    try {
+      request.open('GET', new URL(`${code}.json`, localeBase), false);
+      request.send();
+      if ((request.status === 200 || (request.status === 0 && request.responseText)) && request.responseText) {
+        return (dictionaries[code] = JSON.parse(request.responseText));
+      }
+    } catch (error) {
+      if (code === 'en') throw error;
+    }
+    if (code === 'en') throw new Error('Missing English interface dictionary');
+    return null;
   }
 
   /** `auto` или пусто — язык Windows (его отдаёт WebView2), иначе код языка.
@@ -63,18 +64,15 @@
     enabled = chosen ? SUPPORTED.filter(code => code === 'en' || chosen.includes(code)) : null;
   }
 
-  async function setLanguage(preference) {
+  function setLanguage(preference) {
     const code = resolve(preference);
-    const current = ++request;
-    await load('en');
-    if (code !== 'en') await load(code);
-    if (current !== request) return locale;
-    locale = dictionaries[code] ? code : 'en';
-    dictionary = dictionaries[locale] || {};
+    const loaded = load(code);
+    locale = loaded ? code : 'en';
+    dictionary = loaded || dictionaries.en;
     document.documentElement.lang = locale;
     document.documentElement.dir = RTL.has(locale) ? 'rtl' : 'ltr';
     apply(document);
-    return locale;
+    return Promise.resolve(locale);
   }
 
   function pick(entry, params) {
@@ -110,7 +108,7 @@
   }
 
   window.I18N = {
-    SUPPORTED, NAMES, register, setLanguage, setEnabled, resolve, normalize, t, has, apply,
+    SUPPORTED, NAMES, setLanguage, setEnabled, resolve, normalize, t, has, apply,
     get locale() { return locale; },
     get enabled() { return enabled || SUPPORTED; },
   };

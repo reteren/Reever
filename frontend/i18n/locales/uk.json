@@ -1,20 +1,15 @@
-// Українська (Ukrainian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('uk', {
+{
   "app.pickerTitle": "Reever - знайдено",
-
   "win.minimize": "Згорнути",
   "win.toTray": "Згорнути в трей",
   "win.shade": "Компактний режим",
   "win.expand": "Повне вікно",
   "orb.toggle": "Мікрофон увімк. / вимк.",
-
   "nav.sections": "Розділи",
   "nav.home": "Головна",
   "nav.actions": "Дії",
   "nav.settings": "Налаштування",
   "nav.log": "Журнал",
-
   "mic.idle": "Очікування…",
   "mic.listening": "Слухаю…",
   "mic.busy": "Обробка…",
@@ -23,7 +18,6 @@ I18N.register('uk', {
   "mic.error": "Помилка",
   "mic.pause": "Пауза",
   "mic.resume": "Продовжити",
-
   "tile.mic": "Мікрофон",
   "tile.activation": "Активація",
   "tile.hotkey": "Гаряча клавіша",
@@ -31,7 +25,6 @@ I18N.register('uk', {
   "tile.asr": "Розпізнавання",
   "tile.model": "Модель",
   "tile.actions": "Дій",
-
   "pill.checking": "перевірка…",
   "pill.waiting": "очікування…",
   "pill.paused": "пауза",
@@ -43,13 +36,10 @@ I18N.register('uk', {
   "pill.indexReady": "готовий",
   "pill.indexing": "індексація…",
   "pill.unchecked": "не перевірено",
-
   "mode.both": "Слово і гаряча клавіша",
   "mode.wake": "Слово активації",
   "mode.hotkey": "Гаряча клавіша",
-
   "home.hint": "Скажіть «{wake}» і дочекайтеся сигналу або скажіть усе одразу: «{wake}, {open} …».",
-
   "grammar.heading": "Що можна сказати",
   "grammar.edit": "Змінити",
   "grammar.closeEditor": "Закрити редактор",
@@ -84,7 +74,6 @@ I18N.register('uk', {
   "grammar.stopLegend": "Завершення диктування",
   "grammar.stopHint": "Уся фраза або в кінці фрагмента: «stop typing». Посеред тексту вона лишається текстом.",
   "grammar.reset": "Скинути до стандартних",
-
   "kind.launch": "Запуск",
   "kind.folder": "Папки",
   "kind.search": "Пошук",
@@ -96,7 +85,6 @@ I18N.register('uk', {
   "kind.find": "Знайти",
   "kind.find_folder": "Знайти папку",
   "kind.find_file": "Знайти файл",
-
   "intent.launch": "відкрити програму або посилання",
   "intent.folder": "відкрити папку на комп'ютері",
   "intent.web_google": "пошук у Google",
@@ -111,7 +99,6 @@ I18N.register('uk', {
   "intent.chat_gpt": "запитати ChatGPT (чат у браузері)",
   "intent.chat_claude": "запитати Claude (чат у браузері)",
   "intent.chat_gemini": "запитати Gemini (чат у браузері)",
-
   "example.launch": "{label} · просто назвіть програму",
   "example.close": "закрити відкриту програму",
   "example.kill": "як «Зняти завдання» в Диспетчері завдань",
@@ -125,8 +112,6 @@ I18N.register('uk', {
   "example.command": "Команда",
   "example.shutdown": "система, з підтвердженням",
   "example.cancel": "скасувати команду",
-
-
   "validation.wake": "Додайте хоча б одне слово активації.",
   "validation.id": "У наміру має бути id.",
   "validation.duplicateId": "id «{id}» повторюється.",
@@ -135,14 +120,18 @@ I18N.register('uk', {
   "validation.needPhrase": "Додайте хоча б одну фразу для «{name}».",
   "validation.emptyPhrase": "Порожня фраза дозволена лише для запуску програм («{name}»).",
   "validation.duplicatePhrase": "Фраза «{phrase}» уже використовується в «{other}».",
-
   "actions.search": "Пошук дій…",
   "actions.newTitle": "Нова дія",
   "actions.create": "Створити",
   "actions.empty": "Порожньо. Створіть дію.",
   "actions.pick": "Виберіть дію ліворуч<br />або створіть нову",
   "actions.unnamed": "(без назви)",
-  "actions.phraseCount": { "one": "{count} фраза", "few": "{count} фрази", "many": "{count} фраз", "other": "{count} фрази" },
+  "actions.phraseCount": {
+    "one": "{count} фраза",
+    "few": "{count} фрази",
+    "many": "{count} фраз",
+    "other": "{count} фрази"
+  },
   "actions.confirmDiscard": "У дії є незбережені зміни. Відкинути їх?",
   "actions.namePlaceholder": "Назва",
   "actions.target": "Ціль - шлях до файлу, посилання, протокол або AUMID",
@@ -154,26 +143,22 @@ I18N.register('uk', {
   "actions.calibrate": "Калібрувати",
   "actions.needName": "Введіть назву",
   "actions.confirmDelete": "Видалити дію?",
-
   "filter.all": "Усі",
   "filter.apps": "Програми",
   "filter.folder": "Папки",
   "filter.web": "Веб",
   "filter.system": "Система",
-
   "actionKind.shell": "програма/exe",
   "actionKind.url": "посилання/URL",
   "actionKind.uwp": "застосунок Windows",
   "actionKind.folder": "папка",
   "actionKind.system": "система",
   "actionKind.search": "веб-пошук {q}",
-
   "calibration.title": "Калібрування",
   "calibration.heading": "Калібрування «{label}»",
   "calibration.hint": "Повторюйте фразу знову й знову - так, як ви її говорите. Кожна враховується: що більше, то точніше.",
   "calibration.count": "записано фраз: {count}",
   "calibration.last": "остання: «{phrase}»",
-
   "appPicker.title": "Вибір застосунку",
   "appPicker.search": "Пошук застосунків…",
   "actions.scan": "Сканувати",
@@ -202,7 +187,6 @@ I18N.register('uk', {
   "scan.mark.recent": "нещодавно",
   "scan.usage": "У фокусі {minutes} хв · останній запуск {date}",
   "scan.usage.noDate": "У фокусі {minutes} хв",
-
   "common.add": "Додати",
   "common.save": "Зберегти",
   "common.delete": "Видалити",
@@ -214,7 +198,6 @@ I18N.register('uk', {
   "common.nothingFound": "Нічого не знайдено",
   "common.on": "увімк.",
   "common.off": "вимк.",
-
   "settings.grammarLinkPrefix": "Слово активації та фрази - на Головній, ",
   "settings.grammarLink": "«Що можна сказати» → Змінити",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +302,11 @@ I18N.register('uk', {
   "settings.indexState.off": "вимкнено",
   "settings.indexState.scanning": "сканування",
   "settings.indexState.ready": "готовий",
-
   "hotkey.none": "не задано",
   "hotkey.press": "натисніть комбінацію… (Esc - скасувати)",
   "hotkey.needModifier": "потрібен модифікатор (Ctrl/Alt/Shift)",
   "hotkey.applied": "гарячу клавішу застосовано: {combo}",
   "hotkey.error": "гаряча клавіша: {error}",
-
   "error.prefix": "Помилка - {context}: {message}",
   "error.window": "отримання вікна",
   "error.subscribe": "підписка на {event}",
@@ -352,7 +333,6 @@ I18N.register('uk', {
   "error.loadWallpaper": "завантаження шпалер",
   "error.loadActions": "завантаження дій",
   "error.uiLanguage": "зміна мови інтерфейсу",
-
   "picker.found": "Знайдено",
   "picker.foundFor": "Знайдено: «{title}»",
   "picker.closeTitle": "Закрити (Esc)",
@@ -364,7 +344,12 @@ I18N.register('uk', {
   "picker.doubleClick": "подвійний клік - відкрити",
   "picker.list": "Знайдені файли й папки",
   "picker.openButton": "Відкрити",
-  "picker.count": { "one": "{count} варіант", "few": "{count} варіанти", "many": "{count} варіантів", "other": "{count} варіанта" },
+  "picker.count": {
+    "one": "{count} варіант",
+    "few": "{count} варіанти",
+    "many": "{count} варіантів",
+    "other": "{count} варіанта"
+  },
   "picker.frequent": "Часто відкривані",
   "picker.all": "Усі збіги",
   "picker.searchLabel": "Пошук на комп'ютері",
@@ -408,4 +393,4 @@ I18N.register('uk', {
   "settings.mascot_position.pinned": "Закріплено: восьминіг завжди з'являється в цьому місці.",
   "settings.mascot_position.corner": "Правий нижній кут екрана.",
   "settings.mascot_position.unavailable": "Маскота вимкнено: спершу вибери, коли його показувати."
-});
+}

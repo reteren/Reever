@@ -1,19 +1,15 @@
-// Français. Les commandes vocales entre « » restent en russe.
-I18N.register('fr', {
+{
   "app.pickerTitle": "Reever - résultats",
-
   "win.minimize": "Réduire",
   "win.toTray": "Réduire dans la zone de notification",
   "win.shade": "Mode compact",
   "win.expand": "Fenêtre complète",
   "orb.toggle": "Activer / couper le micro",
-
   "nav.sections": "Sections",
   "nav.home": "Accueil",
   "nav.actions": "Actions",
   "nav.settings": "Paramètres",
   "nav.log": "Journal",
-
   "mic.idle": "En attente…",
   "mic.listening": "À l’écoute…",
   "mic.busy": "Traitement…",
@@ -22,7 +18,6 @@ I18N.register('fr', {
   "mic.error": "Erreur",
   "mic.pause": "Mettre en pause",
   "mic.resume": "Reprendre",
-
   "tile.mic": "Microphone",
   "tile.activation": "Activation",
   "tile.hotkey": "Raccourci clavier",
@@ -30,7 +25,6 @@ I18N.register('fr', {
   "tile.asr": "Reconnaissance",
   "tile.model": "Modèle",
   "tile.actions": "Actions",
-
   "pill.checking": "vérification…",
   "pill.waiting": "en attente…",
   "pill.paused": "en pause",
@@ -42,13 +36,10 @@ I18N.register('fr', {
   "pill.indexReady": "prêt",
   "pill.indexing": "indexation…",
   "pill.unchecked": "non vérifié",
-
   "mode.both": "Mot et raccourci clavier",
   "mode.wake": "Mot de réveil",
   "mode.hotkey": "Raccourci clavier",
-
   "home.hint": "Dites «{wake}» et attendez le signal, ou prononcez tout d’un coup : «{wake}, {open} …».",
-
   "grammar.heading": "Que dire",
   "grammar.edit": "Modifier",
   "grammar.closeEditor": "Fermer l’éditeur",
@@ -83,7 +74,6 @@ I18N.register('fr', {
   "grammar.stopLegend": "Arrêter la dictée",
   "grammar.stopHint": "La phrase entière ou à la fin d’un segment : «stop typing». Au milieu du texte, elle reste du texte.",
   "grammar.reset": "Rétablir les valeurs par défaut",
-
   "kind.launch": "Lancer",
   "kind.folder": "Dossiers",
   "kind.search": "Rechercher",
@@ -95,7 +85,6 @@ I18N.register('fr', {
   "kind.find": "Rechercher",
   "kind.find_folder": "Rechercher un dossier",
   "kind.find_file": "Rechercher un fichier",
-
   "intent.launch": "ouvrir un programme ou un lien",
   "intent.folder": "ouvrir un dossier sur l’ordinateur",
   "intent.web_google": "rechercher sur Google",
@@ -110,7 +99,6 @@ I18N.register('fr', {
   "intent.chat_gpt": "poser une question à ChatGPT (chat dans le navigateur)",
   "intent.chat_claude": "poser une question à Claude (chat dans le navigateur)",
   "intent.chat_gemini": "poser une question à Gemini (chat dans le navigateur)",
-
   "example.launch": "{label} · dites simplement le nom du programme",
   "example.close": "fermer un programme ouvert",
   "example.kill": "comme « Terminer la tâche » dans le Gestionnaire des tâches",
@@ -124,8 +112,6 @@ I18N.register('fr', {
   "example.command": "Commande",
   "example.shutdown": "action système, avec confirmation",
   "example.cancel": "annuler la commande",
-
-
   "validation.wake": "Ajoutez au moins un mot de réveil.",
   "validation.id": "Une intention doit avoir un identifiant.",
   "validation.duplicateId": "L’identifiant «{id}» est déjà utilisé.",
@@ -134,14 +120,17 @@ I18N.register('fr', {
   "validation.needPhrase": "Ajoutez au moins une phrase pour «{name}».",
   "validation.emptyPhrase": "Une phrase vide n’est autorisée que pour lancer des programmes («{name}»).",
   "validation.duplicatePhrase": "La phrase «{phrase}» est déjà utilisée dans «{other}».",
-
   "actions.search": "Rechercher des actions…",
   "actions.newTitle": "Nouvelle action",
   "actions.create": "Créer",
   "actions.empty": "Aucune action. Créez-en une.",
   "actions.pick": "Choisissez une action à gauche<br />ou créez-en une nouvelle",
   "actions.unnamed": "(sans nom)",
-  "actions.phraseCount": { "one": "{count} phrase", "many": "{count} phrases", "other": "{count} phrases" },
+  "actions.phraseCount": {
+    "one": "{count} phrase",
+    "many": "{count} phrases",
+    "other": "{count} phrases"
+  },
   "actions.confirmDiscard": "Cette action comporte des modifications non enregistrées. Les abandonner ?",
   "actions.namePlaceholder": "Nom",
   "actions.target": "Cible - chemin de fichier, lien, protocole ou AUMID",
@@ -153,26 +142,22 @@ I18N.register('fr', {
   "actions.calibrate": "Calibrer",
   "actions.needName": "Saisissez un nom",
   "actions.confirmDelete": "Supprimer cette action ?",
-
   "filter.all": "Tout",
   "filter.apps": "Applications",
   "filter.folder": "Dossiers",
   "filter.web": "Web",
   "filter.system": "Système",
-
   "actionKind.shell": "programme/exe",
   "actionKind.url": "lien/URL",
   "actionKind.uwp": "application Windows",
   "actionKind.folder": "dossier",
   "actionKind.system": "système",
   "actionKind.search": "recherche Web {q}",
-
   "calibration.title": "Calibration",
   "calibration.heading": "Calibration «{label}»",
   "calibration.hint": "Répétez la phrase comme vous la prononcez. Chaque répétition compte : plus il y en a, plus la reconnaissance est précise.",
   "calibration.count": "phrases enregistrées : {count}",
   "calibration.last": "dernière : «{phrase}»",
-
   "appPicker.title": "Choisir une application",
   "appPicker.search": "Rechercher des applications…",
   "actions.scan": "Analyser",
@@ -201,7 +186,6 @@ I18N.register('fr', {
   "scan.mark.recent": "récent",
   "scan.usage": "Au premier plan {minutes} min · dernier lancement {date}",
   "scan.usage.noDate": "Au premier plan {minutes} min",
-
   "common.add": "Ajouter",
   "common.save": "Enregistrer",
   "common.delete": "Supprimer",
@@ -213,7 +197,6 @@ I18N.register('fr', {
   "common.nothingFound": "Aucun résultat",
   "common.on": "activé",
   "common.off": "désactivé",
-
   "settings.grammarLinkPrefix": "Le mot de réveil et les phrases se trouvent dans Accueil, ",
   "settings.grammarLink": "« Que dire » → Modifier",
   "settings.grammarLinkSuffix": ".",
@@ -318,13 +301,11 @@ I18N.register('fr', {
   "settings.indexState.off": "désactivé",
   "settings.indexState.scanning": "analyse en cours",
   "settings.indexState.ready": "prêt",
-
   "hotkey.none": "non défini",
   "hotkey.press": "appuyez sur une combinaison… (Esc pour annuler)",
   "hotkey.needModifier": "une touche de modification est requise (Ctrl/Alt/Shift)",
   "hotkey.applied": "raccourci clavier appliqué : {combo}",
   "hotkey.error": "raccourci clavier : {error}",
-
   "error.prefix": "Erreur - {context} : {message}",
   "error.window": "récupération de la fenêtre",
   "error.subscribe": "abonnement à {event}",
@@ -351,7 +332,6 @@ I18N.register('fr', {
   "error.loadWallpaper": "chargement du fond d’écran",
   "error.loadActions": "chargement des actions",
   "error.uiLanguage": "changement de la langue de l’interface",
-
   "picker.found": "Résultats",
   "picker.foundFor": "Résultats : «{title}»",
   "picker.closeTitle": "Fermer (Esc)",
@@ -363,7 +343,11 @@ I18N.register('fr', {
   "picker.doubleClick": "double-clic - ouvrir",
   "picker.list": "Fichiers et dossiers trouvés",
   "picker.openButton": "Ouvrir",
-  "picker.count": { "one": "{count} option", "many": "{count} options", "other": "{count} options" },
+  "picker.count": {
+    "one": "{count} option",
+    "many": "{count} options",
+    "other": "{count} options"
+  },
   "picker.frequent": "Souvent ouverts",
   "picker.all": "Tous les résultats",
   "picker.searchLabel": "Rechercher sur l'ordinateur",
@@ -407,4 +391,4 @@ I18N.register('fr', {
   "settings.mascot_position.pinned": "Fixé : la pieuvre apparaît toujours à cet endroit.",
   "settings.mascot_position.corner": "Coin inférieur droit de l’écran.",
   "settings.mascot_position.unavailable": "La mascotte est désactivée : choisis d’abord quand l’afficher."
-});
+}

@@ -1,19 +1,15 @@
-// Русский. Голосовые фразы в «» — то, что говорится вслух (распознавание русское).
-I18N.register('ru', {
+{
   "app.pickerTitle": "Reever - найдено",
-
   "win.minimize": "Свернуть",
   "win.toTray": "Свернуть в трей",
   "win.shade": "Компактный режим",
   "win.expand": "Полное окно",
   "orb.toggle": "Микрофон: вкл / выкл",
-
   "nav.sections": "Разделы",
   "nav.home": "Главная",
   "nav.actions": "Действия",
   "nav.settings": "Настройки",
   "nav.log": "Лог",
-
   "mic.idle": "Ожидание…",
   "mic.listening": "Слушаю…",
   "mic.busy": "Обработка…",
@@ -22,7 +18,6 @@ I18N.register('ru', {
   "mic.error": "Ошибка",
   "mic.pause": "Пауза",
   "mic.resume": "Возобновить",
-
   "tile.mic": "Микрофон",
   "tile.activation": "Активация",
   "tile.hotkey": "Хоткей",
@@ -30,7 +25,6 @@ I18N.register('ru', {
   "tile.asr": "Распознавание",
   "tile.model": "Модель",
   "tile.actions": "Действий",
-
   "pill.checking": "проверка…",
   "pill.waiting": "ожидание…",
   "pill.paused": "пауза",
@@ -42,13 +36,10 @@ I18N.register('ru', {
   "pill.indexReady": "готов",
   "pill.indexing": "индексация…",
   "pill.unchecked": "не проверено",
-
   "mode.both": "Слово и хоткей",
   "mode.wake": "Wake-слово",
   "mode.hotkey": "Хоткей",
-
   "home.hint": "Можно сказать «{wake}» и дождаться сигнала, а можно сразу: «{wake}, {open} …».",
-
   "grammar.heading": "Что можно сказать",
   "grammar.edit": "Изменить",
   "grammar.closeEditor": "Закрыть редактор",
@@ -83,7 +74,6 @@ I18N.register('ru', {
   "grammar.stopLegend": "Остановить диктовку",
   "grammar.stopHint": "Фраза целиком или в конце куска: «стоп ввод», «ривер остановись». Посреди текста она остаётся текстом.",
   "grammar.reset": "Сброс к умолчанию",
-
   "kind.launch": "Запуск",
   "kind.folder": "Папки",
   "kind.search": "Поиск",
@@ -95,7 +85,6 @@ I18N.register('ru', {
   "kind.find": "Найти",
   "kind.find_folder": "Найти папку",
   "kind.find_file": "Найти файл",
-
   "intent.launch": "открыть программу или ссылку",
   "intent.folder": "открыть папку на компьютере",
   "intent.web_google": "поиск в Google",
@@ -110,7 +99,6 @@ I18N.register('ru', {
   "intent.chat_gpt": "спросить ChatGPT (чат в браузере)",
   "intent.chat_claude": "спросить Claude (чат в браузере)",
   "intent.chat_gemini": "спросить Gemini (чат в браузере)",
-
   "example.launch": "{label} · просто назови программу",
   "example.close": "закрыть открытую программу",
   "example.kill": "как «Снять задачу» в диспетчере",
@@ -124,8 +112,6 @@ I18N.register('ru', {
   "example.command": "Команда",
   "example.shutdown": "система, с подтверждением",
   "example.cancel": "отмена команды",
-
-
   "validation.wake": "Добавь хотя бы одно wake-слово.",
   "validation.id": "У намерения должен быть id.",
   "validation.duplicateId": "Повторяется id «{id}».",
@@ -134,7 +120,6 @@ I18N.register('ru', {
   "validation.needPhrase": "Добавь хотя бы одну фразу для «{name}».",
   "validation.emptyPhrase": "Пустая фраза доступна только для запуска программ («{name}»).",
   "validation.duplicatePhrase": "Фраза «{phrase}» уже используется в «{other}».",
-
   "actions.search": "Поиск действия…",
   "actions.newTitle": "Новое действие",
   "actions.create": "Создать",
@@ -153,26 +138,22 @@ I18N.register('ru', {
   "actions.calibrate": "Калибровать",
   "actions.needName": "Укажи название",
   "actions.confirmDelete": "Удалить действие?",
-
   "filter.all": "Все",
   "filter.apps": "Проги",
   "filter.folder": "Папки",
   "filter.web": "Веб",
   "filter.system": "Система",
-
   "actionKind.shell": "программа/exe",
   "actionKind.url": "ссылка/URL",
   "actionKind.uwp": "Windows-приложение",
   "actionKind.folder": "папка",
   "actionKind.system": "системная",
   "actionKind.search": "веб-поиск {q}",
-
   "calibration.title": "Калибровка",
   "calibration.heading": "Калибровка «{label}»",
   "calibration.hint": "Говори фразу подряд, как произносишь. Каждая засчитывается - чем больше, тем точнее.",
   "calibration.count": "захвачено фраз: {count}",
   "calibration.last": "последняя: «{phrase}»",
-
   "appPicker.title": "Выбор приложения",
   "appPicker.search": "Поиск приложения…",
   "actions.scan": "Сканировать",
@@ -201,7 +182,6 @@ I18N.register('ru', {
   "scan.mark.recent": "недавно",
   "scan.usage": "В фокусе {minutes} мин · последний запуск {date}",
   "scan.usage.noDate": "В фокусе {minutes} мин",
-
   "common.add": "Добавить",
   "common.save": "Сохранить",
   "common.delete": "Удалить",
@@ -213,7 +193,6 @@ I18N.register('ru', {
   "common.nothingFound": "Ничего не найдено",
   "common.on": "вкл",
   "common.off": "выкл",
-
   "settings.grammarLinkPrefix": "Wake-слово и фразы - на Главной, ",
   "settings.grammarLink": "«Что можно сказать» → Изменить",
   "settings.grammarLinkSuffix": ".",
@@ -318,13 +297,11 @@ I18N.register('ru', {
   "settings.indexState.off": "выключен",
   "settings.indexState.scanning": "сканирует",
   "settings.indexState.ready": "готов",
-
   "hotkey.none": "не задан",
   "hotkey.press": "нажми сочетание… (Esc - отмена)",
   "hotkey.needModifier": "нужен модификатор (Ctrl/Alt/Shift)",
   "hotkey.applied": "хоткей применён: {combo}",
   "hotkey.error": "хоткей: {error}",
-
   "error.prefix": "Ошибка - {context}: {message}",
   "error.window": "получение окна",
   "error.subscribe": "подписка {event}",
@@ -351,7 +328,6 @@ I18N.register('ru', {
   "error.loadWallpaper": "загрузка обоев",
   "error.loadActions": "загрузка действий",
   "error.uiLanguage": "смена языка интерфейса",
-
   "picker.found": "Найдено",
   "picker.foundFor": "Найдено: «{title}»",
   "picker.closeTitle": "Закрыть (Esc)",
@@ -363,7 +339,12 @@ I18N.register('ru', {
   "picker.doubleClick": "двойной щелчок - открыть",
   "picker.list": "Найденные файлы и папки",
   "picker.openButton": "Открыть",
-  "picker.count": { "one": "{count} вариант", "few": "{count} варианта", "many": "{count} вариантов", "other": "{count} варианта" },
+  "picker.count": {
+    "one": "{count} вариант",
+    "few": "{count} варианта",
+    "many": "{count} вариантов",
+    "other": "{count} варианта"
+  },
   "picker.frequent": "Часто открываемые",
   "picker.all": "Все совпадения",
   "picker.searchLabel": "Поиск по компьютеру",
@@ -407,4 +388,4 @@ I18N.register('ru', {
   "settings.mascot_position.pinned": "Закреплено: осьминог всегда появляется в этом месте.",
   "settings.mascot_position.corner": "Правый нижний угол экрана.",
   "settings.mascot_position.unavailable": "Маскот выключен: сначала выбери, когда его показывать."
-});
+}

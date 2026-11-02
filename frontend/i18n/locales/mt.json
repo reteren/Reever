@@ -1,20 +1,15 @@
-// Malti (Maltese) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('mt', {
+{
   "app.pickerTitle": "Reever - instab",
-
   "win.minimize": "Imminimizza",
   "win.toTray": "Imminimizza fiż-żona tan-notifiki",
   "win.shade": "Modalità kompatta",
   "win.expand": "Tieqa sħiħa",
   "orb.toggle": "Mikrofonu mixgħul / mitfi",
-
   "nav.sections": "Taqsimiet",
   "nav.home": "Paġna ewlenija",
   "nav.actions": "Azzjonijiet",
   "nav.settings": "Settings",
   "nav.log": "Reġistru",
-
   "mic.idle": "Qed nistenna…",
   "mic.listening": "Qed nisma'…",
   "mic.busy": "Qed nipproċessa…",
@@ -23,7 +18,6 @@ I18N.register('mt', {
   "mic.error": "Żball",
   "mic.pause": "Pawża",
   "mic.resume": "Kompli",
-
   "tile.mic": "Mikrofonu",
   "tile.activation": "Attivazzjoni",
   "tile.hotkey": "Shortcut",
@@ -31,7 +25,6 @@ I18N.register('mt', {
   "tile.asr": "Rikonoxximent",
   "tile.model": "Mudell",
   "tile.actions": "Azzjonijiet",
-
   "pill.checking": "qed jiċċekkja…",
   "pill.waiting": "qed jistenna…",
   "pill.paused": "pawża",
@@ -43,13 +36,10 @@ I18N.register('mt', {
   "pill.indexReady": "lest",
   "pill.indexing": "qed jindiċizza…",
   "pill.unchecked": "mhux iċċekkjat",
-
   "mode.both": "Kelma u shortcut",
   "mode.wake": "Kelma ta' attivazzjoni",
   "mode.hotkey": "Shortcut",
-
   "home.hint": "Għid «{wake}» u stenna s-sinjal, jew għid kollox f'daqqa: «{wake}, {open} …».",
-
   "grammar.heading": "X'tista' tgħid",
   "grammar.edit": "Editja",
   "grammar.closeEditor": "Agħlaq l-editur",
@@ -84,7 +74,6 @@ I18N.register('mt', {
   "grammar.stopLegend": "Waqfien tad-dettatura",
   "grammar.stopHint": "Il-frażi kollha jew fl-aħħar ta' biċċa: «stop typing». F'nofs it-test tibqa' test.",
   "grammar.reset": "Erġa' għad-default",
-
   "kind.launch": "Tnedija",
   "kind.folder": "Folders",
   "kind.search": "Tfittxija",
@@ -96,7 +85,6 @@ I18N.register('mt', {
   "kind.find": "Sib",
   "kind.find_folder": "Sib folder",
   "kind.find_file": "Sib fajl",
-
   "intent.launch": "iftaħ programm jew link",
   "intent.folder": "iftaħ folder fuq il-kompjuter",
   "intent.web_google": "fittex fuq Google",
@@ -111,7 +99,6 @@ I18N.register('mt', {
   "intent.chat_gpt": "staqsi lil ChatGPT (chat fil-browser)",
   "intent.chat_claude": "staqsi lil Claude (chat fil-browser)",
   "intent.chat_gemini": "staqsi lil Gemini (chat fil-browser)",
-
   "example.launch": "{label} · sempliċement semmi l-programm",
   "example.close": "agħlaq programm miftuħ",
   "example.kill": "bħal “End task” fit-Task Manager",
@@ -125,8 +112,6 @@ I18N.register('mt', {
   "example.command": "Kmand",
   "example.shutdown": "sistema, b'konferma",
   "example.cancel": "ikkanċella l-kmand",
-
-
   "validation.wake": "Żid mill-inqas kelma waħda ta' attivazzjoni.",
   "validation.id": "Intenzjoni trid ikollha id.",
   "validation.duplicateId": "L-id «{id}» qed jirrepeti ruħu.",
@@ -135,14 +120,19 @@ I18N.register('mt', {
   "validation.needPhrase": "Żid mill-inqas frażi waħda għal «{name}».",
   "validation.emptyPhrase": "Frażi vojta hija permessa biss biex jitnedew programmi («{name}»).",
   "validation.duplicatePhrase": "Il-frażi «{phrase}» diġà tintuża f'«{other}».",
-
   "actions.search": "Fittex azzjonijiet…",
   "actions.newTitle": "Azzjoni ġdida",
   "actions.create": "Oħloq",
   "actions.empty": "Vojt. Oħloq azzjoni.",
   "actions.pick": "Agħżel azzjoni fuq ix-xellug<br />jew oħloq waħda ġdida",
   "actions.unnamed": "(mingħajr isem)",
-  "actions.phraseCount": { "one": "{count} frażi", "two": "{count} frażijiet", "few": "{count} frażijiet", "many": "{count} frażi", "other": "{count} frażi" },
+  "actions.phraseCount": {
+    "one": "{count} frażi",
+    "two": "{count} frażijiet",
+    "few": "{count} frażijiet",
+    "many": "{count} frażi",
+    "other": "{count} frażi"
+  },
   "actions.confirmDiscard": "L-azzjoni għandha bidliet mhux issejvjati. Tarmihom?",
   "actions.namePlaceholder": "Isem",
   "actions.target": "Mira - path tal-fajl, link, protokoll jew AUMID",
@@ -154,26 +144,22 @@ I18N.register('mt', {
   "actions.calibrate": "Ikkalibra",
   "actions.needName": "Daħħal isem",
   "actions.confirmDelete": "Tħassar l-azzjoni?",
-
   "filter.all": "Kollha",
   "filter.apps": "Apps",
   "filter.folder": "Folders",
   "filter.web": "Web",
   "filter.system": "Sistema",
-
   "actionKind.shell": "programm/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "app tal-Windows",
   "actionKind.folder": "folder",
   "actionKind.system": "sistema",
   "actionKind.search": "tfittxija fuq il-web {q}",
-
   "calibration.title": "Kalibrazzjoni",
   "calibration.heading": "Kalibrazzjoni «{label}»",
   "calibration.hint": "Għid il-frażi għal darb'oħra u għal darb'oħra, kif tgħidha int. Kull waħda tgħodd - iktar ma jkunu, iktar preċiż.",
   "calibration.count": "frażijiet irreġistrati: {count}",
   "calibration.last": "l-aħħar: «{phrase}»",
-
   "appPicker.title": "Agħżel app",
   "appPicker.search": "Fittex apps…",
   "actions.scan": "Skennja",
@@ -202,7 +188,6 @@ I18N.register('mt', {
   "scan.mark.recent": "riċenti",
   "scan.usage": "Fil-fokus {minutes} min · l-aħħar tħaddim {date}",
   "scan.usage.noDate": "Fil-fokus {minutes} min",
-
   "common.add": "Żid",
   "common.save": "Issejvja",
   "common.delete": "Ħassar",
@@ -214,7 +199,6 @@ I18N.register('mt', {
   "common.nothingFound": "Ma nstab xejn",
   "common.on": "mixgħul",
   "common.off": "mitfi",
-
   "settings.grammarLinkPrefix": "Il-kelma ta' attivazzjoni u l-frażijiet jinsabu fil-Paġna ewlenija, ",
   "settings.grammarLink": "“X'tista' tgħid” → Editja",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +303,11 @@ I18N.register('mt', {
   "settings.indexState.off": "mitfi",
   "settings.indexState.scanning": "qed jiskennja",
   "settings.indexState.ready": "lest",
-
   "hotkey.none": "mhux issettjat",
   "hotkey.press": "agħfas kombinazzjoni… (Esc - ikkanċella)",
   "hotkey.needModifier": "hemm bżonn ta' modifier (Ctrl/Alt/Shift)",
   "hotkey.applied": "shortcut applikat: {combo}",
   "hotkey.error": "shortcut: {error}",
-
   "error.prefix": "Żball - {context}: {message}",
   "error.window": "il-ġbir tat-tieqa",
   "error.subscribe": "l-abbonament għal {event}",
@@ -352,7 +334,6 @@ I18N.register('mt', {
   "error.loadWallpaper": "it-tagħbija tal-wallpaper",
   "error.loadActions": "it-tagħbija tal-azzjonijiet",
   "error.uiLanguage": "il-bidla tal-lingwa tal-interfaċċa",
-
   "picker.found": "Instab",
   "picker.foundFor": "Instab: «{title}»",
   "picker.closeTitle": "Agħlaq (Esc)",
@@ -364,7 +345,13 @@ I18N.register('mt', {
   "picker.doubleClick": "double-click - iftaħ",
   "picker.list": "Fajls u folders misjuba",
   "picker.openButton": "Iftaħ",
-  "picker.count": { "one": "{count} għażla", "two": "{count} għażliet", "few": "{count} għażliet", "many": "{count} għażla", "other": "{count} għażla" },
+  "picker.count": {
+    "one": "{count} għażla",
+    "two": "{count} għażliet",
+    "few": "{count} għażliet",
+    "many": "{count} għażla",
+    "other": "{count} għażla"
+  },
   "picker.frequent": "Miftuħa spiss",
   "picker.all": "It-taqbil kollu",
   "picker.searchLabel": "Fittex fil-kompjuter",
@@ -408,4 +395,4 @@ I18N.register('mt', {
   "settings.mascot_position.pinned": "Imwaħħal: il-qarnita dejjem tidher f'dan il-post.",
   "settings.mascot_position.corner": "Il-kantuniera t'isfel fuq il-lemin tal-iskrin.",
   "settings.mascot_position.unavailable": "Il-maskot mitfi: l-ewwel agħżel meta għandu jidher."
-});
+}

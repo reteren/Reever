@@ -1,20 +1,15 @@
-// Čeština (Czech) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('cs', {
+{
   "app.pickerTitle": "Reever - nalezeno",
-
   "win.minimize": "Minimalizovat",
   "win.toTray": "Minimalizovat do oznamovací oblasti",
   "win.shade": "Kompaktní režim",
   "win.expand": "Celé okno",
   "orb.toggle": "Mikrofon zap. / vyp.",
-
   "nav.sections": "Sekce",
   "nav.home": "Domů",
   "nav.actions": "Akce",
   "nav.settings": "Nastavení",
   "nav.log": "Protokol",
-
   "mic.idle": "Čekám…",
   "mic.listening": "Poslouchám…",
   "mic.busy": "Zpracovávám…",
@@ -23,7 +18,6 @@ I18N.register('cs', {
   "mic.error": "Chyba",
   "mic.pause": "Pozastavit",
   "mic.resume": "Pokračovat",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktivace",
   "tile.hotkey": "Klávesová zkratka",
@@ -31,7 +25,6 @@ I18N.register('cs', {
   "tile.asr": "Rozpoznávání",
   "tile.model": "Model",
   "tile.actions": "Akce",
-
   "pill.checking": "kontrola…",
   "pill.waiting": "čekání…",
   "pill.paused": "pozastaveno",
@@ -43,13 +36,10 @@ I18N.register('cs', {
   "pill.indexReady": "připraven",
   "pill.indexing": "indexování…",
   "pill.unchecked": "nezkontrolováno",
-
   "mode.both": "Slovo i zkratka",
   "mode.wake": "Aktivační slovo",
   "mode.hotkey": "Klávesová zkratka",
-
   "home.hint": "Řekněte «{wake}» a počkejte na signál, nebo řekněte vše najednou: «{wake}, {open} …».",
-
   "grammar.heading": "Co můžete říct",
   "grammar.edit": "Upravit",
   "grammar.closeEditor": "Zavřít editor",
@@ -84,7 +74,6 @@ I18N.register('cs', {
   "grammar.stopLegend": "Ukončení diktování",
   "grammar.stopHint": "Celá fráze nebo na konci úseku: «stop typing». Uprostřed textu zůstane textem.",
   "grammar.reset": "Obnovit výchozí",
-
   "kind.launch": "Spuštění",
   "kind.folder": "Složky",
   "kind.search": "Vyhledávání",
@@ -96,7 +85,6 @@ I18N.register('cs', {
   "kind.find": "Najít",
   "kind.find_folder": "Najít složku",
   "kind.find_file": "Najít soubor",
-
   "intent.launch": "otevřít program nebo odkaz",
   "intent.folder": "otevřít složku v počítači",
   "intent.web_google": "hledat na Googlu",
@@ -111,7 +99,6 @@ I18N.register('cs', {
   "intent.chat_gpt": "zeptat se ChatGPT (chat v prohlížeči)",
   "intent.chat_claude": "zeptat se Claude (chat v prohlížeči)",
   "intent.chat_gemini": "zeptat se Gemini (chat v prohlížeči)",
-
   "example.launch": "{label} · stačí říct název programu",
   "example.close": "zavřít otevřený program",
   "example.kill": "jako „Ukončit úlohu“ ve Správci úloh",
@@ -125,8 +112,6 @@ I18N.register('cs', {
   "example.command": "Příkaz",
   "example.shutdown": "systém, s potvrzením",
   "example.cancel": "zrušit příkaz",
-
-
   "validation.wake": "Přidejte alespoň jedno aktivační slovo.",
   "validation.id": "Záměr musí mít id.",
   "validation.duplicateId": "Id «{id}» se opakuje.",
@@ -135,14 +120,18 @@ I18N.register('cs', {
   "validation.needPhrase": "Přidejte alespoň jednu frázi pro «{name}».",
   "validation.emptyPhrase": "Prázdná fráze je povolena jen pro spouštění programů («{name}»).",
   "validation.duplicatePhrase": "Fráze «{phrase}» se už používá v «{other}».",
-
   "actions.search": "Hledat akce…",
   "actions.newTitle": "Nová akce",
   "actions.create": "Vytvořit",
   "actions.empty": "Prázdné. Vytvořte akci.",
   "actions.pick": "Vyberte akci vlevo<br />nebo vytvořte novou",
   "actions.unnamed": "(bez názvu)",
-  "actions.phraseCount": { "one": "{count} fráze", "few": "{count} fráze", "many": "{count} fráze", "other": "{count} frází" },
+  "actions.phraseCount": {
+    "one": "{count} fráze",
+    "few": "{count} fráze",
+    "many": "{count} fráze",
+    "other": "{count} frází"
+  },
   "actions.confirmDiscard": "Akce má neuložené změny. Zahodit je?",
   "actions.namePlaceholder": "Název",
   "actions.target": "Cíl - cesta k souboru, odkaz, protokol nebo AUMID",
@@ -154,26 +143,22 @@ I18N.register('cs', {
   "actions.calibrate": "Kalibrovat",
   "actions.needName": "Zadejte název",
   "actions.confirmDelete": "Smazat akci?",
-
   "filter.all": "Vše",
   "filter.apps": "Programy",
   "filter.folder": "Složky",
   "filter.web": "Web",
   "filter.system": "Systém",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "odkaz/URL",
   "actionKind.uwp": "aplikace Windows",
   "actionKind.folder": "složka",
   "actionKind.system": "systém",
   "actionKind.search": "webové vyhledávání {q}",
-
   "calibration.title": "Kalibrace",
   "calibration.heading": "Kalibrace «{label}»",
   "calibration.hint": "Opakujte frázi znovu a znovu tak, jak ji říkáte. Každá se počítá - čím víc, tím přesněji.",
   "calibration.count": "zachycené fráze: {count}",
   "calibration.last": "poslední: «{phrase}»",
-
   "appPicker.title": "Vyberte aplikaci",
   "appPicker.search": "Hledat aplikace…",
   "actions.scan": "Skenovat",
@@ -202,7 +187,6 @@ I18N.register('cs', {
   "scan.mark.recent": "nedávno",
   "scan.usage": "V popředí {minutes} min · naposledy spuštěno {date}",
   "scan.usage.noDate": "V popředí {minutes} min",
-
   "common.add": "Přidat",
   "common.save": "Uložit",
   "common.delete": "Smazat",
@@ -214,7 +198,6 @@ I18N.register('cs', {
   "common.nothingFound": "Nic nenalezeno",
   "common.on": "zap.",
   "common.off": "vyp.",
-
   "settings.grammarLinkPrefix": "Aktivační slovo a fráze jsou na stránce Domů, ",
   "settings.grammarLink": "„Co můžete říct“ → Upravit",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +302,11 @@ I18N.register('cs', {
   "settings.indexState.off": "vypnuto",
   "settings.indexState.scanning": "prohledávání",
   "settings.indexState.ready": "připraven",
-
   "hotkey.none": "nenastaveno",
   "hotkey.press": "stiskněte kombinaci… (Esc - zrušit)",
   "hotkey.needModifier": "je potřeba modifikátor (Ctrl/Alt/Shift)",
   "hotkey.applied": "zkratka použita: {combo}",
   "hotkey.error": "zkratka: {error}",
-
   "error.prefix": "Chyba - {context}: {message}",
   "error.window": "získání okna",
   "error.subscribe": "odběr {event}",
@@ -352,7 +333,6 @@ I18N.register('cs', {
   "error.loadWallpaper": "načtení tapety",
   "error.loadActions": "načtení akcí",
   "error.uiLanguage": "změna jazyka rozhraní",
-
   "picker.found": "Nalezeno",
   "picker.foundFor": "Nalezeno: «{title}»",
   "picker.closeTitle": "Zavřít (Esc)",
@@ -364,7 +344,12 @@ I18N.register('cs', {
   "picker.doubleClick": "dvojklik - otevřít",
   "picker.list": "Nalezené soubory a složky",
   "picker.openButton": "Otevřít",
-  "picker.count": { "one": "{count} možnost", "few": "{count} možnosti", "many": "{count} možnosti", "other": "{count} možností" },
+  "picker.count": {
+    "one": "{count} možnost",
+    "few": "{count} možnosti",
+    "many": "{count} možnosti",
+    "other": "{count} možností"
+  },
   "picker.frequent": "Často otevírané",
   "picker.all": "Všechny shody",
   "picker.searchLabel": "Hledat v počítači",
@@ -408,4 +393,4 @@ I18N.register('cs', {
   "settings.mascot_position.pinned": "Připnuto: chobotnice se vždy objeví na tomto místě.",
   "settings.mascot_position.corner": "Pravý dolní roh obrazovky.",
   "settings.mascot_position.unavailable": "Maskot je vypnutý: nejdřív vyber, kdy se má zobrazovat."
-});
+}

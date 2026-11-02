@@ -7,7 +7,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'i18n');
 const SUPPORTED = ['en', 'ru', 'de', 'es', 'pt', 'it', 'fr', 'zh', 'ja', 'ar',
@@ -15,11 +14,11 @@ const SUPPORTED = ['en', 'ru', 'de', 'es', 'pt', 'it', 'fr', 'zh', 'ja', 'ar',
   'sk', 'sl', 'sv', 'uk', 'ko', 'yue'];
 
 function load(code) {
-  const registered = {};
-  const sandbox = { I18N: { register: (name, entries) => { registered[name] = entries; } } };
-  vm.runInNewContext(readFileSync(join(root, 'locales', `${code}.js`), 'utf8'), sandbox, { filename: `${code}.js` });
-  if (!registered[code]) throw new Error(`${code}.js does not call I18N.register('${code}', …)`);
-  return registered[code];
+  const entries = JSON.parse(readFileSync(join(root, 'locales', `${code}.json`), 'utf8'));
+  if (!entries || Array.isArray(entries) || typeof entries !== 'object') {
+    throw new Error(`${code}.json: expected an object`);
+  }
+  return entries;
 }
 
 const texts = entry => (typeof entry === 'string' ? [entry] : Object.values(entry));
@@ -27,15 +26,16 @@ const placeholders = entry => new Set(texts(entry).flatMap(text => text.match(/\
 const tags = entry => new Set(texts(entry).flatMap(text => text.match(/<\/?\w+[^>]*>/g) || []));
 const same = (a, b) => a.size === b.size && [...a].every(item => b.has(item));
 
-const files = readdirSync(join(root, 'locales')).map(name => name.replace(/\.js$/, ''));
-const unknown = files.filter(code => !SUPPORTED.includes(code));
-const problems = unknown.map(code => `${code}.js: not in SUPPORTED`);
+const files = readdirSync(join(root, 'locales'));
+const codes = files.filter(name => name.endsWith('.json')).map(name => name.replace(/\.json$/, ''));
+const unknown = files.filter(name => !name.endsWith('.json') || !SUPPORTED.includes(name.replace(/\.json$/, '')));
+const problems = unknown.map(name => `${name}: not in SUPPORTED`);
 const reference = load('en');
 
 for (const code of SUPPORTED.filter(code => code !== 'en')) {
-  if (!files.includes(code)) { problems.push(`${code}.js: missing`); continue; }
+  if (!codes.includes(code)) { problems.push(`${code}.json: missing`); continue; }
   let dictionary;
-  try { dictionary = load(code); } catch (error) { problems.push(`${code}.js: ${error.message}`); continue; }
+  try { dictionary = load(code); } catch (error) { problems.push(`${code}.json: ${error.message}`); continue; }
   const missing = Object.keys(reference).filter(key => !(key in dictionary));
   const extra = Object.keys(dictionary).filter(key => !(key in reference));
   if (missing.length) problems.push(`${code}: ${missing.length} missing keys: ${missing.slice(0, 8).join(', ')}`);

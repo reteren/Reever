@@ -1,20 +1,15 @@
-// Svenska (Swedish) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('sv', {
+{
   "app.pickerTitle": "Reever - hittat",
-
   "win.minimize": "Minimera",
   "win.toTray": "Minimera till meddelandefältet",
   "win.shade": "Kompakt läge",
   "win.expand": "Helt fönster",
   "orb.toggle": "Mikrofon på / av",
-
   "nav.sections": "Avsnitt",
   "nav.home": "Hem",
   "nav.actions": "Åtgärder",
   "nav.settings": "Inställningar",
   "nav.log": "Logg",
-
   "mic.idle": "Väntar…",
   "mic.listening": "Lyssnar…",
   "mic.busy": "Bearbetar…",
@@ -23,7 +18,6 @@ I18N.register('sv', {
   "mic.error": "Fel",
   "mic.pause": "Pausa",
   "mic.resume": "Fortsätt",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktivering",
   "tile.hotkey": "Kortkommando",
@@ -31,7 +25,6 @@ I18N.register('sv', {
   "tile.asr": "Igenkänning",
   "tile.model": "Modell",
   "tile.actions": "Åtgärder",
-
   "pill.checking": "kontrollerar…",
   "pill.waiting": "väntar…",
   "pill.paused": "pausad",
@@ -43,13 +36,10 @@ I18N.register('sv', {
   "pill.indexReady": "klart",
   "pill.indexing": "indexerar…",
   "pill.unchecked": "inte kontrollerad",
-
   "mode.both": "Ord och kortkommando",
   "mode.wake": "Väckningsord",
   "mode.hotkey": "Kortkommando",
-
   "home.hint": "Säg «{wake}» och vänta på signalen, eller säg allt på en gång: «{wake}, {open} …».",
-
   "grammar.heading": "Vad du kan säga",
   "grammar.edit": "Redigera",
   "grammar.closeEditor": "Stäng redigeraren",
@@ -84,7 +74,6 @@ I18N.register('sv', {
   "grammar.stopLegend": "Avsluta diktering",
   "grammar.stopHint": "Hela frasen eller i slutet av ett stycke: «stop typing». Mitt i texten förblir den text.",
   "grammar.reset": "Återställ standard",
-
   "kind.launch": "Starta",
   "kind.folder": "Mappar",
   "kind.search": "Sökning",
@@ -96,7 +85,6 @@ I18N.register('sv', {
   "kind.find": "Hitta",
   "kind.find_folder": "Hitta mapp",
   "kind.find_file": "Hitta fil",
-
   "intent.launch": "öppna ett program eller en länk",
   "intent.folder": "öppna en mapp på datorn",
   "intent.web_google": "sök på Google",
@@ -111,7 +99,6 @@ I18N.register('sv', {
   "intent.chat_gpt": "fråga ChatGPT (chatt i webbläsaren)",
   "intent.chat_claude": "fråga Claude (chatt i webbläsaren)",
   "intent.chat_gemini": "fråga Gemini (chatt i webbläsaren)",
-
   "example.launch": "{label} · säg bara programmets namn",
   "example.close": "stäng ett öppet program",
   "example.kill": "som ”Avsluta aktivitet” i Aktivitetshanteraren",
@@ -125,8 +112,6 @@ I18N.register('sv', {
   "example.command": "Kommando",
   "example.shutdown": "system, med bekräftelse",
   "example.cancel": "avbryt kommandot",
-
-
   "validation.wake": "Lägg till minst ett väckningsord.",
   "validation.id": "En avsikt måste ha ett id.",
   "validation.duplicateId": "Id:t «{id}» upprepas.",
@@ -135,14 +120,16 @@ I18N.register('sv', {
   "validation.needPhrase": "Lägg till minst en fras för «{name}».",
   "validation.emptyPhrase": "En tom fras är bara tillåten för att starta program («{name}»).",
   "validation.duplicatePhrase": "Frasen «{phrase}» används redan i «{other}».",
-
   "actions.search": "Sök åtgärder…",
   "actions.newTitle": "Ny åtgärd",
   "actions.create": "Skapa",
   "actions.empty": "Tomt. Skapa en åtgärd.",
   "actions.pick": "Välj en åtgärd till vänster<br />eller skapa en ny",
   "actions.unnamed": "(namnlös)",
-  "actions.phraseCount": { "one": "{count} fras", "other": "{count} fraser" },
+  "actions.phraseCount": {
+    "one": "{count} fras",
+    "other": "{count} fraser"
+  },
   "actions.confirmDiscard": "Åtgärden har osparade ändringar. Vill du ignorera dem?",
   "actions.namePlaceholder": "Namn",
   "actions.target": "Mål - sökväg, länk, protokoll eller AUMID",
@@ -154,26 +141,22 @@ I18N.register('sv', {
   "actions.calibrate": "Kalibrera",
   "actions.needName": "Ange ett namn",
   "actions.confirmDelete": "Ta bort åtgärden?",
-
   "filter.all": "Alla",
   "filter.apps": "Appar",
   "filter.folder": "Mappar",
   "filter.web": "Webb",
   "filter.system": "System",
-
   "actionKind.shell": "program/exe",
   "actionKind.url": "länk/URL",
   "actionKind.uwp": "Windows-app",
   "actionKind.folder": "mapp",
   "actionKind.system": "system",
   "actionKind.search": "webbsökning {q}",
-
   "calibration.title": "Kalibrering",
   "calibration.heading": "Kalibrering «{label}»",
   "calibration.hint": "Säg frasen om och om igen, så som du säger den. Varje gång räknas - ju fler, desto noggrannare.",
   "calibration.count": "inspelade fraser: {count}",
   "calibration.last": "senaste: «{phrase}»",
-
   "appPicker.title": "Välj en app",
   "appPicker.search": "Sök appar…",
   "actions.scan": "Skanna",
@@ -202,7 +185,6 @@ I18N.register('sv', {
   "scan.mark.recent": "nyligen",
   "scan.usage": "I fokus {minutes} min · senast startad {date}",
   "scan.usage.noDate": "I fokus {minutes} min",
-
   "common.add": "Lägg till",
   "common.save": "Spara",
   "common.delete": "Ta bort",
@@ -214,7 +196,6 @@ I18N.register('sv', {
   "common.nothingFound": "Inget hittades",
   "common.on": "på",
   "common.off": "av",
-
   "settings.grammarLinkPrefix": "Väckningsordet och fraserna finns på Hem, ",
   "settings.grammarLink": "”Vad du kan säga” → Redigera",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('sv', {
   "settings.indexState.off": "av",
   "settings.indexState.scanning": "söker igenom",
   "settings.indexState.ready": "klart",
-
   "hotkey.none": "inte inställt",
   "hotkey.press": "tryck en kombination… (Esc - avbryt)",
   "hotkey.needModifier": "en modifieringstangent behövs (Ctrl/Alt/Shift)",
   "hotkey.applied": "kortkommandot tillämpat: {combo}",
   "hotkey.error": "kortkommando: {error}",
-
   "error.prefix": "Fel - {context}: {message}",
   "error.window": "hämta fönstret",
   "error.subscribe": "prenumerera på {event}",
@@ -352,7 +331,6 @@ I18N.register('sv', {
   "error.loadWallpaper": "läsa in bakgrundsbilden",
   "error.loadActions": "läsa in åtgärder",
   "error.uiLanguage": "byta gränssnittsspråk",
-
   "picker.found": "Hittat",
   "picker.foundFor": "Hittat: «{title}»",
   "picker.closeTitle": "Stäng (Esc)",
@@ -364,7 +342,10 @@ I18N.register('sv', {
   "picker.doubleClick": "dubbelklick - öppna",
   "picker.list": "Hittade filer och mappar",
   "picker.openButton": "Öppna",
-  "picker.count": { "one": "{count} alternativ", "other": "{count} alternativ" },
+  "picker.count": {
+    "one": "{count} alternativ",
+    "other": "{count} alternativ"
+  },
   "picker.frequent": "Ofta öppnade",
   "picker.all": "Alla träffar",
   "picker.searchLabel": "Sök på datorn",
@@ -408,4 +389,4 @@ I18N.register('sv', {
   "settings.mascot_position.pinned": "Fäst: bläckfisken dyker alltid upp på den här platsen.",
   "settings.mascot_position.corner": "Skärmens nedre högra hörn.",
   "settings.mascot_position.unavailable": "Maskoten är avstängd: välj först när den ska visas."
-});
+}

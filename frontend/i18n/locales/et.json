@@ -1,20 +1,15 @@
-// Eesti (Estonian) — interface translation; voice phrases stay in English
-// (the commands are English for this language; see docs/languages.md).
-I18N.register('et', {
+{
   "app.pickerTitle": "Reever - leitud",
-
   "win.minimize": "Minimeeri",
   "win.toTray": "Minimeeri teavitusalale",
   "win.shade": "Kompaktne režiim",
   "win.expand": "Täisaken",
   "orb.toggle": "Mikrofon sisse / välja",
-
   "nav.sections": "Jaotised",
   "nav.home": "Avaleht",
   "nav.actions": "Toimingud",
   "nav.settings": "Sätted",
   "nav.log": "Logi",
-
   "mic.idle": "Ootan…",
   "mic.listening": "Kuulan…",
   "mic.busy": "Töötlen…",
@@ -23,7 +18,6 @@ I18N.register('et', {
   "mic.error": "Viga",
   "mic.pause": "Peata",
   "mic.resume": "Jätka",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktiveerimine",
   "tile.hotkey": "Kiirklahv",
@@ -31,7 +25,6 @@ I18N.register('et', {
   "tile.asr": "Tuvastus",
   "tile.model": "Mudel",
   "tile.actions": "Toimingud",
-
   "pill.checking": "kontrollin…",
   "pill.waiting": "ootan…",
   "pill.paused": "peatatud",
@@ -43,13 +36,10 @@ I18N.register('et', {
   "pill.indexReady": "valmis",
   "pill.indexing": "indekseerin…",
   "pill.unchecked": "kontrollimata",
-
   "mode.both": "Sõna ja kiirklahv",
   "mode.wake": "Äratussõna",
   "mode.hotkey": "Kiirklahv",
-
   "home.hint": "Ütle «{wake}» ja oota signaali või ütle kõik korraga: «{wake}, {open} …».",
-
   "grammar.heading": "Mida saab öelda",
   "grammar.edit": "Muuda",
   "grammar.closeEditor": "Sulge redaktor",
@@ -84,7 +74,6 @@ I18N.register('et', {
   "grammar.stopLegend": "Dikteerimise lõpp",
   "grammar.stopHint": "Kogu fraas või lõigu lõpus: «stop typing». Teksti keskel jääb see tekstiks.",
   "grammar.reset": "Lähtesta vaikimisi",
-
   "kind.launch": "Käivitamine",
   "kind.folder": "Kaustad",
   "kind.search": "Otsing",
@@ -96,7 +85,6 @@ I18N.register('et', {
   "kind.find": "Leia",
   "kind.find_folder": "Leia kaust",
   "kind.find_file": "Leia fail",
-
   "intent.launch": "ava programm või link",
   "intent.folder": "ava kaust arvutis",
   "intent.web_google": "otsi Google'ist",
@@ -111,7 +99,6 @@ I18N.register('et', {
   "intent.chat_gpt": "küsi ChatGPT-lt (vestlus brauseris)",
   "intent.chat_claude": "küsi Claude'ilt (vestlus brauseris)",
   "intent.chat_gemini": "küsi Geminilt (vestlus brauseris)",
-
   "example.launch": "{label} · lihtsalt ütle programmi nimi",
   "example.close": "sulge avatud programm",
   "example.kill": "nagu „Lõpeta tegum” tegumihalduris",
@@ -125,8 +112,6 @@ I18N.register('et', {
   "example.command": "Käsk",
   "example.shutdown": "süsteem, kinnitusega",
   "example.cancel": "tühista käsk",
-
-
   "validation.wake": "Lisa vähemalt üks äratussõna.",
   "validation.id": "Kavatsusel peab olema id.",
   "validation.duplicateId": "Id «{id}» kordub.",
@@ -135,14 +120,16 @@ I18N.register('et', {
   "validation.needPhrase": "Lisa «{name}» jaoks vähemalt üks fraas.",
   "validation.emptyPhrase": "Tühi fraas on lubatud ainult programmide käivitamiseks («{name}»).",
   "validation.duplicatePhrase": "Fraasi «{phrase}» kasutatakse juba kohas «{other}».",
-
   "actions.search": "Otsi toiminguid…",
   "actions.newTitle": "Uus toiming",
   "actions.create": "Loo",
   "actions.empty": "Tühi. Loo toiming.",
   "actions.pick": "Vali vasakult toiming<br />või loo uus",
   "actions.unnamed": "(nimetu)",
-  "actions.phraseCount": { "one": "{count} fraas", "other": "{count} fraasi" },
+  "actions.phraseCount": {
+    "one": "{count} fraas",
+    "other": "{count} fraasi"
+  },
   "actions.confirmDiscard": "Toimingul on salvestamata muudatusi. Kas loobuda neist?",
   "actions.namePlaceholder": "Nimi",
   "actions.target": "Siht - failitee, link, protokoll või AUMID",
@@ -154,26 +141,22 @@ I18N.register('et', {
   "actions.calibrate": "Kalibreeri",
   "actions.needName": "Sisesta nimi",
   "actions.confirmDelete": "Kas kustutada toiming?",
-
   "filter.all": "Kõik",
   "filter.apps": "Rakendused",
   "filter.folder": "Kaustad",
   "filter.web": "Veeb",
   "filter.system": "Süsteem",
-
   "actionKind.shell": "programm/exe",
   "actionKind.url": "link/URL",
   "actionKind.uwp": "Windowsi rakendus",
   "actionKind.folder": "kaust",
   "actionKind.system": "süsteem",
   "actionKind.search": "veebiotsing {q}",
-
   "calibration.title": "Kalibreerimine",
   "calibration.heading": "Kalibreerimine «{label}»",
   "calibration.hint": "Ütle fraasi ikka ja jälle, nii nagu sa seda ütled. Iga kord loeb - mida rohkem, seda täpsem.",
   "calibration.count": "salvestatud fraase: {count}",
   "calibration.last": "viimane: «{phrase}»",
-
   "appPicker.title": "Vali rakendus",
   "appPicker.search": "Otsi rakendusi…",
   "actions.scan": "Skanni",
@@ -202,7 +185,6 @@ I18N.register('et', {
   "scan.mark.recent": "hiljuti",
   "scan.usage": "Fookuses {minutes} min · viimati käivitatud {date}",
   "scan.usage.noDate": "Fookuses {minutes} min",
-
   "common.add": "Lisa",
   "common.save": "Salvesta",
   "common.delete": "Kustuta",
@@ -214,7 +196,6 @@ I18N.register('et', {
   "common.nothingFound": "Midagi ei leitud",
   "common.on": "sees",
   "common.off": "väljas",
-
   "settings.grammarLinkPrefix": "Äratussõna ja fraasid on avalehel, ",
   "settings.grammarLink": "„Mida saab öelda” → Muuda",
   "settings.grammarLinkSuffix": ".",
@@ -319,13 +300,11 @@ I18N.register('et', {
   "settings.indexState.off": "väljas",
   "settings.indexState.scanning": "skannin",
   "settings.indexState.ready": "valmis",
-
   "hotkey.none": "pole määratud",
   "hotkey.press": "vajuta klahvikombinatsiooni… (Esc - loobu)",
   "hotkey.needModifier": "vaja on muuteklahvi (Ctrl/Alt/Shift)",
   "hotkey.applied": "kiirklahv rakendatud: {combo}",
   "hotkey.error": "kiirklahv: {error}",
-
   "error.prefix": "Viga - {context}: {message}",
   "error.window": "akna hankimine",
   "error.subscribe": "sündmuse {event} tellimine",
@@ -352,7 +331,6 @@ I18N.register('et', {
   "error.loadWallpaper": "taustapildi laadimine",
   "error.loadActions": "toimingute laadimine",
   "error.uiLanguage": "liidese keele muutmine",
-
   "picker.found": "Leitud",
   "picker.foundFor": "Leitud: «{title}»",
   "picker.closeTitle": "Sulge (Esc)",
@@ -364,7 +342,10 @@ I18N.register('et', {
   "picker.doubleClick": "topeltklõps - ava",
   "picker.list": "Leitud failid ja kaustad",
   "picker.openButton": "Ava",
-  "picker.count": { "one": "{count} valik", "other": "{count} valikut" },
+  "picker.count": {
+    "one": "{count} valik",
+    "other": "{count} valikut"
+  },
   "picker.frequent": "Sageli avatud",
   "picker.all": "Kõik vasted",
   "picker.searchLabel": "Otsi arvutist",
@@ -408,4 +389,4 @@ I18N.register('et', {
   "settings.mascot_position.pinned": "Kinnitatud: kaheksajalg ilmub alati sellesse kohta.",
   "settings.mascot_position.corner": "Ekraani alumine parem nurk.",
   "settings.mascot_position.unavailable": "Maskott on välja lülitatud: vali kõigepealt, millal teda näidata."
-});
+}

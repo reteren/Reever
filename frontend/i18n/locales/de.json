@@ -1,19 +1,15 @@
-// Deutsch — gesprochene Befehle bleiben Russisch.
-I18N.register('de', {
+{
   "app.pickerTitle": "Reever - Suchergebnisse",
-
   "win.minimize": "Minimieren",
   "win.toTray": "In den Infobereich minimieren",
   "win.shade": "Kompaktmodus",
   "win.expand": "Volles Fenster",
   "orb.toggle": "Mikrofon ein / aus",
-
   "nav.sections": "Bereiche",
   "nav.home": "Startseite",
   "nav.actions": "Aktionen",
   "nav.settings": "Einstellungen",
   "nav.log": "Protokoll",
-
   "mic.idle": "Wartet…",
   "mic.listening": "Hört zu…",
   "mic.busy": "Wird verarbeitet…",
@@ -22,7 +18,6 @@ I18N.register('de', {
   "mic.error": "Fehler",
   "mic.pause": "Pausieren",
   "mic.resume": "Fortsetzen",
-
   "tile.mic": "Mikrofon",
   "tile.activation": "Aktivierung",
   "tile.hotkey": "Tastenkürzel",
@@ -30,7 +25,6 @@ I18N.register('de', {
   "tile.asr": "Spracherkennung",
   "tile.model": "Modell",
   "tile.actions": "Aktionen",
-
   "pill.checking": "wird geprüft…",
   "pill.waiting": "wartet…",
   "pill.paused": "pausiert",
@@ -42,13 +36,10 @@ I18N.register('de', {
   "pill.indexReady": "bereit",
   "pill.indexing": "indiziert…",
   "pill.unchecked": "nicht geprüft",
-
   "mode.both": "Wort und Tastenkürzel",
   "mode.wake": "Aktivierungswort",
   "mode.hotkey": "Tastenkürzel",
-
   "home.hint": "Sag «{wake}» und warte auf das Signal oder sag alles auf einmal: «{wake}, {open} …».",
-
   "grammar.heading": "Was du sagen kannst",
   "grammar.edit": "Bearbeiten",
   "grammar.closeEditor": "Editor schließen",
@@ -83,7 +74,6 @@ I18N.register('de', {
   "grammar.stopLegend": "Diktat beenden",
   "grammar.stopHint": "Der ganze Befehl oder am Ende eines Abschnitts: «stop typing». Mitten im Text bleibt er normaler Text.",
   "grammar.reset": "Auf Standardwerte zurücksetzen",
-
   "kind.launch": "Starten",
   "kind.folder": "Ordner",
   "kind.search": "Suche",
@@ -95,7 +85,6 @@ I18N.register('de', {
   "kind.find": "Suchen",
   "kind.find_folder": "Ordner suchen",
   "kind.find_file": "Datei suchen",
-
   "intent.launch": "Programm oder Link öffnen",
   "intent.folder": "Ordner auf dem Computer öffnen",
   "intent.web_google": "Google-Suche",
@@ -110,7 +99,6 @@ I18N.register('de', {
   "intent.chat_gpt": "ChatGPT fragen (Chat im Browser)",
   "intent.chat_claude": "Claude fragen (Chat im Browser)",
   "intent.chat_gemini": "Gemini fragen (Chat im Browser)",
-
   "example.launch": "{label} · nenne einfach den Programmnamen",
   "example.close": "ein geöffnetes Programm schließen",
   "example.kill": "wie „Task beenden“ im Task-Manager",
@@ -124,8 +112,6 @@ I18N.register('de', {
   "example.command": "Befehl",
   "example.shutdown": "Systembefehl, mit Bestätigung",
   "example.cancel": "Befehl abbrechen",
-
-
   "validation.wake": "Füge mindestens ein Aktivierungswort hinzu.",
   "validation.id": "Eine Absicht braucht eine ID.",
   "validation.duplicateId": "Die ID „{id}“ kommt mehrfach vor.",
@@ -134,14 +120,16 @@ I18N.register('de', {
   "validation.needPhrase": "Füge mindestens einen Befehl für „{name}“ hinzu.",
   "validation.emptyPhrase": "Ein leerer Befehl ist nur zum Starten von Programmen erlaubt („{name}“).",
   "validation.duplicatePhrase": "Der Befehl „{phrase}“ wird bereits für „{other}“ verwendet.",
-
   "actions.search": "Aktionen suchen…",
   "actions.newTitle": "Neue Aktion",
   "actions.create": "Erstellen",
   "actions.empty": "Keine Aktionen. Erstelle eine Aktion.",
   "actions.pick": "Wähle links eine Aktion aus<br />oder erstelle eine neue",
   "actions.unnamed": "(unbenannt)",
-  "actions.phraseCount": { "one": "{count} Befehl", "other": "{count} Befehle" },
+  "actions.phraseCount": {
+    "one": "{count} Befehl",
+    "other": "{count} Befehle"
+  },
   "actions.confirmDiscard": "Die Aktion enthält ungespeicherte Änderungen. Verwerfen?",
   "actions.namePlaceholder": "Name",
   "actions.target": "Ziel - Dateipfad, Link, Protokoll oder AUMID",
@@ -153,26 +141,22 @@ I18N.register('de', {
   "actions.calibrate": "Kalibrieren",
   "actions.needName": "Gib einen Namen ein",
   "actions.confirmDelete": "Aktion löschen?",
-
   "filter.all": "Alle",
   "filter.apps": "Apps",
   "filter.folder": "Ordner",
   "filter.web": "Web",
   "filter.system": "System",
-
   "actionKind.shell": "Programm/EXE",
   "actionKind.url": "Link/URL",
   "actionKind.uwp": "Windows-App",
   "actionKind.folder": "Ordner",
   "actionKind.system": "System",
   "actionKind.search": "Websuche {q}",
-
   "calibration.title": "Kalibrierung",
   "calibration.heading": "Kalibrierung „{label}“",
   "calibration.hint": "Sage den Befehl mehrmals so, wie du ihn aussprichst. Jeder Versuch zählt - je mehr, desto genauer.",
   "calibration.count": "aufgenommene Befehle: {count}",
   "calibration.last": "zuletzt: «{phrase}»",
-
   "appPicker.title": "App auswählen",
   "appPicker.search": "Apps suchen…",
   "actions.scan": "Scannen",
@@ -201,7 +185,6 @@ I18N.register('de', {
   "scan.mark.recent": "kürzlich",
   "scan.usage": "Im Fokus {minutes} Min. · zuletzt gestartet {date}",
   "scan.usage.noDate": "Im Fokus {minutes} Min.",
-
   "common.add": "Hinzufügen",
   "common.save": "Speichern",
   "common.delete": "Löschen",
@@ -213,7 +196,6 @@ I18N.register('de', {
   "common.nothingFound": "Nichts gefunden",
   "common.on": "ein",
   "common.off": "aus",
-
   "settings.grammarLinkPrefix": "Aktivierungswort und Befehle findest du unter Startseite, ",
   "settings.grammarLink": "„Was du sagen kannst“ → Bearbeiten",
   "settings.grammarLinkSuffix": ".",
@@ -318,13 +300,11 @@ I18N.register('de', {
   "settings.indexState.off": "aus",
   "settings.indexState.scanning": "wird gescannt",
   "settings.indexState.ready": "bereit",
-
   "hotkey.none": "nicht festgelegt",
   "hotkey.press": "Tastenkombination drücken… (Esc - abbrechen)",
   "hotkey.needModifier": "ein Modifikator ist erforderlich (Ctrl/Alt/Shift)",
   "hotkey.applied": "Tastenkürzel übernommen: {combo}",
   "hotkey.error": "Tastenkürzel: {error}",
-
   "error.prefix": "Fehler - {context}: {message}",
   "error.window": "Fenster abrufen",
   "error.subscribe": "{event} abonnieren",
@@ -351,7 +331,6 @@ I18N.register('de', {
   "error.loadWallpaper": "Hintergrundbild laden",
   "error.loadActions": "Aktionen laden",
   "error.uiLanguage": "Oberflächensprache ändern",
-
   "picker.found": "Gefunden",
   "picker.foundFor": "Gefunden: „{title}“",
   "picker.closeTitle": "Schließen (Esc)",
@@ -363,7 +342,10 @@ I18N.register('de', {
   "picker.doubleClick": "Doppelklick - öffnen",
   "picker.list": "Gefundene Dateien und Ordner",
   "picker.openButton": "Öffnen",
-  "picker.count": { "one": "{count} Option", "other": "{count} Optionen" },
+  "picker.count": {
+    "one": "{count} Option",
+    "other": "{count} Optionen"
+  },
   "picker.frequent": "Häufig geöffnet",
   "picker.all": "Alle Treffer",
   "picker.searchLabel": "Computer durchsuchen",
@@ -407,4 +389,4 @@ I18N.register('de', {
   "settings.mascot_position.pinned": "Fixiert: Der Oktopus erscheint immer an dieser Stelle.",
   "settings.mascot_position.corner": "Untere rechte Bildschirmecke.",
   "settings.mascot_position.unavailable": "Das Maskottchen ist aus: Wähle zuerst, wann es erscheinen soll."
-});
+}
