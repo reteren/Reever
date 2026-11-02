@@ -36,6 +36,9 @@ pub enum Item {
     /// Поле ввода; `value` — начальный текст, если поля с этим id ещё не было.
     Input { id: String, placeholder: String, value: String },
     Check { id: String, label: String, on: bool },
+    /// Поле ввода и выпадающий список справа от него (select шириной по тексту):
+    /// выбор — [`FormEvent::Select`].
+    InputSelect { id: String, placeholder: String, value: String, select: String, options: Vec<(String, String)>, selected: String },
     /// Ряд кнопок с отступами сверху и снизу.
     Buttons { buttons: Vec<(String, String, ButtonKind)>, top: f32, bottom: f32 },
     /// Ошибки — строками с маркером.
@@ -50,6 +53,7 @@ pub enum FormEvent {
     Remove(String, usize),
     Add(String, String),
     Edited(String, String),
+    Select(String, String),
     Escape,
 }
 
@@ -59,6 +63,9 @@ enum Hit {
     Remove(String, usize),
     Check(String),
     Input(String),
+    /// выпадающий список (открыть/закрыть) и его вариант
+    Select(String),
+    Option(String, String),
 }
 
 /// Итог события: перерисовать ли и что произошло.
@@ -93,6 +100,8 @@ pub struct Form {
     pub rtl: bool,
     /// окно в фокусе клавиатуры (каретка мигает только тогда)
     window_focused: bool,
+    /// открытый выпадающий список
+    open_select: Option<String>,
 }
 
 fn input_style() -> TextStyle {
@@ -107,12 +116,16 @@ impl Form {
     /// Новый список элементов. Поля с теми же id сохраняют текст и каретку; новые получают
     /// `value`; исчезнувшие забываются.
     pub fn set_items(&mut self, items: Vec<Item>) {
+        if self.open_select.as_ref().is_some_and(|o| !items.iter().any(|it| matches!(it, Item::InputSelect { select, .. } if select == o))) {
+            self.open_select = None;
+        }
         let mut keep = std::collections::HashSet::new();
         self.order.clear();
         for it in &items {
             let (id, placeholder, value) = match it {
                 Item::AddRow { id, placeholder, .. } => (id, placeholder, ""),
                 Item::Input { id, placeholder, value } => (id, placeholder, value.as_str()),
+                Item::InputSelect { id, placeholder, value, .. } => (id, placeholder, value.as_str()),
                 _ => continue,
             };
             keep.insert(id.clone());
@@ -207,6 +220,8 @@ impl Form {
         self.hits.clear();
         let items = self.items.clone();
         let mut y = y0;
+        // открытый выпадающий список рисуется поверх всего, после раскладки
+        let mut popup: Option<(String, Rect, Vec<(String, String)>, String)> = None;
         // открытые рамки: (верх, легенда: x0, x1, высота)
         let mut groups: Vec<(f32, f32, f32, f32)> = Vec::new();
         let (mut cx0, mut cw) = (x, w);
@@ -332,6 +347,29 @@ impl Form {
                     }
                     y += 28.0;
                 }
+                Item::InputSelect { id, select, options, selected, .. } => {
+                    let st = input_style();
+                    let label = options.iter().find(|(v, _)| v == selected).map_or(selected.clone(), |(_, l)| l.clone());
+                    let tw = scene.cache.get(cx.text(), &label, &st, 10_000.0).map_or(60.0, |l| l.width);
+                    let sw = (tw + 9.0 + 26.0 + 2.0).min(cw * 0.6);
+                    let sr = Rect::new(cx0 + cw - sw, y, sw, 28.0);
+                    if let Some(inp) = self.inputs.get_mut(id) {
+                        inp.rect = Rect::new(cx0, y, (cw - sw - 8.0).max(40.0), 28.0);
+                        self.hits.push((inp.rect, Hit::Input(id.clone())));
+                    }
+                    let open = self.open_select.as_deref() == Some(select.as_str());
+                    fill_round(cx, sr, 5.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.45 });
+                    stroke_round(cx, sr, 5.0, if open { ACC_2 } else { ACC_4 }, 1.0, false);
+                    if let Some(l) = scene.cache.get(cx.text(), &label, &st, sw - 9.0 - 26.0) {
+                        scene.text(&l, sr.x + 9.0, sr.y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
+                    }
+                    scene.icon("chev", Rect::new(sr.x + sw - 22.0, sr.y + 6.0, 16.0, 16.0), 2.0, ACC, false, Glow::None);
+                    self.hits.push((sr, Hit::Select(select.clone())));
+                    if open {
+                        popup = Some((select.clone(), sr, options.clone(), selected.clone()));
+                    }
+                    y += 28.0;
+                }
                 Item::Check { id, label, on } => {
                     y += 9.0;
                     let st = TextStyle { wrap: true, direction: self.dir(), ..ui(13.0, 400, 1.45) };
@@ -411,8 +449,49 @@ impl Form {
             }
         }
         scene.flush(cx);
+        if let Some((id, sr, options, selected)) = popup {
+            // ::picker(select): фон #04140F, рамка acc-4, тень; наведённый вариант — заливка acc
+            let st = TextStyle { wrap: false, ..ui(13.0, 400, 1.2) };
+            let w = options
+                .iter()
+                .filter_map(|(_, l)| scene.cache.get(cx.text(), l, &st, 10_000.0).map(|l| l.width))
+                .fold(sr.w - 8.0, f32::max)
+                + 18.0
+                + 8.0;
+            let row_h = 6.0 + 15.6 + 6.0;
+            let pr = Rect::new(sr.x + sr.w - w, sr.y + sr.h + 4.0, w, 8.0 + row_h * options.len() as f32);
+            scene.shadow(cx, pr, 6.0, Color::rgba(39, 230, 170, 41), 18.0);
+            fill_round(cx, pr, 6.0, Color::rgb(0x04, 0x14, 0x0F));
+            stroke_round(cx, pr, 6.0, ACC_4, 1.0, false);
+            for (i, (v, l)) in options.iter().enumerate() {
+                let r = Rect::new(pr.x + 4.0, pr.y + 4.0 + row_h * i as f32, pr.w - 8.0, row_h);
+                let hit = Hit::Option(id.clone(), v.clone());
+                let hot = self.hover.as_ref() == Some(&hit);
+                if hot {
+                    scene.shadow(cx, r, 4.0, Color::rgba(39, 230, 170, 89), 12.0);
+                    fill_round(cx, r, 4.0, ACC);
+                }
+                if let Some(lay) = scene.cache.get(cx.text(), l, &st, 10_000.0) {
+                    let (c, g) = if hot {
+                        (super::GLASS, Glow::None)
+                    } else if *v == selected {
+                        (ACC_HOT, Glow::G2)
+                    } else {
+                        (ACC, Glow::G1)
+                    };
+                    scene.text(&lay, r.x + 9.0, r.y + (row_h - lay.height) / 2.0, c, g);
+                }
+                self.hits.push((r, hit));
+            }
+            scene.flush(cx);
+        }
         let _ = (mix, with_alpha, inside);
         y - y0
+    }
+
+    /// Открыт выпадающий список (щелчок мимо — закрыть).
+    pub fn popup_open(&self) -> bool {
+        self.open_select.is_some()
     }
 
     fn hit_at(&self, x: f32, y: f32) -> Option<Hit> {
@@ -421,6 +500,9 @@ impl Form {
 
     /// Курсор над чем-то кликабельным (рука) или над полем (I-образный — решает окно).
     pub fn hover_kind(&self, x: f32, y: f32) -> Option<bool> {
+        if self.open_select.is_some() {
+            return Some(true);
+        }
         self.hit_at(x, y).map(|h| !matches!(h, Hit::Input(_)))
     }
 
@@ -450,6 +532,17 @@ impl Form {
                     b.press.set_hover(false, 0.12);
                 }
                 self.hover = None;
+                FormResult::redraw()
+            }
+            MouseKind::Down(MouseButton::Left) | MouseKind::DoubleClick if self.open_select.is_some() => {
+                // открытый список: вариант — выбрать, всё остальное — закрыть
+                let h = self.hit_at(x, y);
+                let open = self.open_select.take();
+                if let (Some(Hit::Option(id, v)), Some(_)) = (h, open) {
+                    self.pressed = None;
+                    return FormResult::event(FormEvent::Select(id, v));
+                }
+                self.pressed = Some(Hit::Select(String::new()));
                 FormResult::redraw()
             }
             MouseKind::Down(MouseButton::Left) | MouseKind::DoubleClick => {
@@ -504,6 +597,13 @@ impl Form {
                     Hit::Remove(id, i) => FormResult::event(FormEvent::Remove(id, i)),
                     Hit::Check(id) => FormResult::event(FormEvent::Toggle(id)),
                     Hit::Input(_) => FormResult::redraw(),
+                    Hit::Select(id) => {
+                        if !id.is_empty() {
+                            self.open_select = Some(id);
+                        }
+                        FormResult::redraw()
+                    }
+                    Hit::Option(..) => FormResult::redraw(),
                 }
             }
             _ => FormResult::default(),
@@ -527,6 +627,9 @@ impl Form {
     pub fn key(&mut self, ev: KeyEvent) -> FormResult {
         let k = ev.key as u16;
         if k == VK_ESCAPE.0 {
+            if self.open_select.take().is_some() {
+                return FormResult::redraw();
+            }
             return FormResult::event(FormEvent::Escape);
         }
         if k == VK_TAB.0 && !ev.ctrl && !ev.alt {

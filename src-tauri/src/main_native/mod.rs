@@ -9,6 +9,7 @@
 //! создаёт его заново по снимку состояния (`events::get_ui_snapshot`). События распознавания
 //! окно слушает само через `AppHandle::listen_any`, подписка — при старте программы (`init`).
 
+mod actions_tab;
 mod frame;
 mod fx;
 mod grammar_edit;
@@ -40,6 +41,8 @@ pub enum Act {
     Tab(String),
     SaveGrammar(crate::grammar::Grammar),
     ResetGrammar,
+    SaveAction(crate::actions::Action),
+    DeleteAction(String),
 }
 
 /// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
@@ -127,8 +130,13 @@ fn info(app: &AppHandle) -> Info {
         .and_then(|s| s.grammar.lock().ok().map(|g| g.clone()))
         .unwrap_or_else(crate::grammar::Grammar::defaults);
     let say = say::build(&grammar, &crate::uilang::current().to_string(), &langs);
+    let action_list = shared.as_ref().and_then(|s| s.actions.lock().ok().map(|a| a.clone())).unwrap_or_default();
+    let hidden_phrases = app
+        .try_state::<Arc<crate::actions::SharedState>>()
+        .map(crate::commands_api::inactive_action_phrases)
+        .unwrap_or_default();
     let hidden_triggers = grammar.inactive_triggers_for(Some(&langs.iter().map(|l| l.to_string()).collect::<Vec<_>>()));
-    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers }
+    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers, action_list, hidden_phrases }
 }
 
 /// Обновить экраны из Rust (пауза, индекс, действия, настройки) — после действий и раз в пару секунд.
@@ -164,6 +172,22 @@ fn act(app: &AppHandle, a: Act) {
             };
             refresh(app);
             send(Msg::GrammarDone(r.err()));
+        }
+        Act::SaveAction(a) => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                if let Err(e) = crate::commands_api::save_action(state, a) {
+                    crate::events::ui_log(app, format!("[reever] save action: {e}"));
+                }
+            }
+            refresh(app);
+        }
+        Act::DeleteAction(id) => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                if let Err(e) = crate::commands_api::delete_action(state, id) {
+                    crate::events::ui_log(app, format!("[reever] delete action: {e}"));
+                }
+            }
+            refresh(app);
         }
         Act::ResetGrammar => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {

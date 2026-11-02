@@ -72,6 +72,8 @@ pub enum Msg {
     GrammarDone(Option<String>),
     /// Раскрыть редактор «Что можно сказать» (id команды, `cancel`, `general`; проверка)
     EditGrammar(String),
+    /// Выбрать действие на вкладке «Действия» (проверка)
+    SelectAction(String),
 }
 
 /// Сведения для экранов, которые не приходят событиями.
@@ -87,6 +89,9 @@ pub struct Info {
     /// грамматика для редактора и встроенные фразы языков, которые не распознаются
     pub grammar: crate::grammar::Grammar,
     pub hidden_triggers: Vec<String>,
+    /// действия и их встроенные фразы языков, которые не распознаются
+    pub action_list: Vec<crate::actions::Action>,
+    pub hidden_phrases: std::collections::HashMap<String, Vec<String>>,
 }
 
 /// Картинки скина.
@@ -314,6 +319,7 @@ pub struct MainView {
     editor: Option<super::grammar_edit::GrammarEditor>,
     form: Form,
     form_blink: Option<Instant>,
+    actions_tab: super::actions_tab::ActionsTab,
     /// раскрытую форму прокрутить в поле зрения (scrollIntoView nearest); где она в содержимом
     reveal: bool,
     editor_span: (f32, f32),
@@ -378,6 +384,7 @@ impl MainView {
             lunka(2, (1065.0, 100.0), 30.0, "tray", "win.toTray"),
         ];
         let tab = TABS.iter().position(|t| *t == snapshot.tab).unwrap_or(0);
+        let (list0, hidden0) = (info.action_list.clone(), info.hidden_phrases.clone());
         let mut v = Self {
             host,
             hwnd: 0,
@@ -405,6 +412,7 @@ impl MainView {
             editor: None,
             form: Form::new(0, crate::ui_text::direction(locale) == "rtl"),
             form_blink: None,
+            actions_tab: super::actions_tab::ActionsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             reveal: false,
             editor_span: (0.0, 0.0),
             status: snapshot.status.unwrap_or_default(),
@@ -454,6 +462,7 @@ impl MainView {
         v.pause.font_size = 15.0;
         v.web.label = v.t("main.openWeb");
         v.set_state(&snapshot.state);
+        v.actions_tab.sync(list0, hidden0);
         v
     }
 
@@ -551,7 +560,10 @@ impl MainView {
                     self.status = s;
                 }
             }
-            Msg::Info(i) => self.info = i,
+            Msg::Info(i) => {
+                self.actions_tab.sync(i.action_list.clone(), i.hidden_phrases.clone());
+                self.info = i;
+            }
             Msg::Orb(_) => {}
             Msg::GrammarDone(err) => match err {
                 None => self.close_editor(),
@@ -562,6 +574,11 @@ impl MainView {
                     self.rebuild_form();
                 }
             },
+            Msg::SelectAction(id) => {
+                self.tab = 1;
+                let id = if id.is_empty() { self.info.action_list.first().map(|a| a.id.clone()).unwrap_or_default() } else { id };
+                self.actions_tab.open(&id);
+            }
             Msg::EditGrammar(key) => {
                 self.tab = 0;
                 self.open_editor(&key);
@@ -850,8 +867,13 @@ impl MainView {
         }
         // содержимое вкладки
         let body = Rect::new(r.x + 18.0, r.y + 34.0 + 14.0, r.w - 36.0, r.h - 34.0 - 14.0 - 18.0);
+        self.web.rect = Rect::new(0.0, 0.0, 0.0, 0.0);
         match TABS[self.tab] {
             "home" => self.draw_home(cx, body),
+            "actions" => {
+                self.actions_tab.draw(&mut self.scene, cx, body);
+                self.form_blink = self.actions_tab.next_blink(cx.now);
+            }
             "logs" => self.draw_logs(cx, body),
             _ => self.draw_not_ported(cx, body),
         }
@@ -1042,6 +1064,14 @@ impl MainView {
             self.touch_static();
         }
         redraw
+    }
+
+    fn actions_out(&mut self, out: super::actions_tab::ActionsOut) {
+        use super::actions_tab::ActionsOut;
+        match out {
+            ActionsOut::Save(a) => (self.host)(Act::SaveAction(a)),
+            ActionsOut::Delete(id) => (self.host)(Act::DeleteAction(id)),
+        }
     }
 
     /// Точка над видимой частью «Главной» (ниже бегущей строки).
@@ -1293,7 +1323,8 @@ impl MainView {
             }
             self.static_dirty = false;
             let k = self.k;
-            native::set_ime_caret(self.hwnd, self.form.ime_caret().map(|(x, y, h)| (x * k, y * k, h * k)));
+            let caret = if TABS[self.tab] == "actions" { self.actions_tab.ime_caret() } else { self.form.ime_caret() };
+            native::set_ime_caret(self.hwnd, caret.map(|(x, y, h)| (x * k, y * k, h * k)));
         }
         true
     }
@@ -1384,6 +1415,7 @@ impl WindowHandler for MainView {
     fn attached(&mut self, hwnd: isize) {
         self.hwnd = hwnd;
         self.form = Form::new(hwnd, self.rtl);
+        self.actions_tab.set_hwnd(hwnd);
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
@@ -1631,6 +1663,36 @@ impl WindowHandler for MainView {
 
     fn mouse(&mut self, ev: MouseEvent) -> bool {
         let (x, y) = (ev.x / self.k, ev.y / self.k);
+        if TABS[self.tab] == "actions" {
+            let over = native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0;
+            let skin = MouseEvent { kind: ev.kind, x, y };
+            let mine = match ev.kind {
+                MouseKind::Down(_) | MouseKind::DoubleClick => over || self.actions_tab.form.popup_open(),
+                MouseKind::Up(_) => over && self.pressed.is_none(),
+                _ => false,
+            };
+            if matches!(ev.kind, MouseKind::Move | MouseKind::Leave | MouseKind::Up(_)) || mine {
+                let (redraw, out) = self.actions_tab.mouse(skin);
+                if let Some(out) = out {
+                    self.actions_out(out);
+                }
+                if redraw {
+                    self.touch_static();
+                }
+                if mine {
+                    return true;
+                }
+                if ev.kind == MouseKind::Move && over {
+                    let c = match self.actions_tab.cursor(x, y) {
+                        Some(true) => Cursor::Hand,
+                        Some(false) => Cursor::Text,
+                        None => Cursor::Arrow,
+                    };
+                    set_cursor(self.hwnd, c);
+                    return redraw;
+                }
+            }
+        }
         match ev.kind {
             MouseKind::Move => {
                 if !FRAME_STATIC {
@@ -1764,6 +1826,16 @@ impl WindowHandler for MainView {
     }
 
     fn key(&mut self, ev: KeyEvent) -> bool {
+        if TABS[self.tab] == "actions" {
+            let (redraw, out) = self.actions_tab.key(ev);
+            if let Some(out) = out {
+                self.actions_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if self.editor.is_none() {
             return false;
         }
@@ -1772,6 +1844,16 @@ impl WindowHandler for MainView {
     }
 
     fn char_input(&mut self, c: char) -> bool {
+        if TABS[self.tab] == "actions" {
+            let (redraw, out) = self.actions_tab.char_input(c);
+            if let Some(out) = out {
+                self.actions_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if self.editor.is_none() {
             return false;
         }
@@ -1781,12 +1863,17 @@ impl WindowHandler for MainView {
 
     fn focus(&mut self, focused: bool) -> bool {
         self.form.window_focus(focused);
+        self.actions_tab.window_focus(focused);
         self.static_dirty = true;
         true
     }
 
     fn wheel(&mut self, x: f32, y: f32, delta: f32) -> bool {
         let (x, y) = (x / self.k, y / self.k);
+        if TABS[self.tab] == "actions" && self.actions_tab.wheel(x, y, delta) {
+            self.static_dirty = true;
+            return true;
+        }
         if TABS[self.tab] == "logs" && native::controls::inside(SCREEN, x, y) {
             self.log_scroll = (self.log_scroll + delta * 48.0).max(0.0);
             self.static_dirty = true;

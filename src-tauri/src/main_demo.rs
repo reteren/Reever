@@ -145,6 +145,12 @@ pub fn start(app: &AppHandle) {
         crate::main_native::send(crate::main_native::Msg::Tab("settings".into()));
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "settings");
+        crate::main_native::send(crate::main_native::Msg::Tab("actions".into()));
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "actions");
+        crate::main_native::send(crate::main_native::Msg::SelectAction(String::new()));
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "actions-edit");
         crate::main_native::send(crate::main_native::Msg::Tab("home".into()));
         // редактор «Что можно сказать»: общий (wake-слова) и под строкой диктовки
         crate::main_native::send(crate::main_native::Msg::EditGrammar("general".into()));
