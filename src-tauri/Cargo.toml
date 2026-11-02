@@ -81,6 +81,17 @@ features = [
   # traymenu.rs: меню трея рисуется само (owner-draw) под DPI монитора
   "Win32_UI_Controls",
   "Win32_UI_HiDpi",
+  # native/: окна без WebView2 — Direct2D + DirectWrite + WIC + DirectComposition
+  "Foundation_Numerics",
+  "Win32_Graphics_Direct2D",
+  "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Imaging",
+  "Win32_Graphics_DirectComposition",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
 ]
 
 [profile.release]
