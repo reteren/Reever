@@ -78,6 +78,7 @@ pub struct Info {
     pub mode: String,
     pub hotkey: String,
     pub version: String,
+    pub say: super::say::SayList,
 }
 
 /// Картинки скина.
@@ -293,6 +294,12 @@ pub struct MainView {
     heard: Option<String>,
     log: Vec<String>,
     log_scroll: f32,
+    /// прокрутка «Главной» (подсказка и список «Что можно сказать»), DIP
+    home_scroll: f32,
+    home_max_scroll: f32,
+    /// строки списка на экране (с учётом прокрутки) и строка под курсором
+    say_rects: Vec<Rect>,
+    say_hover: Option<usize>,
     status: serde_json::Value,
     info: Info,
     woke_until: Option<Instant>,
@@ -374,6 +381,10 @@ impl MainView {
             heard: None,
             log: snapshot.log.into_iter().rev().take(LOG_LIMIT).rev().collect(),
             log_scroll: 0.0,
+            home_scroll: 0.0,
+            home_max_scroll: 0.0,
+            say_rects: Vec::new(),
+            say_hover: None,
             status: snapshot.status.unwrap_or_default(),
             info,
             woke_until: None,
@@ -524,6 +535,7 @@ impl MainView {
                 if let Some(i) = TABS.iter().position(|x| *x == t) {
                     self.tab = i;
                     self.log_scroll = 0.0;
+                    self.home_scroll = 0.0;
                 }
             }
         }
@@ -816,34 +828,103 @@ impl MainView {
         if self.rtl { Direction::Rtl } else { Direction::Ltr }
     }
 
+    /// «Главная» (#p-home): услышанная команда или подсказка, «Что можно сказать» — список
+    /// примеров (renderGrammarExamples). Всё вместе прокручивается колесом, как .panel.
     fn draw_home(&mut self, cx: &mut RenderCx<'_>, body: Rect) {
+        // панель прокручивается в своих границах: падинги экрана — внутри прокрутки
+        let clip = Rect::new(body.x - 18.0, body.y - 14.0, body.w + 36.0, body.h + 14.0 + 18.0);
+        self.scene.flush(cx);
+        self.scene.set_clip(Some(clip));
+        unsafe {
+            cx.dc().PushAxisAlignedClip(&clip.d2d(), windows::Win32::Graphics::Direct2D::D2D1_ANTIALIAS_MODE_ALIASED);
+        }
+        let top = body.y - self.home_scroll;
         // .heard: последняя услышанная команда или подсказка
         let (text, style, color, glow) = match &self.heard {
             Some(h) => (h.clone(), TextStyle { wrap: true, direction: self.dir(), line_height: Some(1.05), ..lcd(30.0, 500, 0.03) }, ACC_HOT, Glow::G3),
-            None => {
-                let ru = self.locale == "ru";
-                let hint = crate::ui_text::t(
-                    &self.locale,
-                    "home.hint",
-                    &[("wake", if ru { "ривер" } else { "reever" }), ("open", if ru { "открой" } else { "open" })],
-                );
-                (hint, TextStyle { wrap: true, direction: self.dir(), ..ui(15.0, 400, 1.45) }, ACC_2, Glow::G1)
-            }
+            None => (
+                self.info.say.hint.clone(),
+                TextStyle { wrap: true, direction: self.dir(), ..ui(15.0, 400, 1.45) },
+                ACC_2,
+                Glow::G1,
+            ),
         };
         let mut h = 64.0f32;
         if let Some(l) = self.text(cx, &text, &style, body.w) {
-            self.scene.text(&l, body.x, body.y + 4.0, color, glow);
+            self.scene.text(&l, body.x, top + 4.0, color, glow);
             h = h.max(4.0 + l.height + 14.0);
         }
         self.scene.flush(cx);
-        dotted_hline(cx, body.x, body.y + h, body.w, ACC_4);
-        // «Что можно сказать» — список и редактор пока в веб-версии
-        let y = body.y + h + 12.0;
+        dotted_hline(cx, body.x, top + h, body.w, ACC_4);
+        // .grammar-heading: заголовок слева, «Изменить» справа (редактор пока в веб-версии)
+        let mut y = top + h + 12.0;
+        self.web.label = self.t("grammar.edit");
+        let edit_w = self.web.natural_width(&mut self.scene, cx);
+        self.web.rect = Rect::new(body.x + body.w - edit_w, y, edit_w, 28.0);
         let h2 = self.t("grammar.heading").to_uppercase();
-        if let Some(l) = self.text(cx, &h2, &lcd(22.0, 600, 0.08), body.w) {
-            self.scene.text(&l, body.x, y, ACC_HOT, Glow::G3);
+        if let Some(l) = self.text(cx, &h2, &lcd(18.0, 600, 0.08), body.w - edit_w - 12.0) {
+            self.scene.text(&l, body.x, y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
         }
-        self.web_button(cx, body.x, y + 34.0);
+        self.scene.flush(cx);
+        self.web.draw(&mut self.scene, cx);
+        y += 28.0 + 6.0;
+        // строки: номер, команда, что произойдёт — сетка 26px | auto | 1fr, по базовой линии
+        let rows = self.info.say.rows.clone();
+        self.say_rects.clear();
+        let num_st = lcd(15.0, 500, 0.0);
+        let code_st = TextStyle { line_height: Some(1.25), ..lcd(17.0, 500, 0.04) };
+        let desc_st = TextStyle { wrap: true, direction: self.dir(), ..ui(12.0, 400, 1.45) };
+        for (i, row) in rows.iter().enumerate() {
+            let x0 = body.x + 6.0;
+            let num = self.text(cx, &format!("{:02}.", i + 1), &num_st, 26.0);
+            let code = self.text(cx, &row.command, &code_st, 10_000.0);
+            let code_w = code.as_ref().map_or(0.0, |l| l.width);
+            let desc_x = x0 + 26.0 + 8.0 + code_w + 8.0;
+            let desc = self.text(cx, &row.desc, &desc_st, (body.x + body.w - 6.0 - desc_x).max(60.0));
+            let items = [num.as_ref(), code.as_ref(), desc.as_ref()];
+            let line_base = items.iter().flatten().map(|l| l.baseline()).fold(0.0f32, f32::max);
+            let bottom = items.iter().flatten().map(|l| line_base - l.baseline() + l.height).fold(0.0f32, f32::max);
+            let rh = bottom + 6.0;
+            let rect = Rect::new(body.x, y, body.w, rh);
+            let hover = self.say_hover == Some(i);
+            if hover {
+                fill_round(cx, rect, 4.0, ACC_5);
+            }
+            let alpha = if row.off { 0.45 } else { 1.0 };
+            let ty = |l: &Rc<native::TextLayout>| y + 3.0 + line_base - l.baseline();
+            if let Some(l) = &num {
+                self.scene.text(l, x0, ty(l), ACC_3, Glow::G1);
+            }
+            if let Some(l) = &code {
+                self.scene.text_alpha(l, x0 + 34.0, ty(l), ACC_HOT, Glow::G2, alpha);
+            }
+            if let Some(l) = &desc {
+                self.scene.text_alpha(l, desc_x, ty(l), if hover { ACC_2 } else { ACC_3 }, Glow::G1, alpha);
+            }
+            self.say_rects.push(rect);
+            y += rh;
+        }
+        self.home_max_scroll = (y + self.home_scroll - body.y + 4.0 - body.h).max(0.0);
+        self.home_scroll = self.home_scroll.min(self.home_max_scroll);
+        self.scene.flush(cx);
+        self.scene.set_clip(None);
+        unsafe { cx.dc().PopAxisAlignedClip() };
+        // полоса прокрутки, когда список не влезает
+        if self.home_max_scroll > 0.0 {
+            let track = Rect::new(SCREEN.x + SCREEN.w - 7.0, body.y, 3.0, body.h);
+            let total = body.h + self.home_max_scroll;
+            let th = (track.h * body.h / total).max(24.0);
+            let ty = track.y + (track.h - th) * self.home_scroll / self.home_max_scroll;
+            fill_round(cx, Rect::new(track.x, ty, track.w, th), 1.5, ACC_4);
+        }
+    }
+
+    /// Строка «Что можно сказать» под курсором (только видимая часть «Главной»).
+    fn say_row_at(&self, x: f32, y: f32) -> Option<usize> {
+        if TABS[self.tab] != "home" || !native::controls::inside(SCREEN, x, y) || y < SCREEN.y + 34.0 {
+            return None;
+        }
+        self.say_rects.iter().position(|r| native::controls::inside(*r, x, y))
     }
 
     fn web_button(&mut self, cx: &mut RenderCx<'_>, x: f32, y: f32) {
@@ -855,6 +936,7 @@ impl MainView {
     }
 
     fn draw_not_ported(&mut self, cx: &mut RenderCx<'_>, body: Rect) {
+        self.web.label = self.t("main.openWeb");
         let title = self.t(TAB_KEYS[self.tab]).to_uppercase();
         let mut y = body.y + 2.0;
         if let Some(l) = self.text(cx, &title, &lcd(22.0, 600, 0.08), body.w) {
@@ -1128,6 +1210,8 @@ impl MainView {
                 if self.tab != i {
                     self.tab = i;
                     self.log_scroll = 0.0;
+                    self.home_scroll = 0.0;
+                    self.say_hover = None;
                     self.static_dirty = true;
                     (self.host)(Act::Tab(TABS[i].to_string()));
                 }
@@ -1413,6 +1497,11 @@ impl WindowHandler for MainView {
                     touched = true;
                 }
                 touched |= self.pause.press.set_hover(t == Some(Target::Pause), 0.12);
+                let row = if t.is_none() { self.say_row_at(x, y) } else { None };
+                if row != self.say_hover {
+                    self.say_hover = row;
+                    touched = true;
+                }
                 touched |= self.web.press.set_hover(t == Some(Target::Web), 0.12);
                 if touched {
                     self.touch_static();
@@ -1440,6 +1529,7 @@ impl WindowHandler for MainView {
                 }
                 self.tab_hover = None;
                 self.orb_hover = false;
+                self.say_hover = None;
                 self.touch_static();
                 r | self.pause.press.set_hover(false, 0.12) | self.web.press.set_hover(false, 0.12) | self.tooltip.hide() | true
             }
@@ -1486,6 +1576,15 @@ impl WindowHandler for MainView {
             self.log_scroll = (self.log_scroll + delta * 48.0).max(0.0);
             self.static_dirty = true;
             return true;
+        }
+        if TABS[self.tab] == "home" && native::controls::inside(SCREEN, x, y) && self.home_max_scroll > 0.0 {
+            let next = (self.home_scroll - delta * 48.0).clamp(0.0, self.home_max_scroll);
+            if next != self.home_scroll {
+                self.home_scroll = next;
+                self.say_hover = self.say_row_at(x, y);
+                self.static_dirty = true;
+                return true;
+            }
         }
         false
     }

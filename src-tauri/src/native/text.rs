@@ -25,7 +25,7 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_TEXT_RANGE,
     DWRITE_WORD_WRAPPING_EMERGENCY_BREAK, IDWriteFactory2, IDWriteFontFallback, IDWriteTextLayout2,
     DWRITE_UNICODE_RANGE, DWRITE_TRIMMING, DWRITE_TRIMMING_GRANULARITY_CHARACTER,
-    DWRITE_WORD_WRAPPING_WRAP,
+    DWRITE_WORD_WRAPPING_WRAP, DWRITE_LINE_METRICS,
 };
 
 static GEOLOGICA: &[u8] = include_bytes!("../../../frontend/fonts/Geologica.ttf");
@@ -131,6 +131,19 @@ pub struct TextLayout {
     pub height: f32,
     pub rtl: bool,
     pub lines: u32,
+}
+
+impl TextLayout {
+    /// Базовая линия первой строки от верха раскладки, DIP (для выравнивания по базовой линии,
+    /// как align-items: baseline).
+    pub fn baseline(&self) -> f32 {
+        let mut m = vec![DWRITE_LINE_METRICS::default(); self.lines.max(1) as usize];
+        let mut n = 0u32;
+        match unsafe { self.layout.GetLineMetrics(Some(&mut m), &mut n) } {
+            Ok(()) if n > 0 => m[0].baseline,
+            _ => self.height * 0.8,
+        }
+    }
 }
 
 pub struct Text {

@@ -11,6 +11,7 @@
 
 mod frame;
 mod fx;
+mod say;
 mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -110,7 +111,20 @@ fn info(app: &AppHandle) -> Info {
             (s.activation_mode.clone(), s.hotkey.clone())
         })
         .unwrap_or_default();
-    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string() }
+    // «Что можно сказать»: примеры на языке интерфейса, если он распознаётся
+    // языки загруженных моделей, как у веб-версии (inactive_*); до запуска распознавания — настройки
+    let langs: Vec<String> = crate::grammar::active_languages().unwrap_or_else(|| {
+        app.try_state::<crate::config::LiveConfig>()
+            .map(|c| c.get().settings.recognition_languages().iter().map(|l| l.to_string()).collect())
+            .unwrap_or_else(|| vec!["en".into()])
+    });
+    let langs: Vec<&str> = langs.iter().map(String::as_str).collect();
+    let grammar = shared
+        .as_ref()
+        .and_then(|s| s.grammar.lock().ok().map(|g| g.clone()))
+        .unwrap_or_else(crate::grammar::Grammar::defaults);
+    let say = say::build(&grammar, &crate::uilang::current().to_string(), &langs);
+    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say }
 }
 
 /// Обновить экраны из Rust (пауза, индекс, действия, настройки) — после действий и раз в пару секунд.
