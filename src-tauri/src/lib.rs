@@ -17,6 +17,8 @@ pub mod commands;
 pub mod commands_api;
 pub mod config;
 pub mod confirm;
+pub mod dialog_demo;
+pub mod dialogs_native;
 pub mod dictation;
 pub mod dispatch;
 pub mod engine;
@@ -252,6 +254,8 @@ fn signal_existing_instance_or_register() -> bool {
         "Local\\com.troid.reever.find-demo.show-main"
     } else if mascot_demo::active() {
         "Local\\com.troid.reever.mascot-demo.show-main"
+    } else if dialog_demo::active() {
+        "Local\\com.troid.reever.dialog-demo.show-main"
     } else {
         "Local\\com.troid.reever.show-main"
     };
@@ -434,6 +438,11 @@ pub fn run() {
             // проверка маскота без микрофона и горячих клавиш: REEVER_MASCOT_DEMO=1 (mascot_demo.rs)
             if mascot_demo::active() {
                 mascot_demo::start(app.handle());
+                return Ok(());
+            }
+            // проверка окон выбора и подтверждения: REEVER_DIALOG_DEMO=1 (dialog_demo.rs)
+            if dialog_demo::active() {
+                dialog_demo::start(app.handle());
                 return Ok(());
             }
 

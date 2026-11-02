@@ -27,6 +27,7 @@ static ANSWER: Mutex<Option<(u64, bool)>> = Mutex::new(None);
 /// Показать вопрос; `seconds` — сколько ждать ответа голосом (потом отмена).
 /// Возвращает номер вопроса для `take_answer`.
 pub fn show(app: &AppHandle, pending: &PendingAction, seconds: u32) -> u64 {
+    crate::dialog_demo::asked("confirm");
     let session = SESSION.fetch_add(1, Ordering::SeqCst) + 1;
     if let Ok(mut answer) = ANSWER.lock() {
         *answer = None;
@@ -39,8 +40,28 @@ pub fn show(app: &AppHandle, pending: &PendingAction, seconds: u32) -> u64 {
     if let Ok(mut slot) = PENDING.lock() {
         *slot = Some(json!({ "session": session, "kind": kind, "app": target, "seconds": seconds }));
     }
+    if crate::dialogs_native::enabled(app) {
+        // нативная плашка (native_dialogs)
+        if let Some(window) = app.get_webview_window("confirm") {
+            let _ = window.destroy();
+        }
+        let q = crate::dialogs_native::confirm::Question { session, kind: kind.to_string(), app: target, seconds };
+        crate::dialogs_native::confirm::show(app, std::sync::Arc::new(NativeHost { app: app.clone() }), q);
+        return session;
+    }
     ensure_window(app);
     session
+}
+
+/// Ответ кнопкой нативной плашки — как confirm_answer от страницы.
+struct NativeHost {
+    app: AppHandle,
+}
+
+impl crate::dialogs_native::confirm::Host for NativeHost {
+    fn answer(&self, session: u64, yes: bool) {
+        answer(&self.app, session, yes);
+    }
 }
 
 /// Ответ кликом на вопрос `session`, если он был (забирается один раз).
@@ -64,6 +85,7 @@ pub fn hide(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("confirm") {
         let _ = window.destroy();
     }
+    crate::dialogs_native::confirm::hide(app);
 }
 
 fn answer(app: &AppHandle, session: u64, yes: bool) {
@@ -95,6 +117,7 @@ fn ensure_window(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let window = WebviewWindowBuilder::from_config(&app, &window_config)
             .map(|builder| builder.initialization_script(crate::lite_script(&app)))
+            .map(|builder| if crate::dialog_demo::active() { builder.focused(false) } else { builder })
             .and_then(|builder| builder.build());
         let window = match window {
             Ok(window) => window,
@@ -135,8 +158,22 @@ fn publish(app: &AppHandle, window: &WebviewWindow) {
     };
     let _ = app.emit_to("confirm", "reever://confirm", payload);
     let _ = window.center();
+    if crate::dialog_demo::active() {
+        // режим проверки: показать без фокуса (человек за компьютером может печатать)
+        if let Ok(hwnd) = window.hwnd() {
+            unsafe {
+                let _ = windows::Win32::UI::WindowsAndMessaging::ShowWindow(
+                    windows::Win32::Foundation::HWND(hwnd.0 as _),
+                    windows::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE,
+                );
+            }
+        }
+        crate::dialog_demo::shown("confirm");
+        return;
+    }
     let _ = window.show();
     let _ = window.set_focus();
+    crate::dialog_demo::shown("confirm");
     // Вопрос пришёл голосом, без клика — Windows не даёт фокус фоновой программе.
     if let Ok(hwnd) = window.hwnd() {
         winutil::bring_to_front_raw(hwnd.0 as isize);

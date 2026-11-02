@@ -42,6 +42,7 @@ pub fn show(
     scope: FindScope,
     items: &[FindItem],
 ) -> u64 {
+    crate::dialog_demo::asked("picker");
     let session = shared.picker_session.fetch_add(1, Ordering::SeqCst) + 1;
     SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst);
     if let Ok(mut picker) = shared.picker.lock() {
@@ -50,8 +51,48 @@ pub fn show(
     if let Ok(mut pending) = PENDING_PICKER.lock() {
         *pending = Some(json!({ "title": title, "query": query, "scope": scope, "items": items }));
     }
+    if crate::dialogs_native::enabled(app) {
+        // нативное окно (native_dialogs): веб-окна выбора при этом нет
+        if let Some(window) = app.get_webview_window("picker") {
+            let _ = window.destroy();
+        }
+        let payload = crate::dialogs_native::picker::Payload {
+            title: title.to_string(),
+            query: query.to_string(),
+            scope,
+            items: items.to_vec(),
+        };
+        crate::dialogs_native::picker::show(app, Arc::new(NativeHost { app: app.clone() }), payload);
+        return session;
+    }
     ensure_picker(app);
     session
+}
+
+/// Нативное окно выбора просит то же, что страница: выбрать, закрыть, искать набранное.
+struct NativeHost {
+    app: AppHandle,
+}
+
+impl crate::dialogs_native::picker::Host for NativeHost {
+    fn choose(&self, index: usize) {
+        let shared = self.app.state::<Arc<SharedState>>().inner().clone();
+        let cfg = self.app.state::<crate::config::LiveConfig>().get();
+        mark_closed(&shared);
+        choose(&self.app, &shared, &cfg, index);
+    }
+
+    fn close(&self) {
+        let shared = self.app.state::<Arc<SharedState>>().inner().clone();
+        mark_closed(&shared);
+        hide(&self.app, &shared);
+        ui_log(&self.app, crate::msg!("log.choice.closed"));
+    }
+
+    fn search(&self, query: &str, scope: FindScope) -> Result<Option<Vec<FindItem>>, String> {
+        let shared = self.app.state::<Arc<SharedState>>().inner().clone();
+        search_blocking(&self.app, &shared, query, scope)
+    }
 }
 
 /// Создать окно по требованию. Событие с вариантами отправит picker_ready после подписки страницы.
@@ -85,6 +126,7 @@ fn ensure_picker(app: &AppHandle) {
     tauri::async_runtime::spawn(async move {
         let window = WebviewWindowBuilder::from_config(&app, &window_config)
             .map(|builder| builder.initialization_script(crate::lite_script(&app)))
+            .map(|builder| if crate::dialog_demo::active() { builder.focused(false) } else { builder })
             .and_then(|builder| builder.build());
         let window = match window {
             Ok(window) => window,
@@ -147,8 +189,22 @@ fn publish_picker(app: &AppHandle, window: &WebviewWindow) {
 
     let _ = app.emit_to("picker", "reever://picker", payload);
     let _ = window.center();
+    if crate::dialog_demo::active() {
+        // режим проверки: показать без фокуса (человек за компьютером может печатать)
+        if let Ok(hwnd) = window.hwnd() {
+            unsafe {
+                let _ = windows::Win32::UI::WindowsAndMessaging::ShowWindow(
+                    windows::Win32::Foundation::HWND(hwnd.0 as _),
+                    windows::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE,
+                );
+            }
+        }
+        crate::dialog_demo::shown("picker");
+        return;
+    }
     let _ = window.show();
     let _ = window.set_focus();
+    crate::dialog_demo::shown("picker");
     // Команда пришла голосом, без клика — Windows не даёт фокус фоновой программе;
     // тот же обход, что и при подъёме найденного окна.
     if let Ok(hwnd) = window.hwnd() {
@@ -182,6 +238,7 @@ pub fn hide(app: &AppHandle, shared: &SharedState) {
     if let Some(window) = app.get_webview_window("picker") {
         let _ = window.destroy();
     }
+    crate::dialogs_native::picker::hide(app);
 }
 
 /// Открыть вариант номер `index` (с нуля). `false` — номера нет или открыть не удалось.
@@ -256,29 +313,37 @@ pub async fn picker_search(
     query: String,
     scope: FindScope,
 ) -> Result<Option<Vec<FindItem>>, String> {
-    let generation = SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     let shared = shared.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || search_blocking(&app, &shared, &query, scope))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+/// Поиск набранного (общий для страницы и нативного окна): найденное становится списком окна.
+fn search_blocking(
+    app: &AppHandle,
+    shared: &Arc<SharedState>,
+    query: &str,
+    scope: FindScope,
+) -> Result<Option<Vec<FindItem>>, String> {
+    let generation = SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     let manager = app
         .try_state::<crate::local_index::IndexManager>()
         .map(|manager| manager.inner().clone());
-    tauri::async_runtime::spawn_blocking(move || {
-        let Some(index) = manager.and_then(|manager| manager.snapshot()) else {
-            return Err("index-off".to_string());
-        };
-        if SEARCH_GENERATION.load(Ordering::SeqCst) != generation {
-            return Ok(None);
-        }
-        let usage = Usage::load(&shared.usage_path);
-        let items = crate::find::search_typed(&index, &query, scope, &usage, &windows_recent());
-        let mut picker = shared.picker.lock().unwrap_or_else(|e| e.into_inner());
-        if SEARCH_GENERATION.load(Ordering::SeqCst) != generation {
-            return Ok(None);
-        }
-        *picker = items.clone();
-        Ok(Some(items))
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    let Some(index) = manager.and_then(|manager| manager.snapshot()) else {
+        return Err("index-off".to_string());
+    };
+    if SEARCH_GENERATION.load(Ordering::SeqCst) != generation {
+        return Ok(None);
+    }
+    let usage = Usage::load(&shared.usage_path);
+    let items = crate::find::search_typed(&index, query, scope, &usage, &windows_recent());
+    let mut picker = shared.picker.lock().unwrap_or_else(|e| e.into_inner());
+    if SEARCH_GENERATION.load(Ordering::SeqCst) != generation {
+        return Ok(None);
+    }
+    *picker = items.clone();
+    Ok(Some(items))
 }
 
 #[tauri::command]
