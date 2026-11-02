@@ -34,9 +34,7 @@
     "mégse",
     "anulează",
     "ikkanċella",
-    "취소",
-    "stop",
-    "cancel"
+    "취소"
   ],
   "dictation_stop": [
     "стоп ввод",
@@ -50,7 +48,7 @@
     "停止输入",
     "入力終了"
   ],
-  "version": 13,
+  "version": 11,
   "intents": [
     {
       "id": "launch",
@@ -789,21 +787,6 @@
         "종료해",
         "강제 종료",
         "強制結束"
-      ],
-      "url": "",
-      "enabled": true,
-      "lang": "auto"
-    },
-    {
-      "id": "key",
-      "kind": "key",
-      "label": "нажать клавишу или сочетание",
-      "triggers": [
-        "кнопка",
-        "клавиша",
-        "нажми",
-        "press",
-        "press key"
       ],
       "url": "",
       "enabled": true,
