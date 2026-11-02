@@ -568,6 +568,12 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.spot_at_start = true;
     }
 
+    /// Детектор услышал «ривер», а фраза после него ещё звучит: команда или диктовка вот-вот
+    /// начнутся. Маскот в это время не уходит по сроку ожидания (mascot.rs, `on_wake`).
+    pub fn wake_phrase_open(&self) -> bool {
+        matches!(self.mode, Mode::Idle) && self.spot_age.is_some() && self.idle_speech_age.is_some()
+    }
+
     /// Главный вход: очередной кусок 16 кГц mono из микрофона.
     /// Можно ли сейчас подогреть модели: простой и речи нет (идущую фразу не задерживаем).
     pub fn can_keep_warm(&self) -> bool {

@@ -605,6 +605,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
                         for event in engine.push_audio(&replay) {
                             worker.handle(&mut engine, event);
                         }
+                        crate::events::set_wake_phrase(engine.wake_phrase_open());
                         replay.fill(0);
                         clear_recent_audio(&mut recent_chunks, &mut recent_samples);
                         loading_audio_truncated = false;
@@ -624,6 +625,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         for event in events {
             worker.handle(&mut engine, event);
         }
+        crate::events::set_wake_phrase(engine.wake_phrase_open());
         if activity {
             last_activity = std::time::Instant::now();
         }
@@ -1251,8 +1253,9 @@ impl Worker<'_> {
                 self.wake_sound();
                 self.last_spot_sound = Some(std::time::Instant::now());
                 crate::mascot::on_wake(self.app);
-                // линза лёгкого интерфейса наливается сразу по детектору (frontend/skin/shell.js)
-                let _ = self.app.emit_to("main", "reever://wake", ());
+                // линза лёгкого интерфейса и глаз маскота наливаются сразу по детектору
+                // (frontend/skin/shell.js, frontend/skin/mascot.js)
+                let _ = self.app.emit("reever://wake", ());
                 self.prefetch_index();
             }
             EngineEvent::WakeRejected => {
@@ -1260,7 +1263,7 @@ impl Worker<'_> {
                 self.last_spot_sound = None;
                 self.last_wake_sound = None;
                 crate::mascot::on_wake_rejected(self.app);
-                let _ = self.app.emit_to("main", "reever://wake-rejected", ());
+                let _ = self.app.emit("reever://wake-rejected", ());
             }
             EngineEvent::Partial(t) => {
                 if !self.private() {

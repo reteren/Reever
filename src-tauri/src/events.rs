@@ -30,6 +30,7 @@ static UI_STATUS: Mutex<Option<Value>> = Mutex::new(None);
 static UI_COMPACT: AtomicBool = AtomicBool::new(false);
 static MAIN_VISIBLE: AtomicBool = AtomicBool::new(false);
 static MASCOT_VISIBLE: AtomicBool = AtomicBool::new(false);
+static WAKE_PHRASE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize)]
 pub struct UiSnapshot {
@@ -135,6 +136,15 @@ pub fn set_main_visible(visible: bool) {
 /// Главное окно сейчас видно (на экране, не в трее).
 pub fn main_visible() -> bool {
     MAIN_VISIBLE.load(Ordering::Relaxed)
+}
+
+/// Фраза после «ривер» ещё звучит (`Engine::wake_phrase_open`) — маскот ждёт её конца.
+pub fn set_wake_phrase(open: bool) {
+    WAKE_PHRASE.store(open, Ordering::Relaxed);
+}
+
+pub fn wake_phrase_open() -> bool {
+    WAKE_PHRASE.load(Ordering::Relaxed)
 }
 
 /// Маскот тоже показывает громкость — жидкостью в глазу.

@@ -80,13 +80,27 @@
       dark: spring(0, 18, 9), glitch: spring(0, 60, 14), glow: spring(0, 14, 7),
     };
     let state = 'idle', level = 0, levelRaw = 0, flash = 0;
+    // Детектор услышал «ривер» (reever://wake): глаз наливается сразу, как при команде, не
+    // дожидаясь большой модели. Пока подтверждения нет, «loading»/«idle» его не сливают;
+    // сливается по отказу, по концу команды (после «слушаю»/«выполняю») или через 60 с.
+    let woke = false, wokeTimer = 0, raw = 'idle';
+    function setWoke(on) {
+      clearTimeout(wokeTimer);
+      woke = on;
+      if (on) wokeTimer = setTimeout(() => setWoke(false), 60000);
+      setState(raw);
+    }
     function setState(name) {
-      state = STATES[name] ? name : 'idle';
+      raw = STATES[name] ? name : 'idle';
+      if (raw === 'listening' || raw === 'busy' || raw === 'paused') { woke = false; clearTimeout(wokeTimer); }
+      state = woke && (raw === 'idle' || raw === 'loading') ? 'listening' : raw;
       for (const key in S) S[key].t = STATES[state][key];
     }
     setState('idle');
     const ev = window.__TAURI__?.event;
     ev?.listen('reever://state', (e) => setState(String(e.payload)));
+    ev?.listen('reever://wake', () => setWoke(true));
+    ev?.listen('reever://wake-rejected', () => setWoke(false));
     ev?.listen('reever://level', (e) => {
       const rms = Number(e.payload) || 0;
       levelRaw = state === 'listening' || state === 'busy' ? Math.max(0, Math.min(1, (20 * Math.log10(rms + 1e-6) + 54) / 40)) : 0;

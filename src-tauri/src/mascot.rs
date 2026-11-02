@@ -55,9 +55,10 @@ const TELEPORT: Duration = Duration::from_millis(450);
 /// «ривер» (загрузка и распознавание — 1–2 с, на медленной машине дольше). Не подтвердила
 /// и ничего не случилось — ложное срабатывание, маскот уходит.
 const WAKE_GRACE: Duration = Duration::from_secs(8);
-/// Пока модели грузятся (состояние «loading»), срок `WAKE_GRACE` не истекает — но не дольше
-/// этого: под нагрузкой загрузка после «ривер» идёт дольше 8 с, и маскот уходил посреди команды.
-const WAKE_GRACE_MAX: Duration = Duration::from_secs(30);
+/// Пока модели грузятся (состояние «loading») или фраза после «ривер» ещё звучит, срок
+/// `WAKE_GRACE` не истекает — но не дольше этого: под нагрузкой загрузка и распознавание после
+/// «ривер» идут дольше 8 с, и маскот уходил посреди команды.
+const WAKE_GRACE_MAX: Duration = Duration::from_secs(60);
 
 /// Смены «показать / уйти / спрятать» идут из разных потоков (аудио, отложенные уходы,
 /// команды окна). Проверка поколения и действие по ней — под одним замком: иначе новое
@@ -379,7 +380,9 @@ pub fn on_wake(app: &AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(WAKE_GRACE);
         let waited = std::time::Instant::now();
-        while events::current_state() == "loading"
+        // ждём, пока грузятся модели и пока фраза после «ривер» ещё звучит: «ривер напиши …»
+        // одним духом под нагрузкой может распознаться позже срока, а уходить посреди фразы нельзя
+        while (events::current_state() == "loading" || events::wake_phrase_open())
             && waited.elapsed() < WAKE_GRACE_MAX.saturating_sub(WAKE_GRACE)
             && GENERATION.load(Ordering::Relaxed) == generation
         {
