@@ -9,6 +9,7 @@
 
 pub mod anim;
 pub mod button;
+pub mod form;
 pub mod icons;
 pub mod list;
 pub mod text_input;
