@@ -233,6 +233,86 @@ fn default_actions() -> Vec<Action> {
     ]
 }
 
+/// Сайты по умолчанию (одобрены пользователем 2026-11-01). Программы человек добавляет сам,
+/// а сайты одинаковы у всех — их Reever знает сразу.
+fn default_sites() -> Vec<Action> {
+    vec![
+        act("site_twitter", "X (Twitter)", "url", "https://x.com", &["твиттер", "твитер", "икс твиттер", "twitter"]),
+        act("site_reddit", "Reddit", "url", "https://www.reddit.com", &["реддит", "редит", "reddit"]),
+        act("site_twitch", "Twitch", "url", "https://www.twitch.tv", &["твич", "twitch"]),
+        act("site_netflix", "Netflix", "url", "https://www.netflix.com", &["нетфликс", "netflix"]),
+        act("site_outlook", "Outlook", "url", "https://outlook.live.com/mail/", &["аутлук", "outlook"]),
+        act("site_drive", "Google Drive", "url", "https://drive.google.com", &["гугл диск", "google drive"]),
+        act("site_docs", "Google Docs", "url", "https://docs.google.com/document/", &["гугл документы", "гугл доки", "google docs"]),
+        act("site_sheets", "Google Sheets", "url", "https://docs.google.com/spreadsheets/", &["гугл таблицы", "таблицы", "google sheets"]),
+        act("site_calendar", "Google Calendar", "url", "https://calendar.google.com", &["календарь", "гугл календарь", "google calendar", "calendar"]),
+        act("site_translate", "Google Translate", "url", "https://translate.google.com", &["переводчик", "гугл переводчик", "google translate", "translator"]),
+        act("site_github", "GitHub", "url", "https://github.com", &["гитхаб", "гит хаб", "github"]),
+        act("site_maps", "Google Maps", "url", "https://www.google.com/maps", &["карты", "гугл карты", "google maps", "maps"]),
+        act("site_wikipedia", "Wikipedia", "url", "https://www.wikipedia.org", &["википедия", "wikipedia"]),
+        act("site_aliexpress", "AliExpress", "url", "https://www.aliexpress.com", &["алиэкспресс", "али экспресс", "aliexpress"]),
+        act("site_pinterest", "Pinterest", "url", "https://www.pinterest.com", &["пинтерест", "pinterest"]),
+        act("site_chess", "Chess.com", "url", "https://www.chess.com", &["шахматы", "chess"]),
+        act("site_temu", "Temu", "url", "https://www.temu.com", &["тему", "тэму", "temu"]),
+    ]
+}
+
+/// Хост адреса без `www.` — сайт, который у человека уже есть, второй раз не добавляется.
+fn url_host(target: &str) -> Option<String> {
+    let rest = target.trim().split_once("://")?.1;
+    let host = rest.split(['/', '?', '#']).next()?.to_ascii_lowercase();
+    let host = host.strip_prefix("www.").unwrap_or(&host).to_string();
+    (!host.is_empty()).then_some(host)
+}
+
+/// Сайты по умолчанию добавляются по одному разу: какие уже предлагались, помнит `seen_path`
+/// (рядом с actions.json). Удалённый человеком сайт после перезапуска не возвращается, а сайт
+/// из новой версии появится и у того, кто ставит обновление поверх. Сайт с тем же адресом
+/// (тот же хост и путь), что уже есть в действиях, не дублируется.
+fn seed_default_sites(actions: &mut Vec<Action>, seen_path: &Path) -> bool {
+    let mut seen: Vec<String> = std::fs::read_to_string(seen_path)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default();
+    let key = |target: &str| {
+        url_host(target).map(|host| {
+            let path = target.split_once("://").map_or("", |(_, rest)| rest);
+            let path = path.split_once('/').map_or("", |(_, path)| path).trim_end_matches('/');
+            format!("{host}/{path}")
+        })
+    };
+    let mut added = false;
+    let mut seen_changed = false;
+    for site in default_sites() {
+        if seen.contains(&site.id) {
+            continue;
+        }
+        seen.push(site.id.clone());
+        seen_changed = true;
+        let site_key = key(&site.target);
+        let exists = actions
+            .iter()
+            .any(|action| action.id == site.id || (site_key.is_some() && key(&action.target) == site_key));
+        if !exists {
+            actions.push(site);
+            added = true;
+        }
+    }
+    if seen_changed {
+        if let Ok(json) = serde_json::to_string_pretty(&seen) {
+            if let Err(e) = std::fs::write(seen_path, json) {
+                eprintln!("[reever] не удалось сохранить список сайтов по умолчанию: {e}");
+            }
+        }
+    }
+    added
+}
+
+/// Файл со списком уже предложенных сайтов по умолчанию — рядом с actions.json.
+fn seen_sites_path(actions_path: &Path) -> PathBuf {
+    actions_path.with_extension("sites.json")
+}
+
 /// Добавить дефолтные действия, которых ещё нет (по id). Возвращает true если добавили.
 fn merge_defaults(actions: &mut Vec<Action>) -> bool {
     let mut added = false;
@@ -340,6 +420,34 @@ mod tests {
     }
 
     #[test]
+    fn default_sites_are_offered_once_and_do_not_duplicate_existing_ones() {
+        let seen = std::env::temp_dir().join(format!("reever-sites-{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&seen);
+        let mut actions = vec![super::act("mine", "YT", "url", "https://chess.com/", &["шахматы"])];
+        assert!(super::seed_default_sites(&mut actions, &seen));
+        let ids: Vec<_> = actions.iter().map(|action| action.id.as_str()).collect();
+        assert!(ids.contains(&"site_github") && ids.contains(&"site_temu"));
+        // chess.com уже был у человека — второй не появился
+        assert!(!ids.contains(&"site_chess"));
+        // удалённый сайт после перезапуска не возвращается
+        actions.retain(|action| action.id != "site_github");
+        assert!(!super::seed_default_sites(&mut actions, &seen));
+        assert!(!actions.iter().any(|action| action.id == "site_github"));
+        let _ = std::fs::remove_file(&seen);
+    }
+
+    #[test]
+    fn default_sites_answer_their_names() {
+        let sites = super::default_sites();
+        let site = |id: &str| sites.iter().find(|site| site.id == id).unwrap();
+        assert!(site("site_pinterest").score(&["пинтерест".into()]) >= 0.9);
+        assert!(site("site_sheets").score(&["гугл таблицы".into()]) >= 0.9);
+        assert!(site("site_maps").score(&["карты".into()]) >= 0.9);
+        assert!(site("site_drive").score(&["гугл документы".into()]) < 0.9);
+        assert!(site("site_chess").score(&["шахматы".into()]) >= 0.9);
+    }
+
+    #[test]
     fn search_actions_are_not_merged_as_defaults() {
         let mut actions = Vec::new();
         assert!(super::merge_defaults(&mut actions));
@@ -381,6 +489,7 @@ mod tests {
         assert_eq!(persisted, expected);
 
         drop(state);
+        let _ = std::fs::remove_file(super::seen_sites_path(&actions_path));
         let _ = std::fs::remove_file(actions_path);
         let _ = std::fs::remove_file(grammar_path);
     }
@@ -433,6 +542,7 @@ impl SharedState {
         let mut actions = load_actions(&actions_path);
         let removed = remove_obsolete(&mut actions);
         let added = merge_defaults(&mut actions);
+        let seeded = seed_default_sites(&mut actions, &seen_sites_path(&actions_path));
         let (grammar, migrated_actions) =
             crate::grammar::Grammar::load_or_migrate(&grammar_path, settings, &mut actions);
         let usage_path = actions_path.with_file_name("usage.json");
@@ -459,7 +569,7 @@ impl SharedState {
                 eprintln!("[reever] не удалось сохранить grammar.json: {e}");
             }
         }
-        if removed || added || migrated_actions {
+        if removed || added || seeded || migrated_actions {
             state.persist();
         }
         state
