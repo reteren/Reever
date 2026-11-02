@@ -60,6 +60,45 @@ const ADDED_CANCEL_WORDS: &[(u32, &str)] = &[
     (13, "stop"),
     (13, "cancel"),
 ];
+
+/// Язык слов отмены из языковых пакетов (ADDED_CANCEL_WORDS, версии 10–11). Примеры
+/// «Что можно сказать» не показывают слова языков, которые сейчас не распознаются.
+const CANCEL_WORD_LANGUAGES: &[(&str, &[&str])] = &[
+    ("abbrechen", &["de"]),
+    ("annuler", &["fr"]),
+    ("cancelar", &["es", "pt"]),
+    ("annulla", &["it"]),
+    ("取消", &["zh", "yue"]),
+    ("キャンセル", &["ja"]),
+    ("скасуй", &["uk"]),
+    ("anuluj", &["pl"]),
+    ("zruš", &["cs", "sk"]),
+    ("отказ", &["bg"]),
+    ("odustani", &["hr"]),
+    ("prekliči", &["sl"]),
+    ("annuleer", &["nl"]),
+    ("annuller", &["da"]),
+    ("avbryt", &["sv"]),
+    ("peruuta", &["fi"]),
+    ("tühista", &["et"]),
+    ("atcelt", &["lv"]),
+    ("atšauk", &["lt"]),
+    ("ακύρωση", &["el"]),
+    ("mégse", &["hu"]),
+    ("anulează", &["ro"]),
+    ("ikkanċella", &["mt"]),
+    ("취소", &["ko"]),
+];
+
+/// Слово отмены языка, который распознаётся (`active` — коды языков); свои слова
+/// пользователя и слова без известного языка — всегда.
+pub fn cancel_word_active(word: &str, active: &[&str]) -> bool {
+    let word = word.trim().to_lowercase();
+    CANCEL_WORD_LANGUAGES
+        .iter()
+        .find(|(w, _)| *w == word)
+        .is_none_or(|(_, langs)| langs.iter().any(|l| active.contains(l)))
+}
 /// Новые фразы конца диктовки: (версия, фраза).
 const ADDED_DICTATION_STOP: &[(u32, &str)] = &[
     (9, "stop typing"),
@@ -1188,6 +1227,16 @@ impl Grammar {
     pub fn inactive_triggers(&self) -> Vec<String> {
         let active = ACTIVE_LANGUAGES.read().ok().and_then(|active| active.clone());
         self.inactive_triggers_for(active.as_deref())
+    }
+
+    /// Слова отмены языков, которые сейчас не распознаются («abbrechen» без немецкого): примеры
+    /// «Что можно сказать» их не показывают.
+    pub fn inactive_cancel_words(&self) -> Vec<String> {
+        let Some(active) = ACTIVE_LANGUAGES.read().ok().and_then(|active| active.clone()) else {
+            return Vec::new();
+        };
+        let active: Vec<&str> = active.iter().map(String::as_str).collect();
+        self.cancel_words.iter().filter(|w| !cancel_word_active(w, &active)).cloned().collect()
     }
 
     fn inactive_triggers_for(&self, active: Option<&[String]>) -> Vec<String> {

@@ -55,6 +55,16 @@ pub fn inactive_triggers(state: State<'_, Arc<SharedState>>) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Слова отмены языков, которые сейчас не распознаются, — примеры на «Главной» их прячут.
+#[tauri::command]
+pub fn inactive_cancel_words(state: State<'_, Arc<SharedState>>) -> Vec<String> {
+    state
+        .grammar
+        .lock()
+        .map(|grammar| grammar.inactive_cancel_words())
+        .unwrap_or_default()
+}
+
 /// Проверить и применить грамматику сразу, затем сохранить её для следующего запуска.
 #[tauri::command]
 pub fn save_grammar(state: State<'_, Arc<SharedState>>, grammar: Grammar) -> Result<(), String> {

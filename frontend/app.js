@@ -100,6 +100,7 @@ const invoke = tauri?.core?.invoke || (async(command,commandArgs={})=>{
     case 'add_scanned_apps': return (commandArgs.apps||[]).length;
     case 'list_sound_packs': return ['classic'];
     case 'inactive_triggers': return [];
+    case 'inactive_cancel_words': return [];
     case 'inactive_action_phrases': return {};
     case 'language_models': return {languages:{ru:'european',uk:'european',de:'european',fr:'european',es:'european',it:'european',pt:'european',pl:'european',cs:'european',sk:'european',bg:'european',hr:'european',sl:'european',nl:'european',da:'european',sv:'european',fi:'european',et:'european',lv:'european',lt:'european',el:'european',hu:'european',ro:'european',mt:'european',zh:'asian',yue:'asian',ja:'asian',ko:'asian'},installed:['european']};
     case 'get_paused': case 'get_autostart': return false;
@@ -206,7 +207,7 @@ let calId=null;
 function renderCalCount(){ if(!calId) return; const a=actions.find(x=>x.id===calId); const ph=a?shownPhrases(a):[]; $('#calHeading').textContent=t('calibration.heading',{label:a?.label||calId}); $('#calCount').textContent=t('calibration.count',{count:ph.length}); $('#calLast').textContent=ph.length?t('calibration.last',{phrase:ph[ph.length-1]}):''; }
 // Языки распознавания сменились (или распознавание только что запустилось) — какие
 // встроенные фразы прятать, считается заново; несохранённое в редакторе не трогаем.
-subscribe('reever://active-languages', async ()=>{ try{ hiddenPhrases=await invoke('inactive_action_phrases')||{}; }catch(e){ return; } renderRows(); if(!editorDirty) renderEditor(); });
+subscribe('reever://active-languages', async ()=>{ loadHiddenCancel(); try{ hiddenPhrases=await invoke('inactive_action_phrases')||{}; }catch(e){ return; } renderRows(); if(!editorDirty) renderEditor(); });
 subscribe('reever://calibrated', async ()=>{ await loadActions(); renderCalCount(); });
 
 function appendLog(t){ const d=el('div',{className:'l',textContent:t}); const L=$('#log'); L.append(d); while(L.childNodes.length>250)L.removeChild(L.firstChild); L.scrollTop=L.scrollHeight; }
@@ -423,6 +424,13 @@ let grammar=defaultGrammarPreview(), grammarDraft=null, grammarOpen=null;
 // Встроенные фразы языков, которые сейчас не распознаются: в редакторе не видны, но не
 // удаляются (grammar.rs: inactive_triggers).
 let hiddenTriggers=new Set();
+// Слова отмены языков, которые не распознаются («abbrechen» без немецкого): в примерах их нет.
+let hiddenCancel=new Set();
+const heardCancelWords=()=>(grammar?.cancel_words||[]).filter(word=>!hiddenCancel.has(word));
+async function loadHiddenCancel(){
+  try{ hiddenCancel=new Set(await invoke('inactive_cancel_words')||[]); }catch(e){ return; }
+  renderGrammarExamples();
+}
 const grammarEditor=$('#grammarEditor');
 // Языки распознавания — как RECOGNITION_LANGUAGES в config.rs: английский включён
 // всегда, остальным нужен скачанный языковой пакет (models.rs). Новый язык — строка
@@ -490,7 +498,7 @@ function grammarExample(intent,wake,russian){
     const stop=pickPhrase(grammar.dictation_stop,russian?'стоп ввод':'stop typing');
     // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs: is_dictation_stop).
     const end=russian?'стоп':'stop';
-    const cancel=pickPhrase((grammar.cancel_words||[]).filter(word=>!['стоп','stop','хватит','остановись'].includes(String(word).trim().toLowerCase())),russian?'отмена':'cancel');
+    const cancel=pickPhrase(heardCancelWords().filter(word=>!['стоп','stop','хватит','остановись'].includes(String(word).trim().toLowerCase())),russian?'отмена':'cancel');
     return [`${wake} ${trigger} …`,t('example.dictate',{wake,stop,cancel,end})];
   }
   return [`${wake} ${trigger} X`,intentLabel(intent)||t('example.command')];
@@ -504,7 +512,7 @@ function renderGrammarExamples(){
     if(example) host.append(grammarExampleRow(example[0],example[1],intent.id,!intent.enabled));
   }
   host.append(grammarExampleRow(`${wake} ${russian?'выключи комп':'shut down computer'}`,t('example.shutdown')));
-  host.append(grammarExampleRow(`${wake} ${pickPhrase(grammar.cancel_words,russian?'отмена':'cancel')}`,t('example.cancel'),'cancel'));
+  host.append(grammarExampleRow(`${wake} ${pickPhrase(heardCancelWords(),russian?'отмена':'cancel')}`,t('example.cancel'),'cancel'));
   placeGrammarEditor();
 }
 // Редактор стоит под раскрытой строкой («Изменить» — над списком).
@@ -537,6 +545,7 @@ async function loadGrammar(){
     grammar=defaultGrammarPreview();
   }
   renderGrammarExamples();
+  loadHiddenCancel();
 }
 // kind: wake | phrase | cancel | stop — подписи из словаря grammar.add*/keepOne*.
 function addChipEditor(parent,getValues,setValues,kind,minimum=0){
