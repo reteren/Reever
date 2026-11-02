@@ -156,9 +156,13 @@ pub fn start(app: &AppHandle) {
         crate::main_native::send(crate::main_native::Msg::SelectAction(String::new()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "actions-edit");
-        for which in ["calibration", "voice", "apps"] {
+        for which in ["calibration", "voice", "apps", "scan"] {
             crate::main_native::send(crate::main_native::Msg::TestOverlay(which.into()));
-            std::thread::sleep(Duration::from_millis(if which == "apps" { 1500 } else { 400 }));
+            std::thread::sleep(Duration::from_millis(match which {
+                "apps" => 1500,
+                "scan" => 8000,
+                _ => 400,
+            }));
             shoot(&app, &format!("overlay-{which}"));
         }
         crate::main_native::send(crate::main_native::Msg::TestOverlay("close".into()));

@@ -54,6 +54,8 @@ pub enum ActionsOut {
     Calibrate(Action),
     /// открыть выбор программы Windows
     PickApp,
+    /// открыть сканер программ
+    Scan,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -68,6 +70,9 @@ enum Hover {
     Row(String),
     Filter(usize),
     Create,
+    Scan,
+    /// «Сканировать» в подсказке над пустым списком
+    ScanTip,
 }
 
 pub struct ActionsTab {
@@ -80,6 +85,8 @@ pub struct ActionsTab {
     search: TextInput,
     search_focus: bool,
     create: Button,
+    scan: Button,
+    scan_tip: Button,
     scroll: f32,
     max_scroll: f32,
     edit_scroll: f32,
@@ -114,6 +121,8 @@ impl ActionsTab {
             search,
             search_focus: false,
             create: Button::new(&t(locale, "actions.create", &[]), ButtonKind::Plain),
+            scan: Button::new(&t(locale, "actions.scan", &[]), ButtonKind::Plain),
+            scan_tip: Button::new(&t(locale, "actions.scan", &[]), ButtonKind::Plain),
             scroll: 0.0,
             max_scroll: 0.0,
             edit_scroll: 0.0,
@@ -302,8 +311,10 @@ impl ActionsTab {
         // поиск
         self.search.rect = Rect::new(lx, y, LIST_W, 28.0);
         y += 28.0 + 8.0;
-        // «Создать» (.list-keys: на всю ширину, пока «Сканировать» не перенесён)
-        self.create.rect = Rect::new(lx, y, LIST_W, 28.0);
+        // .list-keys: «Создать» и «Сканировать» поровну
+        let half = (LIST_W - 8.0) / 2.0;
+        self.create.rect = Rect::new(lx, y, half, 28.0);
+        self.scan.rect = Rect::new(lx + half + 8.0, y, half, 28.0);
         y += 28.0 + 8.0;
         // фильтры
         self.filters.clear();
@@ -345,6 +356,22 @@ impl ActionsTab {
         self.rows.clear();
         let shown: Vec<Action> = self.actions.iter().filter(|a| self.visible(a)).cloned().collect();
         let mut ry = list.y - self.scroll;
+        // своих программ ещё нет — подсказать сканер (.scan-tip)
+        self.scan_tip.rect = Rect::new(0.0, 0.0, 0.0, 0.0);
+        if self.filter == 0 && self.search.text().is_empty() && !self.actions.iter().any(|a| a.kind != "system") {
+            let hs = TextStyle { wrap: true, direction: self.dir(), ..ui(12.0, 400, 1.45) };
+            let tip = Rect::new(list.x + 4.0, ry + 2.0, list.w - 8.0, 0.0);
+            let l = Self::text(scene, cx, &self.t("actions.scanTip"), &hs, tip.w - 16.0);
+            let lh = l.as_ref().map_or(0.0, |l| l.height);
+            let bw = self.scan_tip.natural_width(scene, cx);
+            let r = Rect::new(tip.x, tip.y, tip.w, 8.0 + lh + 7.0 + 28.0 + 8.0);
+            stroke_round(cx, r, 5.0, ACC_4, 1.0, true);
+            if let Some(l) = l {
+                scene.text(&l, r.x + 8.0, r.y + 8.0, ACC_3, Glow::G1);
+            }
+            self.scan_tip.rect = Rect::new(r.x + 8.0, r.y + 8.0 + lh + 7.0, bw, 28.0);
+            ry += r.h + 2.0 + 8.0;
+        }
         if shown.is_empty() {
             let hs = TextStyle { wrap: true, direction: self.dir(), ..ui(12.0, 400, 1.45) };
             if let Some(l) = Self::text(scene, cx, &self.t("actions.empty"), &hs, list.w - 24.0) {
@@ -388,6 +415,10 @@ impl ActionsTab {
         self.search.draw(scene, cx);
         scene.flush(cx);
         self.create.draw(scene, cx);
+        self.scan.draw(scene, cx);
+        if self.scan_tip.rect.w > 0.0 && inside(list, self.scan_tip.rect.x, self.scan_tip.rect.y + 27.0) {
+            self.scan_tip.draw(scene, cx);
+        }
         scene.flush(cx);
 
         // редактор справа: пунктир слева, отступ 14
@@ -449,6 +480,12 @@ impl ActionsTab {
         if inside(self.create.rect, x, y) {
             return Some(Hover::Create);
         }
+        if inside(self.scan.rect, x, y) {
+            return Some(Hover::Scan);
+        }
+        if self.scan_tip.rect.w > 0.0 && inside(self.scan_tip.rect, x, y) && inside(self.list_rect, x, y) {
+            return Some(Hover::ScanTip);
+        }
         if let Some(i) = self.filters.iter().position(|r| inside(*r, x, y)) {
             return Some(Hover::Filter(i));
         }
@@ -490,6 +527,8 @@ impl ActionsTab {
                     redraw = true;
                 }
                 redraw |= self.create.press.set_hover(h == Some(Hover::Create), 0.12);
+                redraw |= self.scan.press.set_hover(h == Some(Hover::Scan), 0.12);
+                redraw |= self.scan_tip.press.set_hover(h == Some(Hover::ScanTip), 0.12);
                 let r = self.form.mouse(ev);
                 let (r2, out) = self.form_result(r);
                 (redraw || r2, out)
@@ -521,8 +560,11 @@ impl ActionsTab {
                 }
                 self.set_search_focus(false);
                 let h = self.hover_at(x, y);
-                if h == Some(Hover::Create) {
-                    self.create.press.pressed = true;
+                match h {
+                    Some(Hover::Create) => self.create.press.pressed = true,
+                    Some(Hover::Scan) => self.scan.press.pressed = true,
+                    Some(Hover::ScanTip) => self.scan_tip.press.pressed = true,
+                    _ => {}
                 }
                 self.pressed = h;
                 (true, None)
@@ -530,6 +572,8 @@ impl ActionsTab {
             MouseKind::Up(MouseButton::Left) => {
                 self.search.mouse_up();
                 self.create.press.pressed = false;
+                self.scan.press.pressed = false;
+                self.scan_tip.press.pressed = false;
                 let r = self.form.mouse(ev);
                 let (redraw, out) = self.form_result(r);
                 if out.is_some() {
@@ -540,6 +584,7 @@ impl ActionsTab {
                 if p.is_some() && p == self.hover_at(x, y) {
                     match p.unwrap() {
                         Hover::Create => self.go(None),
+                        Hover::Scan | Hover::ScanTip => return (true, Some(ActionsOut::Scan)),
                         Hover::Filter(i) => {
                             self.filter = i;
                             self.scroll = 0.0;

@@ -76,6 +76,9 @@ pub enum Msg {
     SettingsMsg(String),
     /// Открыть окно поверх для проверки: `calibration`, `voice`, `apps`, `close`.
     TestOverlay(String),
+    /// Сканер: найденные программы и их иконки (id → PNG).
+    ScanApps(Vec<super::overlays::ScanApp>),
+    ScanIcons(std::collections::HashMap<String, std::sync::Arc<[u8]>>),
     /// Программы Windows для выбора (list_apps).
     Apps(Vec<(String, String)>),
     /// Подстройка под голос: сколько слов услышано.
@@ -617,8 +620,22 @@ impl MainView {
                     self.open_overlay(super::overlays::Kind::Apps { list: None });
                     (self.host)(Act::ListApps);
                 }
+                "scan" => {
+                    self.open_overlay(super::overlays::Kind::Scan { apps: None });
+                    (self.host)(Act::Scan);
+                }
                 _ => self.overlay = None,
             },
+            Msg::ScanApps(apps) => {
+                if let Some(o) = self.overlay.as_mut() {
+                    o.set_scan(apps);
+                }
+            }
+            Msg::ScanIcons(icons) => {
+                if let Some(o) = self.overlay.as_mut() {
+                    o.set_icons(&icons);
+                }
+            }
             Msg::Apps(list) => {
                 if let Some(o) = self.overlay.as_mut() {
                     if let super::overlays::Kind::Apps { list: l } = &mut o.kind {
@@ -1173,6 +1190,10 @@ impl MainView {
                 self.set_state("idle");
                 (self.host)(Act::VoiceFinish);
             }
+            OverlayOut::AddScanned(apps) => {
+                (self.host)(Act::AddScanned(apps));
+                self.overlay = None;
+            }
             OverlayOut::App(name, aumid) => {
                 self.actions_tab.apply_app(&name, &aumid);
                 self.overlay = None;
@@ -1216,6 +1237,10 @@ impl MainView {
                     last: phrases.last().cloned(),
                 });
                 (self.host)(Act::Calibrate(a));
+            }
+            ActionsOut::Scan => {
+                self.open_overlay(super::overlays::Kind::Scan { apps: None });
+                (self.host)(Act::Scan);
             }
             ActionsOut::PickApp => {
                 self.open_overlay(super::overlays::Kind::Apps { list: None });

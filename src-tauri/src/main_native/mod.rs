@@ -52,6 +52,8 @@ pub enum Act {
     VoiceStart,
     VoiceCancel,
     VoiceFinish,
+    Scan,
+    AddScanned(Vec<overlays::ScanApp>),
 }
 
 /// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
@@ -330,6 +332,64 @@ fn act(app: &AppHandle, a: Act) {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
                 let _ = crate::commands_api::cancel_voice_adapt(state);
             }
+        }
+        Act::Scan => {
+            let found = match (app.try_state::<Arc<crate::actions::SharedState>>(), app.try_state::<crate::config::LiveConfig>()) {
+                (Some(state), Some(config)) => tauri::async_runtime::block_on(crate::commands_api::scan_apps(state, config)).unwrap_or_default(),
+                _ => Vec::new(),
+            };
+            let apps: Vec<overlays::ScanApp> = found
+                .into_iter()
+                .map(|a| {
+                    let v = serde_json::to_value(&a).unwrap_or_default();
+                    let s = |k: &str| v.get(k).and_then(|x| x.as_str()).map(String::from);
+                    overlays::ScanApp {
+                        id: a.id,
+                        name: a.name,
+                        kind: a.kind,
+                        target: a.target,
+                        phrases: a.phrases,
+                        checked: a.checked,
+                        note: s("note"),
+                        group: s("group").unwrap_or_else(|| "other".into()),
+                        focus_minutes: a.focus_minutes,
+                        icon_png: None,
+                        icon: None,
+                    }
+                })
+                .collect();
+            let ids: Vec<String> = apps.iter().map(|a| a.id.clone()).collect();
+            send(Msg::ScanApps(apps));
+            // иконки догружаются после списка, чтобы он не ждал их
+            if !ids.is_empty() {
+                use base64::Engine;
+                let icons = tauri::async_runtime::block_on(crate::commands_api::scan_app_icons(ids)).unwrap_or_default();
+                let decoded = icons
+                    .into_iter()
+                    .filter_map(|(id, url)| {
+                        let b64 = url.split_once(",").map(|(_, b)| b.to_string())?;
+                        let bytes = base64::engine::general_purpose::STANDARD.decode(b64).ok()?;
+                        Some((id, std::sync::Arc::<[u8]>::from(bytes)))
+                    })
+                    .collect();
+                send(Msg::ScanIcons(decoded));
+            }
+        }
+        Act::AddScanned(apps) => {
+            let chosen: Vec<crate::appscan::ChosenApp> = apps
+                .into_iter()
+                .map(|a| crate::appscan::ChosenApp { name: a.name, kind: a.kind, target: a.target, phrases: a.phrases })
+                .collect();
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                match crate::commands_api::add_scanned_apps(state, chosen) {
+                    Ok(count) => crate::events::ui_log(
+                        app,
+                        crate::ui_text::t(&crate::uilang::current().to_string(), "scan.added", &[("count", &count.to_string())]),
+                    ),
+                    Err(e) => crate::events::ui_log(app, format!("[reever] scan: {e}")),
+                }
+            }
+            refresh(app);
         }
         Act::VoiceFinish => {
             let locale = crate::uilang::current().to_string();
