@@ -1,79 +1,13 @@
 //! Язык интерфейса для того, что рисует сам Rust: меню трея и строки журнала.
-//! Интерфейс окна переводится в frontend/i18n; здесь — те же тридцать языков и тот же
+//! Интерфейс окна и журнал читают общие словари через `ui_text`; здесь — тот же
 //! выбор: `ui_language` в settings.json, `auto` — язык Windows.
 //!
-//! Словари — `src-tauri/locales/<код>.json`, плоские `ключ → строка` с подстановками
-//! `{name}`. Английский — эталон и запасной вариант: нет строки в выбранном языке —
-//! берётся английская, нет и её — сам ключ.
-
-use std::collections::HashMap;
-use std::sync::OnceLock;
-
+//! Словари — `frontend/i18n/locales/<код>.json`; журнал и трей используют
+//! ключи `log.*` и `tray.*` наряду с ключами окон.
 
 pub const SUPPORTED: [&str; 30] = [
-    "en",
-    "ru",
-    "de",
-    "es",
-    "pt",
-    "it",
-    "fr",
-    "zh",
-    "ja",
-    "ar",
-    "bg",
-    "hr",
-    "cs",
-    "da",
-    "nl",
-    "et",
-    "fi",
-    "el",
-    "hu",
-    "lv",
-    "lt",
-    "mt",
-    "pl",
-    "ro",
-    "sk",
-    "sl",
-    "sv",
-    "uk",
-    "ko",
-    "yue",
-];
-
-const SOURCES: [(&str, &str); 30] = [
-    ("en", include_str!("../locales/en.json")),
-    ("ru", include_str!("../locales/ru.json")),
-    ("de", include_str!("../locales/de.json")),
-    ("es", include_str!("../locales/es.json")),
-    ("pt", include_str!("../locales/pt.json")),
-    ("it", include_str!("../locales/it.json")),
-    ("fr", include_str!("../locales/fr.json")),
-    ("zh", include_str!("../locales/zh.json")),
-    ("ja", include_str!("../locales/ja.json")),
-    ("ar", include_str!("../locales/ar.json")),
-    ("bg", include_str!("../locales/bg.json")),
-    ("hr", include_str!("../locales/hr.json")),
-    ("cs", include_str!("../locales/cs.json")),
-    ("da", include_str!("../locales/da.json")),
-    ("nl", include_str!("../locales/nl.json")),
-    ("et", include_str!("../locales/et.json")),
-    ("fi", include_str!("../locales/fi.json")),
-    ("el", include_str!("../locales/el.json")),
-    ("hu", include_str!("../locales/hu.json")),
-    ("lv", include_str!("../locales/lv.json")),
-    ("lt", include_str!("../locales/lt.json")),
-    ("mt", include_str!("../locales/mt.json")),
-    ("pl", include_str!("../locales/pl.json")),
-    ("ro", include_str!("../locales/ro.json")),
-    ("sk", include_str!("../locales/sk.json")),
-    ("sl", include_str!("../locales/sl.json")),
-    ("sv", include_str!("../locales/sv.json")),
-    ("uk", include_str!("../locales/uk.json")),
-    ("ko", include_str!("../locales/ko.json")),
-    ("yue", include_str!("../locales/yue.json")),
+    "en", "ru", "de", "es", "pt", "it", "fr", "zh", "ja", "ar", "bg", "hr", "cs", "da", "nl", "et",
+    "fi", "el", "hu", "lv", "lt", "mt", "pl", "ro", "sk", "sl", "sv", "uk", "ko", "yue",
 ];
 
 /// Текущий язык интерфейса (для строк, которые Rust шлёт в журнал).
@@ -110,7 +44,11 @@ pub fn resolve(preference: &str) -> &'static str {
 fn normalize(value: &str) -> &'static str {
     let language = value.trim().to_lowercase();
     let language = language.split(['-', '_']).next().unwrap_or_default();
-    SUPPORTED.iter().copied().find(|code| *code == language).unwrap_or("en")
+    SUPPORTED
+        .iter()
+        .copied()
+        .find(|code| *code == language)
+        .unwrap_or("en")
 }
 
 fn system_locale() -> String {
@@ -155,14 +93,32 @@ fn system_ui_language() -> String {
     use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
     let (mut count, mut length) = (0u32, 0u32);
     unsafe {
-        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, windows::core::PWSTR::null(), &mut length).is_err() || length == 0 {
+        if GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &mut count,
+            windows::core::PWSTR::null(),
+            &mut length,
+        )
+        .is_err()
+            || length == 0
+        {
             return system_locale();
         }
         let mut buffer = vec![0u16; length as usize];
-        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, windows::core::PWSTR(buffer.as_mut_ptr()), &mut length).is_err() {
+        if GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &mut count,
+            windows::core::PWSTR(buffer.as_mut_ptr()),
+            &mut length,
+        )
+        .is_err()
+        {
             return system_locale();
         }
-        let end = buffer.iter().position(|&unit| unit == 0).unwrap_or(buffer.len());
+        let end = buffer
+            .iter()
+            .position(|&unit| unit == 0)
+            .unwrap_or(buffer.len());
         String::from_utf16_lossy(&buffer[..end])
     }
 }
@@ -170,7 +126,10 @@ fn system_ui_language() -> String {
 /// Слово для подсказки в журнале на языке интерфейса: в русском — первое из списка,
 /// в остальных — первое латиницей (как `displayWake` в app.js), иначе `english`.
 pub fn spoken(words: &[String], russian: &str, english: &str) -> String {
-    let words = words.iter().map(|word| word.trim()).filter(|word| !word.is_empty());
+    let words = words
+        .iter()
+        .map(|word| word.trim())
+        .filter(|word| !word.is_empty());
     if current() == "ru" {
         return words.into_iter().next().unwrap_or(russian).to_string();
     }
@@ -182,52 +141,18 @@ pub fn current() -> &'static str {
     CURRENT.lock().map(|locale| *locale).unwrap_or("en")
 }
 
-fn dictionaries() -> &'static HashMap<&'static str, HashMap<String, String>> {
-    static DICTIONARIES: OnceLock<HashMap<&'static str, HashMap<String, String>>> = OnceLock::new();
-    DICTIONARIES.get_or_init(|| {
-        SOURCES
-            .iter()
-            .map(|(code, source)| (*code, serde_json::from_str(source).unwrap_or_default()))
-            .collect()
-    })
-}
-
 /// Строка на языке `locale` без подстановок.
 pub fn text<'a>(locale: &str, key: &'a str) -> &'a str {
-    let dictionaries = dictionaries();
-    dictionaries
-        .get(locale)
-        .and_then(|dictionary| dictionary.get(key))
-        .or_else(|| dictionaries.get("en").and_then(|dictionary| dictionary.get(key)))
-        .map(String::as_str)
-        .unwrap_or(key)
+    crate::ui_text::text(locale, key)
 }
 
 /// Строка на языке `locale` с подстановкой `{name}`; неизвестные `{…}` остаются как есть.
 pub fn tr(locale: &str, key: &str, args: &[(&str, String)]) -> String {
-    let template = text(locale, key);
-    let mut out = String::with_capacity(template.len());
-    let mut rest = template;
-    while let Some(start) = rest.find('{') {
-        out.push_str(&rest[..start]);
-        let after = &rest[start + 1..];
-        let value = after.find('}').and_then(|end| {
-            let name = &after[..end];
-            args.iter().find(|(arg, _)| *arg == name).map(|(_, value)| (value, end))
-        });
-        match value {
-            Some((value, end)) => {
-                out.push_str(value);
-                rest = &after[end + 1..];
-            }
-            None => {
-                out.push('{');
-                rest = after;
-            }
-        }
-    }
-    out.push_str(rest);
-    out
+    let params: Vec<_> = args
+        .iter()
+        .map(|(name, value)| (*name, value.as_str()))
+        .collect();
+    crate::ui_text::t(locale, key, &params)
 }
 
 /// Сообщение для журнала: ключ словаря и подстановки. Переводится при показе —
@@ -304,34 +229,11 @@ mod tests {
         assert!(SUPPORTED.contains(&resolve("auto")));
     }
 
-    fn placeholders(text: &str) -> Vec<&str> {
-        let mut names: Vec<&str> = text
-            .split('{')
-            .skip(1)
-            .filter_map(|part| part.split_once('}').map(|(name, _)| name))
-            .collect();
-        names.sort_unstable();
-        names.dedup();
-        names
-    }
-
-    /// Как scripts/check-i18n.mjs для окна: у каждого языка ровно ключи английского
-    /// и те же подстановки — иначе строка тихо уйдёт по-английски или потеряет имя.
     #[test]
-    fn every_language_has_every_key_with_same_placeholders() {
-        let dictionaries = dictionaries();
-        let reference = &dictionaries["en"];
-        assert!(reference.len() > 50, "en.json не разобрался");
+    fn journal_and_tray_use_shared_dictionary() {
         for code in SUPPORTED {
-            let dictionary = &dictionaries[code];
-            for (key, english) in reference {
-                let text = dictionary.get(key).unwrap_or_else(|| panic!("{code}: нет {key}"));
-                assert!(!text.trim().is_empty(), "{code}: пусто {key}");
-                assert_eq!(placeholders(text), placeholders(english), "{code}: {key}");
-            }
-            for key in dictionary.keys() {
-                assert!(reference.contains_key(key), "{code}: лишний {key}");
-            }
+            assert_ne!(text(code, "tray.show"), "tray.show", "{code}");
+            assert_ne!(text(code, "log.paused"), "log.paused", "{code}");
         }
     }
 

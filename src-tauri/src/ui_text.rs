@@ -104,6 +104,20 @@ fn plural_category(locale: &str, count: &str) -> &'static str {
     }
 }
 
+/// Строка без подстановок. Нужна журналу и трею, где вызывающие места
+/// используют заимствованный текст; для ключа с формами числа возвращает ключ.
+pub fn text<'a>(locale: &str, key: &'a str) -> &'a str {
+    let locale = normalize(locale);
+    let dictionaries = dictionaries();
+    match dictionaries[locale]
+        .get(key)
+        .or_else(|| dictionaries["en"].get(key))
+    {
+        Some(Entry::Text(value)) => value,
+        _ => key,
+    }
+}
+
 /// Направление письма для `<код>` или системного кода вроде `ar-SA`.
 pub fn direction(locale: &str) -> &'static str {
     if normalize(locale) == "ar" {
@@ -245,5 +259,8 @@ mod tests {
         assert_eq!(t("xx", "win.minimize", &[]), "Minimize");
         assert_eq!(direction("ar-SA"), "rtl");
         assert_eq!(direction("ru"), "ltr");
+        assert_eq!(text("en", "tray.show"), "Show settings");
+        assert_eq!(text("zz", "tray.show"), "Show settings");
+        assert_eq!(text("en", "missing.key"), "missing.key");
     }
 }
