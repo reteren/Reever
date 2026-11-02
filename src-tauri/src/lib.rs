@@ -47,6 +47,7 @@ pub mod textnorm;
 pub mod traymenu;
 pub mod typing;
 pub mod uilang;
+pub mod ui_text;
 pub mod vad;
 pub mod voice_adapt;
 pub mod wake;
