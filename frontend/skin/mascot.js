@@ -276,8 +276,9 @@
     let running = false, loopFrame = 0;
     function tick(t) {
       loopFrame = 0;
-      // не чаще ~60 кадров, как петля главного окна (shell.js, FRAME_MS)
-      if (last && t - last < 13) { loopFrame = requestAnimationFrame(tick); return; }
+      // каждый кадр монитора или не чаще ограничения из настройки «Плавность» (skin/fps.js)
+      const minMs = window.ReeverFps?.minMs() || 0;
+      if (last && minMs && t - last < minMs) { loopFrame = requestAnimationFrame(tick); return; }
       const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
       acc += dt; last = t;
       const fps = inPortal() ? PORTAL_FPS
@@ -287,8 +288,9 @@
       const step = 1 / fps;
       while (acc >= step) { acc -= step; advance(); }
 
-      // уровень: быстрая атака, медленный спад — как в главном окне
-      level += (levelRaw - level) * (levelRaw > level ? 0.55 : 0.12);
+      // уровень: быстрая атака, медленный спад — как в главном окне; доли — за кадр 60 Гц,
+      // пересчёт на любую частоту
+      level += (levelRaw - level) * (1 - Math.pow(levelRaw > level ? 0.45 : 0.88, dt * 60));
       const T = STATES[state], time = (t - t0) / 1000;
       const lv = state === 'listening' ? level : state === 'busy' ? level * 0.4 : 0;
       S.fill.t = T.fill + lv * 0.2 + (state === 'loading' ? Math.sin(time * 2.2) * 0.08 : 0);

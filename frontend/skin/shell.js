@@ -256,8 +256,8 @@
     return moving;
   }
 
-  // Пока что-то движется — каждый кадр монитора (на 144–180 Гц урезанные 20 кадров дёргались);
-  // всё замерло — петля стоит до следующего события, простой ничего не стоит.
+  // Пока что-то движется — каждый кадр монитора или не чаще ограничения из настройки «Плавность»
+  // (skin/fps.js); всё замерло — петля стоит до следующего события, простой ничего не стоит.
   function scheduleLoop() {
     if (!running || loopFrame) return;
     loopFrame = requestAnimationFrame(loop);
@@ -286,13 +286,11 @@
     scheduleLoop();
   }
 
-  // Не чаще ~60 кадров: на мониторе 144–180 Гц каждый лишний кадр — полный проход шейдера рамки.
-  // Порог с запасом ниже 16,7 мс, чтобы на 60 Гц дрожание кадров не роняло до 30.
-  const FRAME_MS = 13;
   function loop(now) {
     loopFrame = 0;
     if (!running) return;
-    if (now - last < FRAME_MS) { scheduleLoop(); return; }
+    const minMs = window.ReeverFps?.minMs() || 0;
+    if (minMs && now - last < minMs) { scheduleLoop(); return; }
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
     const time = (now - t0) / 1000;
     // уровень: быстрая атака, медленный спад; доли — за кадр 60 Гц, пересчёт на любую частоту

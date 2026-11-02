@@ -1,0 +1,21 @@
+// Частота кадров анимации интерфейса (настройка «Плавность»): 0 — как у монитора (каждый кадр
+// requestAnimationFrame, на 180 Гц — 180 кадров), 60 или 30 — не чаще. Выбор живёт в localStorage:
+// он общий для главного окна и окна маскота, смена в настройках долетает до маскота событием
+// storage сразу, а распознавание из-за неё не перезапускается.
+(function () {
+  const KEY = 'reever.fpsLimit', ALLOWED = [0, 60, 30];
+  const read = () => {
+    try { const v = Number(localStorage.getItem(KEY)); return ALLOWED.includes(v) ? v : 0; } catch { return 0; }
+  };
+  let limit = read();
+  addEventListener('storage', (e) => { if (e.key === KEY) limit = read(); });
+  window.ReeverFps = {
+    get limit() { return limit; },
+    set(value) {
+      limit = ALLOWED.includes(Number(value)) ? Number(value) : 0;
+      try { localStorage.setItem(KEY, String(limit)); } catch { }
+    },
+    // наименьший промежуток между кадрами, мс; запас 2 мс — чтобы дрожание кадров не роняло 60 до 30
+    minMs() { return limit ? 1000 / limit - 2 : 0; },
+  };
+})();

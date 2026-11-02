@@ -698,7 +698,7 @@ let indexStatus=null,indexStatusNode=null,indexStatusTimer=null;
 // [ключ настройки, тип, варианты]; подпись — settings.<ключ>,
 // подсказка — settings.<ключ>.help, если она есть в словаре.
 const GROUPS=[
-  ['interface',[['lite_ui','lite_ui'],['ui_language','ui_language'],['ui_languages','ui_languages']]],
+  ['interface',[['lite_ui','lite_ui'],['fps_limit','fps'],['ui_language','ui_language'],['ui_languages','ui_languages']]],
   ['mascot',[['mascot_mode','mascot_mode',['always','commands','never']],['mascot_scale','mascot_scale'],['mascot_position','mascot_position'],['mascot_bubble','bool']]],
   ['activation',[['activation_mode','select',['both','wake','hotkey']],['voice_adapt','voice_adapt'],['voice_passive','bool'],['hotkey','hotkey'],['mute_hotkey','hotkey']]],
   ['privacy',[['private_log','bool'],['offline_mode','bool']]],
@@ -989,6 +989,13 @@ function fieldEl(key,type,opts){
     wrap.append(uiLanguagesEditor());
     if(help) wrap.append(el('div',{className:'hint setting-help',textContent:help}));
     return wrap;
+  }
+  else if(type==='fps'){
+    // Сразу и без перезапуска распознавания: выбор хранится в localStorage (skin/fps.js),
+    // общем для главного окна и маскота.
+    inp=el('select');
+    for(const v of [0,60,30]){ const op=el('option',{value:String(v),textContent:t(`settings.${key}.${v}`)}); if((window.ReeverFps?.limit??0)===v) op.selected=true; inp.append(op); }
+    inp.onchange=()=>{ window.ReeverFps?.set(Number(inp.value)); $('#settingsMsg').textContent=t('settings.saved'); };
   }
   else if(type==='mascot_mode'){
     // Сразу: маскот появляется, прячется или исчезает без «Сохранить».
