@@ -54,12 +54,18 @@
   function create(canvas, opts = {}) {
     const A = assets();
     const ctx = canvas.getContext('2d');
-    const spr = document.createElement('canvas'), sctx = spr.getContext('2d', { willReadFrequently: true });
+    // Размытый силуэт — широкое и узкое свечение; считаются при смене кадра спрайта, а не каждый
+    // кадр, и в уменьшенном виде: широкое — в четверть, узкое — в половину размера холста, на
+    // экран растягиваются обратно (мягкий ореол от этого не меняется, а blur() в 16 и 4 раза
+    // дешевле). Спрайт рисуется прямо из картинки кадра; холсты без чтения с процессора
+    // остаются на видеокарте.
+    const GLOW_WIDE_DOWN = 4, GLOW_NEAR_DOWN = 2;
     const sil = document.createElement('canvas'), gctx = sil.getContext('2d');
-    // размытый силуэт — широкое и узкое свечение; считаются при смене кадра спрайта, а не каждый
-    // кадр: два blur() на весь холст 60 раз в секунду были самым дорогим в окне маскота
     const glowWide = document.createElement('canvas'), wctx = glowWide.getContext('2d');
     const glowNear = document.createElement('canvas'), nctx = glowNear.getContext('2d');
+    // проверка «курсор над головой» — по одному пикселю картинки кадра, по запросу
+    const hit = document.createElement('canvas'); hit.width = hit.height = 1;
+    const hctx = hit.getContext('2d', { willReadFrequently: true });
     const eyeCanvas = document.createElement('canvas');
     let eye = null;
     try { eye = window.SkinOrb.createCore(eyeCanvas, 40); } catch (e) { console.error('mascot orb', e); }
@@ -67,7 +73,7 @@
     // Геометрия в «базовых» CSS-пикселях (маскот при 100 %): холст W×H, спрайт покоя и кадр
     // портала с общим центром; k — масштаб базовых пикселей к CSS холста, clip — круг обрезки.
     let G = { W: 164, H: 204, spr: [22, 22, 120, 160], fly: [-82, -102, 328, 408], k: 1, clip: null };
-    let dpr = 1, u = 1, drawn = null;
+    let dpr = 1, u = 1, drawn = null, drawnRect = null;
 
     const S = {
       fill: spring(0, 46, 7.5), energy: spring(0, 30, 10), wave: spring(0, 40, 12), swirl: spring(0, 10, 6),
@@ -97,7 +103,11 @@
       G = { ...G, ...g };
       dpr = window.devicePixelRatio || 1;
       u = G.k * dpr;
-      for (const c of [canvas, spr, sil, glowWide, glowNear]) { c.width = Math.round(G.W * G.k * dpr); c.height = Math.round(G.H * G.k * dpr); }
+      const w = Math.round(G.W * G.k * dpr), h = Math.round(G.H * G.k * dpr);
+      canvas.width = w; canvas.height = h;
+      for (const [c, down] of [[sil, GLOW_NEAR_DOWN], [glowNear, GLOW_NEAR_DOWN], [glowWide, GLOW_WIDE_DOWN]]) {
+        c.width = Math.max(1, Math.round(w / down)); c.height = Math.max(1, Math.round(h / down));
+      }
       eye?.resize(G.k * (G.eyeScale || 1));
       drawn = null;
     }
@@ -110,27 +120,26 @@
       if (mode === 'rest' || mode === 'portal_out') return { img: A.sets.idle[idleFrame], rect: G.spr, eye: a?.eye.idle[idleFrame] };
       return { img: A.sets.grab[frame], rect: G.spr, eye: a?.eye.grab[frame] };
     }
-    // спрайт и его силуэт перерисовываются, только когда сменился кадр
+    // силуэт и свечение перерисовываются, только когда сменился кадр
     function prepare(cur) {
       if (!cur.img.complete || !cur.img.naturalWidth) return false;
-      if (drawn === cur.img) return true;
-      const [x, y, w, h] = cur.rect;
-      sctx.clearRect(0, 0, spr.width, spr.height);
-      sctx.drawImage(cur.img, x * u, y * u, w * u, h * u);
+      if (drawn === cur.img && drawnRect === cur.rect) return true;
       if (opts.glow) {
+        const [x, y, w, h] = cur.rect, s = u / GLOW_NEAR_DOWN;
         gctx.globalCompositeOperation = 'copy';
-        gctx.drawImage(spr, 0, 0);
+        gctx.drawImage(cur.img, x * s, y * s, w * s, h * s);
         gctx.globalCompositeOperation = 'source-in';
         gctx.fillStyle = `rgb(${GLOW.join(',')})`;
         gctx.fillRect(0, 0, sil.width, sil.height);
-        for (const [g, px] of [[wctx, 10], [nctx, 3]]) {
-          g.clearRect(0, 0, sil.width, sil.height);
-          g.filter = `blur(${(px * u).toFixed(1)}px)`;
-          g.drawImage(sil, 0, 0);
+        gctx.globalCompositeOperation = 'source-over';
+        for (const [g, c, px, down] of [[wctx, glowWide, 10, GLOW_WIDE_DOWN], [nctx, glowNear, 3, GLOW_NEAR_DOWN]]) {
+          g.clearRect(0, 0, c.width, c.height);
+          g.filter = `blur(${(px * u / down).toFixed(2)}px)`;
+          g.drawImage(sil, 0, 0, c.width, c.height);
           g.filter = 'none';
         }
       }
-      drawn = cur.img;
+      drawn = cur.img; drawnRect = cur.rect;
       return true;
     }
     function advance() {
@@ -240,12 +249,12 @@
         const g = Math.max(0, S.glow.v + flash * 0.8) * (0.85 + 0.15 * Math.sin(time * 1.7));
         if (opts.glow && g > 0.01) {
           ctx.globalAlpha = Math.min(1, 0.75 * g);
-          ctx.drawImage(glowWide, 0, 0);
+          ctx.drawImage(glowWide, 0, 0, canvas.width, canvas.height);
           ctx.globalAlpha = Math.min(1, 0.35 * g);
-          ctx.drawImage(glowNear, 0, 0);
+          ctx.drawImage(glowNear, 0, 0, canvas.width, canvas.height);
           ctx.globalAlpha = 1;
         }
-        ctx.drawImage(spr, 0, 0);
+        { const [x, y, w, h] = cur.rect; ctx.drawImage(cur.img, x * u, y * u, w * u, h * u); }
         // линза — по эллипсу купола; отвернувшийся глаз не светится
         const e = cur.eye;
         const facing = e ? Math.max(0, Math.min(1, (e[6] - 0.15) / 0.3)) : 0;
@@ -291,7 +300,7 @@
 
       portalSparks(dt);
       const cur = current();
-      if (!cur) { draw(null, time, dt); drawn = null; }
+      if (!cur) { draw(null, time, dt); drawn = drawnRect = null; }
       else if (prepare(cur)) draw(cur, time, dt);
       if (running && (mode !== 'gone' || sparks.length)) loopFrame = requestAnimationFrame(tick);
       else { ctx.clearRect(0, 0, canvas.width, canvas.height); running = false; }
@@ -306,7 +315,7 @@
       if (loopFrame) cancelAnimationFrame(loopFrame);
       loopFrame = 0;
     }
-    function clear() { ctx.clearRect(0, 0, canvas.width, canvas.height); drawn = null; }
+    function clear() { ctx.clearRect(0, 0, canvas.width, canvas.height); drawn = drawnRect = null; }
 
     return {
       layout, start, stop, clear,
@@ -314,8 +323,8 @@
       get frame() { return frame; },
       inPortal,
       // прийти через портал / уйти в портал / сразу стоять / сразу исчезнуть
-      arrive() { mode = 'portal_in'; frame = 0; acc = 0; drawn = null; clear(); start(); },
-      depart() { if (mode === 'gone') return; mode = 'portal_out'; frame = 0; acc = 0; drawn = null; start(); },
+      arrive() { mode = 'portal_in'; frame = 0; acc = 0; drawn = drawnRect = null; clear(); start(); },
+      depart() { if (mode === 'gone') return; mode = 'portal_out'; frame = 0; acc = 0; drawn = drawnRect = null; start(); },
       present() { if (mode === 'gone' || inPortal()) { mode = 'rest'; idleFrame = 0; frame = 0; } start(); },
       absent() { mode = 'gone'; frame = 0; sparks.length = 0; clear(); },
       grab() { if (mode !== 'grab') { mode = 'grab'; if (frame >= LOOP_FROM) frame = 0; } },
@@ -325,8 +334,13 @@
         if (inPortal() || mode === 'gone') return false;
         const [, sy, , sh] = G.spr;
         if (y < sy * G.k || y > (sy + sh * headBottom) * G.k) return false;
-        const px = sctx.getImageData(Math.floor(x * dpr), Math.floor(y * dpr), 1, 1).data;
-        return px[3] > 40;
+        if (!drawn || !drawnRect) return false;
+        const [rx, ry, rw, rh] = drawnRect;
+        const ix = (x / G.k - rx) / rw * drawn.naturalWidth, iy = (y / G.k - ry) / rh * drawn.naturalHeight;
+        if (ix < 0 || iy < 0 || ix >= drawn.naturalWidth || iy >= drawn.naturalHeight) return false;
+        hctx.clearRect(0, 0, 1, 1);
+        hctx.drawImage(drawn, Math.floor(ix), Math.floor(iy), 1, 1, 0, 0, 1, 1);
+        return hctx.getImageData(0, 0, 1, 1).data[3] > 40;
       },
     };
   }
