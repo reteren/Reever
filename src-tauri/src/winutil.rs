@@ -132,6 +132,14 @@ pub fn minimize_raw(raw: isize) {
     }
 }
 
+/// «Поверх всех окон» вкл/выкл по сырому HWND, без активации и сдвига.
+pub fn set_topmost_raw(raw: isize, on: bool) {
+    use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE};
+    unsafe {
+        let _ = SetWindowPos(hwnd_from(raw), if on { HWND_TOPMOST } else { HWND_NOTOPMOST }, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+}
+
 /// Вывести окно на передний план по сырому HWND (обход запрета смены foreground).
 pub fn bring_to_front_raw(raw: isize) {
     bring_to_front(hwnd_from(raw));

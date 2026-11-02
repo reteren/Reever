@@ -16,6 +16,7 @@ mod grammar_edit;
 mod overlays;
 mod say;
 mod settings_tab;
+mod shade;
 mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -55,6 +56,8 @@ pub enum Act {
     VoiceFinish(bool),
     Scan,
     AddScanned(Vec<overlays::ScanApp>),
+    /// компактный режим: полоска поверх всех окон
+    Shade(bool),
 }
 
 /// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
@@ -255,6 +258,37 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
     send(Msg::SettingsMsg(msg));
 }
 
+/// Полоска (setShade в shell.js): регион и размер окна, «поверх всех», флаг для снимка.
+fn set_shade(app: &AppHandle, on: bool) {
+    let Some((id, hwnd)) = WIN.lock().ok().and_then(|w| *w) else { return };
+    let Some(ui) = crate::mascot_native::ui(app) else { return };
+    ui.call(move |ui| {
+        let Some(v) = ui.handler_mut::<MainView>(id) else { return };
+        if v.shaded() == on {
+            return;
+        }
+        let (src, w, h) = v.shape_source(on);
+        let k = v.k();
+        let shape = ui.images().alpha_mask(src, w, h).map(|m| view::shape_rects(&m.alpha, w as usize, h as usize)).unwrap_or_default();
+        let scale = ui.info(id).map_or(1.0, |i| i.scale);
+        let scaled: Vec<[f64; 4]> = shape.iter().map(|r| r.map(|x| x * k as f64)).collect();
+        // сначала регион, потом размер: иначе на кадр мелькнёт старая форма в новом размере
+        if on {
+            let _ = crate::skin::apply_region(hwnd, &scaled, scale as f64);
+        }
+        ui.set_size(id, w as f32 * k, h as f32 * k);
+        if !on {
+            let _ = crate::skin::apply_region(hwnd, &scaled, scale as f64);
+        }
+        crate::winutil::set_topmost_raw(hwnd, on);
+        if let Some(v) = ui.handler_mut::<MainView>(id) {
+            v.set_shaded(on, shape);
+        }
+        ui.invalidate(id);
+    });
+    crate::events::set_compact(on);
+}
+
 /// Отметка «знакомство показано» (у веб-окна — localStorage): файл в папке настроек.
 fn intro_flag(app: &AppHandle, what: &str) -> Option<std::path::PathBuf> {
     app.path().app_config_dir().ok().map(|d| d.join(format!("native-intro-{what}.txt")))
@@ -357,6 +391,7 @@ fn act(app: &AppHandle, a: Act) {
             refresh(app);
         }
         Act::Settings(out) => apply_setting(app, out),
+        Act::Shade(on) => set_shade(app, on),
         Act::Calibrate(a) => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
                 let id = a.id.clone();
@@ -560,7 +595,16 @@ pub fn show(app: &AppHandle) {
             // осьминог в сфере: свой вид маскота (кадры общие с окном маскота через кэш картинок)
             let orb = crate::mascot_native::load_assets(&app3, ui.images())
                 .map(|a| crate::mascot_native::MascotView::new(a, &crate::events::current_state()));
+            // полоска компактного режима: своя рамка, те же картинки лунок
+            let btn = ui.handler_mut::<MainView>(id).map(|v| v.shade_buttons());
+            let shade_view = btn.map(|btn| {
+                let tip = |k: &str| crate::ui_text::t(&crate::uilang::current().to_string(), k, &[]);
+                shade::Shade::new(ui.images(), &app3, btn, [tip("win.expand"), tip("win.toTray")])
+            });
             if let Some(v) = ui.handler_mut::<MainView>(id) {
+                if let Some(s) = shade_view {
+                    v.set_shade_view(s);
+                }
                 v.set_shape(shape.clone());
                 if let Some(orb) = orb {
                     v.set_orb_mascot(orb, crate::mascot::mascot_orb());
@@ -578,6 +622,10 @@ pub fn show(app: &AppHandle) {
                     *w = Some((id, hwnd));
                 }
                 crate::events::set_main_visible(true);
+                // окно закрывали полоской — открывается полоской (snapshot.compact)
+                if crate::events::get_ui_snapshot().compact {
+                    set_shade(&app, true);
+                }
                 if !demo {
                     crate::winutil::bring_to_front_raw(hwnd);
                     native::activate(hwnd);
@@ -651,4 +699,9 @@ pub fn image_stats(app: &AppHandle) -> Option<(usize, usize, u64)> {
 pub fn frames(app: &AppHandle) -> Option<u64> {
     let ui = crate::mascot_native::ui(app)?;
     ui.call(|ui| ui.frames())
+}
+
+/// Полоска вкл/выкл (проверка main_demo.rs).
+pub fn shade_for_test(app: &AppHandle, on: bool) {
+    set_shade(app, on);
 }

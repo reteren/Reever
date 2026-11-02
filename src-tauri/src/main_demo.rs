@@ -167,6 +167,15 @@ pub fn start(app: &AppHandle) {
         }
         crate::main_native::send(crate::main_native::Msg::TestOverlay("close".into()));
         crate::main_native::send(crate::main_native::Msg::Tab("home".into()));
+        // компактный режим: полоска, бегущая строка, обратно
+        crate::main_native::shade_for_test(&app, true);
+        let _ = app.emit("reever://partial", "открой папку загрузки и найди там файл отчёта");
+        std::thread::sleep(Duration::from_millis(700));
+        shoot(&app, "shade");
+        let _ = app.emit("reever://partial", "");
+        crate::main_native::shade_for_test(&app, false);
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "unshaded");
         // редактор «Что можно сказать»: общий (wake-слова) и под строкой диктовки
         crate::main_native::send(crate::main_native::Msg::EditGrammar("general".into()));
         std::thread::sleep(Duration::from_millis(400));
