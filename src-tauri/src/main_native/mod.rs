@@ -14,6 +14,7 @@ mod frame;
 mod fx;
 mod grammar_edit;
 mod say;
+mod settings_tab;
 mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -43,6 +44,7 @@ pub enum Act {
     ResetGrammar,
     SaveAction(crate::actions::Action),
     DeleteAction(String),
+    Settings(settings_tab::SettingsOut),
 }
 
 /// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
@@ -136,7 +138,73 @@ fn info(app: &AppHandle) -> Info {
         .map(crate::commands_api::inactive_action_phrases)
         .unwrap_or_default();
     let hidden_triggers = grammar.inactive_triggers_for(Some(&langs.iter().map(|l| l.to_string()).collect::<Vec<_>>()));
-    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers, action_list, hidden_phrases }
+    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers, action_list, hidden_phrases, settings: settings_info(app) }
+}
+
+/// Настройки для вкладки: settings.json (как get_settings), автозапуск, наборы звуков, языки.
+fn settings_info(app: &AppHandle) -> settings_tab::SettingsInfo {
+    let Some(config) = app.try_state::<crate::config::LiveConfig>() else { return Default::default() };
+    let settings = crate::commands_api::get_settings(app.state()).unwrap_or_else(|_| serde_json::to_value(&config.get().settings).unwrap_or_default());
+    let enabled = config.get().settings.interface_languages();
+    settings_tab::SettingsInfo {
+        settings,
+        autostart: crate::commands_api::get_autostart(app.clone()),
+        sound_packs: crate::commands_api::list_sound_packs(app.state()),
+        ui_languages: enabled.iter().map(|c| c.to_string()).collect(),
+        auto_language: crate::uilang::resolve_enabled("auto", &enabled).to_string(),
+    }
+}
+
+/// Изменение на вкладке «Настройки» — теми же командами, что у веб-окна; итог — строкой под формой.
+fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
+    use settings_tab::SettingsOut;
+    let locale = crate::uilang::current().to_string();
+    let tr = |k: &str, p: &[(&str, &str)]| crate::ui_text::t(&locale, k, p);
+    let err = |e: String| tr("settings.error", &[("error", &e)]);
+    let saved = tr("settings.saved", &[]);
+    let msg = match out {
+        SettingsOut::Patch(map) => crate::commands_api::save_settings(app.clone(), app.state(), app.state(), serde_json::Value::Object(map))
+            .map_or_else(err, |_| saved.clone()),
+        SettingsOut::Native(key, on) => {
+            let r = match key {
+                "native_mascot" => crate::mascot::set_native_mascot(app.clone(), app.state(), on),
+                "native_dialogs" => crate::dialogs_native::set_native_dialogs(app.state(), on),
+                _ => set_native_main(app.clone(), app.state(), on),
+            };
+            r.map_or_else(err, |_| saved.clone())
+        }
+        SettingsOut::LiteUi(on) => crate::commands_api::set_lite_ui(app.clone(), app.state(), on).map_or_else(err, |_| saved.clone()),
+        SettingsOut::Autostart(on) => match crate::commands_api::set_autostart(app.clone(), on) {
+            Ok(()) => tr("settings.autostartState", &[("state", &tr(if on { "common.on" } else { "common.off" }, &[]))]),
+            Err(e) => err(e),
+        },
+        SettingsOut::Hotkey { mute, combo, mode } => {
+            let r = if mute {
+                crate::commands_api::set_mute_hotkey(app.clone(), app.state(), app.state(), combo.clone(), mode)
+            } else {
+                crate::commands_api::set_hotkey(app.clone(), app.state(), app.state(), combo.clone(), mode)
+            };
+            match r {
+                Ok(()) => tr("hotkey.applied", &[("combo", &combo)]),
+                Err(e) => tr("hotkey.error", &[("error", &e)]),
+            }
+        }
+        SettingsOut::Mascot { mode, scale, bubble } => {
+            crate::commands_api::set_mascot(app.clone(), app.state(), mode, scale, bubble).map_or_else(err, |_| saved.clone())
+        }
+        SettingsOut::UiLanguage(code) => match crate::commands_api::set_ui_language(app.state(), code) {
+            // окно рисует подписи на своём языке — пересоздать его на новом
+            Ok(_) => {
+                crate::switch_main(app);
+                return;
+            }
+            Err(e) => err(e),
+        },
+        SettingsOut::Fps(n) => crate::mascot::set_fps_limit(app.state(), n).map_or_else(err, |_| saved.clone()),
+        SettingsOut::OpenGrammar => return,
+    };
+    refresh(app);
+    send(Msg::SettingsMsg(msg));
 }
 
 /// Обновить экраны из Rust (пауза, индекс, действия, настройки) — после действий и раз в пару секунд.
@@ -189,6 +257,7 @@ fn act(app: &AppHandle, a: Act) {
             }
             refresh(app);
         }
+        Act::Settings(out) => apply_setting(app, out),
         Act::ResetGrammar => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
                 crate::commands_api::reset_grammar_in(&state);

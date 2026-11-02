@@ -72,6 +72,10 @@ pub enum Msg {
     GrammarDone(Option<String>),
     /// Раскрыть редактор «Что можно сказать» (id команды, `cancel`, `general`; проверка)
     EditGrammar(String),
+    /// Итог изменения настройки — строкой под формой.
+    SettingsMsg(String),
+    /// Прокрутить вкладку «Настройки» (проверка)
+    ScrollSettings(f32),
     /// Выбрать действие на вкладке «Действия» (проверка)
     SelectAction(String),
 }
@@ -92,6 +96,7 @@ pub struct Info {
     /// действия и их встроенные фразы языков, которые не распознаются
     pub action_list: Vec<crate::actions::Action>,
     pub hidden_phrases: std::collections::HashMap<String, Vec<String>>,
+    pub settings: super::settings_tab::SettingsInfo,
 }
 
 /// Картинки скина.
@@ -320,6 +325,7 @@ pub struct MainView {
     form: Form,
     form_blink: Option<Instant>,
     actions_tab: super::actions_tab::ActionsTab,
+    settings_tab: super::settings_tab::SettingsTab,
     /// раскрытую форму прокрутить в поле зрения (scrollIntoView nearest); где она в содержимом
     reveal: bool,
     editor_span: (f32, f32),
@@ -384,7 +390,7 @@ impl MainView {
             lunka(2, (1065.0, 100.0), 30.0, "tray", "win.toTray"),
         ];
         let tab = TABS.iter().position(|t| *t == snapshot.tab).unwrap_or(0);
-        let (list0, hidden0) = (info.action_list.clone(), info.hidden_phrases.clone());
+        let (list0, hidden0, settings0) = (info.action_list.clone(), info.hidden_phrases.clone(), info.settings.clone());
         let mut v = Self {
             host,
             hwnd: 0,
@@ -413,6 +419,7 @@ impl MainView {
             form: Form::new(0, crate::ui_text::direction(locale) == "rtl"),
             form_blink: None,
             actions_tab: super::actions_tab::ActionsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
+            settings_tab: super::settings_tab::SettingsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             reveal: false,
             editor_span: (0.0, 0.0),
             status: snapshot.status.unwrap_or_default(),
@@ -463,6 +470,7 @@ impl MainView {
         v.web.label = v.t("main.openWeb");
         v.set_state(&snapshot.state);
         v.actions_tab.sync(list0, hidden0);
+        v.settings_tab.sync(settings0);
         v
     }
 
@@ -562,6 +570,7 @@ impl MainView {
             }
             Msg::Info(i) => {
                 self.actions_tab.sync(i.action_list.clone(), i.hidden_phrases.clone());
+                self.settings_tab.sync(i.settings.clone());
                 self.info = i;
             }
             Msg::Orb(_) => {}
@@ -574,6 +583,10 @@ impl MainView {
                     self.rebuild_form();
                 }
             },
+            Msg::SettingsMsg(m) => self.settings_tab.msg = m,
+            Msg::ScrollSettings(d) => {
+                self.settings_tab.scroll_by(d);
+            }
             Msg::SelectAction(id) => {
                 self.tab = 1;
                 let id = if id.is_empty() { self.info.action_list.first().map(|a| a.id.clone()).unwrap_or_default() } else { id };
@@ -874,6 +887,10 @@ impl MainView {
                 self.actions_tab.draw(&mut self.scene, cx, body);
                 self.form_blink = self.actions_tab.next_blink(cx.now);
             }
+            "settings" => {
+                self.settings_tab.draw(&mut self.scene, cx, body);
+                self.form_blink = self.settings_tab.form.next_blink(cx.now);
+            }
             "logs" => self.draw_logs(cx, body),
             _ => self.draw_not_ported(cx, body),
         }
@@ -1064,6 +1081,19 @@ impl MainView {
             self.touch_static();
         }
         redraw
+    }
+
+    fn settings_out(&mut self, out: super::settings_tab::SettingsOut) {
+        if out == super::settings_tab::SettingsOut::OpenGrammar {
+            self.tab = 0;
+            (self.host)(Act::Tab("home".into()));
+            if !self.editor.as_ref().is_some_and(|e| e.open == "general") {
+                self.open_editor("general");
+            }
+            self.static_dirty = true;
+            return;
+        }
+        (self.host)(Act::Settings(out));
     }
 
     fn actions_out(&mut self, out: super::actions_tab::ActionsOut) {
@@ -1323,7 +1353,11 @@ impl MainView {
             }
             self.static_dirty = false;
             let k = self.k;
-            let caret = if TABS[self.tab] == "actions" { self.actions_tab.ime_caret() } else { self.form.ime_caret() };
+            let caret = match TABS[self.tab] {
+                "actions" => self.actions_tab.ime_caret(),
+                "settings" => self.settings_tab.form.ime_caret(),
+                _ => self.form.ime_caret(),
+            };
             native::set_ime_caret(self.hwnd, caret.map(|(x, y, h)| (x * k, y * k, h * k)));
         }
         true
@@ -1416,9 +1450,13 @@ impl WindowHandler for MainView {
         self.hwnd = hwnd;
         self.form = Form::new(hwnd, self.rtl);
         self.actions_tab.set_hwnd(hwnd);
+        self.settings_tab.set_hwnd(hwnd);
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
+        if let Some(out) = self.settings_tab.take_due(gpu.now) {
+            (self.host)(Act::Settings(out));
+        }
         if self.form_blink.is_some_and(|b| gpu.now >= b) {
             self.form_blink = None;
             self.static_dirty = true;
@@ -1580,6 +1618,9 @@ impl WindowHandler for MainView {
         if let Some(b) = self.form_blink {
             at = Some(at.map_or(b, |a| a.min(b)));
         }
+        if let Some(b) = self.settings_tab.wake_at() {
+            at = Some(at.map_or(b, |a| a.min(b)));
+        }
         if self.orb.as_ref().is_some_and(|o| o.visible()) {
             let next = self.orb_last + Duration::from_millis(34);
             at = Some(at.map_or(next, |a| a.min(next)));
@@ -1663,6 +1704,37 @@ impl WindowHandler for MainView {
 
     fn mouse(&mut self, ev: MouseEvent) -> bool {
         let (x, y) = (ev.x / self.k, ev.y / self.k);
+        if TABS[self.tab] == "settings" {
+            let over = native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0;
+            let skin = MouseEvent { kind: ev.kind, x, y };
+            let busy = self.settings_tab.form.popup_open() || self.settings_tab.form.sliding();
+            let mine = match ev.kind {
+                MouseKind::Down(_) | MouseKind::DoubleClick => over || busy,
+                MouseKind::Up(_) => (over && self.pressed.is_none()) || busy,
+                _ => busy,
+            };
+            if matches!(ev.kind, MouseKind::Move | MouseKind::Leave | MouseKind::Up(_)) || mine {
+                let (redraw, out) = self.settings_tab.mouse(skin);
+                if let Some(out) = out {
+                    self.settings_out(out);
+                }
+                if redraw {
+                    self.touch_static();
+                }
+                if mine {
+                    return true;
+                }
+                if ev.kind == MouseKind::Move && over {
+                    let c = match self.settings_tab.cursor(x, y) {
+                        Some(true) => Cursor::Hand,
+                        Some(false) => Cursor::Text,
+                        None => Cursor::Arrow,
+                    };
+                    set_cursor(self.hwnd, c);
+                    return redraw;
+                }
+            }
+        }
         if TABS[self.tab] == "actions" {
             let over = native::controls::inside(SCREEN, x, y) && y >= SCREEN.y + 34.0;
             let skin = MouseEvent { kind: ev.kind, x, y };
@@ -1826,6 +1898,16 @@ impl WindowHandler for MainView {
     }
 
     fn key(&mut self, ev: KeyEvent) -> bool {
+        if TABS[self.tab] == "settings" {
+            let (redraw, out) = self.settings_tab.key(ev);
+            if let Some(out) = out {
+                self.settings_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if TABS[self.tab] == "actions" {
             let (redraw, out) = self.actions_tab.key(ev);
             if let Some(out) = out {
@@ -1844,6 +1926,16 @@ impl WindowHandler for MainView {
     }
 
     fn char_input(&mut self, c: char) -> bool {
+        if TABS[self.tab] == "settings" {
+            let (redraw, out) = self.settings_tab.char_input(c);
+            if let Some(out) = out {
+                self.settings_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if TABS[self.tab] == "actions" {
             let (redraw, out) = self.actions_tab.char_input(c);
             if let Some(out) = out {
@@ -1864,12 +1956,17 @@ impl WindowHandler for MainView {
     fn focus(&mut self, focused: bool) -> bool {
         self.form.window_focus(focused);
         self.actions_tab.window_focus(focused);
+        self.settings_tab.form.window_focus(focused);
         self.static_dirty = true;
         true
     }
 
     fn wheel(&mut self, x: f32, y: f32, delta: f32) -> bool {
         let (x, y) = (x / self.k, y / self.k);
+        if TABS[self.tab] == "settings" && self.settings_tab.wheel(x, y, delta) {
+            self.static_dirty = true;
+            return true;
+        }
         if TABS[self.tab] == "actions" && self.actions_tab.wheel(x, y, delta) {
             self.static_dirty = true;
             return true;

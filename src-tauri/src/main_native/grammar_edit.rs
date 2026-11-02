@@ -291,7 +291,7 @@ impl GrammarEditor {
         }
         match ev {
             FormEvent::Escape => EditorOut::Close,
-            FormEvent::Select(..) => EditorOut::None,
+            FormEvent::Select(..) | FormEvent::Slide(..) | FormEvent::SlideEnd(..) => EditorOut::None,
             FormEvent::Toggle(id) => {
                 if let Some(iid) = id.strip_prefix("en:") {
                     if let Some(i) = self.intent_mut(iid) {

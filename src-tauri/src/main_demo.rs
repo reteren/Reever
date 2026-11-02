@@ -145,6 +145,11 @@ pub fn start(app: &AppHandle) {
         crate::main_native::send(crate::main_native::Msg::Tab("settings".into()));
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "settings");
+        for (i, d) in [900.0f32, 650.0, 650.0].iter().enumerate() {
+            crate::main_native::send(crate::main_native::Msg::ScrollSettings(*d));
+            std::thread::sleep(Duration::from_millis(300));
+            shoot(&app, &format!("settings-{}", i + 1));
+        }
         crate::main_native::send(crate::main_native::Msg::Tab("actions".into()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "actions");

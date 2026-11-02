@@ -16,7 +16,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_RETURN, VK_TAB};
 
 use super::button::{Button, ButtonKind};
 use super::text_input::TextInput;
-use super::{fill_round, inside, lcd, mix, stroke_round, ui, with_alpha, Glow, Scene, ACC, ACC_2, ACC_3, ACC_4, ACC_5, ACC_HOT};
+use super::{data, fill_round, inside, lcd, mix, stroke_round, ui, with_alpha, Glow, Scene, ACC, ACC_2, ACC_3, ACC_4, ACC_5, ACC_HOT};
 use crate::native::{Color, Direction, KeyEvent, MouseButton, MouseEvent, MouseKind, Rect, RenderCx, TextStyle};
 
 /// Элемент формы.
@@ -39,6 +39,17 @@ pub enum Item {
     /// Поле ввода и выпадающий список справа от него (select шириной по тексту):
     /// выбор — [`FormEvent::Select`].
     InputSelect { id: String, placeholder: String, value: String, select: String, options: Vec<(String, String)>, selected: String },
+    /// Выпадающий список на всю ширину колонки.
+    Select { id: String, options: Vec<(String, String)>, selected: String },
+    /// Пояснение к настройке (.setting-help); `indent` — под флажком (отступ 25, ближе к нему).
+    Help { text: String, indent: bool },
+    /// Ползунок и подпись значения справа (.mascot-scale): тянут — [`FormEvent::Slide`],
+    /// отпустили — [`FormEvent::SlideEnd`].
+    Slider { id: String, min: f32, max: f32, step: f32, value: f32, text: String },
+    /// Строка текста со ссылкой посередине (.hint с <a>): щелчок — [`FormEvent::Click`].
+    Link { id: String, prefix: String, link: String, suffix: String },
+    /// Отступ по вертикали.
+    Gap(f32),
     /// Ряд кнопок с отступами сверху и снизу.
     Buttons { buttons: Vec<(String, String, ButtonKind)>, top: f32, bottom: f32 },
     /// Ошибки — строками с маркером.
@@ -54,6 +65,8 @@ pub enum FormEvent {
     Add(String, String),
     Edited(String, String),
     Select(String, String),
+    Slide(String, f32),
+    SlideEnd(String, f32),
     Escape,
 }
 
@@ -66,6 +79,9 @@ enum Hit {
     /// выпадающий список (открыть/закрыть) и его вариант
     Select(String),
     Option(String, String),
+    /// ползунок: id, левый край и ширина дорожки, min, max, step
+    Slider(String),
+    Link(String),
 }
 
 /// Итог события: перерисовать ли и что произошло.
@@ -102,6 +118,9 @@ pub struct Form {
     window_focused: bool,
     /// открытый выпадающий список
     open_select: Option<String>,
+    /// дорожки ползунков (id → x, ширина, min, max, step) и какой тянут
+    sliders: HashMap<String, (f32, f32, f32, f32, f32)>,
+    sliding: Option<String>,
 }
 
 fn input_style() -> TextStyle {
@@ -116,7 +135,9 @@ impl Form {
     /// Новый список элементов. Поля с теми же id сохраняют текст и каретку; новые получают
     /// `value`; исчезнувшие забываются.
     pub fn set_items(&mut self, items: Vec<Item>) {
-        if self.open_select.as_ref().is_some_and(|o| !items.iter().any(|it| matches!(it, Item::InputSelect { select, .. } if select == o))) {
+        if self.open_select.as_ref().is_some_and(|o| {
+            !items.iter().any(|it| matches!(it, Item::InputSelect { select: id, .. } | Item::Select { id, .. } if id == o))
+        }) {
             self.open_select = None;
         }
         let mut keep = std::collections::HashSet::new();
@@ -370,6 +391,80 @@ impl Form {
                     }
                     y += 28.0;
                 }
+                Item::Select { id, options, selected } => {
+                    let st = input_style();
+                    let label = options.iter().find(|(v, _)| v == selected).map_or(selected.clone(), |(_, l)| l.clone());
+                    let sr = Rect::new(cx0, y, cw, 28.0);
+                    let open = self.open_select.as_deref() == Some(id.as_str());
+                    fill_round(cx, sr, 5.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.45 });
+                    stroke_round(cx, sr, 5.0, if open { ACC_2 } else { ACC_4 }, 1.0, false);
+                    if let Some(l) = scene.cache.get(cx.text(), &label, &TextStyle { ellipsis: true, ..st }, cw - 9.0 - 26.0) {
+                        scene.text(&l, sr.x + 9.0, sr.y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
+                    }
+                    scene.icon("chev", Rect::new(sr.x + cw - 22.0, sr.y + 6.0, 16.0, 16.0), 2.0, ACC, false, Glow::None);
+                    self.hits.push((sr, Hit::Select(id.clone())));
+                    if open {
+                        popup = Some((id.clone(), sr, options.clone(), selected.clone()));
+                    }
+                    y += 28.0;
+                }
+                Item::Help { text, indent } => {
+                    if text.is_empty() {
+                        continue;
+                    }
+                    let (dx, top) = if *indent { (25.0, -4.0) } else { (0.0, 4.0) };
+                    y += top;
+                    let st = TextStyle { wrap: true, direction: self.dir(), ..ui(12.0, 400, 1.45) };
+                    if let Some(l) = scene.cache.get(cx.text(), text, &st, (cw - dx).max(40.0)) {
+                        scene.text(&l, cx0 + dx, y, ACC_3, Glow::G1);
+                        y += l.height;
+                    }
+                    y += 6.0;
+                }
+                Item::Slider { id, min, max, step, value, text } => {
+                    let st = data(12.0, 1.0);
+                    let lw = scene.cache.get(cx.text(), text, &st, 10_000.0).map_or(44.0, |l| l.width).max(44.0);
+                    let tw = (cw - 12.0 - lw).max(40.0);
+                    // дорожка 4 px, ручка 14×14 (ход ручки — ширина дорожки минус ручка)
+                    let track = Rect::new(cx0, y + 12.0, tw, 4.0);
+                    fill_round(cx, track, 2.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 });
+                    stroke_round(cx, track, 2.0, ACC_4, 1.0, false);
+                    let k = if max > min { ((value - min) / (max - min)).clamp(0.0, 1.0) } else { 0.0 };
+                    let thumb = Rect::new(cx0 + (tw - 14.0) * k, y + 7.0, 14.0, 14.0);
+                    scene.shadow(cx, thumb, 3.0, ACC, 8.0);
+                    fill_round(cx, thumb, 3.0, ACC);
+                    if let Some(l) = scene.cache.get(cx.text(), text, &st, 10_000.0) {
+                        scene.text(&l, cx0 + cw - l.width, y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
+                    }
+                    let hit = Rect::new(cx0, y, tw, 28.0);
+                    self.sliders.insert(id.clone(), (cx0 + 7.0, tw - 14.0, *min, *max, *step));
+                    self.hits.push((hit, Hit::Slider(id.clone())));
+                    y += 28.0;
+                }
+                Item::Link { id, prefix, link, suffix } => {
+                    let st = ui(12.0, 400, 1.45);
+                    let mut px = cx0;
+                    let mut h = 17.4f32;
+                    for (i, part) in [prefix, link, suffix].into_iter().enumerate() {
+                        if part.is_empty() {
+                            continue;
+                        }
+                        let Some(l) = scene.cache.get(cx.text(), part, &st, 10_000.0) else { continue };
+                        if i == 1 {
+                            let hit = Hit::Link(id.clone());
+                            let hot = self.hover.as_ref() == Some(&hit);
+                            scene.text(&l, px, y, ACC_HOT, if hot { Glow::G2 } else { Glow::G1 });
+                            cx.fill_rect(Rect::new(px, y + l.baseline() + 3.0, l.width, 1.0), if hot { ACC_HOT } else { ACC_3 });
+                            self.hits.push((Rect::new(px, y, l.width, l.height), hit));
+                        } else {
+                            scene.text(&l, px, y, ACC_3, Glow::G1);
+                        }
+                        px += l.width;
+                        h = h.max(l.height);
+                    }
+                    y += h;
+                }
+                Item::Gap(g) => y += g,
                 Item::Check { id, label, on } => {
                     y += 9.0;
                     let st = TextStyle { wrap: true, direction: self.dir(), ..ui(13.0, 400, 1.45) };
@@ -510,6 +605,13 @@ impl Form {
     pub fn mouse(&mut self, ev: MouseEvent) -> FormResult {
         let (x, y) = (ev.x, ev.y);
         match ev.kind {
+            MouseKind::Move if self.sliding.is_some() => {
+                let id = self.sliding.clone().unwrap_or_default();
+                match self.slider_value(&id, x) {
+                    Some(v) => FormResult::event(FormEvent::Slide(id, v)),
+                    None => FormResult::default(),
+                }
+            }
             MouseKind::Move => {
                 if let Some(id) = self.dragging.clone() {
                     if let Some(i) = self.inputs.get_mut(&id) {
@@ -565,6 +667,16 @@ impl Form {
                             b.press.pressed = true;
                         }
                     }
+                    Some(Hit::Slider(id)) => {
+                        let id = id.clone();
+                        self.set_focus(None);
+                        self.sliding = Some(id.clone());
+                        self.pressed = None;
+                        if let Some(v) = self.slider_value(&id, x) {
+                            return FormResult::event(FormEvent::Slide(id, v));
+                        }
+                        return FormResult::redraw();
+                    }
                     _ => {}
                 }
                 if !matches!(h, Some(Hit::Input(_))) {
@@ -572,6 +684,13 @@ impl Form {
                 }
                 self.pressed = h;
                 FormResult::redraw()
+            }
+            MouseKind::Up(MouseButton::Left) if self.sliding.is_some() => {
+                let id = self.sliding.take().unwrap_or_default();
+                match self.slider_value(&id, x) {
+                    Some(v) => FormResult::event(FormEvent::SlideEnd(id, v)),
+                    None => FormResult::redraw(),
+                }
             }
             MouseKind::Up(MouseButton::Left) => {
                 if let Some(id) = self.dragging.take() {
@@ -603,11 +722,26 @@ impl Form {
                         }
                         FormResult::redraw()
                     }
-                    Hit::Option(..) => FormResult::redraw(),
+                    Hit::Option(..) | Hit::Slider(_) => FormResult::redraw(),
+                    Hit::Link(id) => FormResult::event(FormEvent::Click(id)),
                 }
             }
             _ => FormResult::default(),
         }
+    }
+
+    /// Значение ползунка под x (с шагом и в пределах).
+    fn slider_value(&self, id: &str, x: f32) -> Option<f32> {
+        let (x0, w, min, max, step) = *self.sliders.get(id)?;
+        let k = if w > 0.0 { ((x - x0) / w).clamp(0.0, 1.0) } else { 0.0 };
+        let v = min + (max - min) * k;
+        let v = if step > 0.0 { min + ((v - min) / step).round() * step } else { v };
+        Some(v.clamp(min, max))
+    }
+
+    /// Тянут ползунок (окно держит мышь у себя).
+    pub fn sliding(&self) -> bool {
+        self.sliding.is_some()
     }
 
     fn add(&mut self, field: &str) -> FormResult {
