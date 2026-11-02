@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Natív választó- és megerősítőablakok",
   "settings.native_dialogs.help": "A „keresd …” ablak és a veszélyes parancs előtti kérdés webmotor nélkül rajzolódik ki: gyorsabban nyílnak, és nem foglalnak memóriát. A könnyű felületen egyelőre web. Kísérleti.",
   "settings.native_main": "Natív főablak",
-  "settings.native_main.help": "A főablak webmotor nélkül rajzolódik: gyorsabban nyílik és kevesebb memóriát foglal. Eddig átkerült: keret, Kezdőlap és Napló; a többi lap a webes változatot nyitja. A könnyű felület még webes. Kísérleti.",
+  "settings.native_main.help": "A főablak webmotor nélkül rajzolódik: gyorsabban nyílik és kevesebb memóriát foglal. A könnyű felület még webes. Kísérleti.",
   "main.notPorted": "Ez a lap még nem került át a natív ablakba.",
   "main.openWeb": "Webes változat megnyitása",
   "settings.fps_limit": "Folyamatosság",

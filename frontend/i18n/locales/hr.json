@@ -221,7 +221,7 @@
   "settings.native_dialogs": "Izvorni prozori za odabir i potvrdu",
   "settings.native_dialogs.help": "Prozor „pronađi …” i pitanje prije opasne naredbe crtaju se bez web-pogona: otvaraju se brže i ne drže memoriju. U laganom sučelju zasad web. Eksperimentalno.",
   "settings.native_main": "Izvorni glavni prozor",
-  "settings.native_main.help": "Glavni prozor crta se bez web-pogona: otvara se brže i drži manje memorije. Zasad preneseni: okvir, Početna i Zapisnik; ostale kartice otvaraju web-verziju. Lagano sučelje zasad je web. Eksperimentalno.",
+  "settings.native_main.help": "Glavni prozor crta se bez web-pogona: otvara se brže i drži manje memorije. Lagano sučelje zasad je web. Eksperimentalno.",
   "main.notPorted": "Ova kartica još nije prenesena u izvorni prozor.",
   "main.openWeb": "Otvori web-verziju",
   "settings.fps_limit": "Glatkoća",

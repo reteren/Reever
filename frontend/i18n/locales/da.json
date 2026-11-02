@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Indbyggede valg- og bekræftelsesvinduer",
   "settings.native_dialogs.help": "Vinduet “find …” og spørgsmålet før en farlig kommando tegnes uden webmotor: de åbner hurtigere og optager ikke hukommelse. Den lette brugerflade bruger foreløbig web. Eksperimentel.",
   "settings.native_main": "Indbygget hovedvindue",
-  "settings.native_main.help": "Hovedvinduet tegnes uden webmotor: det åbner hurtigere og bruger mindre hukommelse. Indtil videre flyttet: ramme, Start og Log; andre faner åbner webversionen. Den lette brugerflade er stadig web. Eksperimentel.",
+  "settings.native_main.help": "Hovedvinduet tegnes uden webmotor: det åbner hurtigere og bruger mindre hukommelse. Den lette brugerflade er stadig web. Eksperimentel.",
   "main.notPorted": "Denne fane er endnu ikke flyttet til det indbyggede vindue.",
   "main.openWeb": "Åbn webversionen",
   "settings.fps_limit": "Glathed",

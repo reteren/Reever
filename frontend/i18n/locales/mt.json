@@ -223,7 +223,7 @@
   "settings.native_dialogs": "Twieqi nattivi tal-għażla u l-konferma",
   "settings.native_dialogs.help": "It-tieqa “sib …” u l-mistoqsija qabel kmand perikoluż jinġibdu mingħajr magna tal-web: jinfetħu aktar malajr u ma jżommux memorja. Fl-interfaċċja ħafifa għalissa web. Sperimentali.",
   "settings.native_main": "Tieqa ewlenija nattiva",
-  "settings.native_main.help": "It-tieqa ewlenija titpinġa mingħajr magna tal-web: tiftaħ aktar malajr u żżomm inqas memorja. S’issa ġew trasferiti: il-qafas, Dar u Log; it-tabs l-oħra jiftħu l-verżjoni web. L-interfaċċa ħafifa għadha web. Sperimentali.",
+  "settings.native_main.help": "It-tieqa ewlenija titpinġa mingħajr magna tal-web: tiftaħ aktar malajr u żżomm inqas memorja. L-interfaċċa ħafifa għadha web. Sperimentali.",
   "main.notPorted": "Din it-tab għadha ma ġietx trasferita fit-tieqa nattiva.",
   "main.openWeb": "Iftaħ il-verżjoni web",
   "settings.fps_limit": "Ċarezza",

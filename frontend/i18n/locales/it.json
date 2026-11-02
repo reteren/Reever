@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Finestre native di scelta e conferma",
   "settings.native_dialogs.help": "La finestra «trova …» e la domanda prima di un comando pericoloso vengono disegnate senza motore web: si aprono più in fretta e non occupano memoria. Nell’interfaccia leggera per ora web. Sperimentale.",
   "settings.native_main": "Finestra principale nativa",
-  "settings.native_main.help": "La finestra principale è disegnata senza motore web: si apre più velocemente e usa meno memoria. Già portati: cornice, Home e Registro; le altre schede aprono la versione web. L’interfaccia leggera resta web. Sperimentale.",
+  "settings.native_main.help": "La finestra principale è disegnata senza motore web: si apre più velocemente e usa meno memoria. L’interfaccia leggera resta web. Sperimentale.",
   "main.notPorted": "Questa scheda non è ancora nella finestra nativa.",
   "main.openWeb": "Apri la versione web",
   "settings.fps_limit": "Fluidità",

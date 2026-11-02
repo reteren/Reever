@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Inbyggda val- och bekräftelsefönster",
   "settings.native_dialogs.help": "Fönstret ”hitta …” och frågan före ett farligt kommando ritas utan webbmotor: de öppnas snabbare och håller inget minne. Det lätta gränssnittet använder tills vidare webb. Experimentell.",
   "settings.native_main": "Inbyggt huvudfönster",
-  "settings.native_main.help": "Huvudfönstret ritas utan webbmotor: det öppnas snabbare och använder mindre minne. Hittills flyttat: ram, Start och Logg; andra flikar öppnar webbversionen. Det lätta gränssnittet är fortfarande webb. Experimentellt.",
+  "settings.native_main.help": "Huvudfönstret ritas utan webbmotor: det öppnas snabbare och använder mindre minne. Det lätta gränssnittet är fortfarande webb. Experimentellt.",
   "main.notPorted": "Den här fliken är inte flyttad till det inbyggda fönstret än.",
   "main.openWeb": "Öppna webbversionen",
   "settings.fps_limit": "Mjukhet",

@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Native keuze- en bevestigingsvensters",
   "settings.native_dialogs.help": "Het venster ‘zoek …’ en de vraag vóór een gevaarlijke opdracht worden zonder webengine getekend: ze openen sneller en houden geen geheugen vast. De lichte interface gebruikt voorlopig web. Experimenteel.",
   "settings.native_main": "Native hoofdvenster",
-  "settings.native_main.help": "Het hoofdvenster wordt zonder webengine getekend: het opent sneller en gebruikt minder geheugen. Al overgezet: frame, Start en Logboek; andere tabbladen openen de webversie. De lichte interface blijft web. Experimenteel.",
+  "settings.native_main.help": "Het hoofdvenster wordt zonder webengine getekend: het opent sneller en gebruikt minder geheugen. De lichte interface blijft web. Experimenteel.",
   "main.notPorted": "Dit tabblad is nog niet naar het native venster overgezet.",
   "main.openWeb": "Webversie openen",
   "settings.fps_limit": "Vloeiendheid",

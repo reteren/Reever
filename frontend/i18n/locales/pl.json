@@ -222,7 +222,7 @@
   "settings.native_dialogs": "Natywne okna wyboru i potwierdzenia",
   "settings.native_dialogs.help": "Okno „znajdź …” i pytanie przed niebezpiecznym poleceniem są rysowane bez silnika WWW: otwierają się szybciej i nie zajmują pamięci. W lekkim interfejsie na razie WWW. Eksperymentalne.",
   "settings.native_main": "Natywne okno główne",
-  "settings.native_main.help": "Okno główne jest rysowane bez silnika WWW: otwiera się szybciej i zajmuje mniej pamięci. Przeniesiono już ramkę, Start i Dziennik; inne karty otwierają wersję webową. Lekki interfejs nadal używa WWW. Eksperymentalne.",
+  "settings.native_main.help": "Okno główne jest rysowane bez silnika WWW: otwiera się szybciej i zajmuje mniej pamięci. Lekki interfejs nadal używa WWW. Eksperymentalne.",
   "main.notPorted": "Ta karta nie została jeszcze przeniesiona do natywnego okna.",
   "main.openWeb": "Otwórz wersję webową",
   "settings.fps_limit": "Płynność",

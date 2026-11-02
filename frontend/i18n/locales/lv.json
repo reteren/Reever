@@ -221,7 +221,7 @@
   "settings.native_dialogs": "Vietējie izvēles un apstiprinājuma logi",
   "settings.native_dialogs.help": "Logs “atrodi …” un jautājums pirms bīstamas komandas tiek zīmēti bez tīmekļa dzinēja: tie atveras ātrāk un neaizņem atmiņu. Vieglajā saskarnē pagaidām tīmeklis. Eksperimentāli.",
   "settings.native_main": "Vietējais galvenais logs",
-  "settings.native_main.help": "Galvenais logs tiek zīmēts bez tīmekļa dzinēja: atveras ātrāk un aizņem mazāk atmiņas. Pagaidām pārnests: rāmis, Sākums un Žurnāls; citas cilnes atver tīmekļa versiju. Vieglā saskarne pagaidām ir tīmekļa. Eksperimentāli.",
+  "settings.native_main.help": "Galvenais logs tiek zīmēts bez tīmekļa dzinēja: atveras ātrāk un aizņem mazāk atmiņas. Vieglā saskarne pagaidām ir tīmekļa. Eksperimentāli.",
   "main.notPorted": "Šī cilne vēl nav pārnesta uz vietējo logu.",
   "main.openWeb": "Atvērt tīmekļa versiju",
   "settings.fps_limit": "Plūdenums",

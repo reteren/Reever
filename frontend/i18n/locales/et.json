@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Natiivsed valiku- ja kinnitusaknad",
   "settings.native_dialogs.help": "Aken „leia …“ ja küsimus enne ohtlikku käsku joonistatakse ilma veebimootorita: need avanevad kiiremini ega hoia mälu. Kerges liideses esialgu veeb. Katseline.",
   "settings.native_main": "Natiivne peaaken",
-  "settings.native_main.help": "Peaaken joonistatakse ilma veebimootorita: avaneb kiiremini ja hoiab vähem mälu. Seni üle viidud: raam, Avaleht ja Logi; teised vahekaardid avavad veebiversiooni. Kerge liides on veel veeb. Katseline.",
+  "settings.native_main.help": "Peaaken joonistatakse ilma veebimootorita: avaneb kiiremini ja hoiab vähem mälu. Kerge liides on veel veeb. Katseline.",
   "main.notPorted": "Seda vahekaarti pole veel natiivsesse aknasse viidud.",
   "main.openWeb": "Ava veebiversioon",
   "settings.fps_limit": "Sujuvus",

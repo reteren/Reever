@@ -221,7 +221,7 @@
   "settings.native_dialogs": "Ferestre native de alegere și confirmare",
   "settings.native_dialogs.help": "Fereastra „găsește …” și întrebarea dinaintea unei comenzi periculoase sunt desenate fără motor web: se deschid mai repede și nu țin memorie. În interfața ușoară deocamdată web. Experimental.",
   "settings.native_main": "Fereastră principală nativă",
-  "settings.native_main.help": "Fereastra principală este desenată fără motor web: se deschide mai repede și ține mai puțină memorie. Mutate deja: cadrul, Acasă și Jurnal; celelalte file deschid versiunea web. Interfața ușoară rămâne web. Experimental.",
+  "settings.native_main.help": "Fereastra principală este desenată fără motor web: se deschide mai repede și ține mai puțină memorie. Interfața ușoară rămâne web. Experimental.",
   "main.notPorted": "Această filă nu a fost încă mutată în fereastra nativă.",
   "main.openWeb": "Deschide versiunea web",
   "settings.fps_limit": "Fluiditate",

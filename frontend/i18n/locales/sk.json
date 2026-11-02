@@ -222,7 +222,7 @@
   "settings.native_dialogs": "Natívne okná výberu a potvrdenia",
   "settings.native_dialogs.help": "Okno „nájdi …“ a otázka pred nebezpečným príkazom sa vykresľujú bez webového jadra: otvárajú sa rýchlejšie a nedržia pamäť. V odľahčenom rozhraní zatiaľ web. Experimentálne.",
   "settings.native_main": "Natívne hlavné okno",
-  "settings.native_main.help": "Hlavné okno sa kreslí bez webového jadra: otvára sa rýchlejšie a drží menej pamäte. Zatiaľ prenesené: rám, Domov a Protokol; ostatné karty otvoria webovú verziu. Odľahčené rozhranie je zatiaľ webové. Experimentálne.",
+  "settings.native_main.help": "Hlavné okno sa kreslí bez webového jadra: otvára sa rýchlejšie a drží menej pamäte. Odľahčené rozhranie je zatiaľ webové. Experimentálne.",
   "main.notPorted": "Táto karta ešte nie je v natívnom okne.",
   "main.openWeb": "Otvoriť webovú verziu",
   "settings.fps_limit": "Plynulosť",

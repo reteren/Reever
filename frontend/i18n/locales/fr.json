@@ -221,7 +221,7 @@
   "settings.native_dialogs": "Fenêtres natives de choix et de confirmation",
   "settings.native_dialogs.help": "La fenêtre « trouve … » et la question avant une commande dangereuse sont dessinées sans moteur web : elles s’ouvrent plus vite et n’occupent pas de mémoire. L’interface légère reste web pour l’instant. Expérimental.",
   "settings.native_main": "Fenêtre principale native",
-  "settings.native_main.help": "La fenêtre principale est dessinée sans moteur web : elle s’ouvre plus vite et consomme moins de mémoire. Déjà portés : cadre, Accueil et Journal ; les autres onglets ouvrent la version web. L’interface légère reste web. Expérimental.",
+  "settings.native_main.help": "La fenêtre principale est dessinée sans moteur web : elle s’ouvre plus vite et consomme moins de mémoire. L’interface légère reste web. Expérimental.",
   "main.notPorted": "Cet onglet n’est pas encore porté dans la fenêtre native.",
   "main.openWeb": "Ouvrir la version web",
   "settings.fps_limit": "Fluidité",

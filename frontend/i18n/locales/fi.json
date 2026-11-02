@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Natiivit valinta- ja vahvistusikkunat",
   "settings.native_dialogs.help": "Ikkuna ”etsi …” ja kysymys ennen vaarallista komentoa piirretään ilman verkkomoottoria: ne aukeavat nopeammin eivätkä varaa muistia. Kevyessä käyttöliittymässä toistaiseksi verkko. Kokeellinen.",
   "settings.native_main": "Natiivi pääikkuna",
-  "settings.native_main.help": "Pääikkuna piirretään ilman verkkomoottoria: se aukeaa nopeammin ja vie vähemmän muistia. Siirretty toistaiseksi: kehys, Koti ja Loki; muut välilehdet avaavat verkkoversion. Kevyt käyttöliittymä on vielä verkko. Kokeellinen.",
+  "settings.native_main.help": "Pääikkuna piirretään ilman verkkomoottoria: se aukeaa nopeammin ja vie vähemmän muistia. Kevyt käyttöliittymä on vielä verkko. Kokeellinen.",
   "main.notPorted": "Tätä välilehteä ei ole vielä siirretty natiiviin ikkunaan.",
   "main.openWeb": "Avaa verkkoversio",
   "settings.fps_limit": "Sulavuus",

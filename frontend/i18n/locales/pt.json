@@ -220,7 +220,7 @@
   "settings.native_dialogs": "Janelas nativas de escolha e confirmação",
   "settings.native_dialogs.help": "A janela «encontra …» e a pergunta antes de um comando perigoso são desenhadas sem o motor web: abrem mais depressa e não ocupam memória. Na interface leve, por agora web. Experimental.",
   "settings.native_main": "Janela principal nativa",
-  "settings.native_main.help": "A janela principal é desenhada sem motor web: abre mais rápido e usa menos memória. Já portados: moldura, Início e Registro; as outras abas abrem a versão web. A interface leve continua web. Experimental.",
+  "settings.native_main.help": "A janela principal é desenhada sem motor web: abre mais rápido e usa menos memória. A interface leve continua web. Experimental.",
   "main.notPorted": "Esta aba ainda não foi portada para a janela nativa.",
   "main.openWeb": "Abrir a versão web",
   "settings.fps_limit": "Fluidez",
