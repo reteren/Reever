@@ -80,6 +80,8 @@ pub fn start(app: &AppHandle) {
             }
             std::thread::sleep(Duration::from_millis(5));
         }
+        std::thread::sleep(Duration::from_millis(120));
+        shoot(&app, "power-on");
         step(started, "window shown");
         let _ = app.emit("reever://status", serde_json::json!({ "asr": "ready", "model": "parakeet-v3" }));
         events::ui_log(&app, "[main-demo] журнал: первая строка");

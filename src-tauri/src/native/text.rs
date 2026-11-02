@@ -134,6 +134,21 @@ pub struct TextLayout {
 }
 
 impl TextLayout {
+    /// Точка сразу после последнего символа: x, верх строки, высота строки (для курсора-блока
+    /// после текста, как ::after). `utf16_len` — длина текста в UTF-16.
+    pub fn end_point(&self, utf16_len: u32) -> (f32, f32, f32) {
+        use windows::Win32::Graphics::DirectWrite::DWRITE_HIT_TEST_METRICS;
+        if utf16_len == 0 {
+            return (0.0, 0.0, self.height);
+        }
+        let (mut x, mut y) = (0.0f32, 0.0f32);
+        let mut m = DWRITE_HIT_TEST_METRICS::default();
+        unsafe {
+            let _ = self.layout.HitTestTextPosition(utf16_len - 1, true, &mut x, &mut y, &mut m);
+        }
+        (x, m.top, m.height)
+    }
+
     /// Базовая линия первой строки от верха раскладки, DIP (для выравнивания по базовой линии,
     /// как align-items: baseline).
     pub fn baseline(&self) -> f32 {

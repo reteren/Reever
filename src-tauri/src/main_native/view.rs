@@ -20,6 +20,7 @@ use super::Act;
 use crate::mascot_native::lens::{Lens, LensParams};
 use crate::mascot_native::{Msg as MascotMsg, MascotView};
 use crate::native::controls::button::{Button, ButtonKind, Lunka, Press};
+use crate::native::controls::anim::{Bez, E_OUT};
 use crate::native::controls::form::Form;
 use crate::native::controls::tooltip::Tooltip;
 use crate::native::controls::{
@@ -347,6 +348,15 @@ pub struct MainView {
     shade: Option<super::shade::Shade>,
     shaded: bool,
     shade_pressed: Option<super::shade::ShadeHit>,
+    // анимации экранов: включение (crtOn), смена канала (chOut/chIn), вспышка «принято»
+    power_from: Instant,
+    power_quick: bool,
+    channel: Option<(Instant, usize)>,
+    invert_until: Instant,
+    /// бегущая строка: текст не влезает — рисуется в живом слое и едет
+    ticker_over: f32,
+    ticker_from: Instant,
+    caret_phase: i64,
     /// раскрытую форму прокрутить в поле зрения (scrollIntoView nearest); где она в содержимом
     reveal: bool,
     editor_span: (f32, f32),
@@ -445,6 +455,13 @@ impl MainView {
             shade: None,
             shaded: false,
             shade_pressed: None,
+            power_from: Instant::now(),
+            power_quick: false,
+            channel: None,
+            invert_until: Instant::now(),
+            ticker_over: 0.0,
+            ticker_from: Instant::now(),
+            caret_phase: 0,
             reveal: false,
             editor_span: (0.0, 0.0),
             status: snapshot.status.unwrap_or_default(),
@@ -542,6 +559,9 @@ impl MainView {
     pub fn set_shaded(&mut self, on: bool, shape: Vec<[f64; 4]>) {
         self.shaded = on;
         self.shape = shape;
+        if !on {
+            self.power_on(true);
+        }
         self.tooltip.hide();
         self.overlay = None;
         self.static_dirty = true;
@@ -600,13 +620,19 @@ impl MainView {
         }
         match msg {
             Msg::State(s) => self.set_state(&s),
-            Msg::Partial(p) => self.partial = p,
+            Msg::Partial(p) => {
+                if p != self.partial {
+                    self.ticker_from = Instant::now();
+                }
+                self.partial = p;
+            }
             Msg::Heard(h) => {
                 let h = h.trim().to_string();
                 if !h.is_empty() {
                     self.heard = Some(h);
                     self.flash = 1.0;
                     self.burst = 1.0;
+                    self.invert_until = Instant::now() + Duration::from_millis(95);
                 }
             }
             Msg::Log(line) => {
@@ -1005,13 +1031,51 @@ impl MainView {
         cx.fill_rect(Rect::new(r.x, r.y + 33.0, r.w, 1.0), ACC_5);
         self.scene.icon("play", Rect::new(r.x + 14.0, r.y + 10.5, 13.0, 13.0), 0.0, ACC, true, Glow::G2);
         let partial = if self.partial.trim().is_empty() { "…".to_string() } else { self.partial.to_uppercase() };
-        let st = TextStyle { ellipsis: true, direction: self.dir(), ..lcd(21.0, 500, 0.05) };
-        if let Some(l) = self.text(cx, &partial, &st, r.w - 14.0 - 13.0 - 8.0 - 3.0 - 14.0) {
-            self.scene.text(&l, r.x + 14.0 + 13.0 + 8.0 + 3.0, r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+        let tape_w = r.w - 14.0 - 13.0 - 8.0 - 3.0 - 14.0;
+        let wide = TextStyle { direction: self.dir(), ..lcd(21.0, 500, 0.05) };
+        let over = self.text(cx, &partial, &wide, 100_000.0).map_or(0.0, |l| l.width - tape_w);
+        self.ticker_over = over;
+        if over <= 4.0 {
+            if let Some(l) = self.text(cx, &partial, &wide, tape_w) {
+                self.scene.text(&l, r.x + 14.0 + 13.0 + 8.0 + 3.0, r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+            }
         }
         // содержимое вкладки
         let body = Rect::new(r.x + 18.0, r.y + 34.0 + 14.0, r.w - 36.0, r.h - 34.0 - 14.0 - 18.0);
         self.web.rect = Rect::new(0.0, 0.0, 0.0, 0.0);
+        // смена канала: старое схлопывается в строку (0,14 с), новое раскрывается (0,32 с)
+        let now = cx.now;
+        let mut shown = self.tab;
+        let mut ch: Option<(f32, f32, f32)> = None; // scale x, scale y, яркость
+        if let Some((t, old)) = self.channel {
+            let e = now.duration_since(t).as_secs_f32();
+            if e < 0.14 {
+                shown = old;
+                let k = e / 0.14;
+                let k = Bez(0.7, 0.0, 1.0, 0.5).at(k);
+                // 0 → 70%: сжатие по высоте, 70 → 100%: по ширине
+                let (sx, sy): (f32, f32) = if k < 0.7 { (1.0, 1.0 - (1.0 - 0.012) * k / 0.7) } else { (1.0 - (k - 0.7) / 0.3, 0.012) };
+                ch = Some((sx.max(0.0), sy, 1.0 + 3.0 * k));
+            } else if e < 0.46 {
+                let k = E_OUT.at((e - 0.14) / 0.32);
+                let (sx, sy) = if k < 0.35 { (0.02 + 0.98 * k / 0.35, 0.012) } else { (1.0, 0.012 + 0.988 * (k - 0.35) / 0.65) };
+                ch = Some((sx, sy, 4.0 - 3.0 * k));
+            } else {
+                self.channel = None;
+            }
+        }
+        let mut old_transform = windows::Foundation::Numerics::Matrix3x2::default();
+        if let Some((sx, sy, _)) = ch {
+            self.scene.flush(cx);
+            let (cxm, cym) = (body.x + body.w / 2.0, body.y + body.h / 2.0);
+            unsafe {
+                cx.dc().GetTransform(&mut old_transform);
+                let m = windows::Foundation::Numerics::Matrix3x2 { M11: sx.max(0.0001), M12: 0.0, M21: 0.0, M22: sy, M31: cxm * (1.0 - sx), M32: cym * (1.0 - sy) };
+                cx.dc().SetTransform(&(m * old_transform));
+            }
+        }
+        let real_tab = self.tab;
+        self.tab = shown;
         match TABS[self.tab] {
             "home" => self.draw_home(cx, body),
             "actions" => {
@@ -1024,6 +1088,21 @@ impl MainView {
             }
             "logs" => self.draw_logs(cx, body),
             _ => self.draw_not_ported(cx, body),
+        }
+        self.tab = real_tab;
+        self.scene.flush(cx);
+        if let Some((_, _, bright)) = ch {
+            unsafe { cx.dc().SetTransform(&old_transform) };
+            if bright > 1.0 {
+                let line = Rect::new(body.x, body.y + body.h / 2.0 - 3.0, body.w, 6.0);
+                unsafe { cx.dc().SetPrimitiveBlend(windows::Win32::Graphics::Direct2D::D2D1_PRIMITIVE_BLEND_ADD) };
+                cx.fill_rect(line, Color { a: ((bright - 1.0) * 0.12).min(0.5), ..ACC_HOT });
+                unsafe { cx.dc().SetPrimitiveBlend(windows::Win32::Graphics::Direct2D::D2D1_PRIMITIVE_BLEND_SOURCE_OVER) };
+            }
+        }
+        // «команда принята»: экран на миг вспыхивает (invert 95 мс)
+        if now < self.invert_until {
+            fill_round(cx, Rect::new(r.x, r.y, r.w, r.h), 14.0, Color { a: 0.82, ..ACC });
         }
         self.scene.flush(cx);
         lcd_overlay(cx, r, 14.0);
@@ -1055,9 +1134,17 @@ impl MainView {
             ),
         };
         let mut h = 64.0f32;
-        if let Some(l) = self.text(cx, &text, &style, body.w) {
+        // .heard::after: блок-курсор после текста, мигает (1,06 с, через раз — тусклее)
+        let caret_w = style.size * 0.55;
+        if let Some(l) = self.text(cx, &text, &style, body.w - caret_w - 4.0) {
             self.scene.text(&l, body.x, top + 4.0, color, glow);
             h = h.max(4.0 + l.height + 14.0);
+            let (ex, ey, eh) = l.end_point(text.encode_utf16().count() as u32);
+            let on = (cx.now.duration_since(self.t0).as_secs_f32() / 0.53) as i64 % 2 == 0;
+            let a = if on { 1.0 } else { 0.25 };
+            let block = Rect::new(body.x + ex + 4.0, top + 4.0 + ey + (eh - style.size) / 2.0 + style.size * 0.12, caret_w, style.size);
+            self.scene.shadow(cx, block, 0.0, Color { a: 0.8 * a, ..ACC }, 8.0);
+            cx.fill_rect(block, Color { a, ..ACC });
         }
         self.scene.flush(cx);
         dotted_hline(cx, body.x, top + h, body.w, ACC_4);
@@ -1617,11 +1704,38 @@ impl MainView {
 
     /// Статичная часть окна: экраны с текстом и рамка (в статическом режиме света).
     fn draw_static(&mut self, cx: &mut RenderCx<'_>) {
-        self.draw_title(cx);
-        self.draw_status(cx);
-        self.draw_rail(cx);
-        self.draw_screen(cx);
-        self.draw_eq(cx);
+        let now = cx.now;
+        for (i, r) in [TITLE, STATUS, RAIL, SCREEN, EQ].into_iter().enumerate() {
+            let p = self.power(i, now);
+            if p <= 0.0 {
+                continue; // экран ещё не включился
+            }
+            let anim = p < 1.0;
+            let (clip, bright) = if anim { crt_on(r, p) } else { (r, 0.0) };
+            if anim {
+                self.scene.flush(cx);
+                self.scene.set_clip(Some(clip));
+                unsafe { cx.dc().PushAxisAlignedClip(&clip.d2d(), windows::Win32::Graphics::Direct2D::D2D1_ANTIALIAS_MODE_ALIASED) };
+            }
+            match i {
+                0 => self.draw_title(cx),
+                1 => self.draw_status(cx),
+                2 => self.draw_rail(cx),
+                3 => self.draw_screen(cx),
+                _ => self.draw_eq(cx),
+            }
+            if anim {
+                self.scene.flush(cx);
+                // filter: brightness(5 → 1) — светлой добавкой поверх
+                if bright > 0.0 {
+                    unsafe { cx.dc().SetPrimitiveBlend(windows::Win32::Graphics::Direct2D::D2D1_PRIMITIVE_BLEND_ADD) };
+                    cx.fill_rect(clip, Color { a: (bright * 0.18).min(0.9), ..ACC_HOT });
+                    unsafe { cx.dc().SetPrimitiveBlend(windows::Win32::Graphics::Direct2D::D2D1_PRIMITIVE_BLEND_SOURCE_OVER) };
+                }
+                self.scene.set_clip(None);
+                unsafe { cx.dc().PopAxisAlignedClip() };
+            }
+        }
         self.draw_frame(cx);
         // лунки в покое не меняются; наведение и нажатие обновляют слой (touch_static)
         for l in self.lunki.iter() {
@@ -1633,6 +1747,54 @@ impl MainView {
             self.scene.flush(cx);
             self.form_blink = o.next_blink(cx.now);
         }
+    }
+
+    /// Бегущая строка, когда текст не влезает (#partial.scroll): едет в живом слое, чтобы не
+    /// перерисовывать весь статичный слой 30 раз в секунду.
+    fn draw_ticker_live(&mut self, cx: &mut RenderCx<'_>) {
+        if self.ticker_over <= 4.0 || self.power(3, cx.now) < 1.0 || self.overlay.is_some() {
+            return;
+        }
+        let r = SCREEN;
+        let tape = Rect::new(r.x + 14.0 + 13.0 + 8.0, r.y, r.w - 14.0 - 13.0 - 8.0 - 14.0, 34.0);
+        let partial = self.partial.to_uppercase();
+        let wide = TextStyle { direction: self.dir(), ..lcd(21.0, 500, 0.05) };
+        let Some(l) = self.text(cx, &partial, &wide, 100_000.0) else { return };
+        // marquee: 8% на месте, потом уезжает на переполнение + 30, по кругу
+        let dist = self.ticker_over + 30.0;
+        let dur = (dist / 55.0).max(4.0);
+        let k = (cx.now.duration_since(self.ticker_from).as_secs_f32() % dur) / dur;
+        let shift = if k < 0.08 { 0.0 } else { dist * (k - 0.08) / 0.92 };
+        self.scene.set_clip(Some(tape));
+        unsafe { cx.dc().PushAxisAlignedClip(&tape.d2d(), windows::Win32::Graphics::Direct2D::D2D1_ANTIALIAS_MODE_ALIASED) };
+        self.scene.text(&l, tape.x + 3.0 - shift, r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+        self.scene.flush(cx);
+        self.scene.set_clip(None);
+        unsafe { cx.dc().PopAxisAlignedClip() };
+    }
+
+    /// Включение экрана `i` (powerOn в shell.js): 0 — ещё тёмный, 1 — включён.
+    fn power(&self, i: usize, now: Instant) -> f32 {
+        let delay = if self.power_quick { i as f32 * 0.05 } else { 0.15 + i as f32 * 0.09 };
+        let t = now.saturating_duration_since(self.power_from).as_secs_f32() - delay;
+        if t <= 0.0 {
+            return 0.0;
+        }
+        (t / 0.62).min(1.0)
+    }
+
+    /// Идёт ли какая-то анимация экранов (статичный слой тогда обновляется каждый кадр).
+    fn screens_animating(&self, now: Instant) -> bool {
+        (0..5).any(|i| self.power(i, now) < 1.0)
+            || self.channel.is_some_and(|(t, _)| now.duration_since(t) < Duration::from_millis(140 + 320))
+            || now < self.invert_until + Duration::from_millis(20)
+    }
+
+    /// Включить экраны заново (развернули полоску — быстро).
+    pub fn power_on(&mut self, quick: bool) {
+        self.power_from = Instant::now();
+        self.power_quick = quick;
+        self.static_dirty = true;
     }
 
     /// Обновить статичный слой, если нужно. false — слоя нет (рисовать напрямую).
@@ -1663,6 +1825,12 @@ impl MainView {
         // рамка с живым светом меняется каждый кадр — слой тоже; пока шейдера рамки нет — тоже
         let live = !FRAME_STATIC || Instant::now() < self.static_live_until || self.frame.is_none();
         if self.static_dirty || live {
+            if std::env::var_os("REEVER_MAIN_PROFILE").is_some() {
+                PROFILE.with(|p| {
+                    let mut p = p.borrow_mut();
+                    *p.entry(if live { "redraw_live" } else { "redraw_dirty" }).or_insert(0.0) += 1.0;
+                });
+            }
             let Some((bmp, _, _)) = self.static_layer.clone() else { return false };
             let dc = cx.dc().clone();
             unsafe {
@@ -1732,6 +1900,7 @@ impl MainView {
             Target::Lunka(_) => (self.host)(Act::Shade(true)),
             Target::Tab(i) => {
                 if self.tab != i {
+                    self.channel = Some((Instant::now(), self.tab));
                     if self.settings_tab.placing {
                         self.settings_tab.set_placing(false);
                         (self.host)(Act::Settings(super::settings_tab::SettingsOut::MascotPin(false)));
@@ -1780,8 +1949,15 @@ impl WindowHandler for MainView {
     }
 
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
-        if self.overlay.as_ref().is_some_and(|o| o.animating()) {
+        if self.overlay.as_ref().is_some_and(|o| o.animating()) || self.screens_animating(gpu.now) {
             self.static_dirty = true;
+        }
+        if TABS[self.tab] == "home" && !self.shaded {
+            let phase = (gpu.now.duration_since(self.t0).as_secs_f32() / 0.53) as i64;
+            if phase != self.caret_phase {
+                self.caret_phase = phase;
+                self.static_dirty = true;
+            }
         }
         if let Some(out) = self.settings_tab.take_due(gpu.now) {
             (self.host)(Act::Settings(out));
@@ -1934,6 +2110,7 @@ impl WindowHandler for MainView {
             self.draw_static(cx);
         }
         mark("static", cx);
+        self.draw_ticker_live(cx);
         self.fx.draw(cx);
         mark("fx", cx);
         if prof {
@@ -1975,11 +2152,21 @@ impl WindowHandler for MainView {
             || self.active()
             || self.tooltip.animating(Instant::now())
             || self.overlay.as_ref().is_some_and(|o| o.animating())
+            || self.screens_animating(Instant::now())
             || Instant::now() < self.static_live_until
     }
 
     fn wake_at(&self) -> Option<Instant> {
         let mut at = self.tooltip.wake_at();
+        // мигание курсора на «Главной» (2 раза в секунду), бегущая строка (до 30 кадров)
+        if !self.shaded && TABS[self.tab] == "home" {
+            let next = self.t0 + Duration::from_secs_f32(0.53 * (self.caret_phase + 1) as f32);
+            at = Some(at.map_or(next, |a| a.min(next)));
+        }
+        if !self.shaded && self.ticker_over > 4.0 {
+            let next = Instant::now() + Duration::from_millis(33);
+            at = Some(at.map_or(next, |a| a.min(next)));
+        }
         if self.shaded {
             if let Some(w) = self.shade.as_ref().and_then(|s| s.wake_at()) {
                 at = Some(at.map_or(w, |a| a.min(w)));
@@ -2455,4 +2642,18 @@ mod tests {
 
 thread_local! {
     static PROFILE: std::cell::RefCell<std::collections::BTreeMap<&'static str, f64>> = std::cell::RefCell::new(Default::default());
+}
+
+/// crtOn: щель по центру → полоса во всю ширину → весь экран; яркость 5 → 4 → 1.
+/// Возвращает видимую часть экрана и добавку яркости (0 — как обычно).
+fn crt_on(r: Rect, p: f32) -> (Rect, f32) {
+    let k = E_OUT.at(p);
+    let (ix, iy, b) = if k < 0.3 {
+        let t = k / 0.3;
+        (0.49 * (1.0 - t), 0.5 - 0.006 * t, 5.0 - t)
+    } else {
+        let t = (k - 0.3) / 0.7;
+        (0.0, 0.494 * (1.0 - t), 4.0 - 3.0 * t)
+    };
+    (Rect::new(r.x + r.w * ix, r.y + r.h * iy, (r.w * (1.0 - 2.0 * ix)).max(1.0), (r.h * (1.0 - 2.0 * iy)).max(1.0)), b - 1.0)
 }
