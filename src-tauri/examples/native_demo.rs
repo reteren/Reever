@@ -8,6 +8,8 @@
 // --static      — без анимации (замер покоя: окно на экране, кадров нет)
 // --device-loss — на 3-й секунде пройти путь восстановления после потери устройства
 // --screenshot  — снимок экрана под окном (то, что реально показал DWM) в PNG
+// --click-through — сделать окно сквозным для мыши (WS_EX_LAYERED + WS_EX_TRANSPARENT) и
+//                 проверить WindowFromPoint: под центром окна должно быть чужое окно
 // --fake-dpi N  — прислать окну WM_DPICHANGED с DPI N (проверка смены масштаба)
 // --cold        — не создавать устройство заранее (Ui::prewarm), мерить холодный первый кадр
 // --hold        — не закрываться после замера (посмотреть глазами; закрыть Ctrl+C)
@@ -193,6 +195,20 @@ fn main() -> anyhow::Result<()> {
         std::thread::sleep(Duration::from_millis(500));
         let i = ui.call(move |ui| ui.info(id)).flatten().expect("окно");
         println!("после WM_DPICHANGED {dpi}: DPI {} (×{:.2}), окно {}×{} px", i.dpi, i.scale, i.size_px.0, i.size_px.1);
+    }
+    if args.iter().any(|a| a == "--click-through") {
+        use windows::Win32::Foundation::{HWND, POINT};
+        use windows::Win32::UI::WindowsAndMessaging::*;
+        unsafe {
+            let h = HWND(info.hwnd as *mut _);
+            let ex = GetWindowLongW(h, GWL_EXSTYLE) as u32;
+            SetWindowLongW(h, GWL_EXSTYLE, (ex | WS_EX_LAYERED.0 | WS_EX_TRANSPARENT.0) as i32);
+            std::thread::sleep(Duration::from_millis(300));
+            let mut r = windows::Win32::Foundation::RECT::default();
+            let _ = GetWindowRect(h, &mut r);
+            let under = WindowFromPoint(POINT { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 });
+            println!("сквозной клик: окно под центром {:?}, наше {:?}", under.0, h.0);
+        }
     }
     if let Some(path) = &screenshot {
         capture(info.hwnd, path)?;
