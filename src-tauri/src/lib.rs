@@ -32,6 +32,7 @@ pub mod launcher;
 pub mod local_index;
 pub mod micwatch;
 pub mod native;
+pub mod mascot_demo;
 pub mod mascot_native;
 pub mod models;
 #[cfg(windows)]
@@ -248,6 +249,8 @@ fn signal_existing_instance_or_register() -> bool {
     // Демонстрация поиска работает без аудио и не должна будить установленный экземпляр.
     let event_name = if std::env::var_os("REEVER_FIND_DEMO").is_some() {
         "Local\\com.troid.reever.find-demo.show-main"
+    } else if mascot_demo::active() {
+        "Local\\com.troid.reever.mascot-demo.show-main"
     } else {
         "Local\\com.troid.reever.show-main"
     };
@@ -427,6 +430,11 @@ pub fn run() {
                 show_main(app.handle());
             }
             mascot::spawn(app.handle());
+            // проверка маскота без микрофона и горячих клавиш: REEVER_MASCOT_DEMO=1 (mascot_demo.rs)
+            if mascot_demo::active() {
+                mascot_demo::start(app.handle());
+                return Ok(());
+            }
 
             // --- глобальные хоткеи: push-to-talk + mute ---
             // источник правды для пере-регистрации на лету (set_hotkey / set_mute_hotkey)
