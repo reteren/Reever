@@ -21,7 +21,7 @@ mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};
 
-use tauri::{AppHandle, Listener, Manager};
+use crate::app::AppHandle;
 use windows::Win32::Foundation::POINT;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
@@ -40,7 +40,6 @@ pub enum Act {
     Minimize,
     Tray,
     TogglePause,
-    OpenWeb,
     Tab(String),
     SaveGrammar(crate::grammar::Grammar),
     ResetGrammar,
@@ -58,14 +57,6 @@ pub enum Act {
     AddScanned(Vec<overlays::ScanApp>),
     /// компактный режим: полоска поверх всех окон
     Shade(bool),
-}
-
-/// Включено ли нативное главное окно (настройка `native_main`; в лёгком интерфейсе — веб).
-pub fn enabled(app: &AppHandle) -> bool {
-    app.try_state::<crate::config::LiveConfig>().is_some_and(|c| {
-        let s = &c.get().settings;
-        s.native_main
-    })
 }
 
 pub fn is_open() -> bool {
@@ -161,7 +152,7 @@ fn info(app: &AppHandle) -> Info {
     // встроенные фразы, слова отмены и конца диктовки языков, которые не распознаются
     let mut hidden_triggers = grammar.inactive_triggers_for(Some(&lang_list));
     hidden_triggers.extend(grammar.inactive_words_for(&lang_list));
-    Info { paused, actions, index, mode, hotkey, version: app.package_info().version.to_string(), say, grammar, hidden_triggers, action_list, hidden_phrases, settings: settings_info(app) }
+    Info { paused, actions, index, mode, hotkey, version: crate::app::VERSION.to_string(), say, grammar, hidden_triggers, action_list, hidden_phrases, settings: settings_info(app) }
 }
 
 /// Настройки для вкладки: settings.json (как get_settings), автозапуск, наборы звуков, языки.
@@ -190,14 +181,6 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
     let msg = match out {
         SettingsOut::Patch(map) => crate::commands_api::save_settings(app.clone(), app.state(), app.state(), serde_json::Value::Object(map))
             .map_or_else(err, |_| saved.clone()),
-        SettingsOut::Native(key, on) => {
-            let r = match key {
-                "native_mascot" => crate::mascot::set_native_mascot(app.clone(), app.state(), on),
-                "native_dialogs" => crate::dialogs_native::set_native_dialogs(app.state(), on),
-                _ => set_native_main(app.clone(), app.state(), on),
-            };
-            r.map_or_else(err, |_| saved.clone())
-        }
         SettingsOut::LiteUi(on) => crate::commands_api::set_lite_ui(app.clone(), app.state(), on).map_or_else(err, |_| saved.clone()),
         SettingsOut::Autostart(on) => match crate::commands_api::set_autostart(app.clone(), on) {
             Ok(()) => tr("settings.autostartState", &[("state", &tr(if on { "common.on" } else { "common.off" }, &[]))]),
@@ -220,7 +203,7 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
         SettingsOut::UiLanguage(code) => match crate::commands_api::set_ui_language(app.state(), code) {
             // окно рисует подписи на своём языке — пересоздать его на новом
             Ok(_) => {
-                crate::switch_main(app);
+                crate::rebuild_main(app);
                 return;
             }
             Err(e) => err(e),
@@ -235,7 +218,7 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
                 let before = crate::uilang::current();
                 match crate::commands_api::set_ui_language(app.state(), language) {
                     Ok(code) if code != before => {
-                        crate::switch_main(app);
+                        crate::rebuild_main(app);
                         return;
                     }
                     Ok(_) => saved.clone(),
@@ -366,10 +349,6 @@ fn act(app: &AppHandle, a: Act) {
             crate::toggle_pause(app);
             refresh(app);
         }
-        Act::OpenWeb => {
-            let config = app.state::<crate::config::LiveConfig>();
-            let _ = set_native_main(app.clone(), config, false);
-        }
         Act::Tab(tab) => {
             let _ = crate::events::set_ui_tab(tab);
         }
@@ -429,7 +408,7 @@ fn act(app: &AppHandle, a: Act) {
         }
         Act::Scan => {
             let found = match (app.try_state::<Arc<crate::actions::SharedState>>(), app.try_state::<crate::config::LiveConfig>()) {
-                (Some(state), Some(config)) => tauri::async_runtime::block_on(crate::commands_api::scan_apps(state, config)).unwrap_or_default(),
+                (Some(state), Some(config)) => crate::commands_api::scan_apps(state, config).unwrap_or_default(),
                 _ => Vec::new(),
             };
             let apps: Vec<overlays::ScanApp> = found
@@ -457,7 +436,7 @@ fn act(app: &AppHandle, a: Act) {
             // иконки догружаются после списка, чтобы он не ждал их
             if !ids.is_empty() {
                 use base64::Engine;
-                let icons = tauri::async_runtime::block_on(crate::commands_api::scan_app_icons(ids)).unwrap_or_default();
+                let icons = crate::commands_api::scan_app_icons(ids).unwrap_or_default();
                 let decoded = icons
                     .into_iter()
                     .filter_map(|(id, url)| {
@@ -488,7 +467,7 @@ fn act(app: &AppHandle, a: Act) {
         Act::VoiceFinish(intro) => {
             let locale = crate::uilang::current().to_string();
             let wake = if locale == "ru" { "ривер" } else { "reever" };
-            let r = tauri::async_runtime::block_on(crate::commands_api::finish_voice_adapt(app.clone(), app.state(), app.state()));
+            let r = crate::commands_api::finish_voice_adapt(app.clone(), app.state(), app.state());
             let n = |v: &serde_json::Value, k: &str| v.get(k).and_then(|x| x.as_i64()).unwrap_or(0).to_string();
             let text = match r.map(|rep| serde_json::to_value(rep).unwrap_or_default()) {
                 Ok(v) if v.get("adapted").and_then(|a| a.as_bool()) == Some(true) => crate::ui_text::t(
@@ -680,23 +659,6 @@ pub fn destroy(app: &AppHandle) {
             ui.release_device();
         });
     }
-}
-
-/// Настройки → Интерфейс: нативное главное окно вкл/выкл — сразу: открытое окно (веб или
-/// нативное) пересоздаётся в новом виде.
-#[tauri::command]
-pub fn set_native_main(app: AppHandle, config: tauri::State<'_, crate::config::LiveConfig>, enabled: bool) -> Result<(), String> {
-    let current = config.get();
-    crate::commands_api::persist_value(&current, "native_main", serde_json::Value::Bool(enabled))?;
-    let mut fresh = (*current).clone();
-    fresh.settings.native_main = enabled;
-    config.set(Arc::new(fresh));
-    let open = is_open() || app.get_webview_window("main").is_some();
-    if open {
-        let app = app.clone();
-        std::thread::spawn(move || crate::switch_main(&app));
-    }
-    Ok(())
 }
 
 /// Кэш картинок потока окон: (картинок, байт, декодирований всего) — для проверок.

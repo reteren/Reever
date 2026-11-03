@@ -7,7 +7,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use tauri::AppHandle;
+use crate::app::AppHandle;
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT, D2D_SIZE_U};
 use windows::Win32::Graphics::Direct2D::{
     ID2D1Bitmap1, ID2D1Image, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1, D2D1_INTERPOLATION_MODE_LINEAR,
@@ -1204,8 +1204,7 @@ impl MainView {
                 self.settings_tab.draw(&mut self.scene, cx, body);
                 self.form_blink = self.settings_tab.form.next_blink(cx.now);
             }
-            "logs" => self.draw_logs(cx, body),
-            _ => self.draw_not_ported(cx, body),
+            _ => self.draw_logs(cx, body),
         }
         self.tab = real_tab;
         self.scene.flush(cx);
@@ -1686,34 +1685,6 @@ impl MainView {
             return None;
         }
         self.say_rects.iter().position(|r| native::controls::inside(*r, x, y))
-    }
-
-    fn web_button(&mut self, cx: &mut RenderCx<'_>, x: f32, y: f32) {
-        let label = self.web.label.to_uppercase();
-        let w = self.text(cx, &label, &lcd(15.0, 500, 0.07), 1000.0).map_or(160.0, |l| l.width + 24.0);
-        self.web.rect = Rect::new(x, y, w, 28.0);
-        self.scene.flush(cx);
-        self.web.draw(&mut self.scene, cx);
-    }
-
-    fn draw_not_ported(&mut self, cx: &mut RenderCx<'_>, body: Rect) {
-        self.web.label = self.t("main.openWeb");
-        let title = self.t(TAB_KEYS[self.tab]).to_uppercase();
-        let mut y = body.y + 2.0;
-        if let Some(l) = self.text(cx, &title, &lcd(22.0, 600, 0.08), body.w) {
-            self.scene.text(&l, body.x, y, ACC_HOT, Glow::G3);
-            y += l.height + 12.0;
-        }
-        let note = self.t("main.notPorted");
-        let st = TextStyle { wrap: true, direction: self.dir(), ..ui(12.0, 400, 1.45) };
-        if let Some(l) = self.text(cx, &note, &st, body.w) {
-            self.scene.text(&l, body.x, y, ACC_3, Glow::G1);
-            y += l.height + 14.0;
-        }
-        let label = self.web.label.to_uppercase();
-        let w = self.text(cx, &label, &lcd(15.0, 500, 0.07), 1000.0).map_or(160.0, |l| l.width + 24.0);
-        let x = self.tx(body, body.x, w);
-        self.web_button(cx, x, y);
     }
 
     fn draw_logs(&mut self, cx: &mut RenderCx<'_>, body: Rect) {
@@ -2212,7 +2183,7 @@ impl MainView {
                 self.static_dirty = true;
                 (self.host)(Act::TogglePause);
             }
-            Target::Web if TABS[self.tab] == "home" => {
+            Target::Web => {
                 let general = self.editor.as_ref().is_some_and(|e| e.open == "general");
                 if general {
                     self.close_editor();
@@ -2220,7 +2191,6 @@ impl MainView {
                     self.open_editor("general");
                 }
             }
-            Target::Web => (self.host)(Act::OpenWeb),
             Target::Row(i) => {
                 if let Some(key) = self.info.say.rows.get(i).and_then(|r| r.key.clone()) {
                     self.open_editor(&key);

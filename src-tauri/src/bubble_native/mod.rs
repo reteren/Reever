@@ -10,7 +10,7 @@ mod view;
 
 use std::sync::{Mutex, Once, OnceLock};
 
-use tauri::{AppHandle, Listener};
+use crate::app::AppHandle;
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 

@@ -1,28 +1,24 @@
-//! Маскот: хромовый осьминог в правом нижнем углу экрана (окно `mascot`,
-//! frontend/mascot.html). За голову его можно взять и перетащить; анимации — пререндер
-//! в frontend/mascot/.
+//! Маскот: хромовый осьминог в правом нижнем углу экрана (нативное окно, mascot_native).
+//! За голову его можно взять и перетащить; анимации — пререндер в assets/mascot/.
 //!
 //! Режимы (`mascot_mode` в настройках):
 //! - `always` — осьминог всегда на экране;
 //! - `commands` — в покое он сидит в сфере главного окна; пока Reever слушает и выполняет
 //!   команду, телепортируется на экран: уходит в портал в сфере и выходит из портала в углу
 //!   экрана, а после команды — обратно;
-//! - `never` — окна нет вовсе (WebView2 не держится в памяти), осьминог всегда в сфере.
+//! - `never` — окна нет вовсе, осьминог всегда в сфере.
 //!
 //! Место — `mascot_position`: в настройках осьминога выводят на экран, ставят мышью и
 //! закрепляют; дальше он каждый раз выходит там. Без него — правый нижний угол.
 //!
 //! Размер — `mascot_scale`, 100..500 % от исходного. Осьминога в сфере рисует главное окно
-//! (skin/shell.js) по событию `mascot://orb`.
+//! по событию `mascot://orb`.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
-use tauri::{
-    webview::WebviewWindowBuilder, AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalSize,
-    WebviewWindow,
-};
+use crate::app::{AppHandle, PhysicalPosition, PhysicalSize};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
@@ -38,7 +34,7 @@ use crate::events::{self, ui_log};
 use crate::mascot_native::{self, Msg};
 
 /// Отступ окна от краёв рабочей области, в логических пикселях. Сам осьминог стоит
-/// ещё глубже: поля окна отданы под свечение (frontend/mascot.html, PAD).
+/// ещё глубже: поля окна отданы под свечение.
 const MARGIN: f64 = 0.0;
 /// Видимая часть окна при 100 %: спрайт 120×160 и поля под свечение. Само окно больше
 /// в `BIG` раз (до двух), чтобы портал не обрезался; клики вне осьминога окно пропускает
@@ -87,7 +83,7 @@ static WAKE_PENDING: AtomicBool = AtomicBool::new(false);
 /// Маскот на экране. Само окно после создания не прячется и не обрезается регионом
 /// никогда: и показ скрытого прозрачного окна без рамки, и смена его региона Windows
 /// сопровождает кадром со стандартной белой рамкой. Спрятанный маскот — пустой холст
-/// (mascot.html), а клики окно пропускает сквозь себя (см. `watch_cursor`).
+/// (mascot_native), а клики окно пропускает сквозь себя (см. `watch_cursor`).
 static SHOWN: AtomicBool = AtomicBool::new(false);
 /// Осьминог стоит на месте (не летит) — только тогда окно ловит мышь, и только над ним.
 static RESTING: AtomicBool = AtomicBool::new(false);
@@ -104,17 +100,13 @@ static PLACING: AtomicBool = AtomicBool::new(false);
 /// Как часто проверять, что окно маскота не задвинуто под обычные окна (`keep_on_top`),
 /// в тиках `watch_cursor` по 40 мс.
 const TOPMOST_CHECK_TICKS: u32 = 25;
-/// Окно маскота нативное (`native_mascot`), а не веб (mascot.html).
-static NATIVE: AtomicBool = AtomicBool::new(false);
 /// Для нативного окна: перетаскивание начинается из потока окон, где AppHandle нет под рукой.
 static APP: OnceLock<AppHandle> = OnceLock::new();
 
-/// Окно маскота: веб (frontend/mascot.html) или нативное (mascot_native). Вся логика показа
-/// здесь общая — различается только «транспорт»: как передать событие и сдвинуть окно.
+/// Окно маскота (mascot_native): AppHandle и hwnd окна; после пересоздания окна старый
+/// hwnd считается исчезнувшим.
 #[derive(Clone)]
 enum Win {
-    Web(WebviewWindow),
-    /// AppHandle и hwnd окна: после пересоздания окна старый hwnd считается исчезнувшим.
     Native(AppHandle, isize),
 }
 
@@ -129,7 +121,6 @@ enum Event {
 impl Win {
     fn app_handle(&self) -> &AppHandle {
         match self {
-            Win::Web(w) => w.app_handle(),
             Win::Native(app, _) => app,
         }
     }
@@ -141,14 +132,6 @@ impl Win {
 
     fn emit(&self, event: Event) {
         match self {
-            Win::Web(w) => {
-                let _ = match event {
-                    Event::Enter(fresh) => w.emit("mascot://enter", fresh),
-                    Event::Leave => w.emit("mascot://leave", ()),
-                    Event::Hidden => w.emit("mascot://hidden", ()),
-                    Event::Drop => w.emit("mascot://drop", ()),
-                };
-            }
             Win::Native(_, h) if Win::native_alive(*h) => mascot_native::send(match event {
                 Event::Enter(fresh) => Msg::Enter(fresh),
                 Event::Leave => Msg::Leave,
@@ -161,7 +144,6 @@ impl Win {
 
     fn outer_position(&self) -> Option<PhysicalPosition<i32>> {
         match self {
-            Win::Web(w) => w.outer_position().ok(),
             Win::Native(_, h) => mascot_native::rect()
                 .filter(|_| Win::native_alive(*h))
                 .map(|(x, y, _, _)| PhysicalPosition::new(x, y)),
@@ -170,7 +152,6 @@ impl Win {
 
     fn outer_size(&self) -> Option<PhysicalSize<u32>> {
         match self {
-            Win::Web(w) => w.outer_size().ok(),
             Win::Native(_, h) => mascot_native::rect()
                 .filter(|_| Win::native_alive(*h))
                 .map(|(_, _, w, h)| PhysicalSize::new(w, h)),
@@ -179,9 +160,6 @@ impl Win {
 
     fn set_position(&self, x: i32, y: i32) {
         match self {
-            Win::Web(w) => {
-                let _ = w.set_position(PhysicalPosition::new(x, y));
-            }
             Win::Native(_, h) => unsafe {
                 let flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
                 let _ = SetWindowPos(HWND(*h as *mut _), None, x, y, 0, 0, flags);
@@ -192,7 +170,6 @@ impl Win {
     /// Размер в логических пикселях (DIP монитора, на котором окно).
     fn set_size(&self, width: f64, height: f64) -> bool {
         match self {
-            Win::Web(w) => w.set_size(LogicalSize::new(width, height)).is_ok(),
             Win::Native(_, h) => {
                 let k = self.scale_factor();
                 let flags = SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE;
@@ -204,7 +181,6 @@ impl Win {
 
     fn hwnd(&self) -> Option<HWND> {
         match self {
-            Win::Web(w) => w.hwnd().ok().map(|h| HWND(h.0 as _)),
             Win::Native(_, h) => Some(HWND(*h as *mut _)),
         }
     }
@@ -212,7 +188,6 @@ impl Win {
     /// Пропускать мышь сквозь окно. false — окна больше нет.
     fn set_ignore_cursor_events(&self, ignore: bool) -> bool {
         match self {
-            Win::Web(w) => w.set_ignore_cursor_events(ignore).is_ok(),
             Win::Native(_, h) => {
                 if !Win::native_alive(*h) {
                     return false;
@@ -225,9 +200,6 @@ impl Win {
 
     fn destroy(&self) {
         match self {
-            Win::Web(w) => {
-                let _ = w.destroy();
-            }
             Win::Native(_, h) => {
                 if Win::native_alive(*h) {
                     mascot_native::destroy();
@@ -238,14 +210,12 @@ impl Win {
 
     fn scale_factor(&self) -> f64 {
         match self {
-            Win::Web(w) => w.scale_factor().unwrap_or(1.0),
             Win::Native(_, h) => unsafe { GetDpiForWindow(HWND(*h as *mut _)) }.max(96) as f64 / 96.0,
         }
     }
 
-    fn current_monitor(&self) -> Option<tauri::Monitor> {
+    fn current_monitor(&self) -> Option<crate::app::Monitor> {
         match self {
-            Win::Web(w) => w.current_monitor().ok().flatten(),
             Win::Native(app, _) => {
                 let (p, s) = (self.outer_position()?, self.outer_size()?);
                 let (cx, cy) = (p.x as f64 + s.width as f64 / 2.0, p.y as f64 + s.height as f64 / 2.0);
@@ -255,53 +225,18 @@ impl Win {
     }
 }
 
-/// Окно маскота, какое бы оно ни было сейчас.
+/// Окно маскота, если оно есть.
 fn win(app: &AppHandle) -> Option<Win> {
-    if let Some(h) = mascot_native::hwnd() {
-        return Some(Win::Native(app.clone(), h));
-    }
-    app.get_webview_window("mascot").map(Win::Web)
+    mascot_native::hwnd().map(|h| Win::Native(app.clone(), h))
 }
 
 /// Для пузыря (bubble.rs): где окно маскота, его масштаб и монитор.
-pub(crate) fn geometry(app: &AppHandle) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>, f64, Option<tauri::Monitor>)> {
+pub(crate) fn geometry(app: &AppHandle) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>, f64, Option<crate::app::Monitor>)> {
     let w = win(app)?;
     Some((w.outer_position()?, w.outer_size()?, w.scale_factor(), w.current_monitor()))
 }
 
-/// Окно маскота сейчас нативное (настройка `native_mascot`).
-pub fn native_enabled() -> bool {
-    NATIVE.load(Ordering::Relaxed)
-}
-
-/// Включить или выключить нативное окно маскота на лету: текущее окно убирается, новое
-/// создаётся в том же режиме (на экране маскот выходит заново из портала).
-pub fn set_native(app: &AppHandle, on: bool) {
-    let _transition = transition();
-    if NATIVE.swap(on, Ordering::Relaxed) == on {
-        return;
-    }
-    GENERATION.fetch_add(1, Ordering::Relaxed);
-    if let Some(window) = win(app) {
-        if SHOWN.swap(false, Ordering::Relaxed) {
-            events::set_mascot_visible(false);
-        }
-        RESTING.store(false, Ordering::Relaxed);
-        LEAVING.store(false, Ordering::Relaxed);
-        window.destroy();
-    }
-    ui_log(app, format!("mascot: {} window", if on { "native" } else { "web" }));
-    if mode() != "never" {
-        if on {
-            mascot_native::prewarm(app);
-        }
-        create(app);
-    }
-    bubble::sync(app);
-}
-
-/// Состояние распознавания, уровень микрофона и «услышал» — нативному окну (веб-окно
-/// получает их событиями reever://… само).
+/// Состояние распознавания, уровень микрофона и «услышал» — окну маскота.
 fn native_event(msg: Msg) {
     if mascot_native::exists() {
         mascot_native::send(msg);
@@ -333,7 +268,7 @@ pub fn clamp_scale(scale: u32) -> u32 {
 }
 
 /// Запас под портал для размера `scale`: вдвое, но так, чтобы окно влезло в монитор.
-fn big_for(monitor: Option<tauri::Monitor>, scale: u32) -> f64 {
+fn big_for(monitor: Option<crate::app::Monitor>, scale: u32) -> f64 {
     let factor = scale as f64 / 100.0;
     let Some(monitor) = monitor else { return MAX_BIG };
     let size = monitor.size().to_logical::<f64>(monitor.scale_factor());
@@ -346,14 +281,12 @@ fn visible_corner(big: f64) -> f64 {
     0.5 + 0.5 / big
 }
 
-/// Раскладка для mascot.html: размер в процентах, запас окна под портал и виден ли маскот.
-#[tauri::command]
+/// Раскладка окна маскота: размер в процентах, запас окна под портал и виден ли маскот.
 pub fn mascot_layout() -> (u32, f64, bool) {
     (SCALE.load(Ordering::Relaxed), BIG.load(Ordering::Relaxed) as f64 / 1000.0, SHOWN.load(Ordering::Relaxed))
 }
 
 /// Сидит ли осьминог в сфере — главное окно спрашивает при создании.
-#[tauri::command]
 pub fn mascot_orb() -> bool {
     IN_ORB.load(Ordering::Relaxed)
 }
@@ -362,7 +295,7 @@ pub fn mascot_orb() -> bool {
 /// `present` / `absent` — сразу сидеть / сразу исчезнуть.
 fn orb(app: &AppHandle, action: &str) {
     IN_ORB.store(matches!(action, "arrive" | "present"), Ordering::Relaxed);
-    let _ = app.emit_to("main", "mascot://orb", action);
+    let _ = app.emit("mascot://orb", action);
 }
 
 pub(crate) fn mode() -> String {
@@ -491,8 +424,7 @@ pub fn unpin(app: &AppHandle) {
 pub fn spawn(app: &AppHandle) {
     let settings = app.state::<LiveConfig>().get().settings.clone();
     let _ = APP.set(app.clone());
-    NATIVE.store(settings.native_mascot, Ordering::Relaxed);
-    if settings.native_mascot && settings.effective_mascot_mode() != "never" {
+    if settings.effective_mascot_mode() != "never" {
         // поток окон, устройство и шейдер линзы — фоном, пока создаётся остальное
         mascot_native::prewarm(app);
     }
@@ -702,7 +634,6 @@ fn hide(window: &Win) {
 /// Первый запуск (app.js): осьминог выходит на экран и представляется — реплики `lines`
 /// печатает пузырь, потом зовёт `mascot_intro_done`. Пузырь показывается и тогда, когда
 /// он выключен в настройках. `false` — маскота нет (режим `never`, лёгкий интерфейс).
-#[tauri::command]
 pub fn mascot_intro(app: AppHandle, lines: Vec<String>) -> bool {
     if mode() == "never" || lines.is_empty() {
         return false;
@@ -734,19 +665,17 @@ pub fn mascot_intro(app: AppHandle, lines: Vec<String>) -> bool {
     true
 }
 
-/// bubble.html: реплики знакомства (пусто — знакомства нет или они уже отданы).
-#[tauri::command]
+/// Пузырь: реплики знакомства (пусто — знакомства нет или они уже отданы).
 pub fn bubble_intro() -> Vec<String> {
     INTRO_LINES.lock().map(|mut lines| std::mem::take(&mut *lines)).unwrap_or_default()
 }
 
-/// bubble.html договорил знакомство: в режиме `commands` осьминог уходит в сферу.
-#[tauri::command]
+/// Пузырь договорил знакомство: в режиме `commands` осьминог уходит в сферу.
 pub fn mascot_intro_done(app: AppHandle) {
     if !INTRO.swap(false, Ordering::Relaxed) {
         return;
     }
-    let _ = app.emit_to("main", "reever://mascot-intro-done", ());
+    let _ = app.emit("reever://mascot-intro-done", ());
     bubble::sync(&app);
     if mode() == "commands" && !command_active() {
         if let Some(window) = win(&app) {
@@ -755,21 +684,8 @@ pub fn mascot_intro_done(app: AppHandle) {
     }
 }
 
-/// Настройки → Интерфейс: нативное окно маскота вкл/выкл — сразу, без перезапуска.
-#[tauri::command]
-pub fn set_native_mascot(app: AppHandle, config: tauri::State<'_, LiveConfig>, enabled: bool) -> Result<(), String> {
-    let current = config.get();
-    crate::commands_api::persist_value(&current, "native_mascot", serde_json::Value::Bool(enabled))?;
-    let mut fresh = (*current).clone();
-    fresh.settings.native_mascot = enabled;
-    config.set(std::sync::Arc::new(fresh));
-    set_native(&app, enabled);
-    Ok(())
-}
-
-/// skin/fps.js: «Плавность» сменилась (или веб-окно загрузилось с ней) — для нативных окон.
-#[tauri::command]
-pub fn set_fps_limit(config: tauri::State<'_, LiveConfig>, limit: u32) -> Result<(), String> {
+/// «Плавность» сменилась — для всех окон.
+pub fn set_fps_limit(config: crate::app::State<'_, LiveConfig>, limit: u32) -> Result<(), String> {
     let limit = if crate::native::FPS_LIMITS.contains(&limit) { limit } else { 0 };
     let current = config.get();
     mascot_native::set_fps_limit(limit);
@@ -783,15 +699,14 @@ pub fn set_fps_limit(config: tauri::State<'_, LiveConfig>, limit: u32) -> Result
     Ok(())
 }
 
-/// mascot.html: осьминог приземлился (true) или взлетел/исчез (false).
-#[tauri::command]
+/// Осьминог приземлился (true) или взлетел/исчез (false).
 pub fn mascot_rest(rest: bool) {
     RESTING.store(rest, Ordering::Relaxed);
 }
 
-/// Окно больше осьминога и прозрачно почти целиком, но прозрачные пиксели WebView2 всё
-/// равно ловят клики. Поэтому окно пропускает мышь сквозь себя везде, кроме видимой части
-/// с осьминогом в покое: поток следит за курсором и переключает это на границе.
+/// Окно больше осьминога и прозрачно почти целиком. Оно пропускает мышь сквозь себя везде,
+/// кроме непрозрачных пикселей осьминога в покое: поток следит за курсором и переключает это
+/// на границе.
 fn watch_cursor(window: Win) {
     std::thread::spawn(move || {
         let mut catching: Option<bool> = None;
@@ -803,19 +718,13 @@ fn watch_cursor(window: Win) {
                 // пузырь стоит над маскотом и должен остаться над ним
                 bubble::raise(window.app_handle());
             }
-            let (Some(position), Some(size)) = (window.outer_position(), window.outer_size()) else { return };
-            let native = matches!(window, Win::Native(..));
+            if window.outer_position().is_none() {
+                return;
+            }
             let over = DRAGGING.load(Ordering::Relaxed)
                 || (SHOWN.load(Ordering::Relaxed)
                     && RESTING.load(Ordering::Relaxed)
-                    // нативное окно ловит мышь только над непрозрачными пикселями осьминога;
-                    // веб-окно — над всей видимой частью (прозрачные пиксели WebView2 ловят клики)
-                    && cursor().is_some_and(|p| if native { mascot_native::over_opaque(p) } else {
-                        let big = BIG.load(Ordering::Relaxed) as f64 / 1000.0;
-                        let (half_w, half_h) = (size.width as f64 / big / 2.0, size.height as f64 / big / 2.0);
-                        let (cx, cy) = (position.x as f64 + size.width as f64 / 2.0, position.y as f64 + size.height as f64 / 2.0);
-                        (p.x as f64 - cx).abs() <= half_w && (p.y as f64 - cy).abs() <= half_h
-                    }));
+                    && cursor().is_some_and(mascot_native::over_opaque));
             if catching != Some(over) {
                 if !window.set_ignore_cursor_events(!over) {
                     return;
@@ -867,61 +776,23 @@ fn create(app: &AppHandle) {
     let factor = scale as f64 / 100.0;
     let big = big_for(app.primary_monitor().ok().flatten(), scale);
     BIG.store((big * 1000.0).round() as u32, Ordering::Relaxed);
-    if NATIVE.load(Ordering::Relaxed) {
-        create_native(app, scale, VISIBLE_W * big * factor, VISIBLE_H * big * factor);
-        return;
-    }
-    let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "mascot").cloned() else {
-        ui_log(app, crate::msg!("log.window.noConfig", window = "mascot"));
-        return;
-    };
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        // Создаётся далеко за экраном: первый показ окна без рамки Windows сопровождает
-        // кадром со стандартной рамкой, и пусть он мелькнёт там, где его никто не видит.
-        let built = WebviewWindowBuilder::from_config(&app, &window_config)
-            .map(|builder| builder.inner_size(VISIBLE_W * big * factor, VISIBLE_H * big * factor).position(-30000.0, -30000.0))
-            .and_then(|builder| builder.build());
-        let window = match built {
-            Ok(window) => window,
-            Err(error) => {
-                ui_log(&app, crate::msg!("log.window.failed", window = "mascot", error = error));
-                return;
-            }
-        };
-        // Окно показывается один раз и навсегда (там же, за экраном); дальше маскот
-        // появляется и прячется только рисованием (см. SHOWN), мышь — сквозь окно.
-        let _ = window.set_ignore_cursor_events(true);
-        let _ = window.show();
-        let window = Win::Web(window);
-        if NATIVE.load(Ordering::Relaxed) {
-            // пока окно создавалось, включили нативное — это веб-окно уже лишнее
-            window.destroy();
-            return;
-        }
-        created(&app, window, scale);
-    });
+    create_native(app, scale, VISIBLE_W * big * factor, VISIBLE_H * big * factor);
 }
 
-/// Нативное окно: создаётся в своём потоке (поток окон мог ещё не прогреться), дальше — как
-/// веб-окно. Прозрачное окно без рамки на DirectComposition белой рамкой при показе не мелькает,
-/// поэтому создаётся сразу у угла, где будет стоять, — с DPI нужного монитора.
+/// Окно создаётся в своём потоке (поток окон мог ещё не прогреться). Прозрачное окно без рамки
+/// на DirectComposition белой рамкой при показе не мелькает, поэтому создаётся сразу у угла,
+/// где будет стоять, — с DPI нужного монитора.
 fn create_native(app: &AppHandle, scale: u32, width: f64, height: f64) {
     let app = app.clone();
     std::thread::spawn(move || {
         let anchor = pinned_on_screen(&app).or_else(|| default_anchor(&app)).unwrap_or([0, 0]);
         let fps = app.state::<LiveConfig>().get().settings.fps_limit;
         let Some(hwnd) = mascot_native::create(&app, anchor[0] - 1, anchor[1] - 1, width, height, fps) else { return };
-        let window = Win::Native(app.clone(), hwnd);
-        if !NATIVE.load(Ordering::Relaxed) {
-            window.destroy();
-            return;
-        }
-        created(&app, window, scale);
+        created(&app, Win::Native(app.clone(), hwnd), scale);
     });
 }
 
-/// Окно создано (веб или нативное): слежение за курсором, место, и всё, что могло смениться,
+/// Окно создано: слежение за курсором, место, и всё, что могло смениться,
 /// пока оно создавалось.
 fn created(app: &AppHandle, window: Win, scale: u32) {
     watch_cursor(window.clone());
@@ -963,10 +834,7 @@ fn resize_keep_corner(window: &Win, scale: u32) {
         let y = position.y + (size.height as f64 * old_corner - new_size.height as f64 * corner).round() as i32;
         window.set_position(x, y);
     }
-    // у веб-окна раскладку пересчитывает resize страницы, нативному — сказать
-    if matches!(window, Win::Native(..)) {
-        window_relayout();
-    }
+    window_relayout();
     bubble::place(window.app_handle());
 }
 
@@ -976,15 +844,8 @@ fn window_relayout() {
     }
 }
 
-/// Перетаскивание за голову. Захват указателя в WebView2 теряется, как только окно
-/// поехало под курсором, поэтому окно ведёт этот поток по системному курсору, пока
-/// зажата левая кнопка, а об отпускании страница узнаёт событием `mascot://drop`.
-#[tauri::command]
-pub fn mascot_drag(window: WebviewWindow) {
-    drag(Win::Web(window));
-}
-
-/// Нативное окно: голову взяли (поток окон) — то же перетаскивание, что у веб-окна.
+/// Перетаскивание за голову (голову взяли в потоке окон): окно ведёт этот поток по
+/// системному курсору, пока зажата левая кнопка; об отпускании окно узнаёт сообщением `Drop`.
 pub(crate) fn drag_native() {
     let (Some(app), Some(hwnd)) = (APP.get(), mascot_native::hwnd()) else { return };
     drag(Win::Native(app.clone(), hwnd));

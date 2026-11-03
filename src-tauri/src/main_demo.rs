@@ -11,7 +11,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Emitter, Manager};
+use crate::app::AppHandle;
 
 use crate::events;
 
@@ -51,10 +51,9 @@ fn memory(started: Instant, what: &str) {
 }
 
 pub fn start(app: &AppHandle) {
-    // нативное главное окно — только в памяти, конфиг во временной папке и так свой
+    // вид окна — только в памяти, конфиг во временной папке и так свой
     if let Some(config) = app.try_state::<crate::config::LiveConfig>() {
         let mut fresh = (*config.get()).clone();
-        fresh.settings.native_main = true;
         // REEVER_MAIN_DEMO_LITE=1 — лёгкий вид (lite.css)
         fresh.settings.lite_ui = std::env::var_os("REEVER_MAIN_DEMO_LITE").is_some();
         // REEVER_MAIN_DEMO_LOCALE=ar — язык интерфейса (арабский: зеркальная раскладка)

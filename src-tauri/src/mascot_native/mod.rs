@@ -13,7 +13,7 @@ mod view;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use tauri::{AppHandle, Manager};
+use crate::app::AppHandle;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
@@ -141,7 +141,7 @@ pub fn create(app: &AppHandle, x: i32, y: i32, width: f64, height: f64, fps_limi
         .get("mascot/anim.json".into())
         .and_then(|a| serde_json::from_slice::<AnimJson>(&a.bytes).ok());
     let Some(anim) = anim else {
-        log(app, "mascot: mascot/anim.json is missing from the bundled frontend".into());
+        log(app, "mascot: mascot/anim.json is missing from the embedded assets".into());
         return None;
     };
     let state = crate::events::current_state();

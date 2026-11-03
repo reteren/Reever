@@ -10,7 +10,7 @@ use std::{
 
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Manager};
+use crate::app::AppHandle;
 
 use crate::uilang::LogText;
 
@@ -127,7 +127,6 @@ pub fn remember_ui_status(status: &Value) {
     }
 }
 
-#[tauri::command]
 pub fn cache_ui_status(status: Value) {
     remember_ui_status(&status);
 }
@@ -159,7 +158,6 @@ pub fn set_compact(compact: bool) {
     UI_COMPACT.store(compact, Ordering::Relaxed);
 }
 
-#[tauri::command]
 pub fn set_ui_tab(tab: String) -> Result<(), String> {
     if !is_ui_tab(&tab) {
         return Err("unknown UI tab".into());
@@ -172,7 +170,6 @@ fn is_ui_tab(tab: &str) -> bool {
     matches!(tab, "home" | "actions" | "settings" | "logs")
 }
 
-#[tauri::command]
 pub fn get_ui_snapshot() -> UiSnapshot {
     UiSnapshot {
         state: current_state(),
@@ -226,15 +223,10 @@ impl LevelMeter {
                 return;
             }
         } else if !self.visible || self.last_check.elapsed() >= Self::CHECK {
-            // После создания WebView и далее раз в полсекунды уточняем видимость окна.
+            // Раз в полсекунды уточняем видимость окна.
             // При скрытом окне (и без маскота) обнуляем пик и возвращаемся до расчёта RMS.
             self.last_check = Instant::now();
-            // нативное главное окно (main_native) — без веб-вида, но тоже показывает уровень
-            self.visible = crate::main_native::is_open()
-                || app
-                    .get_webview_window("main")
-                    .and_then(|w| w.is_visible().ok())
-                    .unwrap_or(false);
+            self.visible = crate::main_native::is_open();
             if !self.visible {
                 MAIN_VISIBLE.store(false, Ordering::Relaxed);
                 if !mascot {
@@ -252,10 +244,9 @@ impl LevelMeter {
         }
         let level = (self.peak * 10000.0).round() / 10000.0;
         if self.visible {
-            let _ = app.emit_to("main", "reever://level", level);
+            let _ = app.emit("reever://level", level);
         }
         if mascot {
-            let _ = app.emit_to("mascot", "reever://level", level);
             crate::mascot::level(level);
         }
         self.peak = 0.0;

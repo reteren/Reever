@@ -1,24 +1,16 @@
 //! Фигурное окно скина: силуэт окна = силуэт хромовой рамки.
 //!
-//! Прозрачные пиксели WebView2 всё равно ловят клики, поэтому пустоты между шипами
-//! вырезаются из окна регионом Windows: клик туда уходит в окно под Reever. Маску
-//! считает интерфейс по альфе отрендеренной рамки (один источник правды — картинка)
-//! и присылает прямоугольниками в CSS-пикселях; здесь они переводятся в физические.
+//! Пустоты между шипами вырезаются из окна регионом Windows: клик туда уходит в окно под
+//! Reever. Маску считает главное окно по альфе рамки (один источник правды — картинка) и
+//! отдаёт прямоугольниками в DIP; здесь они переводятся в физические пиксели.
 
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::Graphics::Gdi::{
     ExtCreateRegion, SetWindowRgn, RDH_RECTANGLES, RGNDATA, RGNDATAHEADER,
 };
 
-#[tauri::command]
-pub fn set_window_shape(window: tauri::WebviewWindow, rects: Vec<[f64; 4]>) -> Result<(), String> {
-    let hwnd = window.hwnd().map_err(|e| e.to_string())?.0 as isize;
-    let scale = window.scale_factor().map_err(|e| e.to_string())?;
-    apply_region(hwnd, &rects, scale)
-}
-
 /// Обрезать окно по прямоугольникам (`[x0, y0, x1, y1]` в DIP, `scale` — масштаб монитора).
-/// Пустой список — обычное прямоугольное окно. Общая часть веб-окна и нативного (main_native).
+/// Пустой список — обычное прямоугольное окно.
 pub fn apply_region(hwnd: isize, rects: &[[f64; 4]], scale: f64) -> Result<(), String> {
     let hwnd = HWND(hwnd as _);
     if rects.is_empty() {

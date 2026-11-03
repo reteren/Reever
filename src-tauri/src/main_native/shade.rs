@@ -63,7 +63,7 @@ pub struct Shade {
 }
 
 impl Shade {
-    pub fn new(images: &mut Images, app: &tauri::AppHandle, btn: [(ImageId, ImageId); 2], tips: [String; 2]) -> Self {
+    pub fn new(images: &mut Images, app: &crate::app::AppHandle, btn: [(ImageId, ImageId); 2], tips: [String; 2]) -> Self {
         let l = |p: &str| crate::dialogs_native::loader(app, p);
         let color = images.add_loader(l("skin/shade_color.webp"));
         let normal = images.add_loader(l("skin/shade_normal.webp"));

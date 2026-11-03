@@ -1,5 +1,5 @@
 //! Пузырь над маскотом: терминал без рамки, куда по ходу речи пишется сказанное
-//! (frontend/bubble.html). Настройка `mascot_bubble`; работает, пока маскот на экране.
+//! (bubble_native). Настройка `mascot_bubble`; работает, пока маскот на экране.
 //!
 //! Окно, как и окно маскота, создаётся один раз и больше не прячется: показ и скрытие
 //! прозрачного окна без рамки Windows сопровождает кадром со стандартной белой рамкой.
@@ -9,7 +9,7 @@
 
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
-use tauri::{webview::WebviewWindowBuilder, AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow};
+use crate::app::AppHandle;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -17,7 +17,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::bubble_native::{self, Msg};
-use crate::events::ui_log;
 use crate::mascot;
 
 /// Настройка включена.
@@ -29,66 +28,36 @@ static ARROW_X: AtomicI32 = AtomicI32::new(1700);
 const HEAD_ABOVE_CENTER: f64 = 64.0;
 const TIP_GAP: f64 = 2.0;
 
-/// Окно пузыря: веб (bubble.html) или нативное (bubble_native, вместе с нативным маскотом).
-/// Логика показа общая, различается только транспорт.
-enum Win {
-    Web(WebviewWindow),
-    Native(isize),
-}
+/// Окно пузыря (bubble_native).
+struct Win(isize);
 
 impl Win {
-    fn native(&self) -> bool {
-        matches!(self, Win::Native(_))
-    }
-
     fn destroy(&self) {
-        match self {
-            Win::Web(w) => {
-                let _ = w.destroy();
-            }
-            Win::Native(_) => bubble_native::destroy(),
-        }
+        bubble_native::destroy();
     }
 
     /// (ширина, высота) в физических пикселях.
     fn outer_size(&self) -> Option<(f64, f64)> {
-        match self {
-            Win::Web(w) => w.outer_size().ok().map(|s| (s.width as f64, s.height as f64)),
-            Win::Native(_) => bubble_native::rect().map(|(_, _, w, h)| (w as f64, h as f64)),
-        }
+        bubble_native::rect().map(|(_, _, w, h)| (w as f64, h as f64))
     }
 
     fn set_position(&self, x: i32, y: i32) {
-        match self {
-            Win::Web(w) => {
-                let _ = w.set_position(PhysicalPosition::new(x, y));
-            }
-            Win::Native(h) => unsafe {
-                let _ = SetWindowPos(HWND(*h as *mut _), None, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-            },
+        unsafe {
+            let _ = SetWindowPos(HWND(self.0 as *mut _), None, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
     }
 
     fn scale_factor(&self) -> Option<f64> {
-        match self {
-            Win::Web(w) => w.scale_factor().ok(),
-            Win::Native(h) => Some(unsafe { GetDpiForWindow(HWND(*h as *mut _)) }.max(96) as f64 / 96.0),
-        }
+        Some(unsafe { GetDpiForWindow(HWND(self.0 as *mut _)) }.max(96) as f64 / 96.0)
     }
 
     fn hwnd(&self) -> Option<HWND> {
-        match self {
-            Win::Web(w) => w.hwnd().ok().map(|h| HWND(h.0 as _)),
-            Win::Native(h) => Some(HWND(*h as *mut _)),
-        }
+        Some(HWND(self.0 as *mut _))
     }
 }
 
-fn win(app: &AppHandle) -> Option<Win> {
-    if let Some(h) = bubble_native::hwnd() {
-        return Some(Win::Native(h));
-    }
-    app.get_webview_window("bubble").map(Win::Web)
+fn win(_app: &AppHandle) -> Option<Win> {
+    bubble_native::hwnd().map(Win)
 }
 
 /// Настройка включена — или маскот как раз представляется (`mascot::mascot_intro`).
@@ -104,17 +73,11 @@ pub fn configure(app: &AppHandle, on: bool) {
 }
 
 /// Окно пузыря есть, только пока он может понадобиться: настройка включена и маскот
-/// вообще бывает на экране (не режим `never`). Пузырь того же рода, что и маскот:
-/// нативный маскот — нативный пузырь.
+/// вообще бывает на экране (не режим `never`).
 pub fn sync(app: &AppHandle) {
     let want = enabled() && mascot::mode() != "never";
-    let native = mascot::native_enabled();
     match (want, win(app)) {
         (true, None) => create(app),
-        (true, Some(window)) if window.native() != native => {
-            window.destroy();
-            create(app);
-        }
         (false, Some(window)) => window.destroy(),
         (true, Some(_)) => notify(app),
         (false, None) => {}
@@ -123,20 +86,14 @@ pub fn sync(app: &AppHandle) {
 
 /// Пузырь заново узнаёт, можно ли ему показываться и где хвостик.
 pub fn notify(app: &AppHandle) {
-    match win(app) {
-        Some(Win::Web(window)) => {
-            let _ = window.emit("bubble://layout", ());
+    if win(app).is_some() {
+        let (allowed, ax) = bubble_layout();
+        bubble_native::send(Msg::Layout { allowed, ax: ax as f32 });
+        // реплики знакомства маскота
+        let lines = mascot::bubble_intro();
+        if !lines.is_empty() {
+            bubble_native::send(Msg::Intro(lines));
         }
-        Some(Win::Native(_)) => {
-            let (allowed, ax) = bubble_layout();
-            bubble_native::send(Msg::Layout { allowed, ax: ax as f32 });
-            // реплики знакомства — как bubble_intro() из bubble.html
-            let lines = mascot::bubble_intro();
-            if !lines.is_empty() {
-                bubble_native::send(Msg::Intro(lines));
-            }
-        }
-        None => {}
     }
 }
 
@@ -148,8 +105,7 @@ pub(crate) fn raise(app: &AppHandle) {
     }
 }
 
-/// Для bubble.html: можно ли сейчас показывать пузырь и где хвостик (логические px окна).
-#[tauri::command]
+/// Можно ли сейчас показывать пузырь и где хвостик (логические px окна).
 pub fn bubble_layout() -> (bool, f64) {
     (
         enabled() && mascot::on_screen(),
@@ -159,7 +115,6 @@ pub fn bubble_layout() -> (bool, f64) {
 
 /// Поставить пузырь над головой маскота (в пределах рабочей области его монитора).
 pub fn place(app: &AppHandle) {
-    // окно маскота — веб или нативное (mascot::geometry)
     let (Some(bubble), Some((position, size, scale_factor, monitor))) = (win(app), mascot::geometry(app)) else {
         return;
     };
@@ -187,48 +142,19 @@ pub fn place(app: &AppHandle) {
 static CREATING: AtomicBool = AtomicBool::new(false);
 
 fn create(app: &AppHandle) {
-    if mascot::native_enabled() {
-        if CREATING.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        // нативное окно — в своём потоке: поток окон мог ещё не прогреться
-        let app = app.clone();
-        std::thread::spawn(move || {
-            // у маскота — чтобы окно сразу получило DPI его монитора
-            let (x, y) = mascot::geometry(&app).map_or((0, 0), |(p, _, _, _)| (p.x, p.y));
-            let made = bubble_native::create(&app, x, y);
-            CREATING.store(false, Ordering::SeqCst);
-            if made.is_none() {
-                return;
-            }
-            if !mascot::native_enabled() {
-                bubble_native::destroy();
-                return;
-            }
-            place(&app);
-            notify(&app);
-        });
+    if CREATING.swap(true, Ordering::SeqCst) {
         return;
     }
-    let Some(window_config) = app.config().app.windows.iter().find(|window| window.label == "bubble").cloned() else {
-        ui_log(app, crate::msg!("log.window.noConfig", window = "bubble"));
-        return;
-    };
+    // окно — в своём потоке: поток окон мог ещё не прогреться
     let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        // за экраном: первый показ окна без рамки мелькает стандартной рамкой там, где не видно
-        let built = WebviewWindowBuilder::from_config(&app, &window_config)
-            .map(|builder| builder.position(-30000.0, -30000.0))
-            .and_then(|builder| builder.build());
-        let window = match built {
-            Ok(window) => window,
-            Err(error) => {
-                ui_log(&app, crate::msg!("log.window.failed", window = "bubble", error = error));
-                return;
-            }
-        };
-        let _ = window.set_ignore_cursor_events(true);
-        let _ = window.show();
+    std::thread::spawn(move || {
+        // у маскота — чтобы окно сразу получило DPI его монитора
+        let (x, y) = mascot::geometry(&app).map_or((0, 0), |(p, _, _, _)| (p.x, p.y));
+        let made = bubble_native::create(&app, x, y);
+        CREATING.store(false, Ordering::SeqCst);
+        if made.is_none() {
+            return;
+        }
         place(&app);
         notify(&app);
     });

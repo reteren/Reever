@@ -1,6 +1,6 @@
 //! Автозапуск Windows с тем же значением реестра, которое создавал auto-launch.
 
-use tauri::AppHandle;
+use crate::app::AppHandle;
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::ERROR_FILE_NOT_FOUND;
 use windows::Win32::System::Registry::{
@@ -11,6 +11,8 @@ use windows::Win32::System::Registry::{
 const RUN: &str = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
 const APPROVED: &str =
     "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run";
+/// Имя значения в Run (productName, как писал прежний плагин автозапуска).
+const RUN_NAME: &str = "Reever";
 const ENABLED: [u8; 12] = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 fn wide(value: &str) -> Vec<u16> {
@@ -37,14 +39,14 @@ fn open(
 }
 
 /// Запись совместима с tauri-plugin-autostart/auto-launch: имя пакета и путь без кавычек.
-pub fn set(app: &AppHandle, enabled: bool) -> Result<(), String> {
+pub fn set(_app: &AppHandle, enabled: bool) -> Result<(), String> {
     let command = if enabled {
         let path = std::env::current_exe().map_err(|e| e.to_string())?;
         Some(format!("{} --hidden", path.display()))
     } else {
         None
     };
-    set_named(&app.package_info().name, command.as_deref())
+    set_named(RUN_NAME, command.as_deref())
 }
 
 fn set_named(name: &str, command: Option<&str>) -> Result<(), String> {
@@ -82,8 +84,8 @@ fn set_named(name: &str, command: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn is_enabled(app: &AppHandle) -> bool {
-    is_enabled_named(&app.package_info().name)
+pub fn is_enabled(_app: &AppHandle) -> bool {
+    is_enabled_named(RUN_NAME)
 }
 
 fn is_enabled_named(name: &str) -> bool {

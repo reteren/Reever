@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use tauri::path::BaseDirectory;
-use tauri::{AppHandle, Manager};
+use crate::app::BaseDirectory;
+use crate::app::AppHandle;
 
 /// Таблицы алиасов из resources/aliases.json (редактируется пользователем).
 #[derive(Clone, Default, Deserialize)]
@@ -170,21 +170,9 @@ pub struct Settings {
     /// включён, маскота нет при любом `mascot_mode` (сам выбор сохраняется на потом).
     #[serde(default)]
     pub lite_ui: bool,
-    /// Окно маскота нативное (Direct2D, без WebView2) вместо frontend/mascot.html.
-    #[serde(default)]
-    pub native_mascot: bool,
-    /// «Плавность»: 0 — как у монитора, 60 или 30 кадров. Веб-окна хранят выбор в
-    /// localStorage (skin/fps.js) и присылают его сюда — для нативных окон.
+    /// «Плавность»: 0 — как у монитора, 60 или 30 кадров.
     #[serde(default)]
     pub fps_limit: u32,
-    /// Окна выбора и подтверждения нативные (Direct2D, без WebView2) вместо picker.html и
-    /// confirm.html. В лёгком интерфейсе пока всегда веб.
-    #[serde(default)]
-    pub native_dialogs: bool,
-    /// Главное окно нативное (Direct2D, без WebView2) вместо index.html — этап 4, пока
-    /// перенесены каркас, «Главная» и «Лог». В лёгком интерфейсе пока всегда веб.
-    #[serde(default)]
-    pub native_main: bool,
 }
 
 fn default_dictation_english_level() -> u8 {
@@ -507,10 +495,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("mascot_bubble", mascot_bubble, bool);
     restore!("mascot_position", mascot_position, Option<[i32; 2]>);
     restore!("lite_ui", lite_ui, bool);
-    restore!("native_mascot", native_mascot, bool);
     restore!("fps_limit", fps_limit, u32);
-    restore!("native_dialogs", native_dialogs, bool);
-    restore!("native_main", native_main, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -564,10 +549,7 @@ impl Default for Settings {
             mascot_bubble: true,
             mascot_position: None,
             lite_ui: false,
-            native_mascot: false,
             fps_limit: 0,
-            native_dialogs: false,
-            native_main: false,
         }
     }
 }
@@ -606,7 +588,7 @@ impl LiveConfig {
 }
 
 impl ReeverConfig {
-    pub fn resolve(app: &AppHandle) -> tauri::Result<Self> {
+    pub fn resolve(app: &AppHandle) -> Result<Self, String> {
         let aliases = std::fs::read_to_string(user_config_path(app, "aliases.json"))
             .ok()
             .and_then(|s| serde_json::from_str::<Aliases>(&s).ok())

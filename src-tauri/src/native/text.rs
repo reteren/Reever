@@ -28,9 +28,9 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_WORD_WRAPPING_WRAP, DWRITE_LINE_METRICS,
 };
 
-static GEOLOGICA: &[u8] = include_bytes!("../../../frontend/fonts/Geologica.ttf");
-static HANDJET: &[u8] = include_bytes!("../../../frontend/fonts/Handjet.ttf");
-static MARTIAN_MONO: &[u8] = include_bytes!("../../../frontend/fonts/MartianMono.ttf");
+static GEOLOGICA: &[u8] = include_bytes!("../../assets/fonts/Geologica.ttf");
+static HANDJET: &[u8] = include_bytes!("../../assets/fonts/Handjet.ttf");
+static MARTIAN_MONO: &[u8] = include_bytes!("../../assets/fonts/MartianMono.ttf");
 
 /// Шрифт текста. Свои шрифты берутся из встроенной коллекции, системный — по имени семейства.
 #[derive(Debug, Clone, PartialEq, Eq)]

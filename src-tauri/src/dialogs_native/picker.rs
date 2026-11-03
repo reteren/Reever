@@ -8,7 +8,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::AppHandle;
+use crate::app::AppHandle;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     VK_BACK, VK_DOWN, VK_END, VK_ESCAPE, VK_HOME, VK_NEXT, VK_PRIOR, VK_RETURN, VK_SPACE, VK_TAB, VK_UP,
 };
@@ -297,12 +297,14 @@ impl PickerView {
             return;
         }
         self.items.clear();
+        self.entries.clear();
         let host = self.host.clone();
         std::thread::spawn(move || host.choose(index));
     }
 
     fn close_window(&mut self) {
         self.items.clear();
+        self.entries.clear();
         let host = self.host.clone();
         std::thread::spawn(move || host.close());
     }
@@ -506,7 +508,8 @@ impl PickerView {
                         } else if hover {
                             fill_round(cx, row, 5.0, ACC_5);
                         }
-                        let item = &self.items[*i];
+                        // список очищают выбор и закрытие, а кадр мог начаться до них
+                        let Some(item) = self.items.get(*i) else { continue };
                         let inner = Rect::new(row.x + 10.0, row.y + 5.0, row.w - 20.0, row.h - 10.0);
                         let (num_c, kind_c, name_c, path_c, glow) =
                             if sel { (GLASS, GLASS, GLASS, GLASS, Glow::None) } else { (ACC_3, ACC_2, ACC_HOT, ACC_3, Glow::G2) };
@@ -880,9 +883,10 @@ impl WindowHandler for PickerView {
         let mut items = Vec::new();
         for (e, entry) in self.entries.iter().enumerate() {
             if let Entry::Item(i) = entry {
+                let Some(item) = self.items.get(*i) else { continue };
                 let id = NodeId(100 + *i as u64);
                 let mut n = Node::new(Role::ListBoxOption);
-                n.set_label(format!("{} — {}", self.items[*i].name, self.items[*i].path));
+                n.set_label(format!("{} — {}", item.name, item.path));
                 n.set_selected(*i == self.selected);
                 n.set_position_in_set(*i + 1);
                 n.set_size_of_set(self.items.len());

@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "src-tauri" / "windows" / "art"
-FONT = ROOT / "frontend" / "fonts" / "Handjet.ttf"
+FONT = ROOT / "src-tauri" / "assets" / "fonts" / "Handjet.ttf"
 ICON = ROOT / "src-tauri" / "icons" / "icon.png"
 
 # Цвета — как в models.nsh (REEVER_C_*): фон страниц совпадает с фоном картинок.

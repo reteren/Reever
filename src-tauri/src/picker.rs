@@ -1,20 +1,19 @@
 //! Окно выбора «ривер найди …»: несколько совпадений из индекса — список в центре
-//! экрана (окно `picker`, frontend/picker.html). Выбор — кликом, клавишами или голосом
+//! экрана (нативное окно, dialogs_native/picker.rs). Выбор — кликом, клавишами или голосом
 //! («третий»); открытие записывается в историю для ранжирования (find::Usage).
 //! В окне можно и печатать: поле поиска ищет по индексу на каждую букву, как Everything
-//! (`picker_search`, `find::search_typed`).
+//! (`find::search_typed`).
 
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicU64, Ordering},
         Arc, Mutex,
     },
     time::{Duration, Instant},
 };
 
-use serde_json::{json, Value};
-use tauri::{webview::WebviewWindowBuilder, AppHandle, Emitter, Manager, State, WebviewWindow, WindowEvent};
+use crate::app::AppHandle;
 
 use crate::actions::SharedState;
 use crate::config::ReeverConfig;
@@ -22,9 +21,8 @@ use crate::events::ui_log;
 use crate::find::{FindItem, FindScope, Usage};
 use crate::{launcher, winutil};
 
-static PICKER_CREATE_PENDING: AtomicBool = AtomicBool::new(false);
-static PICKER_READY: AtomicBool = AtomicBool::new(false);
-static PENDING_PICKER: Mutex<Option<Value>> = Mutex::new(None);
+/// Окно открыто (варианты показаны).
+static OPEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 /// Номер последнего набранного запроса: ответ на устаревший не трогает список.
 static SEARCH_GENERATION: AtomicU64 = AtomicU64::new(0);
 /// Недавние Windows (`find::windows_recent` читает папку ярлыков) — на время набора.
@@ -48,28 +46,18 @@ pub fn show(
     if let Ok(mut picker) = shared.picker.lock() {
         *picker = items.to_vec();
     }
-    if let Ok(mut pending) = PENDING_PICKER.lock() {
-        *pending = Some(json!({ "title": title, "query": query, "scope": scope, "items": items }));
-    }
-    if crate::dialogs_native::enabled(app) {
-        // нативное окно (native_dialogs): веб-окна выбора при этом нет
-        if let Some(window) = app.get_webview_window("picker") {
-            let _ = window.destroy();
-        }
-        let payload = crate::dialogs_native::picker::Payload {
-            title: title.to_string(),
-            query: query.to_string(),
-            scope,
-            items: items.to_vec(),
-        };
-        crate::dialogs_native::picker::show(app, Arc::new(NativeHost { app: app.clone() }), payload);
-        return session;
-    }
-    ensure_picker(app);
+    OPEN.store(true, Ordering::SeqCst);
+    let payload = crate::dialogs_native::picker::Payload {
+        title: title.to_string(),
+        query: query.to_string(),
+        scope,
+        items: items.to_vec(),
+    };
+    crate::dialogs_native::picker::show(app, Arc::new(NativeHost { app: app.clone() }), payload);
     session
 }
 
-/// Нативное окно выбора просит то же, что страница: выбрать, закрыть, искать набранное.
+/// Окно выбора просит: выбрать, закрыть, искать набранное.
 struct NativeHost {
     app: AppHandle,
 }
@@ -95,127 +83,9 @@ impl crate::dialogs_native::picker::Host for NativeHost {
     }
 }
 
-/// Создать окно по требованию. Событие с вариантами отправит picker_ready после подписки страницы.
-fn ensure_picker(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("picker") {
-        if PICKER_READY.load(Ordering::SeqCst) {
-            publish_picker(app, &window);
-        }
-        return;
-    }
-    if PICKER_CREATE_PENDING.swap(true, Ordering::SeqCst) {
-        return;
-    }
-    PICKER_READY.store(false, Ordering::SeqCst);
-
-    let Some(window_config) = app
-        .config()
-        .app
-        .windows
-        .iter()
-        .find(|window| window.label == "picker")
-        .cloned()
-    else {
-        PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-        ui_log(app, crate::msg!("log.window.noConfig", window = "picker"));
-        mark_current_session_closed(app);
-        return;
-    };
-
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let window = WebviewWindowBuilder::from_config(&app, &window_config)
-            .map(|builder| builder.initialization_script(crate::lite_script(&app)))
-            .map(|builder| if crate::dialog_demo::active() { builder.focused(false) } else { builder })
-            .and_then(|builder| builder.build());
-        let window = match window {
-            Ok(window) => window,
-            Err(error) => {
-                PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-                ui_log(&app, crate::msg!("log.window.failed", window = "picker", error = error));
-                mark_current_session_closed(&app);
-                return;
-            }
-        };
-
-        attach_picker_window(&app, &window);
-        PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-        // Закрытие могло прийти, пока WebView создавался. Не оставляем его скрытым в фоне.
-        if PENDING_PICKER.lock().map(|pending| pending.is_none()).unwrap_or(true) {
-            let _ = window.destroy();
-        }
-    });
-}
-
-fn attach_picker_window(app: &AppHandle, window: &WebviewWindow) {
-    let handle = app.clone();
-    let shared = app.state::<Arc<SharedState>>().inner().clone();
-    window.on_window_event(move |event| match event {
-        WindowEvent::CloseRequested { api, .. } => {
-            api.prevent_close();
-            mark_closed(&shared);
-            hide(&handle, &shared);
-        }
-        WindowEvent::Destroyed => {
-            PICKER_READY.store(false, Ordering::SeqCst);
-            PICKER_CREATE_PENDING.store(false, Ordering::SeqCst);
-            if PENDING_PICKER.lock().map(|pending| pending.is_some()).unwrap_or(false) {
-                ensure_picker(&handle);
-            }
-        }
-        _ => {}
-    });
-}
-
 /// Окно выбора на экране: пока оно открыто, аудио-поток не слушает голос.
 pub fn is_open() -> bool {
-    PENDING_PICKER.lock().map(|pending| pending.is_some()).unwrap_or(false)
-}
-
-/// Вызывается из picker.html после загрузки страницы и завершения подписки на событие.
-#[tauri::command]
-pub fn picker_ready(app: AppHandle) {
-    let Some(window) = app.get_webview_window("picker") else { return };
-    PICKER_READY.store(true, Ordering::SeqCst);
-    publish_picker(&app, &window);
-}
-
-fn publish_picker(app: &AppHandle, window: &WebviewWindow) {
-    let pending = PENDING_PICKER.lock().ok().and_then(|value| value.clone());
-    let Some(payload) = pending else {
-        let _ = window.destroy();
-        return;
-    };
-
-    let _ = app.emit_to("picker", "reever://picker", payload);
-    let _ = window.center();
-    if crate::dialog_demo::active() {
-        // режим проверки: показать без фокуса (человек за компьютером может печатать)
-        if let Ok(hwnd) = window.hwnd() {
-            unsafe {
-                let _ = windows::Win32::UI::WindowsAndMessaging::ShowWindow(
-                    windows::Win32::Foundation::HWND(hwnd.0 as _),
-                    windows::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE,
-                );
-            }
-        }
-        crate::dialog_demo::shown("picker");
-        return;
-    }
-    let _ = window.show();
-    let _ = window.set_focus();
-    crate::dialog_demo::shown("picker");
-    // Команда пришла голосом, без клика — Windows не даёт фокус фоновой программе;
-    // тот же обход, что и при подъёме найденного окна.
-    if let Ok(hwnd) = window.hwnd() {
-        winutil::bring_to_front_raw(hwnd.0 as isize);
-    }
-}
-
-fn mark_current_session_closed(app: &AppHandle) {
-    if let Some(shared) = app.try_state::<Arc<SharedState>>() {
-        mark_closed(&shared);
-    }
+    OPEN.load(Ordering::SeqCst)
 }
 
 /// Окно закрыто из интерфейса: отметить его номер, чтобы аудио-поток перестал ждать номер.
@@ -231,13 +101,7 @@ pub fn hide(app: &AppHandle, shared: &SharedState) {
     if let Ok(mut picker) = shared.picker.lock() {
         picker.clear();
     }
-    if let Ok(mut pending) = PENDING_PICKER.lock() {
-        *pending = None;
-    }
-    PICKER_READY.store(false, Ordering::SeqCst);
-    if let Some(window) = app.get_webview_window("picker") {
-        let _ = window.destroy();
-    }
+    OPEN.store(false, Ordering::SeqCst);
     crate::dialogs_native::picker::hide(app);
 }
 
@@ -279,18 +143,6 @@ pub fn open(app: &AppHandle, shared: &SharedState, cfg: &ReeverConfig, item: &Fi
     ok
 }
 
-#[tauri::command]
-pub fn picker_choose(
-    app: AppHandle,
-    shared: State<'_, Arc<SharedState>>,
-    cfg: State<'_, crate::config::LiveConfig>,
-    index: usize,
-) -> Result<bool, String> {
-    // Отметить до открытия: оно может занять время, а за это время может открыться новое окно.
-    mark_closed(&shared);
-    Ok(choose(&app, &shared, &cfg.get(), index))
-}
-
 fn windows_recent() -> Arc<HashMap<String, u64>> {
     let mut cached = RECENT.lock().unwrap_or_else(|e| e.into_inner());
     match cached.as_ref() {
@@ -306,20 +158,6 @@ fn windows_recent() -> Arc<HashMap<String, u64>> {
 /// Поиск, набранный в окне: варианты по индексу дисков (`find::search_typed`). Найденное
 /// становится списком окна — его номера выбирают и голосом, и клавишами. `None` в ответе —
 /// пришёл более новый запрос, этот ответ устарел. Индекс выключен — ошибка `index-off`.
-#[tauri::command]
-pub async fn picker_search(
-    app: AppHandle,
-    shared: State<'_, Arc<SharedState>>,
-    query: String,
-    scope: FindScope,
-) -> Result<Option<Vec<FindItem>>, String> {
-    let shared = shared.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || search_blocking(&app, &shared, &query, scope))
-        .await
-        .map_err(|error| error.to_string())?
-}
-
-/// Поиск набранного (общий для страницы и нативного окна): найденное становится списком окна.
 fn search_blocking(
     app: &AppHandle,
     shared: &Arc<SharedState>,
@@ -344,12 +182,4 @@ fn search_blocking(
     }
     *picker = items.clone();
     Ok(Some(items))
-}
-
-#[tauri::command]
-pub fn picker_close(app: AppHandle, shared: State<'_, Arc<SharedState>>) -> Result<(), String> {
-    mark_closed(&shared);
-    hide(&app, &shared);
-    ui_log(&app, crate::msg!("log.choice.closed"));
-    Ok(())
 }

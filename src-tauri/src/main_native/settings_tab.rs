@@ -23,9 +23,6 @@ const GROUPS: &[(&str, &[(&str, &str)])] = &[
         &[
             ("lite_ui", "lite_ui"),
             ("fps_limit", "fps"),
-            ("native_mascot", "native"),
-            ("native_dialogs", "native"),
-            ("native_main", "native"),
             ("ui_language", "ui_language"),
             ("ui_languages", "ui_languages"),
         ],
@@ -109,7 +106,6 @@ pub fn language_name(code: &str) -> &'static str {
 pub enum SettingsOut {
     /// Изменённые ключи settings.json (save_settings).
     Patch(serde_json::Map<String, Value>),
-    Native(&'static str, bool),
     LiteUi(bool),
     Autostart(bool),
     Hotkey { mute: bool, combo: String, mode: String },
@@ -296,7 +292,7 @@ impl SettingsTab {
     fn field(&self, items: &mut Vec<Item>, key: &str, kind: &str) {
         let help = self.help(key);
         match kind {
-            "bool" | "native" | "lite_ui" | "mascot_bubble" => {
+            "bool" | "lite_ui" | "mascot_bubble" => {
                 items.push(Item::Check { id: format!("cb:{key}"), label: self.label(key), on: self.flag(key) });
                 if let Some(h) = &help {
                     items.push(Item::Help { text: h.clone(), indent: true });
@@ -803,9 +799,6 @@ impl SettingsTab {
                 self.set_local(&key, Value::Bool(on));
                 self.rebuild();
                 match key.as_str() {
-                    "native_mascot" => Some(SettingsOut::Native("native_mascot", on)),
-                    "native_dialogs" => Some(SettingsOut::Native("native_dialogs", on)),
-                    "native_main" => Some(SettingsOut::Native("native_main", on)),
                     "lite_ui" => Some(SettingsOut::LiteUi(on)),
                     "mascot_bubble" => Some(self.mascot_out()),
                     _ => {
@@ -942,9 +935,9 @@ mod tests {
     }
 
     #[test]
-    fn native_switches_go_to_their_commands() {
+    fn switches_go_to_their_commands() {
         let mut t = tab();
-        assert_eq!(t.on_event(FormEvent::Toggle("cb:native_main".into())), Some(SettingsOut::Native("native_main", true)));
+        assert_eq!(t.on_event(FormEvent::Toggle("cb:lite_ui".into())), Some(SettingsOut::LiteUi(true)));
         assert_eq!(t.on_event(FormEvent::Toggle("cb:private_log".into())), None);
         assert!(t.patch.contains_key("private_log"));
     }

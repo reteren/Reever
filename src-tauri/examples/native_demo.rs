@@ -100,7 +100,7 @@ fn main() -> anyhow::Result<()> {
     let no_sprite = args.iter().any(|a| a == "--no-sprite");
 
     let (ws0, _) = stats::memory();
-    let mascot_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../frontend/mascot");
+    let mascot_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/mascot");
     let mut files: Vec<PathBuf> = std::fs::read_dir(&mascot_dir)?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("idle_") && n.ends_with(".webp")))

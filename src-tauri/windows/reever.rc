@@ -1,0 +1,31 @@
+// Ресурсы reever.exe: значок, сведения о версии, манифест. VERSION_* задаёт build.rs.
+#include <winver.h>
+
+1 ICON "../icons/icon.ico"
+1 24 "reever.exe.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION VERSION_COMMA
+PRODUCTVERSION VERSION_COMMA
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "46psy4"
+      VALUE "FileDescription", "Reever"
+      VALUE "FileVersion", VERSION_STR
+      VALUE "InternalName", "reever"
+      VALUE "LegalCopyright", "\251 46psy4"
+      VALUE "OriginalFilename", "reever.exe"
+      VALUE "ProductName", "Reever"
+      VALUE "ProductVersion", VERSION_STR
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

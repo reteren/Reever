@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use tauri::{AppHandle, Manager};
+use crate::app::AppHandle;
 
 use crate::actions::{Action, SharedState};
 use crate::config::ReeverConfig;

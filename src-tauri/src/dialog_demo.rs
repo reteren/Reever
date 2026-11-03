@@ -1,17 +1,16 @@
 //! Проверка окон выбора и подтверждения без микрофона: `REEVER_DIALOG_DEMO=1`. Reever
 //! запускается рядом с установленным (своё событие единственного экземпляра), не слушает эфир,
 //! не регистрирует горячие клавиши и держит конфиги во временной папке, а сам показывает окно
-//! выбора с примером списка, длинный список и вопрос «Выключить компьютер?». Работает и с веб-,
-//! и с нативными окнами (`native_dialogs`) — так их и сравнивают. Шаги и время показа окна
-//! печатаются в stderr (`[dialog-demo] …`). `REEVER_DIALOG_DEMO_WARM=1` — первое окно после
-//! прогрева в начале команды (как при «ривер найди …»). `REEVER_DIALOG_DEMO_NATIVE=1` — нативные
-//! окна, `REEVER_DIALOG_DEMO_LITE=1` — лёгкий вид (в памяти, без записи в settings.json).
+//! выбора с примером списка, длинный список и вопрос «Выключить компьютер?». Шаги и время
+//! показа окна печатаются в stderr (`[dialog-demo] …`). `REEVER_DIALOG_DEMO_WARM=1` — первое окно
+//! после прогрева в начале команды (как при «ривер найди …»), `REEVER_DIALOG_DEMO_LITE=1` —
+//! лёгкий вид (в памяти, без записи в settings.json).
 
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Manager};
+use crate::app::AppHandle;
 
 use crate::actions::SharedState;
 use crate::find::{FindItem, FindScope};
@@ -71,58 +70,12 @@ fn long() -> Vec<FindItem> {
         .collect()
 }
 
-#[link(name = "user32")]
-extern "system" {
-    fn PrintWindow(hwnd: windows::Win32::Foundation::HWND, hdc: windows::Win32::Graphics::Gdi::HDC, flags: u32) -> i32;
-}
-
-/// Снимок веб-окна через PrintWindow — только наше окно, экран не захватывается.
-fn print_window(hwnd: isize) -> Option<(u32, u32, Vec<u8>)> {
-    use windows::Win32::Foundation::{HWND, RECT};
-    use windows::Win32::Graphics::Gdi::*;
-    use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
-    unsafe {
-        let h = HWND(hwnd as *mut _);
-        let mut r = RECT::default();
-        GetWindowRect(h, &mut r).ok()?;
-        let (w, hh) = (r.right - r.left, r.bottom - r.top);
-        let screen = GetDC(None);
-        let mem = CreateCompatibleDC(screen);
-        let bmp = CreateCompatibleBitmap(screen, w, hh);
-        let old = SelectObject(mem, bmp);
-        // PW_RENDERFULLCONTENT: содержимое DirectComposition (WebView2) тоже
-        let ok = PrintWindow(h, mem, 2) != 0;
-        let mut bi = BITMAPINFO {
-            bmiHeader: BITMAPINFOHEADER { biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32, biWidth: w, biHeight: -hh, biPlanes: 1, biBitCount: 32, biCompression: BI_RGB.0, ..Default::default() },
-            ..Default::default()
-        };
-        let mut px = vec![0u8; (w * hh * 4) as usize];
-        GetDIBits(mem, bmp, 0, hh as u32, Some(px.as_mut_ptr().cast()), &mut bi, DIB_RGB_COLORS);
-        SelectObject(mem, old);
-        let _ = DeleteObject(bmp);
-        let _ = DeleteDC(mem);
-        ReleaseDC(None, screen);
-        if !ok {
-            return None;
-        }
-        for p in px.chunks_exact_mut(4) {
-            p.swap(0, 2);
-            p[3] = 255;
-        }
-        Some((w as u32, hh as u32, px))
-    }
-}
-
 /// Сохранить снимок окна `what` («picker» / «confirm») в REEVER_DIALOG_SHOTS/<name>.png.
 fn shoot(app: &AppHandle, what: &str, name: &str) {
     let Some(dir) = std::env::var_os("REEVER_DIALOG_SHOTS").map(std::path::PathBuf::from) else { return };
-    let shot = if crate::dialogs_native::enabled(app) {
-        match what {
-            "picker" => crate::dialogs_native::picker::snapshot(app),
-            _ => crate::dialogs_native::confirm::snapshot(app),
-        }
-    } else {
-        app.get_webview_window(what).and_then(|w| w.hwnd().ok()).and_then(|h| print_window(h.0 as isize))
+    let shot = match what {
+        "picker" => crate::dialogs_native::picker::snapshot(app),
+        _ => crate::dialogs_native::confirm::snapshot(app),
     };
     let Some((w, h, rgba)) = shot else {
         eprintln!("[dialog-demo] no shot {name}");
@@ -141,9 +94,6 @@ fn shoot(app: &AppHandle, what: &str, name: &str) {
 
 /// Нативное окно: снимок при 144 DPI (WM_DPICHANGED) и обратно.
 fn shoot_dpi(app: &AppHandle, what: &str, name: &str) {
-    if !crate::dialogs_native::enabled(app) {
-        return;
-    }
     let set = |dpi| match what {
         "picker" => crate::dialogs_native::picker::fake_dpi(dpi),
         _ => crate::dialogs_native::confirm::fake_dpi(dpi),
@@ -156,13 +106,9 @@ fn shoot_dpi(app: &AppHandle, what: &str, name: &str) {
 }
 
 pub fn start(app: &AppHandle) {
-    // REEVER_DIALOG_DEMO_NATIVE=1 — нативные окна, REEVER_DIALOG_DEMO_LITE=1 — лёгкий вид
-    // (только в памяти, settings.json проверки не меняется)
+    // REEVER_DIALOG_DEMO_LITE=1 — лёгкий вид (только в памяти, settings.json проверки не меняется)
     if let Some(config) = app.try_state::<crate::config::LiveConfig>() {
         let mut fresh = (*config.get()).clone();
-        if std::env::var_os("REEVER_DIALOG_DEMO_NATIVE").is_some() {
-            fresh.settings.native_dialogs = true;
-        }
         if std::env::var_os("REEVER_DIALOG_DEMO_LITE").is_some() {
             fresh.settings.lite_ui = true;
         }

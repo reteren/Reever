@@ -6,7 +6,7 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::AppHandle;
+use crate::app::AppHandle;
 use windows::Win32::Graphics::DirectWrite::{DWRITE_FONT_WEIGHT, DWRITE_TEXT_RANGE};
 use windows::Win32::UI::Input::KeyboardAndMouse::{VK_ESCAPE, VK_LEFT, VK_RETURN, VK_RIGHT, VK_SPACE, VK_TAB};
 

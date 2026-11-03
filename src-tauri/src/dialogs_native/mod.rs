@@ -11,7 +11,7 @@ pub mod picker;
 
 use std::sync::Arc;
 
-use tauri::AppHandle;
+use crate::app::AppHandle;
 use windows::Win32::Foundation::POINT;
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
@@ -147,14 +147,12 @@ pub fn centered_position() -> (i32, i32) {
     }
 }
 
-/// Включены ли нативные окна (настройка `native_dialogs`; в лёгком интерфейсе — веб).
+/// Обновить вид окон (лёгкий или полный) из настроек; окна всегда есть — true.
 pub fn enabled(app: &AppHandle) -> bool {
-    use tauri::Manager;
-    app.try_state::<crate::config::LiveConfig>().is_some_and(|c| {
-        let s = &c.get().settings;
-        LITE.store(s.lite_ui, std::sync::atomic::Ordering::Relaxed);
-        s.native_dialogs
-    })
+    if let Some(c) = app.try_state::<crate::config::LiveConfig>() {
+        LITE.store(c.get().settings.lite_ui, std::sync::atomic::Ordering::Relaxed);
+    }
+    true
 }
 
 /// WM_DPICHANGED с прямоугольником под новый масштаб (центр окна на месте).
@@ -170,18 +168,6 @@ pub fn send_dpi(hwnd: isize, dpi: u32) {
         let s = RECT { left: cx - w / 2, top: cy - hh / 2, right: cx - w / 2 + w, bottom: cy - hh / 2 + hh };
         SendMessageW(h, WM_DPICHANGED, WPARAM((dpi | (dpi << 16)) as usize), LPARAM(&s as *const RECT as isize));
     }
-}
-
-/// Настройки → Интерфейс: нативные окна выбора и подтверждения вкл/выкл — сразу: следующее
-/// окно покажется уже в новом виде (открытое сейчас доживает в прежнем).
-#[tauri::command]
-pub fn set_native_dialogs(config: tauri::State<'_, crate::config::LiveConfig>, enabled: bool) -> Result<(), String> {
-    let current = config.get();
-    crate::commands_api::persist_value(&current, "native_dialogs", serde_json::Value::Bool(enabled))?;
-    let mut fresh = (*current).clone();
-    fresh.settings.native_dialogs = enabled;
-    config.set(Arc::new(fresh));
-    Ok(())
 }
 
 /// Команда началась (слушаю после «ривер» или горячей клавиши): создать графическое

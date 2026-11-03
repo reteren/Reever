@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use serde_json::json;
-use tauri::{AppHandle, Manager, State};
+use crate::app::{AppHandle, State};
 
 use crate::actions::{Action, SharedState};
 use crate::apps::{self, AppEntry};
@@ -11,14 +11,12 @@ use crate::config::{LiveConfig, ReeverConfig};
 use crate::grammar::Grammar;
 
 /// Список всех действий (для UI).
-#[tauri::command]
 pub fn list_actions(state: State<'_, Arc<SharedState>>) -> Vec<Action> {
     state.actions.lock().map(|a| a.clone()).unwrap_or_default()
 }
 
 /// Встроенные фразы действий на языках, которые сейчас не распознаются: id → фразы.
 /// Окно их не показывает; из действий они не удаляются и вернутся, когда язык включат.
-#[tauri::command]
 pub fn inactive_action_phrases(
     state: State<'_, Arc<SharedState>>,
 ) -> std::collections::HashMap<String, Vec<String>> {
@@ -36,7 +34,6 @@ pub fn inactive_action_phrases(
 }
 
 /// Вернуть текущую редактируемую грамматику для раздела «Что можно сказать».
-#[tauri::command]
 pub fn get_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
     state
         .grammar
@@ -46,7 +43,6 @@ pub fn get_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
 }
 
 /// Встроенные фразы команд на языках, которые сейчас не распознаются, — редактор их прячет.
-#[tauri::command]
 pub fn inactive_triggers(state: State<'_, Arc<SharedState>>) -> Vec<String> {
     state
         .grammar
@@ -56,7 +52,6 @@ pub fn inactive_triggers(state: State<'_, Arc<SharedState>>) -> Vec<String> {
 }
 
 /// Слова отмены языков, которые сейчас не распознаются, — примеры на «Главной» их прячут.
-#[tauri::command]
 pub fn inactive_cancel_words(state: State<'_, Arc<SharedState>>) -> Vec<String> {
     state
         .grammar
@@ -66,7 +61,6 @@ pub fn inactive_cancel_words(state: State<'_, Arc<SharedState>>) -> Vec<String> 
 }
 
 /// Проверить и применить грамматику сразу, затем сохранить её для следующего запуска.
-#[tauri::command]
 pub fn save_grammar(state: State<'_, Arc<SharedState>>, grammar: Grammar) -> Result<(), String> {
     save_grammar_in(&state, grammar)
 }
@@ -93,7 +87,6 @@ pub fn save_grammar_in(state: &SharedState, grammar: Grammar) -> Result<(), Stri
 }
 
 /// Восстановить встроенные значения, сохранить их и уведомить аудио-воркер о версии.
-#[tauri::command]
 pub fn reset_grammar(state: State<'_, Arc<SharedState>>) -> Grammar {
     reset_grammar_in(&state)
 }
@@ -116,15 +109,13 @@ pub fn reset_grammar_in(state: &SharedState) -> Grammar {
 }
 
 /// Установленные приложения (вкл. UWP) для пикера.
-#[tauri::command]
 pub fn list_apps() -> Vec<AppEntry> {
     apps::list_start_apps()
 }
 
 /// Сканер программ (кнопка «Сканировать» во вкладке «Действия»): программы из меню
 /// «Пуск» с готовыми фразами на включённых языках распознавания.
-#[tauri::command]
-pub async fn scan_apps(
+pub fn scan_apps(
     state: State<'_, Arc<SharedState>>,
     config: State<'_, LiveConfig>,
 ) -> Result<Vec<appscan::ScannedApp>, String> {
@@ -142,7 +133,7 @@ pub async fn scan_apps(
             words
         })
         .unwrap_or_default();
-    tauri::async_runtime::spawn_blocking(move || {
+    crate::app::blocking(move || {
         let mut found = appscan::scan(apps::list_start_apps(), &languages, &actions, &reserved);
         // Часто используемые — сверху, по истории запусков Windows.
         let now = std::time::SystemTime::now()
@@ -152,21 +143,17 @@ pub async fn scan_apps(
         appscan::order_by_usage(&mut found, &appscan::user_assist(), now);
         found
     })
-    .await
     .map_err(|e| e.to_string())
 }
 
 /// Иконки программ из списка сканера (data-URL по AppID) — отдельно, пачками: список
 /// показывается сразу, иконки подгружаются следом.
-#[tauri::command]
-pub async fn scan_app_icons(ids: Vec<String>) -> Result<std::collections::HashMap<String, String>, String> {
-    tauri::async_runtime::spawn_blocking(move || appscan::icons(&ids))
-        .await
+pub fn scan_app_icons(ids: Vec<String>) -> Result<std::collections::HashMap<String, String>, String> {
+    crate::app::blocking(move || appscan::icons(&ids))
         .map_err(|e| e.to_string())
 }
 
 /// Добавить отмеченные в сканере программы как действия. Возвращает, сколько добавлено.
-#[tauri::command]
 pub fn add_scanned_apps(
     state: State<'_, Arc<SharedState>>,
     apps: Vec<appscan::ChosenApp>,
@@ -190,7 +177,6 @@ pub fn add_scanned_apps(
 }
 
 /// Доступные наборы звуков (подпапки sounds/).
-#[tauri::command]
 pub fn list_sound_packs(config: State<'_, LiveConfig>) -> Vec<String> {
     let config = config.get();
     let mut packs: Vec<String> = std::fs::read_dir(&config.sounds_dir)
@@ -210,7 +196,6 @@ pub fn list_sound_packs(config: State<'_, LiveConfig>) -> Vec<String> {
 
 /// Языковые пакеты для экрана «Языки распознавания»: какой пакет нужен каждому языку и
 /// какие скачаны (models.rs). Скачивает их установщик.
-#[tauri::command]
 pub fn language_models(app: AppHandle) -> serde_json::Value {
     use crate::models::{ModelDirs, PACKS};
     let dirs = ModelDirs::new(crate::config::resource(&app, "model"));
@@ -252,7 +237,6 @@ fn universalize(target: &str, kind: &str) -> String {
 }
 
 /// Создать/обновить действие (upsert по id).
-#[tauri::command]
 pub fn save_action(state: State<'_, Arc<SharedState>>, mut action: Action) -> Result<(), String> {
     action.target = universalize(&action.target, &action.kind);
     {
@@ -268,7 +252,6 @@ pub fn save_action(state: State<'_, Arc<SharedState>>, mut action: Action) -> Re
 }
 
 /// Удалить действие.
-#[tauri::command]
 pub fn delete_action(state: State<'_, Arc<SharedState>>, id: String) -> Result<(), String> {
     {
         let mut actions = state.actions.lock().map_err(|e| e.to_string())?;
@@ -279,7 +262,6 @@ pub fn delete_action(state: State<'_, Arc<SharedState>>, id: String) -> Result<(
 }
 
 /// Добавить триггер-фразу вручную.
-#[tauri::command]
 pub fn add_phrase(
     state: State<'_, Arc<SharedState>>,
     id: String,
@@ -302,7 +284,6 @@ pub fn add_phrase(
 }
 
 /// Удалить одну триггер-фразу у действия.
-#[tauri::command]
 pub fn remove_phrase(
     state: State<'_, Arc<SharedState>>,
     id: String,
@@ -319,28 +300,24 @@ pub fn remove_phrase(
 }
 
 /// Включить режим калибровки для действия: следующая сказанная фраза уйдёт в него.
-#[tauri::command]
 pub fn start_calibration(state: State<'_, Arc<SharedState>>, id: String) -> Result<(), String> {
     *state.calibrate.lock().map_err(|e| e.to_string())? = Some(id);
     Ok(())
 }
 
 /// Отменить калибровку.
-#[tauri::command]
 pub fn cancel_calibration(state: State<'_, Arc<SharedState>>) -> Result<(), String> {
     *state.calibrate.lock().map_err(|e| e.to_string())? = None;
     Ok(())
 }
 
 /// Подстройка под голос (voice_adapt.rs): начать запись «ривер».
-#[tauri::command]
 pub fn start_voice_adapt(state: State<'_, Arc<SharedState>>) -> Result<(), String> {
     *state.voice_record.lock().map_err(|e| e.to_string())? = Some(Vec::new());
     Ok(())
 }
 
 /// Бросить запись подстройки, ничего не меняя.
-#[tauri::command]
 pub fn cancel_voice_adapt(state: State<'_, Arc<SharedState>>) -> Result<(), String> {
     if let Some(mut pcm) = state.voice_record.lock().map_err(|e| e.to_string())?.take() {
         pcm.fill(0.0);
@@ -350,8 +327,7 @@ pub fn cancel_voice_adapt(state: State<'_, Arc<SharedState>>) -> Result<(), Stri
 
 /// Закончить запись и подстроить детектор под слова в ней. Err `tooFew:<слов>` — «ривер»
 /// мало, остальное — текст ошибки. Подстроено — поток распознавания перезапускается с ней.
-#[tauri::command]
-pub async fn finish_voice_adapt(
+pub fn finish_voice_adapt(
     app: AppHandle,
     state: State<'_, Arc<SharedState>>,
     config: State<'_, LiveConfig>,
@@ -360,7 +336,7 @@ pub async fn finish_voice_adapt(
     let config = config.get();
     let (name, weights) = crate::recognizer::spotter_weights(&app, &config);
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    let result = tauri::async_runtime::spawn_blocking(move || {
+    let result = crate::app::blocking(move || {
         let result = adapt_and_save(&pcm, name, &weights, &dir);
         if result.is_ok() {
             crate::voice_adapt::save_enrollment(&dir.join("voice"), &pcm);
@@ -368,7 +344,6 @@ pub async fn finish_voice_adapt(
         pcm.fill(0.0);
         result
     })
-    .await
     .map_err(|e| e.to_string())?;
     if result.as_ref().is_ok_and(|report| report.adapted) {
         state.reload.store(true, Ordering::Relaxed);
@@ -431,7 +406,6 @@ pub fn passive_trainer(app: AppHandle, shared: Arc<SharedState>) -> crate::voice
 
 /// Подстройка для весов, что сейчас работают (`null` — её нет), и сколько обращений
 /// собрала тихая подстройка.
-#[tauri::command]
 pub fn voice_adapt_status(app: AppHandle, config: State<'_, LiveConfig>) -> Option<serde_json::Value> {
     let config = config.get();
     let (name, weights) = crate::recognizer::spotter_weights(&app, &config);
@@ -446,20 +420,17 @@ pub fn voice_adapt_status(app: AppHandle, config: State<'_, LiveConfig>) -> Opti
 }
 
 /// Калибровку «скажите „ривер“ 10 раз» требует свежая установка (config::voice_intro_pending).
-#[tauri::command]
 pub fn voice_intro_pending() -> bool {
     crate::config::voice_intro_pending()
 }
 
 /// Обязательная калибровка закончена — до следующей установки не спрашивать.
-#[tauri::command]
 pub fn voice_intro_done() {
     crate::config::clear_voice_intro_pending();
 }
 
 /// Убрать подстройку для всех весов — снова общий детектор, и тихая подстройка
 /// начинается заново.
-#[tauri::command]
 pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> Result<(), String> {
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
     for name in ["wake/river.bin", "wake/river-ru-en.bin"] {
@@ -473,7 +444,6 @@ pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> 
 }
 
 /// Прочитать settings.json (для UI).
-#[tauri::command]
 pub fn get_settings(config: State<'_, LiveConfig>) -> Result<serde_json::Value, String> {
     let config = config.get();
     let txt = std::fs::read_to_string(&config.settings_path).map_err(|e| e.to_string())?;
@@ -499,7 +469,6 @@ pub fn get_settings(config: State<'_, LiveConfig>) -> Result<serde_json::Value, 
 
 /// Сохранить settings.json и применить сразу: настройки перечитываются, хоткеи
 /// перерегистрируются, поток распознавания перезапускается с новыми моделями и паузами.
-#[tauri::command]
 pub fn save_settings(
     app: AppHandle,
     config: State<'_, LiveConfig>,
@@ -543,14 +512,12 @@ pub fn save_settings(
 }
 
 /// Состояние встроенного индекса для плитки Главной и UI настроек.
-#[tauri::command]
 pub fn index_status(index: State<'_, crate::local_index::IndexManager>) -> crate::local_index::IndexStatus {
     index.status()
 }
 
 /// Язык интерфейса: сохраняет выбор; меню трея (traymenu.rs) подхватывает его при открытии. Возвращает
 /// итоговый код языка (`auto` раскрывается в язык Windows).
-#[tauri::command]
 pub fn set_ui_language(
     config: State<'_, LiveConfig>,
     language: String,
@@ -564,7 +531,6 @@ pub fn set_ui_language(
 }
 
 /// Окно загрузило перевод: журнал и меню трея — на том же языке, что и окно.
-#[tauri::command]
 pub fn sync_ui_locale(locale: String) {
     if let Some(code) = crate::uilang::SUPPORTED.iter().copied().find(|code| *code == locale) {
         if let Ok(mut current) = crate::uilang::CURRENT.lock() {
@@ -575,7 +541,6 @@ pub fn sync_ui_locale(locale: String) {
 
 /// Маскот: режим показа и размер применяются сразу, без «Сохранить» и без
 /// перезапуска распознавания.
-#[tauri::command]
 pub fn set_mascot(
     app: AppHandle,
     config: State<'_, LiveConfig>,
@@ -601,14 +566,12 @@ pub fn set_mascot(
 }
 
 /// Настройки: вывести маскота на экран, чтобы его перетащили на нужное место.
-#[tauri::command]
 pub fn mascot_place(app: AppHandle) -> bool {
     crate::mascot::begin_placing(&app)
 }
 
 /// Конец расстановки маскота: `save` — закрепить, где он стоит сейчас. Возвращает
 /// закреплённое место (`null` — не закреплено).
-#[tauri::command]
 pub fn mascot_pin(app: AppHandle, config: State<'_, LiveConfig>, save: bool) -> Result<Option<[i32; 2]>, String> {
     let current = config.get();
     let Some(anchor) = crate::mascot::finish_placing(&app, save) else {
@@ -622,7 +585,6 @@ pub fn mascot_pin(app: AppHandle, config: State<'_, LiveConfig>, save: bool) -> 
 }
 
 /// Открепить маскота: снова правый нижний угол.
-#[tauri::command]
 pub fn mascot_unpin(app: AppHandle, config: State<'_, LiveConfig>) -> Result<(), String> {
     let current = config.get();
     persist_value(&current, "mascot_position", serde_json::Value::Null)?;
@@ -635,7 +597,6 @@ pub fn mascot_unpin(app: AppHandle, config: State<'_, LiveConfig>) -> Result<(),
 
 /// Лёгкий интерфейс вкл/выкл: сохраняет выбор, убирает или возвращает маскота и
 /// пересоздаёт главное окно в другом виде (вид задаётся при создании окна).
-#[tauri::command]
 pub fn set_lite_ui(app: AppHandle, config: State<'_, LiveConfig>, lite: bool) -> Result<(), String> {
     let current = config.get();
     persist_value(&current, "lite_ui", serde_json::Value::Bool(lite))?;
@@ -650,30 +611,25 @@ pub fn set_lite_ui(app: AppHandle, config: State<'_, LiveConfig>, lite: bool) ->
 }
 
 /// Пауза/возобновление микрофона.
-#[tauri::command]
 pub fn set_paused(state: State<'_, Arc<SharedState>>, paused: bool) {
     state.paused.store(paused, Ordering::Relaxed);
 }
 
-#[tauri::command]
 pub fn get_paused(state: State<'_, Arc<SharedState>>) -> bool {
     state.paused.load(Ordering::Relaxed)
 }
 
 /// Автозапуск с Windows.
-#[tauri::command]
 pub fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
     crate::autostart::set(&app, on)
 }
 
-#[tauri::command]
 pub fn get_autostart(app: AppHandle) -> bool {
     crate::autostart::is_enabled(&app)
 }
 
 /// Обои Frutiger Aero как data-URL (фон вебвью). Пользователь может заменить
 /// %APPDATA%/com.troid.reever/wallpaper.png. Пусто → фронт рисует CSS-небо.
-#[tauri::command]
 pub fn get_wallpaper(app: AppHandle) -> Option<String> {
     let path = crate::config::user_config_path(&app, "wallpaper.png");
     let bytes = std::fs::read(&path).ok()?;
@@ -740,7 +696,6 @@ pub(crate) fn persist_value(config: &ReeverConfig, key: &str, value: serde_json:
 }
 
 /// Перерегистрировать push-to-talk хоткей на лету (применяется сразу, без рестарта).
-#[tauri::command(rename_all = "camelCase")]
 pub fn set_hotkey(
     app: AppHandle,
     config: State<'_, LiveConfig>,
@@ -756,7 +711,6 @@ pub fn set_hotkey(
 }
 
 /// Перерегистрировать mute-хоткей (panic-mute) на лету.
-#[tauri::command(rename_all = "camelCase")]
 pub fn set_mute_hotkey(
     app: AppHandle,
     config: State<'_, LiveConfig>,

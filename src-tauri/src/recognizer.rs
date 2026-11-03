@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::json;
-use tauri::{AppHandle, Emitter};
+use crate::app::AppHandle;
 
 use crate::actions::SharedState;
 use crate::anglicism::Anglicisms;
@@ -138,7 +138,6 @@ enum LoadReason {
 /// закрывает микрофон и модели и стартует заново с новыми настройками. После ошибки
 /// старта (неверная модель) ждёт исправленных настроек, а не умирает насовсем.
 pub fn run_worker(app: AppHandle, shared: Arc<SharedState>) {
-    use tauri::Manager;
     loop {
         shared.reload.store(false, Ordering::Relaxed);
         let cfg = app.state::<crate::config::LiveConfig>().get();
@@ -314,7 +313,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         last_spot_sound: None,
         choice_session: None,
         blackbox: cfg.settings.wake_blackbox.then(|| {
-            let dir = tauri::Manager::path(app).app_config_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let dir = app.path().app_config_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
             crate::blackbox::BlackBox::new(dir.join("blackbox"))
         }),
     };
@@ -720,7 +719,7 @@ where
     }
     let (name, mut weights) = spotter_weights(app, cfg);
     // Подстройка под голос (voice_adapt.rs) — вместо общих весов, если сделана для них.
-    let personal = tauri::Manager::path(app).app_config_dir().ok().and_then(|dir| {
+    let personal = app.path().app_config_dir().ok().and_then(|dir| {
         let base = std::fs::read(&weights).ok()?;
         crate::wake::personal_for(&dir, name, &base)
     });
@@ -1076,7 +1075,7 @@ impl Worker<'_> {
     /// «Ривер» — индекс файлов (в покое он только на диске) подгружается заранее, пока
     /// распознаётся команда: «ривер найди …» не ждёт чтения снимка.
     fn prefetch_index(&self) {
-        if let Some(index) = tauri::Manager::try_state::<crate::local_index::IndexManager>(self.app) {
+        if let Some(index) = crate::app::AppHandle::try_state::<crate::local_index::IndexManager>(self.app) {
             index.prefetch();
         }
     }
