@@ -2,7 +2,7 @@
 
 **Reever** — быстрый локальный голосовой лаунчер для Windows. Всегда на фоне (в трее), слушает wake-слово **«ривер»**, распознаёт команду и выполняет действие: запускает программы, открывает папки, ищет в вебе, управляет системой. Распознавание — полностью офлайн (модели sherpa-onnx на устройстве), **аудио никуда не отправляется**. Английский понимает сразу; ещё 28 языков — 24 европейских (русский, украинский, немецкий, французский, польский и другие) и китайский, кантонский, японский, корейский — после языкового пакета, который установщик скачивает по галочке. Интерфейс — на 30 языках, их тоже выбирают в установщике.
 
-> Frutiger Aero / Windows 7 Aero Glass интерфейс · Tauri + Rust · Parakeet, SenseVoice + Silero VAD (sherpa-onnx) · свой индекс дисков
+> Frutiger Aero / Windows 7 Aero Glass интерфейс · Rust, нативные окна (Direct2D) · Parakeet, SenseVoice + Silero VAD (sherpa-onnx) · свой индекс дисков
 
 ---
 
@@ -44,7 +44,7 @@
 
 ## Язык интерфейса
 
-Интерфейс переведён на 10 языков: English, Русский, Deutsch, Español, Português, Italiano, Français, 中文, 日本語, العربية (с письмом справа налево). По умолчанию — язык Windows; сменить можно в **Настройках → Интерфейс**, применяется сразу, вместе с меню трея. Команды в «Что можно сказать» показываются на языке интерфейса: в русском — русские, в остальных — английские.
+Интерфейс переведён на 30 языков, арабский — с письмом справа налево. По умолчанию — язык Windows; сменить можно в **Настройках → Интерфейс**, применяется сразу, вместе с меню трея. Команды в «Что можно сказать» показываются на языке интерфейса: в русском — русские, в остальных — английские.
 
 ## Языки распознавания
 
@@ -53,7 +53,7 @@
 - **Русский + английский** (по умолчанию): команды по-русски, названия на любом из двух языков («ривер поиск ютуб never gonna give you up»). Английские глаголы тоже понимаются, если сказать их с русским произношением: «ривер оупен фотошоп», «ривер некст трек».
 - **Только английский**: всё распознаёт английская модель, команды по-английски — «reever open notepad», «reever search youtube cats», «reever close discord», «reever type …».
 
-Словари окна, журнала и трея — `frontend/i18n/locales/*.json`, эталон — `en.json`. Проверка полноты: `node scripts/check-i18n.mjs`.
+Словари окна, журнала и трея — `src-tauri/assets/locales/*.json`, эталон — `en.json`. Проверка полноты: `node scripts/check-i18n.mjs`.
 
 ---
 
@@ -101,16 +101,15 @@
 
 ## Сборка из исходников
 
-Требуется [Rust](https://rustup.rs/), [Node.js](https://nodejs.org/) и Windows 10/11.
+Требуется [Rust](https://rustup.rs/), [Python 3](https://www.python.org/), [NSIS 3](https://nsis.sourceforge.io/) (только для установщика) и Windows 10/11.
 
 ```bash
-npm install
 powershell -ExecutionPolicy Bypass -File scripts/fetch-deps.ps1
-npm run dev      # разработка
-npm run build    # релизный инсталлятор -> src-tauri/target/release/bundle/nsis/
+cd src-tauri && cargo run          # разработка
+python tools/build_installer.py    # релизный инсталлятор -> src-tauri/target/release/bundle/nsis/
 ```
 
-Второй шаг обязателен: модели распознавания (английская Parakeet 110m, детектор «ривер», Silero VAD; ~160 МБ) не хранятся в git — скрипт скачивает их из релизов sherpa-onnx. Языковые пакеты для разработки — `-Packs european,asian,lid`. Повторный запуск ничего не перекачивает.
+Первый шаг обязателен: модели распознавания (английская Parakeet 110m, детектор «ривер», Silero VAD; ~160 МБ) не хранятся в git — скрипт скачивает их из релизов sherpa-onnx. Языковые пакеты для разработки — `-Packs european,asian,lid`. Повторный запуск ничего не перекачивает.
 
 > Без моделей сборка пройдёт зелёной, но приложение не сможет распознавать речь. Поэтому скрипт сам проверяет результат и возвращает код 1, если чего-то не хватает.
 
@@ -120,7 +119,7 @@ npm run build    # релизный инсталлятор -> src-tauri/target/r
 
 ## Технологии
 
-Tauri 2 · Rust · sherpa-onnx: Parakeet TDT (110m английский, v3 европейские языки), SenseVoice (китайский, японский), Whisper base (определитель языка) + Silero VAD · cpal + rubato + rodio · свой индекс дисков (FindFirstFileExW + ReadDirectoryChangesW) · strsim (fuzzy-матч) · windows-rs.
+Rust · окна на Direct2D/DirectWrite/DirectComposition (windows-rs) · sherpa-onnx: Parakeet TDT (110m английский, v3 европейские языки), SenseVoice (китайский, японский), Whisper base (определитель языка) + Silero VAD · cpal + rubato + rodio · свой индекс дисков (FindFirstFileExW + ReadDirectoryChangesW) · strsim (fuzzy-матч) · windows-rs.
 
 ---
 

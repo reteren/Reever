@@ -4,14 +4,13 @@
 
 ```bash
 git clone <url> && cd Reever
-npm install
 powershell -ExecutionPolicy Bypass -File scripts/fetch-deps.ps1
-npm run dev
+cd src-tauri && cargo run
 ```
 
-Второй шаг обязателен. Модели распознавания **не хранятся в git** — скрипт скачивает из релизов sherpa-onnx то, что вшито в установщик (английская Parakeet 110m, детектор «ривер», Silero VAD). Языковые пакеты (`src-tauri/src/models.rs`) у пользователя качает установщик; для разработки — `-Packs european,asian,lid`. Идемпотентен: повторный запуск ничего не перекачивает, `-Force` переустанавливает. Сама библиотека sherpa-onnx линкуется статически: её prebuilt скачивает `cargo` при первой сборке.
+Первый шаг обязателен. Модели распознавания **не хранятся в git** — скрипт скачивает из релизов sherpa-onnx то, что вшито в установщик (английская Parakeet 110m, детектор «ривер», Silero VAD). Языковые пакеты (`src-tauri/src/models.rs`) у пользователя качает установщик; для разработки — `-Packs european,asian,lid`. Идемпотентен: повторный запуск ничего не перекачивает, `-Force` переустанавливает. Сама библиотека sherpa-onnx линкуется статически: её prebuilt скачивает `cargo` при первой сборке.
 
-Что нужно на машине: [Rust](https://rustup.rs/), [Node.js](https://nodejs.org/), Windows 10/11. Проект собирается только под Windows — вся оболочка построена на WinAPI.
+Что нужно на машине: [Rust](https://rustup.rs/), [Python 3](https://www.python.org/), Windows 10/11; для установщика — [NSIS 3](https://nsis.sourceforge.io/). Node.js нужен только для `node scripts/check-i18n.mjs`. Проект собирается только под Windows — вся оболочка построена на WinAPI.
 
 ## Проверка, что всё встало
 
@@ -20,13 +19,14 @@ npm run dev
 ## Сборка
 
 ```bash
-npm run dev      # разработка
-npm run build    # релизный инсталлятор -> src-tauri/target/release/bundle/nsis/
+cd src-tauri && cargo run          # разработка
+python tools/build_installer.py    # релизный инсталлятор -> src-tauri/target/release/bundle/nsis/
+bash tools/test_build.sh           # release-exe с ресурсами в test-build/, без установщика
 ```
 
 ## О чём стоит знать до первого коммита
 
-**`npm run dev` меняет файлы репозитория.** В dev-режиме конфиги читаются и пишутся в `src-tauri/resources/`, а не в `%APPDATA%` (см. `src-tauri/src/config.rs:196-251`). Калибровка голосом дописывает фразы прямо в `src-tauri/resources/actions.json`. Проверяйте `git diff` перед коммитом — легко случайно отправить свои личные фразы.
+**Debug-сборка меняет файлы репозитория.** В dev-режиме конфиги читаются и пишутся в `src-tauri/resources/`, а не в `%APPDATA%` (см. `src-tauri/src/config.rs:196-251`). Калибровка голосом дописывает фразы прямо в `src-tauri/resources/actions.json`. Проверяйте `git diff` перед коммитом — легко случайно отправить свои личные фразы.
 
 **Скрипты PowerShell сохраняются в UTF-8 с BOM.** Windows PowerShell 5.1 читает `.ps1` без BOM как ANSI и ломает кириллицу в сообщениях. Это закреплено в `.gitattributes`; не «чините» кодировку на UTF-8 без BOM.
 
@@ -47,16 +47,18 @@ cargo run --release --example eval -- --noise-db -30   # то же с фонов
 
 | Где | Что |
 |---|---|
-| `src-tauri/src/recognizer.rs` | аудио-воркер: склейка Engine с Tauri — микрофон, звуки, события UI |
-| `src-tauri/src/engine.rs` | автомат прослушивания (wake → команда / подтверждение / калибровка), без Tauri |
+| `src-tauri/src/recognizer.rs` | аудио-воркер: склейка Engine с приложением — микрофон, звуки, события UI |
+| `src-tauri/src/engine.rs` | автомат прослушивания (wake → команда / подтверждение / калибровка), без побочных эффектов |
 | `src-tauri/src/{asr,vad,segmenter,speech}.rs` | модели sherpa-onnx и набор моделей под языки (`AsrSet`), Silero VAD, нарезка на фразы, общие трейты |
-| `src-tauri/src/models.rs`, `src-tauri/windows/` | каталог языковых пакетов; страница установщика, которая их скачивает |
+| `src-tauri/src/models.rs`, `src-tauri/windows/` | каталог языковых пакетов; установщик NSIS (`installer.nsi`, страница моделей `models.nsh`), собирает `tools/build_installer.py` |
 | `src-tauri/src/{textnorm,commands,dispatch}.rs` | нормализация текста и wake, грамматика команд, диспетчер |
 | `src-tauri/src/config.rs` | настройки, алиасы, резолв путей dev↔release |
 | `src-tauri/src/commands_api.rs` | команды для интерфейса |
 | `src-tauri/src/{find,local_index}.rs` | «найди …»: запросы и ранжирование, свой индекс дисков |
 | `src-tauri/src/{launcher,apps,system,winutil}.rs` | запуск, перечисление приложений, системные команды, окна |
-| `frontend/` | интерфейс без сборки: `index.html`, `picker.html`, `skin.css`, скин в `skin/` |
+| `src-tauri/src/app.rs` | каркас приложения: состояние, события, пути, вшитые ресурсы, главный поток |
+| `src-tauri/src/native/`, `main_native/`, `dialogs_native/`, `bubble_native/`, `mascot_native/` | нативные окна: ядро на Direct2D/DirectComposition, главное окно, выбор и подтверждение, пузырь, маскот |
+| `src-tauri/assets/` | вшитые в exe шрифты, кадры маскота, картинки рамки и словари интерфейса |
 
 Контракт голосового конвейера — `docs/voice-pipeline.md`. Подробная архитектурная документация живёт в отдельном репозитории `Reever-memory`: диаграмма потока данных, карточка на каждую подсистему, зафиксированные решения и список известных проблем.
 
