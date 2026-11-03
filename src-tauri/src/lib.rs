@@ -69,7 +69,6 @@ use std::sync::Arc;
 
 use actions::SharedState;
 use config::{LiveConfig, ReeverConfig};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{Emitter, Manager, RunEvent, WebviewWindow, WindowEvent};
 
@@ -115,6 +114,7 @@ pub(crate) fn toggle_pause(app: &tauri::AppHandle) {
 
 fn quit(app: &tauri::AppHandle) {
     EXIT_REQUESTED.store(true, Ordering::SeqCst);
+    traymenu::remove_icon();
     app.exit(0);
 }
 
@@ -440,25 +440,9 @@ pub fn run() {
                 &cfg.settings.interface_languages(),
             );
             *uilang::CURRENT.lock().unwrap() = locale;
-            // Меню по правому клику — системное меню Windows, нарисованное в стиле Reever (traymenu.rs).
+            // Значок и меню по правому клику — свои (traymenu.rs): Shell_NotifyIcon и системное
+            // меню Windows, нарисованное в стиле Reever.
             traymenu::init(app.handle());
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Reever")
-                .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } => show_main(tray.app_handle()),
-                    TrayIconEvent::Click {
-                        button: MouseButton::Right,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } => traymenu::show(),
-                    _ => {}
-                })
-                .build(app)?;
 
             // Второй запуск поднимает этот экземпляр, не создавая ещё один аудиопоток.
             listen_for_second_instance(app.handle().clone());

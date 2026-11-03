@@ -10,7 +10,9 @@
 //!
 //! Меню живёт в своём потоке со скрытым окном-владельцем: модальный цикл
 //! `TrackPopupMenu` не встаёт посреди цикла событий Tauri, а выбранный пункт уходит
-//! в главный поток.
+//! в главный поток. Это же окно держит и сам значок (`Shell_NotifyIconW`): щелчки по нему
+//! приходят сюда сообщением `WM_TRAY`, а после перезапуска Проводника значок добавляется
+//! заново (`TaskbarCreated`).
 
 use std::cell::RefCell;
 use std::ffi::c_void;
@@ -52,6 +54,14 @@ static APP: OnceLock<AppHandle> = OnceLock::new();
 static BRAND_FONT: OnceLock<bool> = OnceLock::new();
 
 const WM_SHOW_MENU: u32 = WM_APP + 1;
+/// Щелчок по значку: в `lParam` — сообщение мыши.
+const WM_TRAY: u32 = WM_APP + 2;
+/// Номер значка у окна-владельца.
+const TRAY_ID: u32 = 1;
+/// Значок приложения (icons/icon.ico): размер выбирает Windows под DPI трея.
+static ICON_ICO: &[u8] = include_bytes!("../icons/icon.ico");
+/// `RegisterWindowMessageW("TaskbarCreated")`: Проводник перезапустился, значки пропали.
+static TASKBAR_CREATED: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 /// `WM_ENTERIDLE` от меню: `wParam == MSGF_MENU`, в `lParam` — окно самого меню.
 const MSGF_MENU: usize = 2;
 
@@ -192,6 +202,8 @@ fn run() {
             return;
         };
         OWNER.store(owner.0 as isize, Ordering::Release);
+        TASKBAR_CREATED.store(windows::Win32::UI::WindowsAndMessaging::RegisterWindowMessageW(w!("TaskbarCreated")), Ordering::Release);
+        add_icon(owner);
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, None, 0, 0).as_bool() {
             let _ = TranslateMessage(&msg);
@@ -200,10 +212,111 @@ fn run() {
     }
 }
 
+/// Иконка из .ico нужного размера (16 px × масштаб трея): образ не меньше нужного, самый
+/// маленький из таких; Windows уменьшит его сама.
+unsafe fn load_icon(size: i32) -> Option<windows::Win32::UI::WindowsAndMessaging::HICON> {
+    use windows::Win32::UI::WindowsAndMessaging::{CreateIconFromResourceEx, LR_DEFAULTCOLOR};
+    let (offset, len) = ico_entry(size as u32)?;
+    CreateIconFromResourceEx(&ICON_ICO[offset..offset + len], true, 0x0003_0000, size, size, LR_DEFAULTCOLOR).ok()
+}
+
+/// Смещение и длина образа в .ico: каталог ICONDIR, записи по 16 байт (ширина 0 — 256).
+fn ico_entry(want: u32) -> Option<(usize, usize)> {
+    let count = u16::from_le_bytes([*ICON_ICO.get(4)?, *ICON_ICO.get(5)?]) as usize;
+    let mut best: Option<(u32, usize, usize)> = None;
+    for i in 0..count {
+        let e = 6 + i * 16;
+        let w = match *ICON_ICO.get(e)? as u32 {
+            0 => 256,
+            w => w,
+        };
+        let len = u32::from_le_bytes(ICON_ICO.get(e + 8..e + 12)?.try_into().ok()?) as usize;
+        let off = u32::from_le_bytes(ICON_ICO.get(e + 12..e + 16)?.try_into().ok()?) as usize;
+        if off + len > ICON_ICO.len() {
+            continue;
+        }
+        // не меньше нужного и поменьше; если все меньше — самый большой
+        let better = match best {
+            None => true,
+            Some((bw, _, _)) => (w >= want && (bw < want || w < bw)) || (bw < want && w > bw),
+        };
+        if better {
+            best = Some((w, off, len));
+        }
+    }
+    best.map(|(_, off, len)| (off, len))
+}
+
+unsafe fn icon_data(owner: HWND) -> windows::Win32::UI::Shell::NOTIFYICONDATAW {
+    use windows::Win32::UI::Shell::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NOTIFYICONDATAW};
+    let dpi = windows::Win32::UI::HiDpi::GetDpiForWindow(owner).max(96);
+    let size = (16 * dpi / 96) as i32;
+    let mut data = NOTIFYICONDATAW {
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+        hWnd: owner,
+        uID: TRAY_ID,
+        uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP,
+        uCallbackMessage: WM_TRAY,
+        ..Default::default()
+    };
+    if let Some(icon) = load_icon(size) {
+        data.hIcon = icon;
+    }
+    for (dst, src) in data.szTip.iter_mut().zip("Reever".encode_utf16()) {
+        *dst = src;
+    }
+    data
+}
+
+/// Добавить значок в трей (при старте и после перезапуска Проводника).
+unsafe fn add_icon(owner: HWND) {
+    use windows::Win32::UI::Shell::{Shell_NotifyIconW, NIM_ADD, NIM_MODIFY};
+    let data = icon_data(owner);
+    if !Shell_NotifyIconW(NIM_ADD, &data).as_bool() && !Shell_NotifyIconW(NIM_MODIFY, &data).as_bool() {
+        eprintln!("[reever] tray icon: Shell_NotifyIcon failed");
+    } else if data.hIcon.is_invalid() {
+        eprintln!("[reever] tray icon: no image in icon.ico");
+    }
+}
+
+/// Убрать значок (выход): иначе он висит в трее, пока над ним не проведут мышью.
+pub fn remove_icon() {
+    use windows::Win32::UI::Shell::{Shell_NotifyIconW, NIM_DELETE, NOTIFYICONDATAW};
+    let owner = OWNER.load(Ordering::Acquire);
+    if owner == 0 {
+        return;
+    }
+    let data = NOTIFYICONDATAW { cbSize: size_of::<NOTIFYICONDATAW>() as u32, hWnd: HWND(owner as *mut c_void), uID: TRAY_ID, ..Default::default() };
+    unsafe {
+        let _ = Shell_NotifyIconW(NIM_DELETE, &data);
+    }
+}
+
+/// Действие на главном потоке приложения.
+fn run_action(action: fn(&AppHandle)) {
+    let Some(app) = APP.get() else { return };
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || action(&handle));
+}
+
 unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    use windows::Win32::UI::WindowsAndMessaging::{WM_LBUTTONUP, WM_RBUTTONUP};
+    let taskbar = TASKBAR_CREATED.load(Ordering::Acquire);
+    if taskbar != 0 && msg == taskbar {
+        add_icon(hwnd);
+        return LRESULT(0);
+    }
     match msg {
         WM_SHOW_MENU => {
             popup(hwnd);
+            LRESULT(0)
+        }
+        WM_TRAY => {
+            match lparam.0 as u32 {
+                WM_LBUTTONUP => run_action(crate::show_main),
+                WM_RBUTTONUP => popup(hwnd),
+                _ => {}
+            }
             LRESULT(0)
         }
         WM_MEASUREITEM => {
@@ -282,8 +395,7 @@ unsafe fn popup(owner: HWND) {
         ID_QUIT => crate::quit,
         _ => return,
     };
-    let handle = app.clone();
-    let _ = app.run_on_main_thread(move || action(&handle));
+    run_action(action);
 }
 
 unsafe fn insert(menu: HMENU, position: u32, row: Row, id: u32) {
