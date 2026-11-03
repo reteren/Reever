@@ -1,7 +1,6 @@
 //! Нативные окна выбора и подтверждения (этап 3 docs/native-ui-roadmap.md): то же, что
-//! frontend/picker.html и confirm.html, на ядре `native/` и его элементах управления. Включаются
-//! настройкой `native_dialogs` (в лёгком интерфейсе пока остаются веб-окна). Логику — когда
-//! показывать, что делать с выбором и ответом — по-прежнему ведут picker.rs и confirm.rs.
+//! прежние frontend/picker.html и confirm.html, на ядре `native/` и его элементах управления.
+//! Логику — когда показывать, что делать с выбором и ответом — ведут picker.rs и confirm.rs.
 //!
 //! Общая обвязка обоих окон — хромовая рамка `skin/picker_frame.webp` поверх двух экранов ЭЛТ
 //! (табло заголовка и основной экран) и купол закрытия; окно перетаскивается за любое пустое место.
@@ -20,7 +19,7 @@ use crate::native::controls::button::{Lunka, Press};
 use crate::native::controls::{lcd, lcd_background, lcd_overlay, Glow, Scene, ACC, ACC_HOT};
 use crate::native::{Align, Direction, ImageId, Images, Loader, Rect, RenderCx, TextStyle};
 
-/// Окно 620×520 DIP — как у веб-окон picker/confirm (tauri.conf.json).
+/// Окно 620×520 DIP — как у прежних веб-окон picker/confirm.
 pub const WIN_W: f32 = 620.0;
 pub const WIN_H: f32 = 520.0;
 pub const TITLE: Rect = Rect::new(40.0, 38.0, 342.0, 38.0);

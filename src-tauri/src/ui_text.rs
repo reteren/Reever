@@ -1,5 +1,5 @@
-//! Строки нативного интерфейса из тех же JSON, которые читают веб-окна.
-//! Ключи и тексты живут только в `frontend/i18n/locales`.
+//! Строки нативного интерфейса. Ключи и тексты живут только в `assets/locales/*.json`
+//! (эталон — en.json, полнота — `node scripts/check-i18n.mjs`).
 
 use intl_pluralrules::{PluralCategory, PluralRuleType, PluralRules};
 use serde::Deserialize;

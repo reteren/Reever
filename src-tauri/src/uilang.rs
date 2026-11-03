@@ -2,7 +2,7 @@
 //! Интерфейс окна и журнал читают общие словари через `ui_text`; здесь — тот же
 //! выбор: `ui_language` в settings.json, `auto` — язык Windows.
 //!
-//! Словари — `frontend/i18n/locales/<код>.json`; журнал и трей используют
+//! Словари — `assets/locales/<код>.json` (вшиты в exe); журнал и трей используют
 //! ключи `log.*` и `tray.*` наряду с ключами окон.
 
 pub const SUPPORTED: [&str; 30] = [

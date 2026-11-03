@@ -42,7 +42,7 @@ $ModelDir  = Join-Path $RepoRoot 'src-tauri/resources/model'
 $SherpaReleaseUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models'
 $SileroName = 'silero_vad.onnx'
 
-# Модели установщика (tauri.conf.json, bundle.resources) и пакеты (models.rs). Files —
+# Модели установщика (src-tauri/windows/installer.nsi, секция Install) и пакеты (models.rs). Files —
 # что должно лежать в папке модели после распаковки.
 $BaseModels = @(
     @{ Name = 'sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8'

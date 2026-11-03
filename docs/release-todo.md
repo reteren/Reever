@@ -11,9 +11,8 @@
 - `src-tauri/windows/models.nsh`, `NSIS_HOOK_POSTINSTALL` — запись `voice-intro-pending.txt`
   (блок с пометкой «ВРЕМЕННО, ДО ФИНАЛЬНОГО РЕЛИЗА»): удалить.
 - `src-tauri/src/config.rs` — `voice_intro_pending` / `clear_voice_intro_pending`,
-  `src-tauri/src/commands_api.rs` — команды `voice_intro_pending` / `voice_intro_done`
-  (и их регистрация в `lib.rs`): удалить.
-- `frontend/app.js`, `maybeVoiceIntro` — ветку `pending` убрать.
+  `src-tauri/src/commands_api.rs` — `voice_intro_pending` / `voice_intro_done`: удалить.
+- `src-tauri/src/main_native/mod.rs`, `first_run` — ветку `pending` убрать.
 
 Что остаётся в релизе: обязательная калибровка один раз — при первом открытии программы, пока
-подстройки под голос нет и калибровка не пройдена (`localStorage` `reever.voiceIntroShown`).
+подстройки под голос нет и калибровка не пройдена (отметка `native-intro-*.txt` в папке настроек).
