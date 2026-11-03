@@ -916,18 +916,18 @@ impl MainView {
         let logo = TextStyle { ..lcd(21.0, 700, 0.14) };
         let mut x = r.x + 10.0;
         if let Some(l) = self.text(cx, "REEVER", &logo, 400.0) {
-            self.scene.text(&l, x, r.y + (r.h - l.height) / 2.0, ACC_HOT, Glow::G3);
+            self.scene.text(&l, self.tx(r, x, l.width), r.y + (r.h - l.height) / 2.0, ACC_HOT, Glow::G3);
             x += l.width + 8.0;
         }
         let ver = format!("v{}", self.info.version);
         if let Some(l) = self.text(cx, &ver, &lcd(13.0, 400, 0.06), 200.0) {
-            self.scene.text(&l, x, r.y + (r.h - l.height) / 2.0, ACC_3, Glow::G1);
+            self.scene.text(&l, self.tx(r, x, l.width), r.y + (r.h - l.height) / 2.0, ACC_3, Glow::G1);
         }
         // лампочки: индекс готов, идёт запись
         let net = self.info.index == "ready";
         let rec = matches!(self.state.as_str(), "listening" | "busy");
         for (i, on) in [net, rec].into_iter().enumerate() {
-            let c = Rect::new(r.x + r.w - 10.0 - 6.0 - (1 - i) as f32 * 11.0, r.y + 12.0, 6.0, 6.0);
+            let c = self.mx(r, Rect::new(r.x + r.w - 10.0 - 6.0 - (1 - i) as f32 * 11.0, r.y + 12.0, 6.0, 6.0));
             if on {
                 self.scene.shadow(cx, c, 3.0, ACC, 6.0);
             }
@@ -943,7 +943,7 @@ impl MainView {
         let r = status_r();
         let now = Instant::now();
         let blink = |period: f32| ((now.duration_since(self.t0).as_secs_f32() / (period / 2.0)) as i64) % 2 == 0;
-        let dot = Rect::new(r.x + 12.0, r.y + 20.0 + 7.0, 10.0, 10.0);
+        let dot = native::controls::mirror(r, Rect::new(r.x + 12.0, r.y + 20.0 + 7.0, 10.0, 10.0), self.rtl);
         let (dot_c, glow_r, show) = match self.state.as_str() {
             "listening" => (ACC, 8.0, blink(1.0)),
             "busy" => (ACC_HOT, 10.0, blink(0.35)),
@@ -971,9 +971,9 @@ impl MainView {
             _ => "mic.idle".into(),
         };
         let label = self.t(&key).to_uppercase();
-        let st = TextStyle { ellipsis: true, ..lcd(24.0, 600, 0.06) };
+        let st = TextStyle { ellipsis: true, direction: self.dir(), ..lcd(24.0, 600, 0.06) };
         if let Some(l) = self.text(cx, &label, &st, x1 - x0 - 19.0) {
-            self.scene.text(&l, x0 + 19.0, r.y + 20.0 + (24.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+            self.scene.text(&l, self.tx(r, x0 + 19.0, x1 - x0 - 19.0), r.y + 20.0 + (24.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
         }
         // показания
         let paused = self.info.paused;
@@ -1012,13 +1012,18 @@ impl MainView {
             ("tile.hotkey", hotkey, 0),
         ];
         let dt = ui(11.0, 400, 15.0 / 11.0);
-        let dd = TextStyle { ellipsis: true, align: Align::End, letter_spacing: -0.2, ..data(10.0, 1.5) };
+        let dd = if self.rtl {
+            TextStyle { ellipsis: true, direction: Direction::Ltr, letter_spacing: -0.2, ..data(10.0, 1.5) }
+        } else {
+            TextStyle { ellipsis: true, align: Align::End, letter_spacing: -0.2, ..data(10.0, 1.5) }
+        };
         let mut y = r.y + 20.0 + 24.0 + 4.0;
         for (label, value, kind) in rows {
             let label = self.t(label);
             let mut lw = 0.0;
-            if let Some(l) = self.text(cx, &label, &dt, 200.0) {
-                self.scene.text(&l, x0, y + (15.0 - l.height) / 2.0, ACC_3, Glow::G1);
+            // естественная ширина: арабская подпись в широком поле ушла бы к его правому краю
+            if let Some(l) = self.text(cx, &label, &dt, 1000.0) {
+                self.scene.text(&l, self.tx(r, x0, l.width), y + (15.0 - l.height) / 2.0, ACC_3, Glow::G1);
                 lw = l.width;
             }
             let vw = x1 - x0 - lw - 10.0;
@@ -1028,12 +1033,12 @@ impl MainView {
                     -1 => (ACC, Glow::G2, 0.8),
                     _ => (ACC, Glow::G2, 1.0),
                 };
-                let lx = x1 - vw.max(10.0);
+                let lx = if self.rtl { x0 } else { x1 - vw.max(10.0) };
                 let ty = y + (15.0 - l.height) / 2.0;
                 self.scene.text_alpha(&l, lx, ty, c, g, a);
                 if kind == -1 {
                     // .pill.bad — зачёркнуто
-                    let line_x = x1 - l.width.min(vw);
+                    let line_x = if self.rtl { x0 } else { x1 - l.width.min(vw) };
                     self.scene.flush(cx);
                     cx.fill_rect(Rect::new(line_x, ty + l.height / 2.0, l.width.min(vw), 1.0), with_alpha(ACC, 0.8));
                 }
@@ -1076,7 +1081,7 @@ impl MainView {
                 }
             }
             if on {
-                let bar = Rect::new(r.x, tr.y + tr.h * 0.18, 2.0, tr.h * 0.64);
+                let bar = self.mx(r, Rect::new(r.x, tr.y + tr.h * 0.18, 2.0, tr.h * 0.64));
                 self.scene.shadow(cx, bar, 1.0, ACC, 8.0);
                 self.scene.flush(cx);
                 fill_round(cx, bar, 1.0, ACC);
@@ -1127,7 +1132,22 @@ impl MainView {
         let tk = Rect::new(r.x, r.y, r.w, 34.0);
         fill_round(cx, tk, 0.0, with_alpha(ACC_5, ACC_5.a * 0.5));
         cx.fill_rect(Rect::new(r.x, r.y + 33.0, r.w, 1.0), ACC_5);
-        self.scene.icon("play", Rect::new(r.x + 14.0, r.y + 10.5, 13.0, 13.0), 0.0, ACC, true, Glow::G2);
+        let play = self.mx(r, Rect::new(r.x + 14.0, r.y + 10.5, 13.0, 13.0));
+        if self.rtl {
+            // значок «вперёд» смотрит по ходу чтения — влево
+            self.scene.flush(cx);
+            let mut t0 = windows::Foundation::Numerics::Matrix3x2::default();
+            unsafe {
+                cx.dc().GetTransform(&mut t0);
+                let flip = windows::Foundation::Numerics::Matrix3x2 { M11: -1.0, M12: 0.0, M21: 0.0, M22: 1.0, M31: 2.0 * play.x + play.w, M32: 0.0 };
+                cx.dc().SetTransform(&(flip * t0));
+            }
+            self.scene.icon("play", play, 0.0, ACC, true, Glow::G2);
+            self.scene.flush(cx);
+            unsafe { cx.dc().SetTransform(&t0) };
+        } else {
+            self.scene.icon("play", play, 0.0, ACC, true, Glow::G2);
+        }
         let partial = if self.partial.trim().is_empty() { "…".to_string() } else { self.partial.to_uppercase() };
         let tape_w = r.w - 14.0 - 13.0 - 8.0 - 3.0 - 14.0;
         let wide = TextStyle { direction: self.dir(), ..lcd(21.0, 500, 0.05) };
@@ -1135,7 +1155,7 @@ impl MainView {
         self.ticker_over = over;
         if over <= 4.0 {
             if let Some(l) = self.text(cx, &partial, &wide, tape_w) {
-                self.scene.text(&l, r.x + 14.0 + 13.0 + 8.0 + 3.0, r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+                self.scene.text(&l, self.tx(r, r.x + 14.0 + 13.0 + 8.0 + 3.0, tape_w), r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
             }
         }
         // содержимое вкладки
@@ -1210,6 +1230,16 @@ impl MainView {
         if self.rtl { Direction::Rtl } else { Direction::Ltr }
     }
 
+    /// dir="rtl": прямоугольник, отражённый внутри контейнера (раскладка считается слева направо).
+    fn mx(&self, c: Rect, r: Rect) -> Rect {
+        native::controls::mirror(c, r, self.rtl)
+    }
+
+    /// Левый край текста шириной `w`, стоящего в контейнере `c` с левого края `x` (LTR).
+    fn tx(&self, c: Rect, x: f32, w: f32) -> f32 {
+        self.mx(c, Rect::new(x, 0.0, w, 0.0)).x
+    }
+
     /// «Главная» (#p-home): услышанная команда или подсказка, «Что можно сказать» — список
     /// примеров (renderGrammarExamples). Всё вместе прокручивается колесом, как .panel.
     fn draw_home(&mut self, cx: &mut RenderCx<'_>, body: Rect) {
@@ -1235,12 +1265,15 @@ impl MainView {
         // .heard::after: блок-курсор после текста, мигает (1,06 с, через раз — тусклее)
         let caret_w = style.size * 0.55;
         if let Some(l) = self.text(cx, &text, &style, body.w - caret_w - 4.0) {
-            self.scene.text(&l, body.x, top + 4.0, color, glow);
+            let text_x = if self.rtl { body.x + caret_w + 4.0 } else { body.x };
+            self.scene.text(&l, text_x, top + 4.0, color, glow);
             h = h.max(4.0 + l.height + 14.0);
             let (ex, ey, eh) = l.end_point(text.encode_utf16().count() as u32);
             let on = (cx.now.duration_since(self.t0).as_secs_f32() / 0.53) as i64 % 2 == 0;
             let a = if on { 1.0 } else { 0.25 };
-            let block = Rect::new(body.x + ex + 4.0, top + 4.0 + ey + (eh - style.size) / 2.0 + style.size * 0.12, caret_w, style.size);
+            // справа налево курсор встаёт левее последней строки (как ::after в dir="rtl")
+            let bx = if self.rtl { text_x + l.last_line_left() - 4.0 - caret_w } else { body.x + ex + 4.0 };
+            let block = Rect::new(bx, top + 4.0 + ey + (eh - style.size) / 2.0 + style.size * 0.12, caret_w, style.size);
             self.scene.shadow(cx, block, 0.0, Color { a: 0.8 * a, ..ACC }, 8.0);
             cx.fill_rect(block, Color { a, ..ACC });
         }
@@ -1272,10 +1305,11 @@ impl MainView {
         let general = self.editor.as_ref().is_some_and(|e| e.open == "general");
         self.web.label = self.t(if general { "grammar.closeEditor" } else { "grammar.edit" });
         let edit_w = self.web.natural_width(&mut self.scene, cx);
-        self.web.rect = Rect::new(body.x + body.w - edit_w, y, edit_w, 28.0);
+        self.web.rect = self.mx(body, Rect::new(body.x + body.w - edit_w, y, edit_w, 28.0));
         let h2 = self.t("grammar.heading").to_uppercase();
-        if let Some(l) = self.text(cx, &h2, &lcd(18.0, 600, 0.08), body.w - edit_w - 12.0) {
-            self.scene.text(&l, body.x, y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+        let h2_st = TextStyle { direction: self.dir(), ..lcd(18.0, 600, 0.08) };
+        if let Some(l) = self.text(cx, &h2, &h2_st, body.w - edit_w - 12.0) {
+            self.scene.text(&l, self.tx(body, body.x, body.w - edit_w - 12.0), y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
         }
         self.scene.flush(cx);
         self.web.draw(&mut self.scene, cx);
@@ -1297,7 +1331,8 @@ impl MainView {
             let code = self.text(cx, &row.command, &code_st, 10_000.0);
             let code_w = code.as_ref().map_or(0.0, |l| l.width);
             let desc_x = x0 + 26.0 + 8.0 + code_w + 8.0;
-            let desc = self.text(cx, &row.desc, &desc_st, (body.x + body.w - 6.0 - desc_x).max(60.0));
+            let desc_w = (body.x + body.w - 6.0 - desc_x).max(60.0);
+            let desc = self.text(cx, &row.desc, &desc_st, desc_w);
             let items = [num.as_ref(), code.as_ref(), desc.as_ref()];
             let line_base = items.iter().flatten().map(|l| l.baseline()).fold(0.0f32, f32::max);
             let bottom = items.iter().flatten().map(|l| line_base - l.baseline() + l.height).fold(0.0f32, f32::max);
@@ -1311,13 +1346,15 @@ impl MainView {
             let alpha = if row.off { 0.45 } else { 1.0 };
             let ty = |l: &Rc<native::TextLayout>| y + 3.0 + line_base - l.baseline();
             if let Some(l) = &num {
-                self.scene.text(l, x0, ty(l), ACC_3, Glow::G1);
+                // колонка 26 px: текст у её начала
+                let nx = if self.rtl { self.tx(body, x0, 26.0) + 26.0 - l.width } else { x0 };
+                self.scene.text(l, nx, ty(l), ACC_3, Glow::G1);
             }
             if let Some(l) = &code {
-                self.scene.text_alpha(l, x0 + 34.0, ty(l), ACC_HOT, Glow::G2, alpha);
+                self.scene.text_alpha(l, self.tx(body, x0 + 34.0, l.width), ty(l), ACC_HOT, Glow::G2, alpha);
             }
             if let Some(l) = &desc {
-                self.scene.text_alpha(l, desc_x, ty(l), if hover { ACC_2 } else { ACC_3 }, Glow::G1, alpha);
+                self.scene.text_alpha(l, self.tx(body, desc_x, desc_w), ty(l), if hover { ACC_2 } else { ACC_3 }, Glow::G1, alpha);
             }
             self.say_rects.push(rect);
             let row_top = y;
@@ -1366,7 +1403,7 @@ impl MainView {
         unsafe { cx.dc().PopAxisAlignedClip() };
         // полоса прокрутки, когда список не влезает
         if self.home_max_scroll > 0.0 {
-            let track = Rect::new(screen_r().x + screen_r().w - 7.0, body.y, 3.0, body.h);
+            let track = self.mx(screen_r(), Rect::new(screen_r().x + screen_r().w - 7.0, body.y, 3.0, body.h));
             let total = body.h + self.home_max_scroll;
             let th = (track.h * body.h / total).max(24.0);
             let ty = track.y + (track.h - th) * self.home_scroll / self.home_max_scroll;
@@ -1410,8 +1447,10 @@ impl MainView {
     fn draw_editor(&mut self, cx: &mut RenderCx<'_>, body: Rect, y: f32) -> f32 {
         let x = body.x + 34.0;
         let top = y + 4.0;
-        let h = self.form.draw(&mut self.scene, cx, x + 11.0, top, body.w - 34.0 - 11.0);
-        cx.fill_rect(Rect::new(x, top, 1.0, h), ACC_4);
+        let fw = body.w - 34.0 - 11.0;
+        let fx = self.tx(body, x + 11.0, fw);
+        let h = self.form.draw(&mut self.scene, cx, fx, top, fw);
+        cx.fill_rect(self.mx(body, Rect::new(x, top, 1.0, h)), ACC_4);
         self.form_blink = self.form.next_blink(cx.now);
         top + h + 10.0
     }
@@ -1671,7 +1710,10 @@ impl MainView {
             self.scene.text(&l, body.x, y, ACC_3, Glow::G1);
             y += l.height + 14.0;
         }
-        self.web_button(cx, body.x, y);
+        let label = self.web.label.to_uppercase();
+        let w = self.text(cx, &label, &lcd(15.0, 500, 0.07), 1000.0).map_or(160.0, |l| l.width + 24.0);
+        let x = self.tx(body, body.x, w);
+        self.web_button(cx, x, y);
     }
 
     fn draw_logs(&mut self, cx: &mut RenderCx<'_>, body: Rect) {
@@ -1683,7 +1725,7 @@ impl MainView {
         }
         // строки снизу вверх: последняя — у нижнего края, прокрутка колесом
         let view = Rect::new(body.x, top, body.w, body.y + body.h - top);
-        let st = TextStyle { wrap: true, break_words: true, letter_spacing: -0.22, ..data(11.0, 1.6) };
+        let st = TextStyle { wrap: true, break_words: true, letter_spacing: -0.22, direction: self.dir(), ..data(11.0, 1.6) };
         self.scene.set_clip(Some(view));
         let mut y = view.y + view.h + self.log_scroll;
         let n = self.log.len();
@@ -1998,7 +2040,7 @@ impl MainView {
             return;
         }
         let r = screen_r();
-        let tape = Rect::new(r.x + 14.0 + 13.0 + 8.0, r.y, r.w - 14.0 - 13.0 - 8.0 - 14.0, 34.0);
+        let tape = self.mx(r, Rect::new(r.x + 14.0 + 13.0 + 8.0, r.y, r.w - 14.0 - 13.0 - 8.0 - 14.0, 34.0));
         let partial = self.partial.to_uppercase();
         let wide = TextStyle { direction: self.dir(), ..lcd(21.0, 500, 0.05) };
         let Some(l) = self.text(cx, &partial, &wide, 100_000.0) else { return };
@@ -2009,7 +2051,9 @@ impl MainView {
         let shift = if k < 0.08 { 0.0 } else { dist * (k - 0.08) / 0.92 };
         self.scene.set_clip(Some(tape));
         unsafe { cx.dc().PushAxisAlignedClip(&tape.d2d(), windows::Win32::Graphics::Direct2D::D2D1_ANTIALIAS_MODE_ALIASED) };
-        self.scene.text(&l, tape.x + 3.0 - shift, r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
+        // справа налево строка начинается у правого края и уезжает вправо
+        let x = if self.rtl { tape.x + tape.w - 3.0 - l.width + shift } else { tape.x + 3.0 - shift };
+        self.scene.text(&l, x, r.y + (34.0 - l.height) / 2.0, ACC_HOT, Glow::G3);
         self.scene.flush(cx);
         self.scene.set_clip(None);
         unsafe { cx.dc().PopAxisAlignedClip() };

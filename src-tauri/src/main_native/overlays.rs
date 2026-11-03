@@ -81,6 +81,8 @@ pub struct Overlay {
     max_scroll: f32,
     pressed: Option<u8>,
     locale: String,
+    /// dir="rtl": раскладка отражена
+    rtl: bool,
     t0: Instant,
     all: Button,
     none: Button,
@@ -101,6 +103,8 @@ impl Overlay {
         search.style = ui(13.0, 400, 1.0);
         search.placeholder = tr(if matches!(kind, Kind::Scan { .. }) { "scan.search" } else { "appPicker.search" });
         search.hwnd = hwnd;
+        let rtl = crate::ui_text::direction(locale) == "rtl";
+        search.rtl = rtl;
         search.set_focus(typing);
         Self {
             kind,
@@ -115,11 +119,16 @@ impl Overlay {
             max_scroll: 0.0,
             pressed: None,
             locale: locale.to_string(),
+            rtl,
             t0: Instant::now(),
             all: Button::new(&tr("scan.all"), ButtonKind::Plain),
             none: Button::new(&tr("scan.none"), ButtonKind::Plain),
             tint: None,
         }
+    }
+
+    fn dir(&self) -> crate::native::Direction {
+        if self.rtl { crate::native::Direction::Rtl } else { crate::native::Direction::Ltr }
     }
 
     /// Заголовок окна (для диктора).
@@ -265,16 +274,17 @@ impl Overlay {
                 scene.set_clip(Some(lr));
                 unsafe { cx.dc().PushAxisAlignedClip(&lr.d2d(), D2D1_ANTIALIAS_MODE_ALIASED) };
                 self.rows.clear();
-                let st = TextStyle { ellipsis: true, ..ui(13.0, 400, 1.45) };
+                let st = TextStyle { ellipsis: true, direction: self.dir(), ..ui(13.0, 400, 1.45) };
+                let note_st = TextStyle { direction: self.dir(), ..ui(12.0, 400, 1.45) };
                 let mut y = lr.y - self.scroll;
                 if list.is_none() {
-                    if let Some(l) = scene.cache.get(cx.text(), &self.t("common.loading", &[]), &ui(12.0, 400, 1.45), lr.w) {
+                    if let Some(l) = scene.cache.get(cx.text(), &self.t("common.loading", &[]), &note_st, lr.w) {
                         scene.text(&l, lr.x, y, ACC_3, Glow::G1);
                     }
                 } else {
                     let shown = self.filtered();
                     if shown.is_empty() {
-                        if let Some(l) = scene.cache.get(cx.text(), &self.t("common.nothingFound", &[]), &ui(12.0, 400, 1.45), lr.w) {
+                        if let Some(l) = scene.cache.get(cx.text(), &self.t("common.nothingFound", &[]), &note_st, lr.w) {
                             scene.text(&l, lr.x, y, ACC_3, Glow::G1);
                         }
                     }
@@ -317,7 +327,7 @@ impl Overlay {
             }
             let bw = b.natural_width(scene, cx);
             x -= bw;
-            b.rect = Rect::new(x, fy, bw, 28.0);
+            b.rect = crate::native::controls::mirror(r, Rect::new(x, fy, bw, 28.0), self.rtl);
             x -= 8.0;
         }
         let ok_on = self.ok_enabled();
@@ -341,27 +351,32 @@ impl Overlay {
     fn draw_scan(&mut self, scene: &mut Scene, cx: &mut RenderCx<'_>, inner: Rect, now: Instant, apps: Option<Vec<ScanApp>>) {
         let mut y = inner.y;
         let title = self.t("scan.title", &[]).to_uppercase();
-        if let Some(l) = scene.cache.get(cx.text(), &title, &lcd(18.0, 600, 0.08), inner.w) {
+        let rtl = self.rtl;
+        let m = move |c: Rect, r: Rect| crate::native::controls::mirror(c, r, rtl);
+        let dir = self.dir();
+        if let Some(l) = scene.cache.get(cx.text(), &title, &TextStyle { direction: dir, ..lcd(18.0, 600, 0.08) }, inner.w) {
             scene.text(&l, inner.x, y, ACC_HOT, Glow::G3);
         }
         let (checked, total) = self.scan_counts();
         if apps.as_ref().is_some_and(|a| !a.is_empty()) {
             let c = self.t("scan.count", &[("checked", &checked.to_string()), ("total", &total.to_string())]);
             if let Some(l) = scene.cache.get(cx.text(), &c, &crate::native::controls::data(11.0, 1.0), 1000.0) {
-                scene.text(&l, inner.x + inner.w - l.width, y + 4.0, crate::native::controls::ACC_2, Glow::G1);
+                scene.text(&l, m(inner, Rect::new(inner.x + inner.w - l.width, y, l.width, 0.0)).x, y + 4.0, crate::native::controls::ACC_2, Glow::G1);
             }
         }
         y += 24.0;
-        if let Some(l) = scene.cache.get(cx.text(), &self.t("scan.hint", &[]), &TextStyle { wrap: true, ..ui(12.0, 400, 1.45) }, inner.w) {
+        if let Some(l) = scene.cache.get(cx.text(), &self.t("scan.hint", &[]), &TextStyle { wrap: true, direction: dir, ..ui(12.0, 400, 1.45) }, inner.w) {
             scene.text(&l, inner.x, y, ACC_3, Glow::G1);
         }
         y += 36.0 + 12.0;
         // фильтр и кнопки
         let nw = self.none.natural_width(scene, cx);
         let aw = self.all.natural_width(scene, cx);
-        self.none.rect = Rect::new(inner.x + inner.w - nw, y, nw, 28.0);
-        self.all.rect = Rect::new(self.none.rect.x - 8.0 - aw, y, aw, 28.0);
-        self.search.rect = Rect::new(inner.x, y, self.all.rect.x - 8.0 - inner.x, 28.0);
+        let none_r = Rect::new(inner.x + inner.w - nw, y, nw, 28.0);
+        let all_r = Rect::new(none_r.x - 8.0 - aw, y, aw, 28.0);
+        self.search.rect = m(inner, Rect::new(inner.x, y, all_r.x - 8.0 - inner.x, 28.0));
+        self.none.rect = m(inner, none_r);
+        self.all.rect = m(inner, all_r);
         y += 28.0 + 6.0;
         let lr = Rect::new(inner.x - 6.0, y, inner.w + 12.0, inner.y + inner.h - y);
         self.list_rect = lr;
@@ -371,7 +386,7 @@ impl Overlay {
         self.rows.clear();
         let mut ry = lr.y - self.scroll;
         let hint = |scene: &mut Scene, cx: &mut RenderCx<'_>, text: &str, a: f32| {
-            if let Some(l) = scene.cache.get(cx.text(), text, &ui(12.0, 400, 1.45), lr.w - 12.0) {
+            if let Some(l) = scene.cache.get(cx.text(), text, &TextStyle { direction: dir, ..ui(12.0, 400, 1.45) }, lr.w - 12.0) {
                 scene.text_alpha(&l, lr.x + 6.0, lr.y + 18.0, ACC_3, Glow::G1, a);
             }
         };
@@ -393,7 +408,7 @@ impl Overlay {
                         group = Some(a.group.as_str());
                         ry += if self.rows.is_empty() { 0.0 } else { 6.0 };
                         let gt = self.t(&format!("scan.group.{}", a.group), &[]).to_uppercase();
-                        if let Some(l) = scene.cache.get(cx.text(), &gt, &lcd(14.0, 500, 0.08), lr.w) {
+                        if let Some(l) = scene.cache.get(cx.text(), &gt, &TextStyle { direction: dir, ..lcd(14.0, 500, 0.08) }, lr.w - 12.0) {
                             scene.text(&l, lr.x + 6.0, ry + 6.0, ACC_3, Glow::G1);
                         }
                         crate::native::controls::dotted_hline(cx, lr.x, ry + 25.0, lr.w, crate::native::controls::ACC_4);
@@ -407,7 +422,8 @@ impl Overlay {
                         fill_round(cx, row, 5.0, crate::native::controls::ACC_5);
                     }
                     // флажок
-                    let cb = Rect::new(row.x + 6.0, row.y + (rh - 16.0) / 2.0, 16.0, 16.0);
+                    let cb0 = Rect::new(row.x + 6.0, row.y + (rh - 16.0) / 2.0, 16.0, 16.0);
+                    let cb = m(row, cb0);
                     fill_round(cx, cb, 3.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 * alpha });
                     stroke_round(cx, cb, 3.0, Color { a: ACC_3.a * alpha, ..ACC_3 }, 1.0, false);
                     if a.checked {
@@ -416,7 +432,8 @@ impl Overlay {
                         fill_round(cx, ir, 1.0, ACC);
                     }
                     // иконка
-                    let ic = Rect::new(cb.x + 16.0 + 10.0, row.y + (rh - 22.0) / 2.0, 22.0, 22.0);
+                    let ic0 = Rect::new(cb0.x + 16.0 + 10.0, row.y + (rh - 22.0) / 2.0, 22.0, 22.0);
+                    let ic = m(row, ic0);
                     let mut drew = false;
                     if let Some(png) = &a.icon_png {
                         let id = match a.icon {
@@ -461,10 +478,10 @@ impl Overlay {
                         scene.icon(icon, Rect::new(ic.x + 3.0, ic.y + 3.0, 16.0, 16.0), 1.6, Color { a: ACC_3.a * alpha, ..ACC_3 }, false, Glow::G1);
                     }
                     // имя, отметки
-                    let bx = ic.x + 22.0 + 10.0;
+                    let bx = ic0.x + 22.0 + 10.0;
                     let bw = row.x + row.w - 6.0 - bx;
                     let mut nx = bx;
-                    let name_st = TextStyle { ellipsis: true, ..ui(13.0, 400, 1.3) };
+                    let name_st = TextStyle { ellipsis: true, direction: dir, ..ui(13.0, 400, 1.3) };
                     let mark = match a.group.as_str() {
                         "frequent" | "recent" => Some((self.t(&format!("scan.mark.{}", a.group), &[]).to_uppercase(), a.group == "frequent")),
                         _ => None,
@@ -477,12 +494,12 @@ impl Overlay {
                         .filter_map(|s| scene.cache.get(cx.text(), s, &tag_st, 1000.0).map(|l| l.width + 12.0 + 8.0))
                         .sum();
                     if let Some(l) = scene.cache.get(cx.text(), &a.name, &name_st, (bw - tags_w).max(40.0)) {
-                        scene.text_alpha(&l, nx, row.y + 6.0, ACC_HOT, Glow::G1, alpha);
+                        scene.text_alpha(&l, m(row, Rect::new(nx, row.y, (bw - tags_w).max(40.0), 0.0)).x, row.y + 6.0, ACC_HOT, Glow::G1, alpha);
                         nx += l.width + 8.0;
                     }
                     for (text, solid, dashed) in [mark.map(|(t, f)| (t, f, false)), note.map(|n| (n, false, true))].into_iter().flatten() {
                         if let Some(l) = scene.cache.get(cx.text(), &text, &tag_st, 1000.0) {
-                            let tr = Rect::new(nx, row.y + 6.0 + 1.0, l.width + 10.0, l.height + 2.0);
+                            let tr = m(row, Rect::new(nx, row.y + 6.0 + 1.0, l.width + 10.0, l.height + 2.0));
                             if solid {
                                 fill_round(cx, tr, 3.0, Color { a: crate::native::controls::ACC_2.a * alpha, ..crate::native::controls::ACC_2 });
                             } else {
@@ -494,10 +511,10 @@ impl Overlay {
                         }
                     }
                     let phr = if a.phrases.is_empty() { "-".to_string() } else { a.phrases.join(" · ") };
-                    let phr_st = TextStyle { ellipsis: true, ..lcd(14.0, 500, 0.04) };
+                    let phr_st = TextStyle { ellipsis: true, direction: dir, ..lcd(14.0, 500, 0.04) };
                     if let Some(l) = scene.cache.get(cx.text(), &phr, &phr_st, bw) {
                         let c = if a.checked { crate::native::controls::ACC_2 } else { ACC_3 };
-                        scene.text_alpha(&l, bx, row.y + 6.0 + 17.0 + 3.0, c, Glow::G1, alpha);
+                        scene.text_alpha(&l, m(row, Rect::new(bx, row.y, bw, 0.0)).x, row.y + 6.0 + 17.0 + 3.0, c, Glow::G1, alpha);
                     }
                     self.rows.push((row, i));
                     ry += rh;
@@ -528,7 +545,8 @@ impl Overlay {
         fill_round(cx, Rect::new(orb.x + 10.0, orb.y + 10.0, 44.0, 44.0), 22.0, Color { a: 0.25 * a, ..ACC });
         fill_round(cx, Rect::new(orb.x + 20.0, orb.y + 26.0, 24.0, 24.0), 12.0, Color { a: 0.85 * a, ..ACC });
         y += 64.0 + 8.0;
-        let center = |s: TextStyle| TextStyle { align: Align::Center, wrap: true, ..s };
+        let dir = self.dir();
+        let center = |s: TextStyle| TextStyle { align: Align::Center, wrap: true, direction: dir, ..s };
         let parts: [(&str, TextStyle, Color, Glow); 4] = [
             (title, center(lcd(18.0, 600, 0.08)), ACC_HOT, Glow::G3),
             (hint, center(ui(12.0, 400, 1.45)), ACC_3, Glow::G1),

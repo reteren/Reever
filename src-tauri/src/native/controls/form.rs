@@ -394,6 +394,10 @@ impl Form {
         // открытые рамки: (верх, легенда: x0, x1, высота)
         let mut groups: Vec<(f32, f32, f32, f32)> = Vec::new();
         let (mut cx0, mut cw) = (x, w);
+        // dir="rtl": раскладка считается слева направо и отражается вокруг формы
+        let rtl = self.rtl;
+        let m = move |r: Rect| super::mirror(Rect::new(x, 0.0, w, 0.0), r, rtl);
+        let dir = self.dir();
         for it in &items {
             match it {
                 Item::GroupBegin { legend, icon } => {
@@ -405,14 +409,15 @@ impl Form {
                     let lx0 = cx0 + 14.0 - 2.0;
                     let mut tx = lx0 + 6.0;
                     if let Some(name) = icon {
-                        scene.icon(name, Rect::new(tx, y + (lh - 15.0) / 2.0, 15.0, 15.0), 1.6, ACC_HOT, false, Glow::G2);
+                        scene.icon(name, m(Rect::new(tx, y + (lh - 15.0) / 2.0, 15.0, 15.0)), 1.6, ACC_HOT, false, Glow::G2);
                         tx += 15.0 + 6.0;
                     }
                     if let Some(l) = &l {
-                        scene.text(l, tx, y, ACC_HOT, Glow::G2);
+                        scene.text(l, m(Rect::new(tx, y, l.width, lh)).x, y, ACC_HOT, Glow::G2);
                         tx += l.width;
                     }
-                    groups.push((y + lh / 2.0, lx0, tx + 6.0, lh));
+                    let gap = m(Rect::new(lx0, y, tx + 6.0 - lx0, lh));
+                    groups.push((y + lh / 2.0, gap.x, gap.x + gap.w, lh));
                     y += lh + 4.0;
                     cx0 += 15.0;
                     cw -= 30.0;
@@ -474,15 +479,16 @@ impl Form {
                             y += row_h + 5.0;
                             row_h = 0.0;
                         }
-                        let r = Rect::new(px, y, cw_, ch);
+                        let r0 = Rect::new(px, y, cw_, ch);
+                        let r = m(r0);
                         let primary = *primary_first && i == 0;
                         if primary {
                             scene.shadow(cx, r, 4.0, Color::rgba(39, 230, 170, 51), 8.0);
                         }
                         fill_round(cx, r, 4.0, ACC_5);
                         stroke_round(cx, r, 4.0, if primary { ACC_2 } else { ACC_4 }, 1.0, false);
-                        scene.text(&l, r.x + 10.0, r.y + (ch - l.height) / 2.0, ACC_HOT, Glow::None);
-                        let xr = Rect::new(r.x + r.w - 1.0 - 4.0 - 18.0, r.y + (ch - 18.0) / 2.0, 18.0, 18.0);
+                        scene.text(&l, m(Rect::new(r0.x + 10.0, r.y, l.width, 0.0)).x, r.y + (ch - l.height) / 2.0, ACC_HOT, Glow::None);
+                        let xr = m(Rect::new(r0.x + r0.w - 1.0 - 4.0 - 18.0, r.y + (ch - 18.0) / 2.0, 18.0, 18.0));
                         let hit = Hit::Remove(id.clone(), i);
                         let hot = self.hover.as_ref() == Some(&hit);
                         scene.icon("x", Rect::new(xr.x + 2.0, xr.y + 2.0, 14.0, 14.0), 1.6, if hot { ACC_HOT } else { ACC }, false, if hot { Glow::G3 } else { Glow::G2 });
@@ -500,10 +506,10 @@ impl Form {
                     let bid = format!("add:{id}");
                     let b = self.button(&bid, button, ButtonKind::Plain);
                     let bw = b.natural_width(scene, cx);
-                    b.rect = Rect::new(cx0 + cw - bw, y, bw, 28.0);
+                    b.rect = m(Rect::new(cx0 + cw - bw, y, bw, 28.0));
                     let br = b.rect;
                     if let Some(inp) = self.inputs.get_mut(id) {
-                        inp.rect = Rect::new(cx0, y, (cw - bw - 8.0).max(40.0), 28.0);
+                        inp.rect = m(Rect::new(cx0, y, (cw - bw - 8.0).max(40.0), 28.0));
                         self.hits.push((inp.rect, Hit::Input(id.clone())));
                     }
                     self.hits.push((br, Hit::Button(bid)));
@@ -521,18 +527,21 @@ impl Form {
                     let label = options.iter().find(|(v, _)| v == selected).map_or(selected.clone(), |(_, l)| l.clone());
                     let tw = scene.cache.get(cx.text(), &label, &st, 10_000.0).map_or(60.0, |l| l.width);
                     let sw = (tw + 9.0 + 26.0 + 2.0).min(cw * 0.6);
-                    let sr = Rect::new(cx0 + cw - sw, y, sw, 28.0);
+                    let sr = m(Rect::new(cx0 + cw - sw, y, sw, 28.0));
                     if let Some(inp) = self.inputs.get_mut(id) {
-                        inp.rect = Rect::new(cx0, y, (cw - sw - 8.0).max(40.0), 28.0);
+                        inp.rect = m(Rect::new(cx0, y, (cw - sw - 8.0).max(40.0), 28.0));
                         self.hits.push((inp.rect, Hit::Input(id.clone())));
                     }
                     let open = self.open_select.as_deref() == Some(select.as_str());
                     fill_round(cx, sr, 5.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.45 });
                     stroke_round(cx, sr, 5.0, if open { ACC_2 } else { ACC_4 }, 1.0, false);
+                    let st = TextStyle { direction: dir, ..st };
                     if let Some(l) = scene.cache.get(cx.text(), &label, &st, sw - 9.0 - 26.0) {
-                        scene.text(&l, sr.x + 9.0, sr.y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
+                        let tx = if rtl { sr.x + 26.0 } else { sr.x + 9.0 };
+                        scene.text(&l, tx, sr.y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
                     }
-                    scene.icon("chev", Rect::new(sr.x + sw - 22.0, sr.y + 6.0, 16.0, 16.0), 2.0, ACC, false, Glow::None);
+                    let chev_x = if rtl { sr.x + 6.0 } else { sr.x + sw - 22.0 };
+                    scene.icon("chev", Rect::new(chev_x, sr.y + 6.0, 16.0, 16.0), 2.0, ACC, false, Glow::None);
                     self.hits.push((sr, Hit::Select(select.clone())));
                     if open {
                         popup = Some((select.clone(), sr, options.clone(), selected.clone()));
@@ -546,10 +555,12 @@ impl Form {
                     let open = self.open_select.as_deref() == Some(id.as_str());
                     fill_round(cx, sr, 5.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.45 });
                     stroke_round(cx, sr, 5.0, if open { ACC_2 } else { ACC_4 }, 1.0, false);
-                    if let Some(l) = scene.cache.get(cx.text(), &label, &TextStyle { ellipsis: true, ..st }, cw - 9.0 - 26.0) {
-                        scene.text(&l, sr.x + 9.0, sr.y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
+                    if let Some(l) = scene.cache.get(cx.text(), &label, &TextStyle { ellipsis: true, direction: dir, ..st }, cw - 9.0 - 26.0) {
+                        let tx = if rtl { sr.x + 26.0 } else { sr.x + 9.0 };
+                        scene.text(&l, tx, sr.y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
                     }
-                    scene.icon("chev", Rect::new(sr.x + cw - 22.0, sr.y + 6.0, 16.0, 16.0), 2.0, ACC, false, Glow::None);
+                    let chev_x = if rtl { sr.x + 6.0 } else { sr.x + cw - 22.0 };
+                    scene.icon("chev", Rect::new(chev_x, sr.y + 6.0, 16.0, 16.0), 2.0, ACC, false, Glow::None);
                     self.hits.push((sr, Hit::Select(id.clone())));
                     if open {
                         popup = Some((id.clone(), sr, options.clone(), selected.clone()));
@@ -564,7 +575,7 @@ impl Form {
                     y += top;
                     let st = TextStyle { wrap: true, direction: self.dir(), ..ui(12.0, 400, 1.45) };
                     if let Some(l) = scene.cache.get(cx.text(), text, &st, (cw - dx).max(40.0)) {
-                        scene.text(&l, cx0 + dx, y, ACC_3, Glow::G1);
+                        scene.text(&l, m(Rect::new(cx0 + dx, y, (cw - dx).max(40.0), 0.0)).x, y, ACC_3, Glow::G1);
                         y += l.height;
                     }
                     y += 6.0;
@@ -574,18 +585,20 @@ impl Form {
                     let lw = scene.cache.get(cx.text(), text, &st, 10_000.0).map_or(44.0, |l| l.width).max(44.0);
                     let tw = (cw - 12.0 - lw).max(40.0);
                     // дорожка 4 px, ручка 14×14 (ход ручки — ширина дорожки минус ручка)
-                    let track = Rect::new(cx0, y + 12.0, tw, 4.0);
+                    let track = m(Rect::new(cx0, y + 12.0, tw, 4.0));
                     fill_round(cx, track, 2.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 });
                     stroke_round(cx, track, 2.0, ACC_4, 1.0, false);
                     let k = if max > min { ((value - min) / (max - min)).clamp(0.0, 1.0) } else { 0.0 };
-                    let thumb = Rect::new(cx0 + (tw - 14.0) * k, y + 7.0, 14.0, 14.0);
+                    let thumb = m(Rect::new(cx0 + (tw - 14.0) * k, y + 7.0, 14.0, 14.0));
                     scene.shadow(cx, thumb, 3.0, ACC, 8.0);
                     fill_round(cx, thumb, 3.0, ACC);
                     if let Some(l) = scene.cache.get(cx.text(), text, &st, 10_000.0) {
-                        scene.text(&l, cx0 + cw - l.width, y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
+                        scene.text(&l, m(Rect::new(cx0 + cw - l.width, y, l.width, 0.0)).x, y + (28.0 - l.height) / 2.0, ACC_HOT, Glow::G1);
                     }
-                    let hit = Rect::new(cx0, y, tw, 28.0);
-                    self.sliders.insert(id.clone(), (cx0 + 7.0, tw - 14.0, *min, *max, *step));
+                    let hit = m(Rect::new(cx0, y, tw, 28.0));
+                    // RTL: начало хода справа, ширина отрицательная
+                    let (sx0, sw_) = if rtl { (hit.x + hit.w - 7.0, -(tw - 14.0)) } else { (cx0 + 7.0, tw - 14.0) };
+                    self.sliders.insert(id.clone(), (sx0, sw_, *min, *max, *step));
                     self.hits.push((hit, Hit::Slider(id.clone())));
                     y += 28.0;
                 }
@@ -598,14 +611,15 @@ impl Form {
                             continue;
                         }
                         let Some(l) = scene.cache.get(cx.text(), part, &st, 10_000.0) else { continue };
+                        let lx = m(Rect::new(px, y, l.width, 0.0)).x;
                         if i == 1 {
                             let hit = Hit::Link(id.clone());
                             let hot = self.hover.as_ref() == Some(&hit);
-                            scene.text(&l, px, y, ACC_HOT, if hot { Glow::G2 } else { Glow::G1 });
-                            cx.fill_rect(Rect::new(px, y + l.baseline() + 3.0, l.width, 1.0), if hot { ACC_HOT } else { ACC_3 });
-                            self.hits.push((Rect::new(px, y, l.width, l.height), hit));
+                            scene.text(&l, lx, y, ACC_HOT, if hot { Glow::G2 } else { Glow::G1 });
+                            cx.fill_rect(Rect::new(lx, y + l.baseline() + 3.0, l.width, 1.0), if hot { ACC_HOT } else { ACC_3 });
+                            self.hits.push((Rect::new(lx, y, l.width, l.height), hit));
                         } else {
-                            scene.text(&l, px, y, ACC_3, Glow::G1);
+                            scene.text(&l, lx, y, ACC_3, Glow::G1);
                         }
                         px += l.width;
                         h = h.max(l.height);
@@ -616,18 +630,18 @@ impl Form {
                 Item::LangRow { id, name, note, missing, removable } => {
                     let st = ui(13.0, 400, 1.2);
                     let h = 22.0;
-                    if let Some(l) = scene.cache.get(cx.text(), name, &st, 90.0) {
-                        scene.text(&l, cx0, y + (h - l.height) / 2.0, ACC, Glow::G1);
+                    if let Some(l) = scene.cache.get(cx.text(), name, &TextStyle { direction: dir, ..st.clone() }, 90.0) {
+                        scene.text(&l, m(Rect::new(cx0, y, 90.0, 0.0)).x, y + (h - l.height) / 2.0, ACC, Glow::G1);
                     }
                     let mut px = cx0 + 90.0 + 8.0;
                     if !note.is_empty() {
                         if let Some(l) = scene.cache.get(cx.text(), note, &ui(11.0, 400, 1.2), 10_000.0) {
-                            scene.text(&l, px, y + (h - l.height) / 2.0, if *missing { ACC_HOT } else { ACC_3 }, Glow::G1);
+                            scene.text(&l, m(Rect::new(px, y, l.width, 0.0)).x, y + (h - l.height) / 2.0, if *missing { ACC_HOT } else { ACC_3 }, Glow::G1);
                             px += l.width + 8.0;
                         }
                     }
                     if *removable {
-                        let xr = Rect::new(px, y + 2.0, 18.0, 18.0);
+                        let xr = m(Rect::new(px, y + 2.0, 18.0, 18.0));
                         let hit = Hit::Remove(id.clone(), 0);
                         let hot = self.hover.as_ref() == Some(&hit);
                         scene.icon("x", Rect::new(xr.x + 2.0, xr.y + 2.0, 14.0, 14.0), 1.6, if hot { ACC_HOT } else { ACC }, false, if hot { Glow::G3 } else { Glow::G2 });
@@ -640,7 +654,7 @@ impl Form {
                     let st = TextStyle { wrap: true, direction: self.dir(), ..ui(13.0, 400, 1.45) };
                     let l = scene.cache.get(cx.text(), label, &st, (cw - 25.0).max(40.0));
                     let h = l.as_ref().map_or(16.0, |l| l.height).max(16.0);
-                    let b = Rect::new(cx0, y + (h - 16.0) / 2.0, 16.0, 16.0);
+                    let b = m(Rect::new(cx0, y + (h - 16.0) / 2.0, 16.0, 16.0));
                     fill_round(cx, b, 3.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 });
                     let hit = Hit::Check(id.clone());
                     let hot = self.hover.as_ref() == Some(&hit);
@@ -652,10 +666,10 @@ impl Form {
                     }
                     let mut tw = 0.0;
                     if let Some(l) = &l {
-                        scene.text(l, cx0 + 25.0, y + (h - l.height) / 2.0, ACC, Glow::G1);
+                        scene.text(l, m(Rect::new(cx0 + 25.0, y, (cw - 25.0).max(40.0), 0.0)).x, y + (h - l.height) / 2.0, ACC, Glow::G1);
                         tw = l.width;
                     }
-                    self.hits.push((Rect::new(cx0, y, 25.0 + tw, h), hit));
+                    self.hits.push((m(Rect::new(cx0, y, 25.0 + tw, h)), hit));
                     y += h + 9.0;
                 }
                 Item::Buttons { buttons, top, bottom } => {
@@ -669,7 +683,7 @@ impl Form {
                             px = cx0;
                             y += row_h + 8.0;
                         }
-                        b.rect = Rect::new(px, y, bw, 28.0);
+                        b.rect = m(Rect::new(px, y, bw, 28.0));
                         let br = b.rect;
                         if !id.starts_with('!') {
                             self.hits.push((br, Hit::Button(id.clone())));
@@ -687,8 +701,8 @@ impl Form {
                     let st = TextStyle { wrap: true, direction: self.dir(), ..ui(13.0, 400, 1.45) };
                     for e in list {
                         if let Some(l) = scene.cache.get(cx.text(), e, &st, (cw - 18.0).max(40.0)) {
-                            fill_round(cx, Rect::new(cx0 + 6.0, y + 8.0, 4.0, 4.0), 2.0, ACC_HOT);
-                            scene.text(&l, cx0 + 18.0, y, ACC_HOT, Glow::G1);
+                            fill_round(cx, m(Rect::new(cx0 + 6.0, y + 8.0, 4.0, 4.0)), 2.0, ACC_HOT);
+                            scene.text(&l, m(Rect::new(cx0 + 18.0, y, (cw - 18.0).max(40.0), 0.0)).x, y, ACC_HOT, Glow::G1);
                             y += l.height;
                         }
                     }
@@ -741,7 +755,7 @@ impl Form {
                 + 18.0
                 + 8.0;
             let row_h = 6.0 + 15.6 + 6.0;
-            let pr = Rect::new(sr.x + sr.w - w, sr.y + sr.h + 4.0, w, 8.0 + row_h * options.len() as f32);
+            let pr = Rect::new(if self.rtl { sr.x } else { sr.x + sr.w - w }, sr.y + sr.h + 4.0, w, 8.0 + row_h * options.len() as f32);
             scene.shadow(cx, pr, 6.0, Color::rgba(39, 230, 170, 41), 18.0);
             fill_round(cx, pr, 6.0, Color::rgb(0x04, 0x14, 0x0F));
             stroke_round(cx, pr, 6.0, ACC_4, 1.0, false);
@@ -761,7 +775,8 @@ impl Form {
                     } else {
                         (ACC, Glow::G1)
                     };
-                    scene.text(&lay, r.x + 9.0, r.y + (row_h - lay.height) / 2.0, c, g);
+                    let tx = if self.rtl { r.x + r.w - 9.0 - lay.width } else { r.x + 9.0 };
+                    scene.text(&lay, tx, r.y + (row_h - lay.height) / 2.0, c, g);
                 }
                 self.hits.push((r, hit));
             }
@@ -931,7 +946,7 @@ impl Form {
     /// Значение ползунка под x (с шагом и в пределах).
     fn slider_value(&self, id: &str, x: f32) -> Option<f32> {
         let (x0, w, min, max, step) = *self.sliders.get(id)?;
-        let k = if w > 0.0 { ((x - x0) / w).clamp(0.0, 1.0) } else { 0.0 };
+        let k = if w != 0.0 { ((x - x0) / w).clamp(0.0, 1.0) } else { 0.0 };
         let v = min + (max - min) * k;
         let v = if step > 0.0 { min + ((v - min) / step).round() * step } else { v };
         Some(v.clamp(min, max))

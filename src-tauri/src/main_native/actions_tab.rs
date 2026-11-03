@@ -336,13 +336,16 @@ impl ActionsTab {
     pub fn draw(&mut self, scene: &mut Scene, cx: &mut RenderCx<'_>, body: Rect) {
         let lx = body.x;
         let mut y = body.y;
+        // dir="rtl": колонки и всё в них отражены — список справа, редактор слева
+        let rtl = self.rtl;
+        let m = move |r: Rect| crate::native::controls::mirror(body, r, rtl);
         // поиск
-        self.search.rect = Rect::new(lx, y, LIST_W, 28.0);
+        self.search.rect = m(Rect::new(lx, y, LIST_W, 28.0));
         y += 28.0 + 8.0;
         // .list-keys: «Создать» и «Сканировать» поровну
         let half = (LIST_W - 8.0) / 2.0;
-        self.create.rect = Rect::new(lx, y, half, 28.0);
-        self.scan.rect = Rect::new(lx + half + 8.0, y, half, 28.0);
+        self.create.rect = m(Rect::new(lx, y, half, 28.0));
+        self.scan.rect = m(Rect::new(lx + half + 8.0, y, half, 28.0));
         y += 28.0 + 8.0;
         // фильтры
         self.filters.clear();
@@ -357,7 +360,7 @@ impl ActionsTab {
                 px = lx;
                 y += h + 4.0;
             }
-            let r = Rect::new(px, y, w, h);
+            let r = m(Rect::new(px, y, w, h));
             let on = i == self.filter;
             let hot = self.hover == Some(Hover::Filter(i));
             if on {
@@ -376,7 +379,7 @@ impl ActionsTab {
         }
         y += 8.0;
         // строки
-        let list = Rect::new(lx - 4.0, y, LIST_W + 8.0, body.y + body.h - y);
+        let list = m(Rect::new(lx - 4.0, y, LIST_W + 8.0, body.y + body.h - y));
         self.list_rect = list;
         scene.flush(cx);
         scene.set_clip(Some(list));
@@ -397,7 +400,7 @@ impl ActionsTab {
             if let Some(l) = l {
                 scene.text(&l, r.x + 8.0, r.y + 8.0, ACC_3, Glow::G1);
             }
-            self.scan_tip.rect = Rect::new(r.x + 8.0, r.y + 8.0 + lh + 7.0, bw, 28.0);
+            self.scan_tip.rect = crate::native::controls::mirror(r, Rect::new(r.x + 8.0, r.y + 8.0 + lh + 7.0, bw, 28.0), rtl);
             ry += r.h + 2.0 + 8.0;
         }
         if shown.is_empty() {
@@ -419,17 +422,18 @@ impl ActionsTab {
                 fill_round(cx, r, 4.0, ACC_5);
             }
             let (ci, cn, cc, g) = if sel { (GLASS, GLASS, GLASS, Glow::None) } else { (ACC_3, ACC_2, ACC_3, Glow::G1) };
-            scene.icon(kind_icon(&a.kind), Rect::new(r.x + 6.0 + 1.5, r.y + (rh - 15.0) / 2.0, 15.0, 15.0), 1.6, ci, false, g);
+            let mr = move |x: Rect| crate::native::controls::mirror(r, x, rtl);
+            scene.icon(kind_icon(&a.kind), mr(Rect::new(r.x + 6.0 + 1.5, r.y + (rh - 15.0) / 2.0, 15.0, 15.0)), 1.6, ci, false, g);
             let count = t(&self.locale, "actions.phraseCount", &[("count", &self.shown(a).len().to_string())]);
             let cw = Self::text(scene, cx, &count, &count_st, 1000.0).map(|l| {
-                scene.text(&l, r.x + r.w - 6.0 - l.width, r.y + (rh - l.height) / 2.0, cc, g);
+                scene.text(&l, mr(Rect::new(r.x + r.w - 6.0 - l.width, r.y, l.width, 0.0)).x, r.y + (rh - l.height) / 2.0, cc, g);
                 l.width
             });
             let label = if a.label.trim().is_empty() { self.t("actions.unnamed") } else { a.label.clone() };
             let nx = r.x + 6.0 + 18.0 + 8.0;
             let nw = (r.x + r.w - 6.0 - cw.unwrap_or(0.0) - 8.0 - nx).max(20.0);
             if let Some(l) = Self::text(scene, cx, &label, &name_st, nw) {
-                scene.text(&l, nx, r.y + (rh - l.height) / 2.0, cn, g);
+                scene.text(&l, mr(Rect::new(nx, r.y, nw, 0.0)).x, r.y + (rh - l.height) / 2.0, cn, g);
             }
             self.rows.push((r, a.id.clone()));
             ry += rh;
@@ -464,10 +468,10 @@ impl ActionsTab {
         let ex = body.x + LIST_W + 14.0;
         let mut dy = body.y;
         while dy < body.y + body.h {
-            cx.fill_rect(Rect::new(ex, dy, 1.0, 1.0), ACC_4);
+            cx.fill_rect(m(Rect::new(ex, dy, 1.0, 1.0)), ACC_4);
             dy += 2.0;
         }
-        let edit = Rect::new(ex + 15.0, body.y, body.x + body.w - ex - 15.0, body.h);
+        let edit = m(Rect::new(ex + 15.0, body.y, body.x + body.w - ex - 15.0, body.h));
         self.edit_rect = edit;
         if self.draft.is_none() {
             let st = TextStyle { align: Align::Center, wrap: true, line_height: Some(1.3), ..lcd(17.0, 500, 0.06) };

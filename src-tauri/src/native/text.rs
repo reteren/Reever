@@ -149,6 +149,29 @@ impl TextLayout {
         (x, m.top, m.height)
     }
 
+    /// Левый край последней строки от начала раскладки, DIP (куда встаёт курсор после текста
+    /// в абзаце справа налево).
+    pub fn last_line_left(&self) -> f32 {
+        use windows::Win32::Graphics::DirectWrite::DWRITE_HIT_TEST_METRICS;
+        let mut lines = vec![DWRITE_LINE_METRICS::default(); self.lines.max(1) as usize];
+        let mut n = 0u32;
+        if unsafe { self.layout.GetLineMetrics(Some(&mut lines), &mut n) }.is_err() || n == 0 {
+            return 0.0;
+        }
+        let start: u32 = lines[..n as usize - 1].iter().map(|l| l.length).sum();
+        let len = lines[n as usize - 1].length - lines[n as usize - 1].trailingWhitespaceLength;
+        if len == 0 {
+            return 0.0;
+        }
+        let mut count = 0u32;
+        let _ = unsafe { self.layout.HitTestTextRange(start, len, 0.0, 0.0, None, &mut count) };
+        let mut m = vec![DWRITE_HIT_TEST_METRICS::default(); count.max(1) as usize];
+        if unsafe { self.layout.HitTestTextRange(start, len, 0.0, 0.0, Some(&mut m), &mut count) }.is_err() {
+            return 0.0;
+        }
+        m[..count as usize].iter().map(|h| h.left).fold(f32::MAX, f32::min)
+    }
+
     /// Базовая линия первой строки от верха раскладки, DIP (для выравнивания по базовой линии,
     /// как align-items: baseline).
     pub fn baseline(&self) -> f32 {

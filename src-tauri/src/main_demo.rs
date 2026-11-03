@@ -57,6 +57,14 @@ pub fn start(app: &AppHandle) {
         fresh.settings.native_main = true;
         // REEVER_MAIN_DEMO_LITE=1 — лёгкий вид (lite.css)
         fresh.settings.lite_ui = std::env::var_os("REEVER_MAIN_DEMO_LITE").is_some();
+        // REEVER_MAIN_DEMO_LOCALE=ar — язык интерфейса (арабский: зеркальная раскладка)
+        if let Ok(code) = std::env::var("REEVER_MAIN_DEMO_LOCALE") {
+            let resolved = crate::uilang::resolve(&code);
+            if let Ok(mut current) = crate::uilang::CURRENT.lock() {
+                *current = resolved;
+            }
+            fresh.settings.ui_language = code;
+        }
         // REEVER_MAIN_DEMO_FPS=60|30 — «Плавность» (по умолчанию без лимита, частота монитора)
         if let Some(fps) = std::env::var("REEVER_MAIN_DEMO_FPS").ok().and_then(|v| v.parse().ok()) {
             fresh.settings.fps_limit = fps;

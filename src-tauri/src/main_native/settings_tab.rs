@@ -603,7 +603,8 @@ impl SettingsTab {
         scene.set_clip(None);
         unsafe { cx.dc().PopAxisAlignedClip() };
         if self.max_scroll > 0.0 {
-            let track = Rect::new(clip.x + clip.w - 7.0, body.y, 3.0, body.h);
+            // полоса прокрутки — у конца строки (слева в dir="rtl", как в Chromium)
+            let track = crate::native::controls::mirror(clip, Rect::new(clip.x + clip.w - 7.0, body.y, 3.0, body.h), self.rtl);
             let total = body.h + self.max_scroll;
             let th = (track.h * body.h / total).max(24.0);
             let ty = track.y + (track.h - th) * self.scroll / self.max_scroll;

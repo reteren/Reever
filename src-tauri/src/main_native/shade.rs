@@ -253,13 +253,14 @@ impl Shade {
         if let Some(l) = scene.cache.get(cx.text(), &text, &st, 100_000.0) {
             let l: Rc<TextLayout> = l;
             self.overflow = l.width - inner.w;
-            let mut x = inner.x;
+            // арабская строка стоит у правого края и уезжает вправо
+            let mut x = if l.rtl { inner.x + inner.w - l.width } else { inner.x };
             if self.overflow > 4.0 {
                 // marquee: уезжает на ширину переполнения + 24, по кругу
                 let dist = self.overflow + 24.0 + 30.0;
                 let dur = (dist / MARQUEE).max(4.0);
                 let t = cx.now.duration_since(self.marquee_from).as_secs_f32() % dur;
-                x -= dist * t / dur;
+                x += if l.rtl { dist * t / dur } else { -dist * t / dur };
             }
             scene.flush(cx);
             scene.set_clip(Some(inner));
