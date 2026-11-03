@@ -24,7 +24,7 @@ use crate::native::controls::anim::{Bez, E_OUT};
 use crate::native::controls::form::Form;
 use crate::native::controls::tooltip::Tooltip;
 use crate::native::controls::{
-    data, dotted_hline, fill_round, lcd, lcd_background, lcd_overlay, ui, with_alpha, Glow, Scene, ACC, ACC_2, ACC_3,
+    data, dotted_hline, fill_round, lcd, lcd_background, lcd_overlay, stroke_round, ui, with_alpha, Glow, Scene, ACC, ACC_2, ACC_3,
     ACC_4, ACC_5, ACC_HOT,
 };
 use crate::native::{
@@ -456,6 +456,8 @@ pub struct MainView {
     orb_layer: Option<(ID2D1Bitmap1, (u32, u32), u64)>,
     /// лёгкий вид: битмап сферы и ключ того, что в нём нарисовано
     lite_orb_layer: Option<(ID2D1Bitmap1, (u32, u32), u64, Option<(i32, i32, i32, bool, bool, bool)>)>,
+    /// смена канала: снимок содержимого вкладки (вкладка, битмап, размер, поколение GPU)
+    channel_snap: Option<(usize, ID2D1Bitmap1, (u32, u32), u64)>,
     orb_dirty: bool,
     orb_last: Instant,
 }
@@ -580,6 +582,7 @@ impl MainView {
             orb: None,
             orb_layer: None,
             lite_orb_layer: None,
+            channel_snap: None,
             orb_dirty: true,
             orb_last: Instant::now(),
             assets,
@@ -1068,16 +1071,11 @@ impl MainView {
             let on = i == self.tab;
             let hover = self.tab_hover == Some(i) && !on;
             if on || hover {
-                // .navi.on: полоса фона по горизонтали прозрачная к краям
-                let bg = ACC_5;
-                let third = tr.w * 0.3;
-                fill_round(cx, Rect::new(tr.x + third, tr.y, tr.w - 2.0 * third, tr.h), 0.0, bg);
-                for k in 0..6 {
-                    let a = (k as f32 + 0.5) / 6.0;
-                    let w = third / 6.0;
-                    let c = with_alpha(bg, bg.a * a);
-                    fill_round(cx, Rect::new(tr.x + k as f32 * w, tr.y, w, tr.h), 0.0, c);
-                    fill_round(cx, Rect::new(tr.x + tr.w - (k as f32 + 1.0) * w, tr.y, w, tr.h), 0.0, c);
+                // Клавиша подсвечивается целиком: прежняя полоса, прозрачная к краям, оставляла
+                // сплошной фон лишь в средних 40 % ширины — уже подписи «ACTIONS».
+                fill_round(cx, tr, 6.0, ACC_5);
+                if on {
+                    stroke_round(cx, tr, 6.0, ACC_4, 1.0, false);
                 }
             }
             if on {
@@ -1182,34 +1180,34 @@ impl MainView {
                 self.channel = None;
             }
         }
-        let mut old_transform = windows::Foundation::Numerics::Matrix3x2::default();
         if let Some((sx, sy, _)) = ch {
+            // Содержимое вкладки рисуется в картинку один раз на фазу (старая вкладка, потом
+            // новая), а кадры анимации её только масштабируют. Перерисовка вкладки со свечением
+            // каждый кадр (сотни строк «Действий», формы «Настроек») давала ~10 кадров/с.
             self.scene.flush(cx);
             let (cxm, cym) = (body.x + body.w / 2.0, body.y + body.h / 2.0);
-            unsafe {
-                cx.dc().GetTransform(&mut old_transform);
-                let m = windows::Foundation::Numerics::Matrix3x2 { M11: sx.max(0.0001), M12: 0.0, M21: 0.0, M22: sy, M31: cxm * (1.0 - sx), M32: cym * (1.0 - sy) };
-                cx.dc().SetTransform(&(m * old_transform));
+            let m = windows::Foundation::Numerics::Matrix3x2 { M11: sx.max(0.0001), M12: 0.0, M21: 0.0, M22: sy, M31: cxm * (1.0 - sx), M32: cym * (1.0 - sy) };
+            let mut old_transform = windows::Foundation::Numerics::Matrix3x2::default();
+            unsafe { cx.dc().GetTransform(&mut old_transform) };
+            let area = Self::channel_area(body);
+            if let Some(bmp) = self.channel_snapshot(cx, area, shown) {
+                unsafe {
+                    cx.dc().SetTransform(&(m * old_transform));
+                    cx.dc().DrawBitmap(&bmp, Some(&area.d2d()), 1.0, D2D1_INTERPOLATION_MODE_LINEAR, None, None);
+                    cx.dc().SetTransform(&old_transform);
+                }
+            } else {
+                unsafe { cx.dc().SetTransform(&(m * old_transform)) };
+                self.draw_tab_content(cx, body, shown);
+                self.scene.flush(cx);
+                unsafe { cx.dc().SetTransform(&old_transform) };
             }
+        } else {
+            self.channel_snap = None;
+            self.draw_tab_content(cx, body, shown);
+            self.scene.flush(cx);
         }
-        let real_tab = self.tab;
-        self.tab = shown;
-        match TABS[self.tab] {
-            "home" => self.draw_home(cx, body),
-            "actions" => {
-                self.actions_tab.draw(&mut self.scene, cx, body);
-                self.form_blink = self.actions_tab.next_blink(cx.now);
-            }
-            "settings" => {
-                self.settings_tab.draw(&mut self.scene, cx, body);
-                self.form_blink = self.settings_tab.form.next_blink(cx.now);
-            }
-            _ => self.draw_logs(cx, body),
-        }
-        self.tab = real_tab;
-        self.scene.flush(cx);
         if let Some((_, _, bright)) = ch {
-            unsafe { cx.dc().SetTransform(&old_transform) };
             if bright > 1.0 {
                 let line = Rect::new(body.x, body.y + body.h / 2.0 - 3.0, body.w, 6.0);
                 unsafe { cx.dc().SetPrimitiveBlend(windows::Win32::Graphics::Direct2D::D2D1_PRIMITIVE_BLEND_ADD) };
@@ -1223,6 +1221,72 @@ impl MainView {
         }
         self.scene.flush(cx);
         lcd_overlay(cx, r, 14.0);
+    }
+
+    /// Содержимое вкладки `tab` в прямоугольнике `body`.
+    fn draw_tab_content(&mut self, cx: &mut RenderCx<'_>, body: Rect, tab: usize) {
+        let real_tab = self.tab;
+        self.tab = tab;
+        match TABS[self.tab] {
+            "home" => self.draw_home(cx, body),
+            "actions" => {
+                self.actions_tab.draw(&mut self.scene, cx, body);
+                self.form_blink = self.actions_tab.next_blink(cx.now);
+            }
+            "settings" => {
+                self.settings_tab.draw(&mut self.scene, cx, body);
+                self.form_blink = self.settings_tab.form.next_blink(cx.now);
+            }
+            _ => self.draw_logs(cx, body),
+        }
+        self.tab = real_tab;
+    }
+
+    /// Область снимка вкладки: экран ниже бегущей строки — с полями вокруг `body`, чтобы в
+    /// снимок попало и то, что вкладка рисует у края (полосы прокрутки, свечение).
+    fn channel_area(body: Rect) -> Rect {
+        Rect::new(body.x - 18.0, body.y - 14.0, body.w + 36.0, body.h + 14.0 + 18.0)
+    }
+
+    /// Снимок вкладки `tab` для анимации смены канала; рисуется один раз на вкладку.
+    /// None — битмап не создался (тогда вкладка рисуется прямо в кадр).
+    fn channel_snapshot(&mut self, cx: &mut RenderCx<'_>, area: Rect, tab: usize) -> Option<ID2D1Bitmap1> {
+        let size = ((area.w * cx.scale).round().max(1.0) as u32, (area.h * cx.scale).round().max(1.0) as u32);
+        if let Some((t, bmp, sz, generation)) = &self.channel_snap {
+            if *t == tab && *sz == size && *generation == self.gpu_generation {
+                return Some(bmp.clone());
+            }
+        }
+        let dc = cx.dc().clone();
+        let (mut dx, mut dy) = (96.0f32, 96.0f32);
+        unsafe { dc.GetDpi(&mut dx, &mut dy) };
+        let props = D2D1_BITMAP_PROPERTIES1 {
+            pixelFormat: D2D1_PIXEL_FORMAT { format: DXGI_FORMAT_B8G8R8A8_UNORM, alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED },
+            dpiX: dx,
+            dpiY: dy,
+            bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
+            colorContext: std::mem::ManuallyDrop::new(None),
+        };
+        let bmp = unsafe { dc.CreateBitmap(D2D_SIZE_U { width: size.0, height: size.1 }, None, 0, &props) }.ok()?;
+        let body = Rect::new(area.x + 18.0, area.y + 14.0, area.w - 36.0, area.h - 14.0 - 18.0);
+        let mut m = windows::Foundation::Numerics::Matrix3x2::default();
+        let old: Option<ID2D1Image> = unsafe { dc.GetTarget().ok() };
+        unsafe {
+            dc.GetTransform(&mut m);
+            dc.SetTarget(&bmp);
+            dc.SetTransform(&windows::Foundation::Numerics::Matrix3x2 { M11: 1.0, M12: 0.0, M21: 0.0, M22: 1.0, M31: -area.x, M32: -area.y });
+            dc.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
+        }
+        self.draw_tab_content(cx, body, tab);
+        self.scene.flush(cx);
+        unsafe {
+            dc.SetTransform(&m);
+            if let Some(old) = old {
+                dc.SetTarget(&old);
+            }
+        }
+        self.channel_snap = Some((tab, bmp.clone(), size, self.gpu_generation));
+        Some(bmp)
     }
 
     fn dir(&self) -> Direction {
