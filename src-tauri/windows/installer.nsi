@@ -1,7 +1,15 @@
-; Шаблон установщика Reever: tauri-bundler 2.11.3 (tauri-cli-v2.11.3,
-; crates/tauri-bundler/src/bundle/windows/nsis/installer.nsi) с двумя вставками —
-; страница языковых моделей после выбора папки и её строки после языков (models.nsh).
-; При обновлении @tauri-apps/cli взять новый шаблон и перенести обе вставки (ищи «Reever:»).
+﻿; Установщик Reever (NSIS, собирается tools/build_installer.py, без Tauri).
+; Основа — шаблон tauri-bundler 2.11.3 в отрендеренном виде с вставками Reever (ищи «Reever:»):
+; страница языковых моделей после выбора папки (models.nsh), её строки после языков.
+; nsis_tauri_utils заменён: строки с именем программы — в lang/*.nsh, поиск и завершение
+; процесса — tasklist/taskkill (utils.nsh), сравнение версий — ${VersionCompare}, запуск — Exec.
+; Секция WebView2 убрана: интерфейс нативный.
+;
+; Задаются снаружи (/D): SRC — папка src-tauri, VERSION, VERSIONWITHBUILD, MAINBINARYSRCPATH,
+; OUTFILE, ESTIMATEDSIZE (КБ).
+!ifndef SRC | VERSION | VERSIONWITHBUILD | MAINBINARYSRCPATH | OUTFILE | ESTIMATEDSIZE
+  !error "Собирайте через tools/build_installer.py: нужны /DSRC /DVERSION /DVERSIONWITHBUILD /DMAINBINARYSRCPATH /DOUTFILE /DESTIMATEDSIZE"
+!endif
 Unicode true
 ManifestDPIAware true
 ; Add in `dpiAwareness` `PerMonitorV2` to manifest for Windows 10 1607+ (note this should not affect lower versions since they should be able to ignore this and pick up `dpiAware` `true` set by `ManifestDPIAware true`)
@@ -10,69 +18,50 @@ ManifestDPIAware true
 ; https://github.com/tauri-apps/tauri/pull/10106
 ManifestDPIAwareness PerMonitorV2
 
-!if "{{compression}}" == "none"
+!if "lzma" == "none"
   SetCompress off
 !else
   ; Set the compression algorithm. We default to LZMA.
-  SetCompressor /SOLID "{{compression}}"
+  SetCompressor /SOLID "lzma"
 !endif
 
-; Keep above !include to stay ahead of any plugin command
-; see https://github.com/tauri-apps/tauri/pull/15422#discussion_r3289239624
-{{#if signed_plugins_path}}
-!addplugindir "{{signed_plugins_path}}"
-{{/if}}
 
 !include MUI2.nsh
 !include FileFunc.nsh
 !include x64.nsh
 !include WordFunc.nsh
-!include "utils.nsh"
-!include "FileAssociation.nsh"
+!include "${SRC}\windows\utils.nsh"
+!include "${SRC}\windows\FileAssociation.nsh"
 !include "Win\COM.nsh"
 !include "Win\Propkey.nsh"
 !include "StrFunc.nsh"
 ${StrCase}
 ${StrLoc}
 
-{{#if installer_hooks}}
-!include "{{installer_hooks}}"
-{{/if}}
+!include "${SRC}\windows\models.nsh"
 
-!define WEBVIEW2APPGUID "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
 
-!define MANUFACTURER "{{manufacturer}}"
-!define PRODUCTNAME "{{product_name}}"
-!define VERSION "{{version}}"
-!define VERSIONWITHBUILD "{{version_with_build}}"
-!define HOMEPAGE "{{homepage}}"
-!define INSTALLMODE "{{install_mode}}"
-!define LICENSE "{{license}}"
-!define INSTALLERICON "{{installer_icon}}"
-!define SIDEBARIMAGE "{{sidebar_image}}"
-!define HEADERIMAGE "{{header_image}}"
-!define UNINSTALLERICON "{{uninstaller_icon}}"
-!define UNINSTALLERHEADERIMAGE "{{uninstaller_header_image}}"
-!define MAINBINARYNAME "{{main_binary_name}}"
-!define MAINBINARYSRCPATH "{{main_binary_path}}"
-!define BUNDLEID "{{bundle_id}}"
-!define COPYRIGHT "{{copyright}}"
-!define OUTFILE "{{out_file}}"
-!define ARCH "{{arch}}"
-!define ADDITIONALPLUGINSPATH "{{additional_plugins_path}}"
-!define ALLOWDOWNGRADES "{{allow_downgrades}}"
-!define DISPLAYLANGUAGESELECTOR "{{display_language_selector}}"
-!define INSTALLWEBVIEW2MODE "{{install_webview2_mode}}"
-!define WEBVIEW2INSTALLERARGS "{{webview2_installer_args}}"
-!define WEBVIEW2BOOTSTRAPPERPATH "{{webview2_bootstrapper_path}}"
-!define WEBVIEW2INSTALLERPATH "{{webview2_installer_path}}"
-!define MINIMUMWEBVIEW2VERSION "{{minimum_webview2_version}}"
+!define MANUFACTURER "46psy4"
+!define PRODUCTNAME "Reever"
+!define HOMEPAGE ""
+!define INSTALLMODE "currentUser"
+!define LICENSE ""
+!define INSTALLERICON ""
+!define SIDEBARIMAGE "${SRC}\windows\art\sidebar.bmp"
+!define HEADERIMAGE "${SRC}\windows\art\header.bmp"
+!define UNINSTALLERICON ""
+!define UNINSTALLERHEADERIMAGE ""
+!define MAINBINARYNAME "reever"
+!define BUNDLEID "com.troid.reever"
+!define COPYRIGHT "© 46psy4"
+!define ARCH "x64"
+!define ALLOWDOWNGRADES "true"
+!define DISPLAYLANGUAGESELECTOR "false"
 !define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}"
 !define MANUKEY "Software\${MANUFACTURER}"
 !define MANUPRODUCTKEY "${MANUKEY}\${PRODUCTNAME}"
-!define UNINSTALLERSIGNCOMMAND "{{uninstaller_sign_cmd}}"
-!define ESTIMATEDSIZE "{{estimated_size}}"
-!define STARTMENUFOLDER "{{start_menu_folder}}"
+!define UNINSTALLERSIGNCOMMAND ""
+!define STARTMENUFOLDER ""
 
 Var PassiveMode
 Var UpdateMode
@@ -96,9 +85,6 @@ VIAddVersionKey "FileDescription" "${PRODUCTNAME}"
 VIAddVersionKey "LegalCopyright" "${COPYRIGHT}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
-
-# additional plugins
-!addplugindir "${ADDITIONALPLUGINSPATH}"
 
 ; Uninstaller signing command
 !if "${UNINSTALLERSIGNCOMMAND}" != ""
@@ -235,8 +221,14 @@ Function PageReinstall
   ${EndIf}
   ${IfThen} $R0 == "" ${|} StrCpy $R4 "$(unknown)" ${|}
 
-  nsis_tauri_utils::SemverCompare "${VERSION}" $R0
-  Pop $R0
+  ; Reever: ${VersionCompare} вместо nsis_tauri_utils::SemverCompare — 0 равны, 1 ставим новее,
+  ; 2 установлена новее; приводим к 0 / 1 / -1, как ждёт код ниже. Неизвестная версия — как старая.
+  ${If} $R0 == ""
+    StrCpy $R0 1
+  ${Else}
+    ${VersionCompare} "${VERSION}" $R0 $R0
+    ${IfThen} $R0 = 2 ${|} StrCpy $R0 -1 ${|}
+  ${EndIf}
   ; Reinstalling the same version
   ${If} $R0 = 0
     StrCpy $R1 "$(alreadyInstalledLong)"
@@ -435,7 +427,7 @@ Var AppStartMenuFolder
 !insertmacro MUI_PAGE_FINISH
 
 Function RunMainBinary
-  nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
+  Exec '"$INSTDIR\${MAINBINARYNAME}.exe"'
 FunctionEnd
 
 ; Uninstaller Pages
@@ -486,13 +478,65 @@ FunctionEnd
 !insertmacro MUI_UNPAGE_INSTFILES
 
 ;Languages
-{{#each languages}}
-!insertmacro MUI_LANGUAGE "{{this}}"
-{{/each}}
+!insertmacro MUI_LANGUAGE "English"
+!insertmacro MUI_LANGUAGE "Russian"
+!insertmacro MUI_LANGUAGE "German"
+!insertmacro MUI_LANGUAGE "French"
+!insertmacro MUI_LANGUAGE "Spanish"
+!insertmacro MUI_LANGUAGE "Italian"
+!insertmacro MUI_LANGUAGE "PortugueseBR"
+!insertmacro MUI_LANGUAGE "SimpChinese"
+!insertmacro MUI_LANGUAGE "Japanese"
+!insertmacro MUI_LANGUAGE "Arabic"
+!insertmacro MUI_LANGUAGE "Bulgarian"
+!insertmacro MUI_LANGUAGE "Croatian"
+!insertmacro MUI_LANGUAGE "Czech"
+!insertmacro MUI_LANGUAGE "Danish"
+!insertmacro MUI_LANGUAGE "Dutch"
+!insertmacro MUI_LANGUAGE "Estonian"
+!insertmacro MUI_LANGUAGE "Finnish"
+!insertmacro MUI_LANGUAGE "Greek"
+!insertmacro MUI_LANGUAGE "Hungarian"
+!insertmacro MUI_LANGUAGE "Latvian"
+!insertmacro MUI_LANGUAGE "Lithuanian"
+!insertmacro MUI_LANGUAGE "Polish"
+!insertmacro MUI_LANGUAGE "Romanian"
+!insertmacro MUI_LANGUAGE "Slovak"
+!insertmacro MUI_LANGUAGE "Slovenian"
+!insertmacro MUI_LANGUAGE "Swedish"
+!insertmacro MUI_LANGUAGE "Ukrainian"
+!insertmacro MUI_LANGUAGE "Korean"
+!insertmacro MUI_LANGUAGE "TradChinese"
 !insertmacro MUI_RESERVEFILE_LANGDLL
-{{#each language_files}}
-  !include "{{this}}"
-{{/each}}
+  !include "${SRC}\windows\lang\English.nsh"
+  !include "${SRC}\windows\lang\Russian.nsh"
+  !include "${SRC}\windows\lang\German.nsh"
+  !include "${SRC}\windows\lang\French.nsh"
+  !include "${SRC}\windows\lang\Spanish.nsh"
+  !include "${SRC}\windows\lang\Italian.nsh"
+  !include "${SRC}\windows\lang\PortugueseBR.nsh"
+  !include "${SRC}\windows\lang\SimpChinese.nsh"
+  !include "${SRC}\windows\lang\Japanese.nsh"
+  !include "${SRC}\windows\lang\Arabic.nsh"
+  !include "${SRC}\windows\lang\Bulgarian.nsh"
+  !include "${SRC}\windows\lang\Croatian.nsh"
+  !include "${SRC}\windows\lang\Czech.nsh"
+  !include "${SRC}\windows\lang\Danish.nsh"
+  !include "${SRC}\windows\lang\Dutch.nsh"
+  !include "${SRC}\windows\lang\Estonian.nsh"
+  !include "${SRC}\windows\lang\Finnish.nsh"
+  !include "${SRC}\windows\lang\Greek.nsh"
+  !include "${SRC}\windows\lang\Hungarian.nsh"
+  !include "${SRC}\windows\lang\Latvian.nsh"
+  !include "${SRC}\windows\lang\Lithuanian.nsh"
+  !include "${SRC}\windows\lang\Polish.nsh"
+  !include "${SRC}\windows\lang\Romanian.nsh"
+  !include "${SRC}\windows\lang\Slovak.nsh"
+  !include "${SRC}\windows\lang\Slovenian.nsh"
+  !include "${SRC}\windows\lang\Swedish.nsh"
+  !include "${SRC}\windows\lang\Ukrainian.nsh"
+  !include "${SRC}\windows\lang\Korean.nsh"
+  !include "${SRC}\windows\lang\TradChinese.nsh"
 ; Reever: строки страницы языковых моделей.
 !insertmacro REEVER_MODELS_STRINGS
 
@@ -565,98 +609,6 @@ Section EarlyChecks
 
 SectionEnd
 
-Section WebView2
-  ; Check if Webview2 is already installed and skip this section
-  ${If} ${RunningX64}
-    ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
-  ${Else}
-    ReadRegStr $4 HKLM "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
-  ${EndIf}
-  ${If} $4 == ""
-    ReadRegStr $4 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
-  ${EndIf}
-
-  ${If} $4 == ""
-    ; Webview2 installation
-    ;
-    ; Skip if updating
-    ${If} $UpdateMode <> 1
-      !if "${INSTALLWEBVIEW2MODE}" == "downloadBootstrapper"
-        Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-        DetailPrint "$(webview2Downloading)"
-        NSISdl::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-        Pop $0
-        ${If} $0 == "success"
-          DetailPrint "$(webview2DownloadSuccess)"
-        ${Else}
-          DetailPrint "$(webview2DownloadError)"
-          Abort "$(webview2AbortError)"
-        ${EndIf}
-        StrCpy $6 "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-        Goto install_webview2
-      !endif
-
-      !if "${INSTALLWEBVIEW2MODE}" == "embedBootstrapper"
-        Delete "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-        File "/oname=$TEMP\MicrosoftEdgeWebview2Setup.exe" "${WEBVIEW2BOOTSTRAPPERPATH}"
-        DetailPrint "$(installingWebview2)"
-        StrCpy $6 "$TEMP\MicrosoftEdgeWebview2Setup.exe"
-        Goto install_webview2
-      !endif
-
-      !if "${INSTALLWEBVIEW2MODE}" == "offlineInstaller"
-        Delete "$TEMP\MicrosoftEdgeWebView2RuntimeInstaller.exe"
-        File "/oname=$TEMP\MicrosoftEdgeWebView2RuntimeInstaller.exe" "${WEBVIEW2INSTALLERPATH}"
-        DetailPrint "$(installingWebview2)"
-        StrCpy $6 "$TEMP\MicrosoftEdgeWebView2RuntimeInstaller.exe"
-        Goto install_webview2
-      !endif
-
-      Goto webview2_done
-
-      install_webview2:
-        DetailPrint "$(installingWebview2)"
-        ; $6 holds the path to the webview2 installer
-        ExecWait "$6 ${WEBVIEW2INSTALLERARGS} /install" $1
-        ${If} $1 = 0
-          DetailPrint "$(webview2InstallSuccess)"
-        ${Else}
-          DetailPrint "$(webview2InstallError)"
-          Abort "$(webview2AbortError)"
-        ${EndIf}
-      webview2_done:
-    ${EndIf}
-  ${Else}
-    !if "${MINIMUMWEBVIEW2VERSION}" != ""
-      ${VersionCompare} "${MINIMUMWEBVIEW2VERSION}" "$4" $R0
-      ${If} $R0 = 1
-        update_webview:
-          DetailPrint "$(installingWebview2)"
-          ${If} ${RunningX64}
-            ReadRegStr $R1 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate" "path"
-          ${Else}
-            ReadRegStr $R1 HKLM "SOFTWARE\Microsoft\EdgeUpdate" "path"
-          ${EndIf}
-          ${If} $R1 == ""
-            ReadRegStr $R1 HKCU "SOFTWARE\Microsoft\EdgeUpdate" "path"
-          ${EndIf}
-          ${If} $R1 != ""
-            ; Chromium updater docs: https://source.chromium.org/chromium/chromium/src/+/main:docs/updater/user_manual.md
-            ; Modified from "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView\ModifyPath"
-            ExecWait `"$R1" /install appguid=${WEBVIEW2APPGUID}&needsadmin=true` $1
-            ${If} $1 = 0
-              DetailPrint "$(webview2InstallSuccess)"
-            ${Else}
-              MessageBox MB_ICONEXCLAMATION|MB_ABORTRETRYIGNORE "$(webview2InstallError)" IDIGNORE ignore IDRETRY update_webview
-              Quit
-              ignore:
-            ${EndIf}
-          ${EndIf}
-      ${EndIf}
-    !endif
-  ${EndIf}
-SectionEnd
-
 Section Install
   SetOutPath $INSTDIR
 
@@ -670,32 +622,36 @@ Section Install
   File "${MAINBINARYSRCPATH}"
 
   ; Copy resources
-  {{#each resources_dirs}}
-    CreateDirectory "$INSTDIR\\{{this}}"
-  {{/each}}
-  {{#each resources}}
-    File /a "/oname={{this.[1]}}" "{{no-escape @key}}"
-  {{/each}}
+    CreateDirectory "$INSTDIR\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8"
+    CreateDirectory "$INSTDIR\resources\model"
+    CreateDirectory "$INSTDIR\resources\wake"
+    CreateDirectory "$INSTDIR\resources\sounds\classic"
+    CreateDirectory "$INSTDIR\resources"
+    File /a "/oname=resources\actions.json" "${SRC}\resources\actions.json"
+    File /a "/oname=resources\aliases.json" "${SRC}\resources\aliases.json"
+    File /a "/oname=resources\anglicisms.tsv" "${SRC}\resources\anglicisms.tsv"
+    File /a "/oname=resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\decoder.int8.onnx" "${SRC}\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\decoder.int8.onnx"
+    File /a "/oname=resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\encoder.int8.onnx" "${SRC}\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\encoder.int8.onnx"
+    File /a "/oname=resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\joiner.int8.onnx" "${SRC}\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\joiner.int8.onnx"
+    File /a "/oname=resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\tokens.txt" "${SRC}\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\tokens.txt"
+    File /a "/oname=resources\model\silero_vad.onnx" "${SRC}\resources\model\silero_vad.onnx"
+    File /a "/oname=resources\settings.json" "${SRC}\resources\settings.json"
+    File /a "/oname=resources\sounds\classic\error.wav" "${SRC}\resources\sounds\classic\error.wav"
+    File /a "/oname=resources\sounds\classic\received.wav" "${SRC}\resources\sounds\classic\received.wav"
+    File /a "/oname=resources\sounds\classic\start.wav" "${SRC}\resources\sounds\classic\start.wav"
+    File /a "/oname=resources\sounds\classic\success.wav" "${SRC}\resources\sounds\classic\success.wav"
+    File /a "/oname=resources\wake\river-ru-en.bank" "${SRC}\resources\wake\river-ru-en.bank"
+    File /a "/oname=resources\wake\river-ru-en.bin" "${SRC}\resources\wake\river-ru-en.bin"
+    File /a "/oname=resources\wake\river.bank" "${SRC}\resources\wake\river.bank"
+    File /a "/oname=resources\wake\river.bin" "${SRC}\resources\wake\river.bin"
+    File /a "/oname=resources\wake\verify-ru-en.bin" "${SRC}\resources\wake\verify-ru-en.bin"
+    File /a "/oname=resources\wallpaper.png" "${SRC}\resources\wallpaper.png"
 
   ; Copy external binaries
-  {{#each binaries}}
-    File /a "/oname={{this}}" "{{no-escape @key}}"
-  {{/each}}
 
   ; Create file associations
-  {{#each file_associations as |association| ~}}
-    {{#each association.ext as |ext| ~}}
-       !insertmacro APP_ASSOCIATE "{{ext}}" "{{or association.name ext}}" "{{association-description association.description ext}}" "$INSTDIR\${MAINBINARYNAME}.exe,0" "Open with ${PRODUCTNAME}" "$INSTDIR\${MAINBINARYNAME}.exe $\"%1$\""
-    {{/each}}
-  {{/each}}
 
   ; Register deep links
-  {{#each deep_link_protocols as |protocol| ~}}
-    WriteRegStr SHCTX "Software\Classes\\{{protocol}}" "URL Protocol" ""
-    WriteRegStr SHCTX "Software\Classes\\{{protocol}}" "" "URL:${BUNDLEID} protocol"
-    WriteRegStr SHCTX "Software\Classes\\{{protocol}}\DefaultIcon" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\",0"
-    WriteRegStr SHCTX "Software\Classes\\{{protocol}}\shell\open\command" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
-  {{/each}}
 
   ; Create uninstaller
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -770,7 +726,7 @@ Function .onInstSuccess
     ${GetOptions} $CMDLINE "/R" $R0
     ${IfNot} ${Errors}
       ${GetOptions} $CMDLINE "/ARGS" $R0
-      nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "$R0"
+      Exec '"$INSTDIR\${MAINBINARYNAME}.exe" $R0'
     ${EndIf}
   ${EndIf}
 FunctionEnd
@@ -808,37 +764,42 @@ Section Uninstall
   Delete "$INSTDIR\${MAINBINARYNAME}.exe"
 
   ; Delete resources
-  {{#each resources}}
-    Delete "$INSTDIR\\{{this.[1]}}"
-  {{/each}}
+    Delete "$INSTDIR\resources\actions.json"
+    Delete "$INSTDIR\resources\aliases.json"
+    Delete "$INSTDIR\resources\anglicisms.tsv"
+    Delete "$INSTDIR\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\decoder.int8.onnx"
+    Delete "$INSTDIR\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\encoder.int8.onnx"
+    Delete "$INSTDIR\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\joiner.int8.onnx"
+    Delete "$INSTDIR\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8\tokens.txt"
+    Delete "$INSTDIR\resources\model\silero_vad.onnx"
+    Delete "$INSTDIR\resources\settings.json"
+    Delete "$INSTDIR\resources\sounds\classic\error.wav"
+    Delete "$INSTDIR\resources\sounds\classic\received.wav"
+    Delete "$INSTDIR\resources\sounds\classic\start.wav"
+    Delete "$INSTDIR\resources\sounds\classic\success.wav"
+    Delete "$INSTDIR\resources\wake\river-ru-en.bank"
+    Delete "$INSTDIR\resources\wake\river-ru-en.bin"
+    Delete "$INSTDIR\resources\wake\river.bank"
+    Delete "$INSTDIR\resources\wake\river.bin"
+    Delete "$INSTDIR\resources\wake\verify-ru-en.bin"
+    Delete "$INSTDIR\resources\wallpaper.png"
 
   ; Delete external binaries
-  {{#each binaries}}
-    Delete "$INSTDIR\\{{this}}"
-  {{/each}}
 
   ; Delete app associations
-  {{#each file_associations as |association| ~}}
-    {{#each association.ext as |ext| ~}}
-      !insertmacro APP_UNASSOCIATE "{{ext}}" "{{or association.name ext}}"
-    {{/each}}
-  {{/each}}
 
   ; Delete deep links
-  {{#each deep_link_protocols as |protocol| ~}}
-    ReadRegStr $R7 SHCTX "Software\Classes\\{{protocol}}\shell\open\command" ""
-    ${If} $R7 == "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
-      DeleteRegKey SHCTX "Software\Classes\\{{protocol}}"
-    ${EndIf}
-  {{/each}}
 
 
   ; Delete uninstaller
   Delete "$INSTDIR\uninstall.exe"
 
-  {{#each resources_ancestors}}
-  RMDir /REBOOTOK "$INSTDIR\\{{this}}"
-  {{/each}}
+  RMDir /REBOOTOK "$INSTDIR\resources\model\sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8"
+  RMDir /REBOOTOK "$INSTDIR\resources\sounds\classic"
+  RMDir /REBOOTOK "$INSTDIR\resources\model"
+  RMDir /REBOOTOK "$INSTDIR\resources\sounds"
+  RMDir /REBOOTOK "$INSTDIR\resources\wake"
+  RMDir /REBOOTOK "$INSTDIR\resources"
   RMDir "$INSTDIR"
 
   ; Remove shortcuts if not updating

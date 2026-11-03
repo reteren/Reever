@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_FINNISH} "Lisää/asenna osat uudelleen"
+﻿LangString addOrReinstall ${LANG_FINNISH} "Lisää/asenna osat uudelleen"
 LangString alreadyInstalled ${LANG_FINNISH} "Asennettu jo"
 LangString alreadyInstalledLong ${LANG_FINNISH} "${PRODUCTNAME} ${VERSION} on jo asennettu. Valitse toiminto ja jatka napsauttamalla Seuraava."
 LangString appRunning ${LANG_FINNISH} "${PRODUCTNAME} on käynnissä! Sulje se ensin ja yritä uudelleen."

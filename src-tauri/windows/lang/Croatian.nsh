@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_CROATIAN} "Dodaj/ponovno instaliraj komponente"
+﻿LangString addOrReinstall ${LANG_CROATIAN} "Dodaj/ponovno instaliraj komponente"
 LangString alreadyInstalled ${LANG_CROATIAN} "Već instalirano"
 LangString alreadyInstalledLong ${LANG_CROATIAN} "${PRODUCTNAME} ${VERSION} već je instaliran. Odaberite radnju i kliknite Dalje za nastavak."
 LangString appRunning ${LANG_CROATIAN} "${PRODUCTNAME} je pokrenut! Najprije ga zatvorite pa pokušajte ponovno."

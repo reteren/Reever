@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_LITHUANIAN} "Pridėti/iš naujo įdiegti komponentus"
+﻿LangString addOrReinstall ${LANG_LITHUANIAN} "Pridėti/iš naujo įdiegti komponentus"
 LangString alreadyInstalled ${LANG_LITHUANIAN} "Jau įdiegta"
 LangString alreadyInstalledLong ${LANG_LITHUANIAN} "${PRODUCTNAME} ${VERSION} jau įdiegtas. Pasirinkite veiksmą ir spustelėkite Toliau, kad tęstumėte."
 LangString appRunning ${LANG_LITHUANIAN} "${PRODUCTNAME} veikia! Pirmiausia jį uždarykite ir bandykite dar kartą."

@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_SLOVENIAN} "Dodaj/znova namesti komponente"
+﻿LangString addOrReinstall ${LANG_SLOVENIAN} "Dodaj/znova namesti komponente"
 LangString alreadyInstalled ${LANG_SLOVENIAN} "Že nameščeno"
 LangString alreadyInstalledLong ${LANG_SLOVENIAN} "${PRODUCTNAME} ${VERSION} je že nameščen. Izberite dejanje in kliknite Naprej za nadaljevanje."
 LangString appRunning ${LANG_SLOVENIAN} "${PRODUCTNAME} se izvaja! Najprej ga zaprite in poskusite znova."

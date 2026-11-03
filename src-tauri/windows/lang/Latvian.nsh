@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_LATVIAN} "Pievienot/pārinstalēt komponentus"
+﻿LangString addOrReinstall ${LANG_LATVIAN} "Pievienot/pārinstalēt komponentus"
 LangString alreadyInstalled ${LANG_LATVIAN} "Jau instalēts"
 LangString alreadyInstalledLong ${LANG_LATVIAN} "${PRODUCTNAME} ${VERSION} jau ir instalēts. Izvēlieties darbību un noklikšķiniet uz Tālāk, lai turpinātu."
 LangString appRunning ${LANG_LATVIAN} "${PRODUCTNAME} darbojas! Vispirms aizveriet to un mēģiniet vēlreiz."

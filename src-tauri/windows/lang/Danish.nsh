@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_DANISH} "Tilføj/geninstaller komponenter"
+﻿LangString addOrReinstall ${LANG_DANISH} "Tilføj/geninstaller komponenter"
 LangString alreadyInstalled ${LANG_DANISH} "Allerede installeret"
 LangString alreadyInstalledLong ${LANG_DANISH} "${PRODUCTNAME} ${VERSION} er allerede installeret. Vælg handlingen, og klik på Næste for at fortsætte."
 LangString appRunning ${LANG_DANISH} "${PRODUCTNAME} kører! Luk det først, og prøv igen."

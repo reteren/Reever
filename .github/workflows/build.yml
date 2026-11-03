@@ -13,22 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
       - uses: dtolnay/rust-toolchain@stable
 
-      # GigaAM, Parakeet и Silero VAD не хранятся в git.
-      # Скрипт фиксирует имена, версии и URL; конфиг фиксирует состав ресурсов,
+      # Parakeet, детектор «ривер» и Silero VAD не хранятся в git.
+      # Скрипт фиксирует имена, версии и URL; installer.nsi фиксирует состав ресурсов,
       # поэтому оба файла обновляют ключ кеша при смене состава speech-моделей.
       - name: Cache speech dependencies
         id: cache-speech
         uses: actions/cache@v4
         with:
           path: src-tauri/resources/model
-          key: speech-${{ runner.os }}-${{ hashFiles('scripts/fetch-deps.ps1', 'src-tauri/tauri.conf.json') }}
+          key: speech-${{ runner.os }}-${{ hashFiles('scripts/fetch-deps.ps1', 'src-tauri/windows/installer.nsi') }}
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -44,15 +39,18 @@ jobs:
         shell: powershell
         run: .\scripts\fetch-deps.ps1
 
-      - run: npm ci
-
       - name: Check formatting
         working-directory: src-tauri
         run: cargo fmt --check
         continue-on-error: true # в проекте пока нет единого форматирования
 
+      - name: Unit tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+      # NSIS 3 есть в образе windows-latest; tools/build_installer.py находит makensis сам.
       - name: Build installer
-        run: npm run build
+        run: python tools/build_installer.py
 
       - uses: actions/upload-artifact@v4
         with:

@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_ESTONIAN} "Lisa/paigalda komponendid uuesti"
+﻿LangString addOrReinstall ${LANG_ESTONIAN} "Lisa/paigalda komponendid uuesti"
 LangString alreadyInstalled ${LANG_ESTONIAN} "Juba paigaldatud"
 LangString alreadyInstalledLong ${LANG_ESTONIAN} "${PRODUCTNAME} ${VERSION} on juba paigaldatud. Vali toiming ja klõpsa jätkamiseks Edasi."
 LangString appRunning ${LANG_ESTONIAN} "${PRODUCTNAME} töötab! Sulge see esmalt ja proovi uuesti."

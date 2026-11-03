@@ -1,4 +1,4 @@
-LangString addOrReinstall ${LANG_SLOVAK} "Pridať/preinštalovať súčasti"
+﻿LangString addOrReinstall ${LANG_SLOVAK} "Pridať/preinštalovať súčasti"
 LangString alreadyInstalled ${LANG_SLOVAK} "Už nainštalované"
 LangString alreadyInstalledLong ${LANG_SLOVAK} "${PRODUCTNAME} ${VERSION} je už nainštalovaný. Vyberte operáciu a pokračujte kliknutím na Ďalej."
 LangString appRunning ${LANG_SLOVAK} "${PRODUCTNAME} je spustený! Najprv ho zatvorte a skúste to znova."
