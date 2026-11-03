@@ -576,6 +576,8 @@ pub fn show(app: &AppHandle) {
                 topmost: false,
                 no_activate: demo,
                 visible: true,
+                // кнопка на панели задач: свёрнутое окно возвращается ею, а не только из трея
+                taskbar: !demo,
             };
             let id = ui.create_window(spec, Box::new(view))?;
             let (hwnd, scale) = ui.info(id).map(|i| (i.hwnd, i.scale)).unwrap_or((0, 1.0));

@@ -463,7 +463,7 @@ pub fn show(app: &AppHandle, host: std::sync::Arc<dyn Host>, q: Question) {
             let skin = load_skin(&app2, ui.images());
             let mut view = ConfirmView::new(host, skin);
             view.apply(q);
-            let spec = WindowSpec { title: "Reever".into(), x, y, width: WIN_W, height: WIN_H, topmost: true, no_activate: crate::dialog_demo::active(), visible: true };
+            let spec = WindowSpec { title: "Reever".into(), x, y, width: WIN_W, height: WIN_H, topmost: true, no_activate: crate::dialog_demo::active(), visible: true, taskbar: false };
             let id = ui.create_window(spec, Box::new(view))?;
             Ok::<_, windows::core::Error>((id, ui.info(id).map(|i| i.hwnd).unwrap_or(0)))
         });

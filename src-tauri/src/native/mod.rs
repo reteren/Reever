@@ -82,6 +82,9 @@ pub struct WindowSpec {
     /// Не забирать фокус ни при показе, ни при клике (маскот, пузырь).
     pub no_activate: bool,
     pub visible: bool,
+    /// Обычное окно приложения: кнопка на панели задач, сворачивается и разворачивается ею.
+    /// Без флага — окно-инструмент (маскот, пузырь, диалоги): на панели задач его нет.
+    pub taskbar: bool,
 }
 
 impl Default for WindowSpec {
@@ -95,6 +98,7 @@ impl Default for WindowSpec {
             topmost: true,
             no_activate: true,
             visible: true,
+            taskbar: false,
         }
     }
 }

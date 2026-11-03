@@ -60,6 +60,7 @@ pub fn create(app: &AppHandle, x: i32, y: i32) -> Option<isize> {
             topmost: true,
             no_activate: true,
             visible: true,
+            taskbar: false,
         };
         let id = ui.create_window(spec, Box::new(view))?;
         let hwnd = ui.info(id).map(|i| i.hwnd).unwrap_or(0);

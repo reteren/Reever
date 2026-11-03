@@ -57,7 +57,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_ERASEBKGND, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE,
     WM_NCCREATE, WM_NCDESTROY, WM_NCHITTEST, WM_PAINT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SIZE,
     WNDCLASSEXW, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_POPUP,
+    WS_POPUP, WS_EX_APPWINDOW, WS_MINIMIZEBOX, WS_SYSMENU, LoadImageW, GetSystemMetrics, HICON,
+    IMAGE_ICON, LR_SHARED, SM_CXICON, SM_CYICON, SM_CXSMICON, SM_CYSMICON,
 };
 
 use super::device::Gfx;
@@ -233,6 +234,12 @@ fn ensure_class() -> Result<()> {
     }
     let hinstance = unsafe { GetModuleHandleW(None)? };
     let name = HSTRING::from(CLASS_NAME);
+    // значок exe (ресурс 1, windows/reever.rc): его показывают панель задач и Alt+Tab
+    let icon = |cx, cy| unsafe {
+        LoadImageW(hinstance, windows::core::PCWSTR(1 as _), IMAGE_ICON, GetSystemMetrics(cx), GetSystemMetrics(cy), LR_SHARED)
+            .map(|h| HICON(h.0))
+            .unwrap_or_default()
+    };
     let wc = WNDCLASSEXW {
         cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
         lpfnWndProc: Some(wndproc),
@@ -240,6 +247,8 @@ fn ensure_class() -> Result<()> {
         // двойной щелчок приходит как WM_LBUTTONDBLCLK
         style: CS_DBLCLKS,
         lpszClassName: windows::core::PCWSTR(name.as_ptr()),
+        hIcon: icon(SM_CXICON, SM_CYICON),
+        hIconSm: icon(SM_CXSMICON, SM_CYSMICON),
         ..Default::default()
     };
     // класс уже зарегистрирован прошлым потоком окон того же процесса — тоже годится
@@ -488,7 +497,12 @@ impl NativeWindow {
         let monitor = unsafe { MonitorFromPoint(POINT { x: spec.x, y: spec.y }, MONITOR_DEFAULTTONEAREST) };
         let (mut dx, mut dy) = (96u32, 96u32);
         let _ = unsafe { GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &mut dx, &mut dy) };
-        let mut ex = WS_EX_NOREDIRECTIONBITMAP | WS_EX_TOOLWINDOW;
+        // Окно-инструмент не попадает на панель задач, а свёрнутое пропадает совсем — главному
+        // окну нужен обычный вид: WS_EX_APPWINDOW и WS_MINIMIZEBOX (щелчок по кнопке на панели
+        // задач сворачивает и разворачивает только окно с этим стилем). Заголовка без
+        // WS_CAPTION нет, рамку по-прежнему рисует само окно.
+        let mut ex = WS_EX_NOREDIRECTIONBITMAP | if spec.taskbar { WS_EX_APPWINDOW } else { WS_EX_TOOLWINDOW };
+        let style = if spec.taskbar { WS_POPUP | WS_MINIMIZEBOX | WS_SYSMENU } else { WS_POPUP };
         if spec.topmost {
             ex |= WS_EX_TOPMOST;
         }
@@ -510,7 +524,7 @@ impl NativeWindow {
                 WINDOW_EX_STYLE(ex.0),
                 &HSTRING::from(CLASS_NAME),
                 &HSTRING::from(spec.title.as_str()),
-                WS_POPUP,
+                style,
                 spec.x,
                 spec.y,
                 dip_to_px(spec.width, dx) as i32,

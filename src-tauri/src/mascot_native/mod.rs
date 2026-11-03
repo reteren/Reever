@@ -174,6 +174,7 @@ pub fn create(app: &AppHandle, x: i32, y: i32, width: f64, height: f64, fps_limi
             topmost: true,
             no_activate: true,
             visible: true,
+            taskbar: false,
         };
         let id = ui.create_window(spec, Box::new(MascotView::new(assets, &state)))?;
         let hwnd = ui.info(id).map(|i| i.hwnd).unwrap_or(0);

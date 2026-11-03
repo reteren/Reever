@@ -997,7 +997,7 @@ pub fn show(app: &AppHandle, host: std::sync::Arc<dyn Host>, payload: Payload) {
             let skin = load_skin(&app2, ui.images());
             let mut view = PickerView::new(host, Some(ui2), skin);
             view.apply(payload);
-            let spec = WindowSpec { title: "Reever".into(), x, y, width: WIN_W, height: WIN_H, topmost: true, no_activate: crate::dialog_demo::active(), visible: true };
+            let spec = WindowSpec { title: "Reever".into(), x, y, width: WIN_W, height: WIN_H, topmost: true, no_activate: crate::dialog_demo::active(), visible: true, taskbar: false };
             let id = ui.create_window(spec, Box::new(view))?;
             if let Some(v) = ui.handler_mut::<PickerView>(id) {
                 v.id = Some(id);
