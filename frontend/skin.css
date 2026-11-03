@@ -37,6 +37,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+/* the browser's own white ring never shows: scrollable lists get keyboard focus too */
+:focus-visible { outline: 1px dashed var(--acc-2); outline-offset: -1px; }
 body {
   font: 400 13px/1.45 var(--f-ui);
   font-variation-settings: 'SHRP' 60;
