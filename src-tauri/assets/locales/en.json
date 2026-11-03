@@ -1,7 +1,7 @@
 {
   "app.pickerTitle": "Reever - found",
   "win.minimize": "Minimize",
-  "win.toTray": "Minimize to tray",
+  "win.toTray": "Close window",
   "win.shade": "Compact mode",
   "win.expand": "Full window",
   "orb.toggle": "Microphone on / off",

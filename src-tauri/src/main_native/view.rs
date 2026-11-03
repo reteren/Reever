@@ -2272,6 +2272,12 @@ impl WindowHandler for MainView {
         self.settings_tab.set_hwnd(hwnd);
     }
 
+    /// «Закрыть окно» из меню значка на панели задач и Alt+F4 — как кнопка закрытия: окно
+    /// уходит, Reever остаётся в трее.
+    fn close_requested(&mut self) {
+        (self.host)(Act::Tray);
+    }
+
     fn prepare(&mut self, gpu: &GpuCx<'_>) {
         if self.overlay.as_ref().is_some_and(|o| o.animating()) || self.screens_animating(gpu.now) {
             self.static_dirty = true;

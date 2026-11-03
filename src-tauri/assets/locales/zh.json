@@ -1,7 +1,7 @@
 {
   "app.pickerTitle": "Reever - 已找到",
   "win.minimize": "最小化",
-  "win.toTray": "最小化到系统托盘",
+  "win.toTray": "关闭窗口",
   "win.shade": "紧凑模式",
   "win.expand": "完整窗口",
   "orb.toggle": "开 / 关麦克风",
