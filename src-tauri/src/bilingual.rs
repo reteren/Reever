@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::grammar::{Grammar, IntentKind};
 use crate::speech::{Lang, LanguageId, Timed, Transcriber};
-use crate::textnorm::{normalize, strip_leading_fillers, strip_wake};
+use crate::textnorm::{normalize, strip_leading_fillers};
 
 const SAMPLE_RATE: usize = 16_000;
 const CROP_MARGIN_MS: f32 = 0.150;
@@ -290,7 +290,9 @@ fn segment_after_wake(
 ) -> (Vec<String>, Vec<Span>) {
     let source_words = words(&normalize(&timed.text));
     let spans = source_spans(audio, timed, &source_words);
-    let Some(rest) = strip_wake(&timed.text, wake_words) else {
+    // Обращение — первым словом или после вводного («ну ривер …»), как решает Engine: иначе
+    // «открой ривер» после сигнала теряло бы всю команду.
+    let Some(rest) = crate::engine::strip_initial_wake(&normalize(&timed.text), wake_words) else {
         return (source_words, spans);
     };
     let rest_words = words(&rest);

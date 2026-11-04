@@ -2582,7 +2582,7 @@ fn wake_clip_range(timed: &Timed, audio_len: usize, wake_words: &[String]) -> Op
     (end >= start + samples(400)).then_some((start, end))
 }
 
-fn strip_initial_wake(text: &str, wake_words: &[String]) -> Option<String> {
+pub(crate) fn strip_initial_wake(text: &str, wake_words: &[String]) -> Option<String> {
     // Нечёткость (опечатки ASR) решает textnorm::strip_wake, но он ищет wake в первых двух
     // словах. Вторым словом wake допустим только после обращения — иначе «открой ривер
     // загрузки» из обычной речи ложно становилось бы командой.
@@ -2896,6 +2896,19 @@ mod tests {
                 alt: None
             }
         ));
+    }
+
+    #[test]
+    fn open_reever_keeps_the_name_as_the_target() {
+        // «ривер, открой ривер» одной фразой и «ривер» … «открой ривер» — цель не вырезается
+        let (mut one, _, _, _) = engine(test_config(), &["ривер открой ривер"]);
+        let events = one.push_audio(&phrase(123, 120));
+        assert!(contains(&events, &EngineEvent::Command { text: "открой ривер".into(), alt: None }), "{events:?}");
+
+        let (mut two, _, _, _) = engine(test_config(), &["ривер", "открой ривер"]);
+        assert!(contains(&two.push_audio(&phrase(123, 120)), &EngineEvent::WakeHeard));
+        let events = two.push_audio(&phrase(123, 120));
+        assert!(contains(&events, &EngineEvent::Command { text: "открой ривер".into(), alt: None }), "{events:?}");
     }
 
     #[test]
