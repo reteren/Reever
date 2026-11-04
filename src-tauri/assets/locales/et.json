@@ -457,6 +457,7 @@
   "log.cancelled": "↩ tühistatud",
   "log.unknownCommand": "⚠ käsku ei tuvastatud",
   "log.noAction": "∅ sellist toimingut pole (lisa see ja kalibreeri)",
+  "log.showSelf": "⌂ avan Reeveri akna",
   "log.confirm": "❓ {action} - kinnita häälega: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - kinnita häälega: «yes» / «cancel»",
   "log.confirm.timeout": "↩ kinnitust pole - tühistatud",

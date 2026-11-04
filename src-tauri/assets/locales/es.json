@@ -457,6 +457,7 @@
   "log.cancelled": "↩ cancelado",
   "log.unknownCommand": "⚠ comando no reconocido",
   "log.noAction": "∅ no existe esa acción (añádela y calíbrala)",
+  "log.showSelf": "⌂ abriendo la ventana de Reever",
   "log.confirm": "❓ {action} - confirma por voz: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - confirma por voz: «yes» / «cancel»",
   "log.confirm.timeout": "↩ sin confirmación - cancelado",

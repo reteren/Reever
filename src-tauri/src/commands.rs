@@ -155,9 +155,66 @@ fn clean_target(text: &str) -> String {
     clean_command_text(text)
 }
 
+/// Что открыть у самого Reever по «открой ривер» / «открой настройки ривера».
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelfPage {
+    /// Главное окно (как щелчок по значку в трее).
+    Window,
+    /// Главное окно на вкладке «Настройки».
+    Settings,
+}
+
+const SELF_VERBS: &[&str] = &[
+    "открой", "открои", "откройте", "открыть", "покажи", "покажите", "разверни", "верни", "open", "show",
+];
+const SELF_SETTINGS: &[&str] = &["настройки", "настроики", "настройку", "settings", "setting"];
+const SELF_WINDOW: &[&str] = &["окно", "меню", "менюшку", "window", "menu", "app"];
+
+/// «открой ривер», «покажи окно ривера», «открой настройки ривера», «open reever settings»:
+/// команда самому Reever. `wake_words` — как в настройках (первое — каноническое «ривер»).
+/// Обращение в начале фразы Engine уже снял: сюда приходит «открой ривер» из «ривер, открой
+/// ривер».
+pub fn opens_self(text: &str, wake_words: &[String]) -> Option<SelfPage> {
+    let normalized = strip_leading_fillers(&normalize(text));
+    let mut words: Vec<&str> = normalized.split_whitespace().collect();
+    if words.is_empty() || !SELF_VERBS.contains(&words[0]) {
+        return None;
+    }
+    words.remove(0);
+    let mut page = SelfPage::Window;
+    words.retain(|w| {
+        if SELF_SETTINGS.contains(w) {
+            page = SelfPage::Settings;
+            false
+        } else {
+            !SELF_WINDOW.contains(w) && !matches!(*w, "мне" | "пожалуйста" | "please" | "the" | "my")
+        }
+    });
+    // осталось одно слово — само имя: «ривер», падежом «ривера» / «риверу», латиницей
+    let [name] = words.as_slice() else { return None };
+    let is_wake = |w: &str| crate::textnorm::strip_wake(w, wake_words).is_some_and(|rest| rest.is_empty());
+    let stem = name.strip_suffix(['а', 'у']).unwrap_or(name);
+    (is_wake(name) || (stem.chars().count() >= 4 && is_wake(stem))).then_some(page)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{is_bare_verb, parse, ReeverCommand};
+    use super::{is_bare_verb, opens_self, parse, ReeverCommand, SelfPage};
+
+    #[test]
+    fn open_self_window_and_settings() {
+        let wake = vec!["ривер".to_string(), "reever".to_string(), "river".to_string()];
+        assert_eq!(opens_self("открой ривер", &wake), Some(SelfPage::Window));
+        assert_eq!(opens_self("Покажи окно ривера", &wake), Some(SelfPage::Window));
+        assert_eq!(opens_self("открой меню ривера", &wake), Some(SelfPage::Window));
+        assert_eq!(opens_self("открой настройки ривера", &wake), Some(SelfPage::Settings));
+        assert_eq!(opens_self("open reever", &wake), Some(SelfPage::Window));
+        assert_eq!(opens_self("open river settings", &wake), Some(SelfPage::Settings));
+        assert_eq!(opens_self("открой фотошоп", &wake), None);
+        assert_eq!(opens_self("открой ривер загрузки", &wake), None);
+        assert_eq!(opens_self("открой реверс", &wake), None);
+        assert_eq!(opens_self("открой", &wake), None);
+    }
 
     #[test]
     fn parse_matches_whole_verb_words_and_polite_forms() {

@@ -526,6 +526,21 @@ fn placement() -> (i32, i32, f32) {
     }
 }
 
+/// Показать окно на вкладке `tab` («открой настройки ривера»): окно создаётся в потоке окон,
+/// вкладка переключается, когда оно появилось.
+pub fn show_tab(app: &AppHandle, tab: &'static str) {
+    show(app);
+    std::thread::spawn(move || {
+        for _ in 0..100 {
+            if WIN.lock().ok().is_some_and(|w| w.is_some()) {
+                send(Msg::Tab(tab.into()));
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+    });
+}
+
 /// Показать окно (создать, если его нет) и отдать ему фокус.
 pub fn show(app: &AppHandle) {
     init(app);

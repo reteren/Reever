@@ -465,6 +465,7 @@
   "log.cancelled": "↩ تم الإلغاء",
   "log.unknownCommand": "⚠ لم يتم التعرّف على الأمر",
   "log.noAction": "∅ لا يوجد إجراء بهذا الاسم (أضفه ثم قم بمعايرته)",
+  "log.showSelf": "⌂ فتح نافذة Reever",
   "log.confirm": "❓ {action} - أكّد بالصوت: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - أكّد بالصوت: «yes» / «cancel»",
   "log.confirm.timeout": "↩ لم يصل تأكيد - تم الإلغاء",

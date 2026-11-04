@@ -459,6 +459,7 @@
   "log.cancelled": "↩ poništeno",
   "log.unknownCommand": "⚠ naredba nije prepoznata",
   "log.noAction": "∅ takva radnja ne postoji (dodajte je i kalibrirajte)",
+  "log.showSelf": "⌂ otvaram prozor Reever",
   "log.confirm": "❓ {action} - potvrdite glasom: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - potvrdite glasom: «yes» / «cancel»",
   "log.confirm.timeout": "↩ nema potvrde - poništeno",

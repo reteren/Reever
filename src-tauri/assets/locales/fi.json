@@ -457,6 +457,7 @@
   "log.cancelled": "↩ peruutettu",
   "log.unknownCommand": "⚠ komentoa ei tunnistettu",
   "log.noAction": "∅ tällaista toimintoa ei ole (lisää ja kalibroi se)",
+  "log.showSelf": "⌂ avataan Reever-ikkuna",
   "log.confirm": "❓ {action} - vahvista äänellä: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - vahvista äänellä: «yes» / «cancel»",
   "log.confirm.timeout": "↩ ei vahvistusta - peruutettu",

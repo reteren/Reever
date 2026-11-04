@@ -461,6 +461,7 @@
   "log.cancelled": "↩ anulowano",
   "log.unknownCommand": "⚠ polecenie nie rozpoznane",
   "log.noAction": "∅ nie ma takiej akcji (dodaj ją i skalibruj)",
+  "log.showSelf": "⌂ otwieram okno Reever",
   "log.confirm": "❓ {action} - potwierdź głosem: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - potwierdź głosem: «yes» / «cancel»",
   "log.confirm.timeout": "↩ brak potwierdzenia - anulowano",

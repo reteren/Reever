@@ -461,6 +461,7 @@
   "log.cancelled": "↩ preklicano",
   "log.unknownCommand": "⚠ ukaz ni prepoznan",
   "log.noAction": "∅ takega dejanja ni (dodajte ga in kalibrirajte)",
+  "log.showSelf": "⌂ odpiram okno Reever",
   "log.confirm": "❓ {action} - potrdite z glasom: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - potrdite z glasom: «yes» / «cancel»",
   "log.confirm.timeout": "↩ ni potrditve - preklicano",

@@ -456,6 +456,7 @@
   "log.cancelled": "↩ отменено",
   "log.unknownCommand": "⚠ не распознал команду",
   "log.noAction": "∅ нет такого действия (добавь и откалибруй)",
+  "log.showSelf": "⌂ открываю окно Reever",
   "log.confirm": "❓ {action} - подтверди голосом: «да» / «нет» (yes / no)",
   "log.confirmSystem": "⚙ {action} - подтверди голосом: «да» / «отмена»",
   "log.confirm.timeout": "↩ не дождался подтверждения - отменено",

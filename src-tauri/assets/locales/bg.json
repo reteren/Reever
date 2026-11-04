@@ -457,6 +457,7 @@
   "log.cancelled": "↩ отказано",
   "log.unknownCommand": "⚠ командата не е разпозната",
   "log.noAction": "∅ няма такова действие (добавете го и го калибрирайте)",
+  "log.showSelf": "⌂ отварям прозореца на Reever",
   "log.confirm": "❓ {action} - потвърдете с глас: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - потвърдете с глас: «yes» / «cancel»",
   "log.confirm.timeout": "↩ няма потвърждение - отказано",

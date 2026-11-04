@@ -459,6 +459,7 @@
   "log.cancelled": "↩ atcelts",
   "log.unknownCommand": "⚠ komanda nav atpazīta",
   "log.noAction": "∅ šādas darbības nav (pievienojiet to un kalibrējiet)",
+  "log.showSelf": "⌂ atveru Reever logu",
   "log.confirm": "❓ {action} - apstipriniet ar balsi: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - apstipriniet ar balsi: «yes» / «cancel»",
   "log.confirm.timeout": "↩ nav apstiprinājuma - atcelts",

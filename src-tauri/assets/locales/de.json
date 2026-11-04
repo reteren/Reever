@@ -457,6 +457,7 @@
   "log.cancelled": "↩ abgebrochen",
   "log.unknownCommand": "⚠ Befehl nicht erkannt",
   "log.noAction": "∅ keine solche Aktion (hinzufügen und kalibrieren)",
+  "log.showSelf": "⌂ Reever-Fenster wird geöffnet",
   "log.confirm": "❓ {action} - per Sprache bestätigen: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - per Sprache bestätigen: «yes» / «cancel»",
   "log.confirm.timeout": "↩ keine Bestätigung - abgebrochen",

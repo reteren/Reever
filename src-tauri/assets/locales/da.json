@@ -457,6 +457,7 @@
   "log.cancelled": "↩ annulleret",
   "log.unknownCommand": "⚠ kommandoen blev ikke genkendt",
   "log.noAction": "∅ ingen sådan handling (tilføj den, og kalibrer)",
+  "log.showSelf": "⌂ åbner Reever-vinduet",
   "log.confirm": "❓ {action} - bekræft med stemmen: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - bekræft med stemmen: «yes» / «cancel»",
   "log.confirm.timeout": "↩ ingen bekræftelse - annulleret",

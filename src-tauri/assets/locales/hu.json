@@ -457,6 +457,7 @@
   "log.cancelled": "↩ megszakítva",
   "log.unknownCommand": "⚠ a parancs nincs felismerve",
   "log.noAction": "∅ nincs ilyen művelet (add hozzá és kalibráld)",
+  "log.showSelf": "⌂ a Reever ablak megnyitása",
   "log.confirm": "❓ {action} - erősítsd meg hanggal: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - erősítsd meg hanggal: «yes» / «cancel»",
   "log.confirm.timeout": "↩ nincs megerősítés - megszakítva",

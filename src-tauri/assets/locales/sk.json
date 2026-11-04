@@ -461,6 +461,7 @@
   "log.cancelled": "↩ zrušené",
   "log.unknownCommand": "⚠ príkaz nerozpoznaný",
   "log.noAction": "∅ taká akcia neexistuje (pridajte ju a skalibrujte)",
+  "log.showSelf": "⌂ otváram okno Reever",
   "log.confirm": "❓ {action} - potvrďte hlasom: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - potvrďte hlasom: «yes» / «cancel»",
   "log.confirm.timeout": "↩ bez potvrdenia - zrušené",

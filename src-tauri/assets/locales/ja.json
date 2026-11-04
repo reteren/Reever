@@ -455,6 +455,7 @@
   "log.cancelled": "↩ キャンセルしました",
   "log.unknownCommand": "⚠ コマンドを認識できませんでした",
   "log.noAction": "∅ そのアクションはありません（追加してキャリブレーションしてください）",
+  "log.showSelf": "⌂ Reever のウィンドウを開きます",
   "log.confirm": "❓ {action} - 音声で確認してください：「yes」/「no」",
   "log.confirmSystem": "⚙ {action} - 音声で確認してください：「yes」/「cancel」",
   "log.confirm.timeout": "↩ 確認がありませんでした - キャンセルしました",

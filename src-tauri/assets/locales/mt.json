@@ -463,6 +463,7 @@
   "log.cancelled": "↩ ikkanċellat",
   "log.unknownCommand": "⚠ il-kmand ma ġiex rikonoxxut",
   "log.noAction": "∅ m'hemmx azzjoni bħal din (żidha u kkalibraha)",
+  "log.showSelf": "⌂ qed niftaħ it-tieqa ta’ Reever",
   "log.confirm": "❓ {action} - ikkonferma bil-vuċi: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - ikkonferma bil-vuċi: «yes» / «cancel»",
   "log.confirm.timeout": "↩ l-ebda konferma - ikkanċellat",

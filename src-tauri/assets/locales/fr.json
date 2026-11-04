@@ -459,6 +459,7 @@
   "log.cancelled": "↩ annulé",
   "log.unknownCommand": "⚠ commande non reconnue",
   "log.noAction": "∅ aucune action de ce nom (ajoutez-la et calibrez-la)",
+  "log.showSelf": "⌂ ouverture de la fenêtre Reever",
   "log.confirm": "❓ {action} - confirmez à la voix : «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - confirmez à la voix : «yes» / «cancel»",
   "log.confirm.timeout": "↩ pas de confirmation - annulé",

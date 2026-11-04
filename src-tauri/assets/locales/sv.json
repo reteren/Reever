@@ -457,6 +457,7 @@
   "log.cancelled": "↩ avbrutet",
   "log.unknownCommand": "⚠ kommandot kändes inte igen",
   "log.noAction": "∅ ingen sådan åtgärd (lägg till den och kalibrera)",
+  "log.showSelf": "⌂ öppnar Reever-fönstret",
   "log.confirm": "❓ {action} - bekräfta med rösten: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - bekräfta med rösten: «yes» / «cancel»",
   "log.confirm.timeout": "↩ ingen bekräftelse - avbrutet",

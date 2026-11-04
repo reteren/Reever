@@ -461,6 +461,7 @@
   "log.cancelled": "↩ скасовано",
   "log.unknownCommand": "⚠ команду не розпізнано",
   "log.noAction": "∅ такої дії немає (додайте її й відкалібруйте)",
+  "log.showSelf": "⌂ відкриваю вікно Reever",
   "log.confirm": "❓ {action} - підтвердіть голосом: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - підтвердіть голосом: «yes» / «cancel»",
   "log.confirm.timeout": "↩ підтвердження немає - скасовано",

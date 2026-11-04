@@ -457,6 +457,7 @@
   "log.cancelled": "↩ ακυρώθηκε",
   "log.unknownCommand": "⚠ η εντολή δεν αναγνωρίστηκε",
   "log.noAction": "∅ δεν υπάρχει τέτοια ενέργεια (προσθέστε την και βαθμονομήστε)",
+  "log.showSelf": "⌂ άνοιγμα του παραθύρου Reever",
   "log.confirm": "❓ {action} - επιβεβαιώστε με τη φωνή: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - επιβεβαιώστε με τη φωνή: «yes» / «cancel»",
   "log.confirm.timeout": "↩ καμία επιβεβαίωση - ακυρώθηκε",

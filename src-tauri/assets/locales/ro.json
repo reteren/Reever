@@ -459,6 +459,7 @@
   "log.cancelled": "↩ anulat",
   "log.unknownCommand": "⚠ comanda nu a fost recunoscută",
   "log.noAction": "∅ nu există o astfel de acțiune (adaug-o și calibreaz-o)",
+  "log.showSelf": "⌂ deschid fereastra Reever",
   "log.confirm": "❓ {action} - confirmă cu vocea: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - confirmă cu vocea: «yes» / «cancel»",
   "log.confirm.timeout": "↩ nicio confirmare - anulat",

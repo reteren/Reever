@@ -369,6 +369,19 @@ pub fn dispatch(
 ) -> DispatchResult {
     // Копируем снапшоты под короткими локами; поиск и запуск приложений идут
     // уже без удержания общих mutex, чтобы не задерживать обновления грамматики/UI.
+    // «открой ривер» / «открой настройки ривера» — окно самого Reever, раньше действий и папок.
+    if let Some(page) = [Some(text), alt]
+        .into_iter()
+        .flatten()
+        .find_map(|t| crate::commands::opens_self(t, &cfg.settings.wake_words))
+    {
+        ui_log(app, crate::msg!("log.showSelf"));
+        match page {
+            crate::commands::SelfPage::Window => crate::show_main(app),
+            crate::commands::SelfPage::Settings => crate::main_native::show_tab(app, "settings"),
+        }
+        return DispatchResult::Done(true);
+    }
     let grammar = shared.grammar.lock().unwrap().clone();
     let actions = shared.actions.lock().unwrap().clone();
     let route = route(text, alt, &grammar, &actions, cfg.settings.match_threshold);

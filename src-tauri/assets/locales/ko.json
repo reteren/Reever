@@ -455,6 +455,7 @@
   "log.cancelled": "↩ 취소됨",
   "log.unknownCommand": "⚠ 명령을 인식하지 못했습니다",
   "log.noAction": "∅ 그런 동작이 없습니다 (추가하고 보정하세요)",
+  "log.showSelf": "⌂ Reever 창 여는 중",
   "log.confirm": "❓ {action} - 음성으로 확인하세요: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - 음성으로 확인하세요: «yes» / «cancel»",
   "log.confirm.timeout": "↩ 확인 없음 - 취소됨",

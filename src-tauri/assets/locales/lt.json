@@ -461,6 +461,7 @@
   "log.cancelled": "↩ atšaukta",
   "log.unknownCommand": "⚠ komanda neatpažinta",
   "log.noAction": "∅ tokio veiksmo nėra (pridėkite jį ir sukalibruokite)",
+  "log.showSelf": "⌂ atidarau Reever langą",
   "log.confirm": "❓ {action} - patvirtinkite balsu: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - patvirtinkite balsu: «yes» / «cancel»",
   "log.confirm.timeout": "↩ nėra patvirtinimo - atšaukta",

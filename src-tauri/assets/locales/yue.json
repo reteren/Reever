@@ -455,6 +455,7 @@
   "log.cancelled": "↩ 取消咗",
   "log.unknownCommand": "⚠ 識別唔到指令",
   "log.noAction": "∅ 冇呢個動作（加咗佢再校正）",
+  "log.showSelf": "⌂ 打開 Reever 視窗",
   "log.confirm": "❓ {action} - 用聲音確認：«yes» / «no»",
   "log.confirmSystem": "⚙ {action} - 用聲音確認：«yes» / «cancel»",
   "log.confirm.timeout": "↩ 冇確認 - 取消咗",

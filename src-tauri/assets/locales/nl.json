@@ -457,6 +457,7 @@
   "log.cancelled": "↩ geannuleerd",
   "log.unknownCommand": "⚠ opdracht niet herkend",
   "log.noAction": "∅ zo'n actie bestaat niet (voeg hem toe en kalibreer)",
+  "log.showSelf": "⌂ Reever-venster openen",
   "log.confirm": "❓ {action} - bevestig met je stem: «yes» / «no»",
   "log.confirmSystem": "⚙ {action} - bevestig met je stem: «yes» / «cancel»",
   "log.confirm.timeout": "↩ geen bevestiging - geannuleerd",
