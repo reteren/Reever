@@ -24,8 +24,8 @@ use windows::Win32::{
     },
     UI::{
         Accessibility::{
-            CUIAutomation, IUIAutomation, IUIAutomationValuePattern, UIA_DocumentControlTypeId,
-            UIA_EditControlTypeId, UIA_ValuePatternId,
+            CUIAutomation, IUIAutomation, IUIAutomationValuePattern, UIA_ComboBoxControlTypeId,
+            UIA_DocumentControlTypeId, UIA_EditControlTypeId, UIA_ValuePatternId,
         },
         Input::KeyboardAndMouse::{
             SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS,
@@ -185,7 +185,7 @@ thread_local! {
 }
 
 /// Браузеры и Electron не рисуют системный курсор — у них поле видно только через UIA:
-/// в фокусе Edit или Document, и если у него есть ValuePattern, то не только для чтения
+/// в фокусе Edit, Document или ComboBox с вводом, и если у него есть ValuePattern, то не только для чтения
 /// (так страница без активного поля в браузере — не цель, а документ Word — цель).
 fn focused_element_editable(foreground_pid: u32) -> Option<bool> {
     AUTOMATION.with(|automation| {
@@ -205,10 +205,17 @@ fn focused_element_editable(foreground_pid: u32) -> Option<bool> {
             // pid 48532, поле pid 49924). Фокус и так в активном окне, а печать идёт туда же.
             let _ = (element_pid, foreground_pid);
             let control_type = element.CurrentControlType().ok()?;
+            let value = element.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId);
+            if control_type == UIA_ComboBoxControlTypeId {
+                // Поле с подсказками (поиск YouTube, адресные строки сайтов — <input
+                // role="combobox">): цель, только если в него можно писать. Выпадающий список
+                // без ввода (<select>) — ValuePattern нет или он только для чтения.
+                return Some(value.ok().and_then(|v| v.CurrentIsReadOnly().ok()).is_some_and(|ro| !ro.as_bool()));
+            }
             if control_type != UIA_EditControlTypeId && control_type != UIA_DocumentControlTypeId {
                 return Some(false);
             }
-            match element.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId) {
+            match value {
                 Ok(value) => value.CurrentIsReadOnly().ok().map(|ro| !ro.as_bool()),
                 Err(_) => Some(true),
             }
