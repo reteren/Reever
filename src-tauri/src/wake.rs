@@ -57,6 +57,19 @@ pub fn personal_for(config_dir: &Path, weights: &str, base: &[u8]) -> Option<(st
     (fits && bin.is_file()).then_some((bin, meta))
 }
 
+/// Напарник весов `weights_for` в связке: вторая сеть слушает тот же звук, оценки сводятся
+/// средним логитов, а вторая ступень берёт порог `ENSEMBLE_VERIFY_THRESHOLD`. Русско-английским
+/// весам (ruen4) — многоязычные (ml7): обучены отдельно, ошибки у них разные. Замер 2026-11-04
+/// (docs/research/wake-detector.md): пользователь 81 → 82 из 91, второй диктор 10 → 12 из 15,
+/// ложных на шумах 11 → 10, на речи FLEURS 2 → 0.
+pub fn partner_for(weights: &str) -> Option<&'static str> {
+    (weights == "wake/river-ru-en.bin").then_some("wake/river.bin")
+}
+
+/// Порог второй ступени в связке: сводная оценка первой уже строже, вторая только отсеивает явно
+/// чужое.
+pub const ENSEMBLE_VERIFY_THRESHOLD: f32 = 0.03;
+
 /// Вторая ступень к весам `weights_for` (пока есть только у русско-английских).
 pub fn verifier_for(weights: &str) -> Option<&'static str> {
     (weights == "wake/river-ru-en.bin").then_some("wake/verify-ru-en.bin")
@@ -115,9 +128,94 @@ pub struct AcousticWakeSpotter {
     /// Вторая ступень решает: кадров на ожидание, порог и описание кандидата до решения.
     verifying: Option<(usize, f32, String)>,
     pause_gate: bool,
+    /// Ещё сети, слушающие тот же звук (связка): их оценки сводятся с оценкой `kws`.
+    partners: Vec<StreamingTcn>,
+    /// Доли сетей в сводной оценке: первая — `kws`, дальше — `partners` по порядку.
+    shares: Vec<f32>,
+    combine: Combine,
+    partner_scores: Vec<f32>,
+}
+
+/// Как свести оценки нескольких сетей в одну.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Combine {
+    /// Взвешенное среднее вероятностей.
+    Mean,
+    /// Взвешенное среднее логитов (уверенная сеть весит больше).
+    Logit,
+    /// Наименьшая: срабатывают только вместе.
+    Min,
+    /// Наибольшая: достаточно любой.
+    Max,
+}
+
+impl Combine {
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "mean" => Self::Mean,
+            "logit" => Self::Logit,
+            "min" => Self::Min,
+            "max" => Self::Max,
+            _ => return None,
+        })
+    }
+
+    fn apply(self, scores: &[f32], shares: &[f32]) -> f32 {
+        let total: f32 = shares.iter().sum::<f32>().max(1e-6);
+        match self {
+            Self::Mean => scores.iter().zip(shares).map(|(s, w)| s * w).sum::<f32>() / total,
+            Self::Logit => {
+                let z = scores
+                    .iter()
+                    .zip(shares)
+                    .map(|(s, w)| {
+                        let p = s.clamp(1e-6, 1.0 - 1e-6);
+                        (p / (1.0 - p)).ln() * w
+                    })
+                    .sum::<f32>()
+                    / total;
+                1.0 / (1.0 + (-z).exp())
+            }
+            Self::Min => scores.iter().copied().fold(1.0, f32::min),
+            Self::Max => scores.iter().copied().fold(0.0, f32::max),
+        }
+    }
 }
 
 impl AcousticWakeSpotter {
+    /// Связка: ещё одна сеть RKW2 слушает тот же звук, `share` — её доля в сводной оценке
+    /// (у первой сети доля 1, если не задано `set_shares`).
+    pub fn with_partner(mut self, weights: &Path, share: f32) -> anyhow::Result<Self> {
+        self.partners.push(StreamingTcn::from_path(weights, 0.99)?);
+        if self.shares.is_empty() {
+            self.shares.push(1.0);
+        }
+        self.shares.push(share);
+        Ok(self)
+    }
+
+    /// Связка из готовой сети (например, с личной головой).
+    pub fn with_partner_model(mut self, model: crate::kws::TcnModel, share: f32) -> Self {
+        self.partners.push(StreamingTcn::new(model, 0.99));
+        if self.shares.is_empty() {
+            self.shares.push(1.0);
+        }
+        self.shares.push(share);
+        self
+    }
+
+    /// Доля первой сети в связке.
+    pub fn set_main_share(&mut self, share: f32) {
+        if self.shares.is_empty() {
+            self.shares.push(share);
+        } else {
+            self.shares[0] = share;
+        }
+    }
+
+    pub fn set_combine(&mut self, combine: Combine) {
+        self.combine = combine;
+    }
     /// `weights` — файл RKW2 (resources/wake/river.bin).
     pub fn new(weights: &Path) -> anyhow::Result<Self> {
         Ok(Self {
@@ -137,6 +235,10 @@ impl AcousticWakeSpotter {
             history: VecDeque::new(),
             verifying: None,
             pause_gate: true,
+            partners: Vec::new(),
+            shares: Vec::new(),
+            combine: Combine::Mean,
+            partner_scores: Vec::new(),
         })
     }
 
@@ -259,6 +361,9 @@ impl WakeSpotter for AcousticWakeSpotter {
 
     fn reset(&mut self) {
         self.kws.reset();
+        for partner in &mut self.partners {
+            partner.reset();
+        }
         self.history.clear();
         self.verifying = None;
         self.run = 0;
@@ -317,6 +422,24 @@ impl AcousticWakeSpotter {
         }
         self.scores.clear();
         self.kws.feed_scores(&self.buffer, &mut self.scores);
+        if !self.partners.is_empty() {
+            // Все сети с одним входом и шагом: кадров у каждой столько же.
+            let n = self.partners.len() + 1;
+            let mut all = vec![0.0f32; self.scores.len() * n];
+            for (i, s) in self.scores.iter().enumerate() {
+                all[i * n] = *s;
+            }
+            for (k, partner) in self.partners.iter_mut().enumerate() {
+                self.partner_scores.clear();
+                partner.feed_scores(&self.buffer, &mut self.partner_scores);
+                for (i, s) in self.partner_scores.iter().take(self.scores.len()).enumerate() {
+                    all[i * n + k + 1] = *s;
+                }
+            }
+            for i in 0..self.scores.len() {
+                self.scores[i] = self.combine.apply(&all[i * n..(i + 1) * n], &self.shares);
+            }
+        }
         for i in 0..self.scores.len() {
             let score = self.scores[i];
             if self.fired {
@@ -346,5 +469,23 @@ impl AcousticWakeSpotter {
             }
         }
         spotted
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Combine;
+
+    #[test]
+    fn combine_scores() {
+        let shares = [1.0, 1.0];
+        assert!((Combine::Mean.apply(&[0.9, 0.5], &shares) - 0.7).abs() < 1e-6);
+        assert_eq!(Combine::Min.apply(&[0.9, 0.5], &shares), 0.5);
+        assert_eq!(Combine::Max.apply(&[0.9, 0.5], &shares), 0.9);
+        // равные логиты разного знака — середина; уверенная сеть перевешивает в среднем логитов
+        assert!((Combine::Logit.apply(&[0.9, 0.1], &shares) - 0.5).abs() < 1e-4);
+        assert!(Combine::Logit.apply(&[0.999, 0.4], &shares) > Combine::Mean.apply(&[0.999, 0.4], &shares));
+        assert_eq!(Combine::parse("logit"), Some(Combine::Logit));
+        assert_eq!(Combine::parse("x"), None);
     }
 }

@@ -730,14 +730,32 @@ where
     let verifier = crate::wake::verifier_for(name)
         .map(|verify| (verify, crate::config::resource(app, verify)))
         .filter(|(_, path)| path.is_file());
-    let spotter = crate::wake::AcousticWakeSpotter::new(&weights).and_then(|spotter| match &verifier {
-        Some((_, path)) => spotter.with_verifier(path),
-        None => Ok(spotter),
-    });
+    // Связка: вторая сеть слушает вместе с первой (wake::partner_for) — если её веса есть.
+    let partner = crate::wake::partner_for(name)
+        .map(|p| (p, crate::config::resource(app, p)))
+        .filter(|(_, path)| path.is_file());
+    let spotter = crate::wake::AcousticWakeSpotter::new(&weights)
+        .and_then(|spotter| match &verifier {
+            Some((_, path)) => spotter.with_verifier(path),
+            None => Ok(spotter),
+        })
+        .and_then(|spotter| match &partner {
+            Some((_, path)) => {
+                let mut spotter = spotter.with_partner(path, 1.0)?;
+                spotter.set_combine(crate::wake::Combine::Logit);
+                spotter.set_verify_threshold(crate::wake::ENSEMBLE_VERIFY_THRESHOLD);
+                Ok(spotter)
+            }
+            None => Ok(spotter),
+        });
     match spotter {
         Ok(spotter) => {
             let file = name.rsplit('/').next().unwrap_or(name);
             let file = if personal.is_some() { format!("{file} (personal)") } else { file.to_string() };
+            let file = match &partner {
+                Some((p, _)) => format!("{file} + {}", p.rsplit('/').next().unwrap_or(p)),
+                None => file,
+            };
             let model = match &verifier {
                 Some((verify, _)) => format!("{file} + {} (RKW2)", verify.rsplit('/').next().unwrap_or(verify)),
                 None => format!("{file} (RKW2)"),

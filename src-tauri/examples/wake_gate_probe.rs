@@ -59,6 +59,22 @@ fn main() -> anyhow::Result<()> {
                 if std::env::var("NO_PAUSE").is_ok() {
                     spotter.set_pause_gate(false);
                 }
+                // PARTNERS=<файл>;<файл> — связка: эти сети слушают вместе с WEIGHTS;
+                // SHARES=1,1,… — доли (первая — WEIGHTS), COMBINE=mean|logit|min|max.
+                if let Ok(partners) = std::env::var("PARTNERS") {
+                    let shares: Vec<f32> = std::env::var("SHARES")
+                        .map(|s| s.split(',').filter_map(|v| v.trim().parse().ok()).collect())
+                        .unwrap_or_default();
+                    for (k, p) in partners.split(';').filter(|p| !p.is_empty()).enumerate() {
+                        spotter = spotter.with_partner(Path::new(p), shares.get(k + 1).copied().unwrap_or(1.0))?;
+                    }
+                    if let Some(main) = shares.first() {
+                        spotter.set_main_share(*main);
+                    }
+                    if let Some(c) = std::env::var("COMBINE").ok().and_then(|c| reever_lib::wake::Combine::parse(&c)) {
+                        spotter.set_combine(c);
+                    }
+                }
                 // VERIFY=<файл> [VERIFY_THRESHOLD=<порог>] — со второй ступенью.
                 if let Ok(verify) = std::env::var("VERIFY") {
                     spotter = spotter.with_verifier(Path::new(&verify))?;
