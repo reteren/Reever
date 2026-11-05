@@ -40,6 +40,25 @@ fn shoot(app: &AppHandle, name: &str) {
     eprintln!("[main-demo] shot {name}");
 }
 
+/// Видимых верхних окон этого процесса.
+fn visible_windows() -> usize {
+    use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetWindowThreadProcessId, IsWindowVisible};
+    unsafe extern "system" fn each(hwnd: HWND, data: LPARAM) -> BOOL {
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        if pid == std::process::id() && IsWindowVisible(hwnd).as_bool() {
+            *(data.0 as *mut usize) += 1;
+        }
+        true.into()
+    }
+    let mut n = 0usize;
+    unsafe {
+        let _ = EnumWindows(Some(each), LPARAM(&mut n as *mut usize as isize));
+    }
+    n
+}
+
 fn memory(started: Instant, what: &str) {
     let (ws, private) = crate::native::stats::memory();
     eprintln!(
@@ -80,6 +99,9 @@ pub fn start(app: &AppHandle) {
         std::thread::sleep(Duration::from_secs(3));
         eprintln!("[main-demo] cpu without window 3 s: {:?}", cpu.finish());
         step(started, "show");
+        let before = visible_windows();
+        // двойной щелчок по значку в трее — два show подряд: окно должно быть одно
+        crate::main_native::show(&app);
         crate::main_native::show(&app);
         for _ in 0..400 {
             if let Some(ms) = crate::main_native::first_frame(&app) {
@@ -89,6 +111,7 @@ pub fn start(app: &AppHandle) {
             std::thread::sleep(Duration::from_millis(5));
         }
         std::thread::sleep(Duration::from_millis(120));
+        eprintln!("[main-demo] windows added by a double show: {}", visible_windows() - before);
         shoot(&app, "power-on");
         step(started, "window shown");
         let _ = app.emit("reever://status", serde_json::json!({ "asr": "ready", "model": "parakeet-v3" }));

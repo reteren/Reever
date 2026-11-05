@@ -29,6 +29,10 @@ pub use view::Msg;
 use view::{skin_h, skin_w, Info, MainView};
 
 static WIN: Mutex<Option<(WindowId, isize)>> = Mutex::new(None);
+/// Окно создаётся (между `show` и записью в `WIN`): второй `show` в это время — двойной щелчок
+/// по значку в трее — создал бы второе окно, которого программа не знает (его кнопки и
+/// «Закрыть окно» ничего не делали бы).
+static CREATING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static LISTEN: Once = Once::new();
 static APP: OnceLock<AppHandle> = OnceLock::new();
 
@@ -562,8 +566,19 @@ pub fn show(app: &AppHandle) {
         }
         return;
     }
+    if CREATING.swap(true, std::sync::atomic::Ordering::AcqRel) {
+        return;
+    }
     let app = app.clone();
     std::thread::spawn(move || {
+        // сброс — когда окно записано в WIN (или не создалось), как бы ни кончилась ветка
+        struct Created;
+        impl Drop for Created {
+            fn drop(&mut self) {
+                CREATING.store(false, std::sync::atomic::Ordering::Release);
+            }
+        }
+        let _created = Created;
         let Some(ui) = crate::mascot_native::ui(&app) else { return };
         let lite = app.try_state::<crate::config::LiveConfig>().is_some_and(|c| c.get().settings.lite_ui);
         view::set_lite(lite);
