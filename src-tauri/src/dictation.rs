@@ -33,6 +33,9 @@ enum Spoken {
     NewLine,
 }
 
+/// Знаки, которые ставит модель с пунктуацией: без «Пунктуации» снимаются с краёв слов.
+const MODEL_MARKS: &str = ".,!?;:…\"«»“”„()¿¡";
+
 /// Произнесённые знаки: длинные фразы раньше коротких («точка с запятой» до «точка»).
 const SPOKEN: &[(&[&str], Spoken)] = &[
     (&["точка", "с", "запятой"], Spoken::Mark(";")),
@@ -55,12 +58,29 @@ const SPOKEN: &[(&[&str], Spoken)] = &[
     (&["period"], Spoken::Mark(".")),
 ];
 
+/// Что делать с троеточием, которое модель ставит, когда речь затихает.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Ellipsis {
+    /// Как поставила модель.
+    Keep,
+    /// В конце куска — только после долгой паузы (`Formatter::take_held_ellipsis`), внутри
+    /// куска (паузы там короткие) — нет.
+    AfterPause,
+    /// Никогда.
+    Off,
+}
+
 /// Оформитель одной диктовки: помнит, начало ли предложения и нужен ли пробел, так что
 /// куски, распознанные по паузам, склеиваются в связный текст.
 #[derive(Clone, Debug)]
 pub struct Formatter {
     sentence_start: bool,
     need_space: bool,
+    /// Знаки и заглавные модели (выключено — без них; произнесённые знаки остаются).
+    punctuation: bool,
+    ellipsis: Ellipsis,
+    /// Кусок кончился троеточием модели, оно ждёт долгой паузы.
+    held_ellipsis: bool,
 }
 
 impl Default for Formatter {
@@ -71,14 +91,57 @@ impl Default for Formatter {
 
 impl Formatter {
     pub fn new() -> Self {
+        Self::with_options(true, Ellipsis::Keep)
+    }
+
+    /// Настройки «Пунктуация» и «Троеточие на паузе».
+    pub fn with_options(punctuation: bool, ellipsis: Ellipsis) -> Self {
         Self {
             sentence_start: true,
             need_space: false,
+            punctuation,
+            ellipsis,
+            held_ellipsis: false,
         }
+    }
+
+    /// Пауза после куска стала долгой: троеточие, отложенное в его конце, — допечатать.
+    pub fn take_held_ellipsis(&mut self) -> Option<&'static str> {
+        std::mem::take(&mut self.held_ellipsis).then_some("…")
+    }
+
+    /// Слово модели по настройкам: без знаков и заглавной начала предложения или без
+    /// троеточия. `sentence` — модель начала с него предложение, `last` — последнее в куске.
+    fn model_word(&mut self, word: &str, sentence: bool, last: bool) -> String {
+        if !self.punctuation {
+            let bare = word.trim_matches(|c: char| MODEL_MARKS.contains(c));
+            let acronym = bare.chars().filter(|c| c.is_alphabetic()).count() > 1
+                && bare.chars().all(|c| !c.is_lowercase());
+            if !sentence || acronym {
+                return bare.to_string();
+            }
+            let mut chars = bare.chars();
+            return match chars.next() {
+                Some(first) => first.to_lowercase().chain(chars).collect(),
+                None => String::new(),
+            };
+        }
+        if self.ellipsis == Ellipsis::Keep {
+            return word.to_string();
+        }
+        let Some(bare) = word.strip_suffix("...").or_else(|| word.strip_suffix('…')) else {
+            return word.to_string();
+        };
+        if last && self.ellipsis == Ellipsis::AfterPause {
+            self.held_ellipsis = true;
+        }
+        bare.trim_end_matches('.').to_string()
     }
 
     /// Оформить очередной распознанный кусок.
     pub fn format(&mut self, raw: &str) -> Vec<Piece> {
+        // Новый кусок — речь вернулась раньше долгой паузы: отложенного троеточия нет.
+        self.held_ellipsis = false;
         let raw = crate::textnorm::digits_in_text(raw);
         let hyphenated = hyphenate_particles(&raw);
         let tokens: Vec<&str> = hyphenated.iter().map(String::as_str).collect();
@@ -118,7 +181,11 @@ impl Formatter {
                 i += len;
                 continue;
             }
-            self.push_word(&mut text, tokens[i], true);
+            let sentence = i == 0 || tokens[i - 1].ends_with(['.', '!', '?', '…']);
+            let word = self.model_word(tokens[i], sentence, i + 1 == tokens.len());
+            if !word.is_empty() {
+                self.push_word(&mut text, &word, self.punctuation);
+            }
             spoken_last = false;
             i += 1;
         }
@@ -712,6 +779,34 @@ pub fn trim_words(raw: &str, drop_front: usize, drop_back: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn punctuation_off_drops_model_marks_and_sentence_capitals() {
+        let mut f = Formatter::with_options(false, Ellipsis::Keep);
+        assert_eq!(text(&f.format("Привет, как дела? Я в Москве...")), "привет как дела я в Москве");
+        // произнесённый знак остаётся, аббревиатура и «I» — как есть
+        assert_eq!(text(&f.format("Это NASA запятая I think.")), " это NASA, I think");
+    }
+
+    #[test]
+    fn ellipsis_off_and_after_pause() {
+        let mut off = Formatter::with_options(true, Ellipsis::Off);
+        assert_eq!(text(&off.format("Я думаю... что это так...")), "Я думаю что это так");
+        assert_eq!(off.take_held_ellipsis(), None);
+
+        let mut pause = Formatter::with_options(true, Ellipsis::AfterPause);
+        assert_eq!(text(&pause.format("Ну я думаю...")), "Ну я думаю");
+        // долгая пауза — троеточие допечатывается
+        assert_eq!(pause.take_held_ellipsis(), Some("…"));
+        assert_eq!(pause.take_held_ellipsis(), None);
+        // заговорили раньше — отложенное троеточие пропадает
+        assert_eq!(text(&pause.format("Ну...")), " Ну");
+        assert_eq!(text(&pause.format("всё")), " всё");
+        assert_eq!(pause.take_held_ellipsis(), None);
+
+        let mut keep = Formatter::new();
+        assert_eq!(text(&keep.format("Я думаю...")), "Я думаю...");
+    }
 
     fn text(pieces: &[Piece]) -> String {
         pieces_to_string(pieces)

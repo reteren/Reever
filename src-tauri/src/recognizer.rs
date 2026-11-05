@@ -246,6 +246,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             dictation_pause_ms: s.dictation_pause_ms.clamp(300, 5_000),
             dictation_idle_ms: s.dictation_idle_ms.clamp(2_000, 600_000),
             dictation_live: s.dictation_live,
+            dictation_long_pause_ms: dictation_ellipsis(s).1,
         },
         asr.clone(),
         vad,
@@ -703,6 +704,17 @@ fn install_anglicisms<T, V>(
         Some(Ok(anglicisms)) => engine.set_anglicisms(Some(anglicisms), cfg.cyrillic_spellcheck()),
         Some(Err(error)) => ui_log(app, crate::msg!("log.anglicismsFailed", error = format!("{error:#}"))),
         None => engine.set_anglicisms(None, Vec::new()),
+    }
+}
+
+/// Троеточие диктовки по настройкам: как оформлять и через сколько мс молчания его
+/// допечатывать (0 — движку не сообщать о паузе).
+fn dictation_ellipsis(s: &crate::config::Settings) -> (crate::dictation::Ellipsis, u32) {
+    use crate::dictation::Ellipsis;
+    if !s.dictation_punctuation || !s.dictation_ellipsis {
+        (Ellipsis::Off, 0)
+    } else {
+        (Ellipsis::AfterPause, s.dictation_ellipsis_pause_ms.clamp(1_000, 600_000))
     }
 }
 
@@ -1320,6 +1332,7 @@ impl Worker<'_> {
             EngineEvent::DictationStart => self.dictation_start(),
             EngineEvent::Dictation(text) => self.dictation_text(&text),
             EngineEvent::DictationPartial(text, settled) => self.dictation_partial(&text, settled),
+            EngineEvent::DictationLongPause => self.dictation_long_pause(),
             EngineEvent::DictationEnd(reason) => self.dictation_end(reason),
             EngineEvent::Log(m) => {
                 let text = m.render("en");
@@ -1350,7 +1363,19 @@ impl Worker<'_> {
         // Цепочка сигналов: «ривер» уже прозвучал (детектор/пауза) — теперь «принял команду».
         self.wake_sound();
         self.sound("received.wav");
-        self.dictation = Some(Dictation::default());
+        let (ellipsis, _) = dictation_ellipsis(&self.cfg.settings);
+        self.dictation = Some(Dictation {
+            formatter: Formatter::with_options(self.cfg.settings.dictation_punctuation, ellipsis),
+            ..Dictation::default()
+        });
+    }
+
+    /// Молчат дольше порога «Троеточие после паузы»: отложенное троеточие куска — в поле.
+    fn dictation_long_pause(&mut self) {
+        let Some(mark) = self.dictation.as_mut().and_then(|s| s.formatter.take_held_ellipsis()) else {
+            return;
+        };
+        self.dictation_typed(mark.to_string());
     }
 
     /// Окно, куда печатать: выбранное в начале диктовки, пока оно активно (поле в нём не
@@ -1446,12 +1471,17 @@ impl Worker<'_> {
     /// допечатывается продолжение). Если поля нет, кусок ждёт его вместе с прежними
     /// ненапечатанными — так текст не разбивается между полем и буфером обмена.
     fn dictation_text(&mut self, raw: &str) {
+        let session = self.dictation.get_or_insert_with(Dictation::default);
+        let wanted = typing::pieces_to_text(&session.formatter.format(raw));
+        self.dictation_typed(wanted);
+    }
+
+    /// Напечатать готовый оформленный текст куска (или допечатку к нему).
+    fn dictation_typed(&mut self, wanted: String) {
         let _ = self.app.emit("reever://partial", String::new());
         self.sync_live();
         let private = self.private();
         let session = self.dictation.get_or_insert_with(Dictation::default);
-        let pieces = session.formatter.format(raw);
-        let wanted = typing::pieces_to_text(&pieces);
         if wanted.is_empty() && session.live.typed.is_empty() {
             return;
         }

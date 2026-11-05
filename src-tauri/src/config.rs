@@ -118,6 +118,17 @@ pub struct Settings {
     /// что похоже на английское и не нашлось в русском словаре (anglicism.rs).
     #[serde(default = "default_dictation_english_level")]
     pub dictation_english_level: u8,
+    /// Знаки препинания и заглавные, которые ставит модель распознавания. Выключено — текст
+    /// диктовки без них (произнесённые «запятая», «точка» остаются).
+    #[serde(default = "default_true")]
+    pub dictation_punctuation: bool,
+    /// Троеточие, которое модель ставит, когда речь затихает. Выключено — не ставится.
+    #[serde(default = "default_true")]
+    pub dictation_ellipsis: bool,
+    /// Троеточие — только если молчание после куска длиннее этого (мс); заговорили раньше —
+    /// его нет.
+    #[serde(default = "default_dictation_ellipsis_pause_ms")]
+    pub dictation_ellipsis_pause_ms: u32,
     /// «ривер гемини …»: сразу отправлять вопрос (Enter), а не только вводить.
     #[serde(default = "default_true")]
     pub webchat_send: bool,
@@ -363,6 +374,9 @@ pub fn write_installer_ui_style(lite: bool) {
 fn default_dictation_pause_ms() -> u32 {
     800
 }
+fn default_dictation_ellipsis_pause_ms() -> u32 {
+    2_000
+}
 fn default_dictation_idle_ms() -> u32 {
     3_000
 }
@@ -485,6 +499,9 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_live", dictation_live, bool);
     restore!("dictation_english", dictation_english, bool);
     restore!("dictation_english_level", dictation_english_level, u8);
+    restore!("dictation_punctuation", dictation_punctuation, bool);
+    restore!("dictation_ellipsis", dictation_ellipsis, bool);
+    restore!("dictation_ellipsis_pause_ms", dictation_ellipsis_pause_ms, u32);
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_blackbox", wake_blackbox, bool);
     restore!("ui_language", ui_language, String);
@@ -535,6 +552,9 @@ impl Default for Settings {
             dictation_live: true,
             dictation_english: true,
             dictation_english_level: default_dictation_english_level(),
+            dictation_punctuation: true,
+            dictation_ellipsis: true,
+            dictation_ellipsis_pause_ms: default_dictation_ellipsis_pause_ms(),
             webchat_send: true,
             wake_blackbox: false,
             ui_language: default_ui_language(),

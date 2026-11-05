@@ -42,6 +42,9 @@ pub struct EngineConfig {
     pub dictation_idle_ms: u32,
     /// Печатать диктовку по ходу речи (промежуточный текст), а не после паузы.
     pub dictation_live: bool,
+    /// Молчание после куска диктовки (мс, считая паузу конца куска), после которого
+    /// приходит `DictationLongPause`; 0 — не сообщать.
+    pub dictation_long_pause_ms: u32,
 }
 
 impl Default for EngineConfig {
@@ -61,6 +64,7 @@ impl Default for EngineConfig {
             dictation_pause_ms: 800,
             dictation_idle_ms: 3_000,
             dictation_live: false,
+            dictation_long_pause_ms: 0,
         }
     }
 }
@@ -94,6 +98,8 @@ pub enum EngineEvent {
     /// Промежуточный текст текущего куска «как сказано» — для печати по ходу речи.
     /// `true` — посчитан на паузе после речи: последнее слово договорено, печатать всё.
     DictationPartial(String, bool),
+    /// После куска диктовки молчат дольше `dictation_long_pause_ms` (раз на паузу).
+    DictationLongPause,
     /// Диктовка закончилась.
     DictationEnd(DictationEndReason),
     /// Диагностика для лога (без распознанного текста — приватность решает glue).
@@ -314,6 +320,8 @@ struct DictationState {
     opening: bool,
     /// На этой паузе после речи кусок уже пересчитан (`LIVE_SETTLED_SILENCE_MS`).
     settled: bool,
+    /// `DictationLongPause` на этой паузе уже был.
+    long_pause_sent: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -951,6 +959,20 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     }
 
     fn advance_wait(&mut self, count: usize, out: &mut Vec<EngineEvent>) {
+        // Долгая пауза в диктовке: кусок кончился после `dictation_pause_ms` тишины, дальше
+        // молчание считает `idle_remaining`.
+        let long_ms = self.cfg.dictation_long_pause_ms;
+        if long_ms > 0 {
+            let idle_total = samples(self.cfg.dictation_idle_ms.max(1_000));
+            let after = samples(long_ms.saturating_sub(self.cfg.dictation_pause_ms));
+            if let Mode::Dictating(state) = &mut self.mode {
+                let waited = idle_total.saturating_sub(state.idle_remaining) + count;
+                if !state.speech_started && !state.long_pause_sent && waited >= after {
+                    state.long_pause_sent = true;
+                    out.push(EngineEvent::DictationLongPause);
+                }
+            }
+        }
         let remaining = match &mut self.mode {
             Mode::Listening(state) if !state.speech_started => &mut state.wait_remaining,
             Mode::Dictating(state) if !state.speech_started => &mut state.idle_remaining,
@@ -1827,6 +1849,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             partial_elapsed: 0,
             opening: true,
             settled: false,
+            long_pause_sent: false,
         });
         let text = self.before_wake_word(&trim_words(&raw, skip, 0));
         if !text.trim().is_empty() {
@@ -1922,6 +1945,7 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             partial_elapsed: 0,
             opening: false,
             settled: false,
+            long_pause_sent: false,
         });
         self.mute_remaining = 0;
         self.mode_epoch = self.mode_epoch.wrapping_add(1);
@@ -3340,6 +3364,29 @@ mod tests {
             &EngineEvent::DictationEnd(DictationEndReason::Silence)
         ));
         assert!(contains(&events, &EngineEvent::State("idle")));
+    }
+
+    #[test]
+    fn dictation_reports_a_long_pause_once_before_it_ends() {
+        let mut cfg = test_config();
+        cfg.dictation_pause_ms = 120;
+        cfg.dictation_idle_ms = 2_000;
+        cfg.dictation_long_pause_ms = 700;
+        let (mut engine, _, _, _) = engine(cfg, &["ривер напиши", "ну я думаю..."]);
+        engine.set_grammar(crate::grammar::Grammar::defaults());
+        engine.push_audio(&phrase(123, 700));
+        let long = |events: &[EngineEvent]| events.iter().filter(|e| **e == EngineEvent::DictationLongPause).count();
+        // кусок и 300 мс тишины после него — ещё не долгая пауза (120 + 300 < 700)
+        let events = engine.push_audio(&phrase(123, 120));
+        assert_eq!(dictated(&events), vec!["ну я думаю...".to_string()]);
+        let events = engine.push_audio(&vec![0; samples(300)]);
+        assert_eq!(long(&events), 0);
+        // ещё 400 мс — порог пройден, событие одно
+        let events = engine.push_audio(&vec![0; samples(400)]);
+        assert_eq!(long(&events), 1);
+        let events = engine.push_audio(&vec![0; samples(300)]);
+        assert_eq!(long(&events), 0);
+        assert!(!contains(&events, &EngineEvent::DictationEnd(DictationEndReason::Silence)));
     }
 
     #[test]

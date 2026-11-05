@@ -51,6 +51,9 @@ const GROUPS: &[(&str, &[(&str, &str)])] = &[
             ("dictation_live", "bool"),
             ("dictation_english", "bool"),
             ("dictation_english_level", "strength"),
+            ("dictation_punctuation", "bool"),
+            ("dictation_ellipsis", "bool"),
+            ("dictation_ellipsis_pause_ms", "ellipsis_pause"),
             ("dictation_idle_ms", "number"),
             ("dictation_pause_ms", "number"),
             ("webchat_send", "bool"),
@@ -217,7 +220,7 @@ impl SettingsTab {
     fn flag(&self, key: &str) -> bool {
         match self.get(key) {
             Value::Bool(b) => b,
-            Value::Null => key == "mascot_bubble",
+            Value::Null => matches!(key, "mascot_bubble" | "dictation_punctuation" | "dictation_ellipsis"),
             _ => false,
         }
     }
@@ -290,6 +293,12 @@ impl SettingsTab {
     }
 
     fn field(&self, items: &mut Vec<Item>, key: &str, kind: &str) {
+        // троеточие — часть пунктуации модели, порог паузы — часть троеточия
+        if (key.starts_with("dictation_ellipsis") && !self.flag("dictation_punctuation"))
+            || (key == "dictation_ellipsis_pause_ms" && !self.flag("dictation_ellipsis"))
+        {
+            return;
+        }
         let help = self.help(key);
         match kind {
             "bool" | "lite_ui" | "mascot_bubble" => {
@@ -345,6 +354,14 @@ impl SettingsTab {
                 items.push(Item::Slider { id: key.into(), min: 1.0, max: 5.0, step: 1.0, value: v, text: format!("{} / 5", v as i64) });
                 items.push(Item::Help { text: self.t(&format!("settings.{key}.{}", v as i64)), indent: false });
                 return;
+            }
+            "ellipsis_pause" => {
+                // до конца диктовки по молчанию: дольше пауза бывает, только когда диктовка кончилась
+                let max = self.num("dictation_idle_ms").unwrap_or(3_000.0).clamp(2_000.0, 15_000.0) as f32;
+                let v = self.num(key).unwrap_or(2_000.0).clamp(1_000.0, max as f64) as f32;
+                let seconds = format!("{:.1}", v / 1000.0).trim_end_matches(".0").to_string();
+                let text = t(&self.locale, "settings.dictation_ellipsis_pause_ms.seconds", &[("n", &seconds)]);
+                items.push(Item::Slider { id: key.into(), min: 1_000.0, max, step: 500.0, value: v, text });
             }
             "unload" => {
                 let v = self.num(key).map_or(NEVER_UNLOAD, |n| n.round() as f32).clamp(0.0, NEVER_UNLOAD);
