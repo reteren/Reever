@@ -17,7 +17,7 @@
   "text.file.types": "Zvuk a video",
   "text.cancel": "Zrušiť",
   "text.languages": "Jazyky v súbore",
-  "text.languages.help": "Len jazyky v súbore: čím menej, tým presnejšie. Odobrať cez ×, pridať hľadaním.",
+  "text.languages.help": "Označte jazyky v súbore: čím menej, tým presnejšie. Hľadanie zúži zoznam.",
   "text.languages.search": "Nájsť jazyk: názov alebo kód…",
   "text.languages.none": "Taký jazyk medzi stiahnutými nie je.",
   "text.listen": "Zvuk počítača",

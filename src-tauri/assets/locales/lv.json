@@ -17,7 +17,7 @@
   "text.file.types": "Audio un video",
   "text.cancel": "Atcelt",
   "text.languages": "Valodas failā",
-  "text.languages.help": "Tikai faila valodas: jo mazāk, jo precīzāk. Noņemt ar ×, pievienot ar meklēšanu.",
+  "text.languages.help": "Atzīmējiet faila valodas: jo mazāk, jo precīzāk. Meklēšana sašaurina sarakstu.",
   "text.languages.search": "Meklēt valodu: nosaukums vai kods…",
   "text.languages.none": "Lejupielādēto vidū tādas valodas nav.",
   "text.listen": "Datora skaņa",

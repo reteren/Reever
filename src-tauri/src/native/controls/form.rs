@@ -41,6 +41,9 @@ pub enum Item {
     /// Поле ввода; `value` — начальный текст, если поля с этим id ещё не было.
     Input { id: String, placeholder: String, value: String },
     Check { id: String, label: String, on: bool },
+    /// Флажки сеткой в `columns` колонок (список языков): каждый — как [`Item::Check`],
+    /// подпись в одну строку. Щелчок — [`FormEvent::Toggle`] с id флажка.
+    CheckGrid { checks: Vec<(String, String, bool)>, columns: usize },
     /// Поле ввода и выпадающий список справа от него (select шириной по тексту):
     /// выбор — [`FormEvent::Select`].
     InputSelect { id: String, placeholder: String, value: String, select: String, options: Vec<(String, String)>, selected: String },
@@ -238,6 +241,13 @@ impl Form {
                     let h = Hit::Check(id.clone());
                     labels.insert(h.clone(), label.clone());
                     nav.push(h);
+                }
+                Item::CheckGrid { checks, .. } => {
+                    for (id, label, _) in checks {
+                        let h = Hit::Check(id.clone());
+                        labels.insert(h.clone(), label.clone());
+                        nav.push(h);
+                    }
                 }
                 Item::Buttons { buttons, .. } => {
                     for (id, label, _) in buttons.iter().filter(|(id, _, _)| !id.starts_with('!')) {
@@ -671,6 +681,36 @@ impl Form {
                     }
                     self.hits.push((m(Rect::new(cx0, y, 25.0 + tw, h)), hit));
                     y += h + 9.0;
+                }
+                Item::CheckGrid { checks, columns } => {
+                    let cols = (*columns).max(1);
+                    let col_w = cw / cols as f32;
+                    let row_h = 28.0;
+                    y += 4.0;
+                    for (i, (id, label, on)) in checks.iter().enumerate() {
+                        let (col, row) = (i % cols, i / cols);
+                        let x = cx0 + col as f32 * col_w;
+                        let ry = y + row as f32 * row_h;
+                        let st = TextStyle { ellipsis: true, direction: self.dir(), ..ui(13.0, 400, 1.2) };
+                        let l = scene.cache.get(cx.text(), label, &st, (col_w - 31.0).max(30.0));
+                        let b = m(Rect::new(x, ry + (row_h - 16.0) / 2.0, 16.0, 16.0));
+                        fill_round(cx, b, 3.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 });
+                        let hit = Hit::Check(id.clone());
+                        let hot = self.hover.as_ref() == Some(&hit);
+                        stroke_round(cx, b, 3.0, if hot { ACC_2 } else { ACC_3 }, 1.0, false);
+                        if *on {
+                            let inner = Rect::new(b.x + 4.0, b.y + 4.0, 8.0, 8.0);
+                            scene.shadow(cx, inner, 1.0, ACC, 6.0);
+                            fill_round(cx, inner, 1.0, ACC);
+                        }
+                        if let Some(l) = &l {
+                            let color = if *on || hot { ACC_HOT } else { ACC };
+                            scene.text(l, m(Rect::new(x + 25.0, ry, (col_w - 31.0).max(30.0), 0.0)).x, ry + (row_h - l.height) / 2.0, color, Glow::G1);
+                        }
+                        // вся ячейка — цель щелчка: попасть в маленький квадрат не нужно
+                        self.hits.push((m(Rect::new(x, ry, col_w - 6.0, row_h)), hit));
+                    }
+                    y += checks.len().div_ceil(cols) as f32 * row_h + 4.0;
                 }
                 Item::Buttons { buttons, top, bottom } => {
                     y += top;
@@ -1198,7 +1238,11 @@ impl Form {
                         n
                     }
                     Hit::Check(cid) => {
-                        let on = self.items.iter().any(|it| matches!(it, Item::Check { id, on: true, .. } if id == cid));
+                        let on = self.items.iter().any(|it| match it {
+                            Item::Check { id, on, .. } => *on && id == cid,
+                            Item::CheckGrid { checks, .. } => checks.iter().any(|(id, _, on)| *on && id == cid),
+                            _ => false,
+                        });
                         let mut n = Node::new(Role::CheckBox);
                         n.set_toggled(if on { Toggled::True } else { Toggled::False });
                         n.add_action(Action::Click);

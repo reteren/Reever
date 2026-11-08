@@ -17,7 +17,7 @@
   "text.file.types": "Hang és videó",
   "text.cancel": "Mégse",
   "text.languages": "Nyelvek a fájlban",
-  "text.languages.help": "Csak a fájl nyelvei: minél kevesebb, annál pontosabb. Eltávolítás ×-szel, hozzáadás kereséssel.",
+  "text.languages.help": "Jelölje be a fájl nyelveit: minél kevesebb, annál pontosabb. A keresés szűkíti a listát.",
   "text.languages.search": "Nyelv keresése: név vagy kód…",
   "text.languages.none": "Nincs ilyen nyelv a letöltöttek között.",
   "text.listen": "Számítógép hangja",

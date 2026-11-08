@@ -17,7 +17,7 @@
   "text.file.types": "Audio și video",
   "text.cancel": "Anulează",
   "text.languages": "Limbi din fișier",
-  "text.languages.help": "Doar limbile din fișier: cu cât mai puține, cu atât mai precis. Elimină cu ×, adaugă prin căutare.",
+  "text.languages.help": "Bifează limbile din fișier: cu cât mai puține, cu atât mai precis. Căutarea restrânge lista.",
   "text.languages.search": "Caută o limbă: nume sau cod…",
   "text.languages.none": "Nu există o astfel de limbă printre cele descărcate.",
   "text.listen": "Sunetul computerului",

@@ -17,7 +17,7 @@
   "text.file.types": "صوت وفيديو",
   "text.cancel": "إلغاء",
   "text.languages": "لغات الملف",
-  "text.languages.help": "فقط لغات الملف: كلما قلّت زادت الدقة. أزل بـ×، وأضف عبر البحث.",
+  "text.languages.help": "حدّد لغات الملف: كلما قلّت زادت الدقة. البحث يضيّق القائمة.",
   "text.languages.search": "ابحث عن لغة: الاسم أو الرمز…",
   "text.languages.none": "لا توجد هذه اللغة بين اللغات المنزّلة.",
   "text.listen": "صوت الحاسوب",

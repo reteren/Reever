@@ -121,23 +121,21 @@ impl TextTab {
         picked
     }
 
-    /// Языки для поиска: не выбранные, у которых имя (родное, английское, русское) или код
-    /// содержит строку поиска.
+    /// Языки в сетке: отмеченные первыми, затем остальные; строка поиска оставляет те, у
+    /// которых имя (родное, английское, русское) или код её содержит.
     fn found(&self) -> Vec<String> {
         let q = self.query.trim().to_lowercase();
-        if q.is_empty() {
-            return Vec::new();
-        }
         let picked = self.languages();
-        self.available()
+        let mut list: Vec<String> = self
+            .available()
             .into_iter()
-            .filter(|c| !picked.contains(c))
             .filter(|c| {
                 let (en, ru) = search_names(c);
-                c.as_str() == q
-                    || [language_name(c), en, ru].iter().any(|n| n.to_lowercase().contains(&q))
+                q.is_empty() || c.as_str() == q || [language_name(c), en, ru].iter().any(|n| n.to_lowercase().contains(&q))
             })
-            .collect()
+            .collect();
+        list.sort_by_key(|c| !picked.contains(c));
+        list
     }
 
     fn set_languages(&mut self, picked: Vec<String>) -> Option<TextOut> {
@@ -202,20 +200,17 @@ impl TextTab {
         };
         items.push(Item::Buttons { buttons, top: 4.0, bottom: 0.0 });
         items.push(Item::GroupEnd);
-        // языки файла: выбранные — фишками с крестиком, остальные — поиском
+        // языки файла: поиск и сетка флажков (отмеченные первыми)
         items.push(Item::GroupBegin { legend: self.t("text.languages"), icon: None });
         items.push(Item::Help { text: self.t("text.languages.help"), indent: false });
-        let picked = self.languages();
-        items.push(Item::Chips { id: "langs".into(), values: picked.iter().map(|c| language_name(c).to_string()).collect(), primary_first: false });
         items.push(Item::Input { id: "in:langsearch".into(), placeholder: self.t("text.languages.search"), value: String::new() });
-        if !self.query.trim().is_empty() {
-            let found = self.found();
-            if found.is_empty() {
-                items.push(Item::Note(self.t("text.languages.none")));
-            }
-            for code in found {
-                items.push(Item::Check { id: format!("lang:{code}"), label: language_name(&code).to_string(), on: false });
-            }
+        let picked = self.languages();
+        let found = self.found();
+        if found.is_empty() {
+            items.push(Item::Note(self.t("text.languages.none")));
+        } else {
+            let checks = found.iter().map(|c| (format!("lang:{c}"), language_name(c).to_string(), picked.contains(c))).collect();
+            items.push(Item::CheckGrid { checks, columns: 3 });
         }
         items.push(Item::GroupEnd);
         self.form.set_items(items);
@@ -337,23 +332,18 @@ impl TextTab {
                 }
                 _ => None,
             },
-            // найденный язык — добавить
+            // флажок языка: отметить или снять (последний язык остаётся)
             FormEvent::Toggle(id) => {
                 let code = id.strip_prefix("lang:")?.to_string();
                 let mut picked = self.languages();
-                if picked.contains(&code) {
-                    return None;
+                if let Some(i) = picked.iter().position(|c| *c == code) {
+                    if picked.len() < 2 {
+                        return None;
+                    }
+                    picked.remove(i);
+                } else {
+                    picked.push(code);
                 }
-                picked.push(code);
-                self.set_languages(picked)
-            }
-            // крестик на фишке — убрать (последний язык остаётся)
-            FormEvent::Remove(id, i) if id == "langs" => {
-                let mut picked = self.languages();
-                if picked.len() < 2 || i >= picked.len() {
-                    return None;
-                }
-                picked.remove(i);
                 self.set_languages(picked)
             }
             FormEvent::Edited(id, text) if id == "in:langsearch" => {
@@ -427,17 +417,20 @@ mod tests {
     fn languages_default_to_recognition_ones_and_english_can_be_removed() {
         let mut t = tab();
         assert_eq!(t.languages(), vec!["en", "ru"]);
+        // без поиска — все скачанные, отмеченные первыми
+        assert_eq!(&t.found()[..2], &["en".to_string(), "ru".to_string()]);
+        assert!(t.found().contains(&"de".to_string()));
         // поиск по родному, английскому и русскому имени
         t.on_event(FormEvent::Edited("in:langsearch".into(), "нем".into()));
         assert_eq!(t.found(), vec!["de"]);
         t.on_event(FormEvent::Edited("in:langsearch".into(), "GERM".into()));
         assert_eq!(t.found(), vec!["de"]);
         assert_eq!(t.on_event(FormEvent::Toggle("lang:de".into())), Some(TextOut::Languages(vec!["en".into(), "ru".into(), "de".into()])));
-        // английский убирается крестиком, как любой
-        assert_eq!(t.on_event(FormEvent::Remove("langs".into(), 0)), Some(TextOut::Languages(vec!["ru".into(), "de".into()])));
-        t.on_event(FormEvent::Remove("langs".into(), 0));
+        // английский снимается, как любой
+        assert_eq!(t.on_event(FormEvent::Toggle("lang:en".into())), Some(TextOut::Languages(vec!["ru".into(), "de".into()])));
+        t.on_event(FormEvent::Toggle("lang:ru".into()));
         // последний язык остаётся
-        assert_eq!(t.on_event(FormEvent::Remove("langs".into(), 0)), None);
+        assert_eq!(t.on_event(FormEvent::Toggle("lang:de".into())), None);
         assert_eq!(t.languages(), vec!["de"]);
         // китайский не скачан — его не найти
         t.on_event(FormEvent::Edited("in:langsearch".into(), "chin".into()));

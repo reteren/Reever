@@ -17,7 +17,7 @@
   "text.file.types": "音频和视频",
   "text.cancel": "取消",
   "text.languages": "文件中的语言",
-  "text.languages.help": "只选文件中的语言：越少越准确。用 × 移除，通过搜索添加。",
+  "text.languages.help": "勾选文件中的语言：越少越准确。搜索可缩小列表。",
   "text.languages.search": "查找语言：名称或代码…",
   "text.languages.none": "已下载的语言中没有。",
   "text.listen": "电脑声音",

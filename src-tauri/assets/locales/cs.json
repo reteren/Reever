@@ -17,7 +17,7 @@
   "text.file.types": "Zvuk a video",
   "text.cancel": "Zrušit",
   "text.languages": "Jazyky v souboru",
-  "text.languages.help": "Jen jazyky v souboru: čím méně, tím přesněji. Odebrat přes ×, přidat hledáním.",
+  "text.languages.help": "Zaškrtněte jazyky v souboru: čím méně, tím přesněji. Hledání zúží seznam.",
   "text.languages.search": "Najít jazyk: název nebo kód…",
   "text.languages.none": "Takový jazyk mezi staženými není.",
   "text.listen": "Zvuk počítače",

@@ -17,7 +17,7 @@
   "text.file.types": "Garsas ir vaizdas",
   "text.cancel": "Atšaukti",
   "text.languages": "Kalbos faile",
-  "text.languages.help": "Tik failo kalbos: kuo mažiau, tuo tiksliau. Pašalinkite ×, pridėkite paieška.",
+  "text.languages.help": "Pažymėkite failo kalbas: kuo mažiau, tuo tiksliau. Paieška susiaurina sąrašą.",
   "text.languages.search": "Ieškoti kalbos: pavadinimas ar kodas…",
   "text.languages.none": "Tarp atsisiųstų tokios kalbos nėra.",
   "text.listen": "Kompiuterio garsas",

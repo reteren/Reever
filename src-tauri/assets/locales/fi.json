@@ -17,7 +17,7 @@
   "text.file.types": "Ääni ja video",
   "text.cancel": "Peruuta",
   "text.languages": "Tiedoston kielet",
-  "text.languages.help": "Vain tiedoston kielet: mitä vähemmän, sitä tarkemmin. Poista ×:llä, lisää haulla.",
+  "text.languages.help": "Valitse tiedoston kielet: mitä vähemmän, sitä tarkemmin. Haku rajaa listaa.",
   "text.languages.search": "Etsi kieli: nimi tai koodi…",
   "text.languages.none": "Ladatuista ei löydy sellaista kieltä.",
   "text.listen": "Tietokoneen ääni",

@@ -17,7 +17,7 @@
   "text.file.types": "Audio and video",
   "text.cancel": "Cancel",
   "text.languages": "Languages in the file",
-  "text.languages.help": "Only the languages spoken in the file: the fewer, the more accurate. Remove with ×, add through search.",
+  "text.languages.help": "Tick the languages spoken in the file: the fewer, the more accurate. Search narrows the list.",
   "text.languages.search": "Find a language: name or code…",
   "text.languages.none": "No such language among the downloaded ones.",
   "text.listen": "Computer sound",

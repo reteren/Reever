@@ -17,7 +17,7 @@
   "text.file.types": "Lyd og video",
   "text.cancel": "Annuller",
   "text.languages": "Sprog i filen",
-  "text.languages.help": "Kun sprogene i filen: jo færre, desto mere præcist. Fjern med ×, tilføj via søgning.",
+  "text.languages.help": "Markér sprogene i filen: jo færre, desto mere præcist. Søgning indsnævrer listen.",
   "text.languages.search": "Søg sprog: navn eller kode…",
   "text.languages.none": "Intet sådant sprog blandt de hentede.",
   "text.listen": "Computerens lyd",

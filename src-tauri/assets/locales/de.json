@@ -17,7 +17,7 @@
   "text.file.types": "Audio und Video",
   "text.cancel": "Abbrechen",
   "text.languages": "Sprachen in der Datei",
-  "text.languages.help": "Nur die Sprachen in der Datei: je weniger, desto genauer. Mit × entfernen, über die Suche hinzufügen.",
+  "text.languages.help": "Kreuzen Sie die Sprachen in der Datei an: je weniger, desto genauer. Die Suche grenzt die Liste ein.",
   "text.languages.search": "Sprache suchen: Name oder Code…",
   "text.languages.none": "Keine solche Sprache unter den geladenen.",
   "text.listen": "Computerton",

@@ -17,7 +17,7 @@
   "text.file.types": "Audio en video",
   "text.cancel": "Annuleren",
   "text.languages": "Talen in het bestand",
-  "text.languages.help": "Alleen de talen in het bestand: hoe minder, hoe nauwkeuriger. Verwijder met ×, voeg toe via zoeken.",
+  "text.languages.help": "Vink de talen in het bestand aan: hoe minder, hoe nauwkeuriger. Zoeken beperkt de lijst.",
   "text.languages.search": "Taal zoeken: naam of code…",
   "text.languages.none": "Geen zo'n taal bij de gedownloade.",
   "text.listen": "Computergeluid",

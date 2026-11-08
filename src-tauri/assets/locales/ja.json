@@ -17,7 +17,7 @@
   "text.file.types": "音声と動画",
   "text.cancel": "キャンセル",
   "text.languages": "ファイルの言語",
-  "text.languages.help": "ファイルで話されている言語だけ：少ないほど正確です。× で外し、検索で追加します。",
+  "text.languages.help": "ファイルで話されている言語にチェックを入れてください。少ないほど正確です。検索で一覧を絞り込めます。",
   "text.languages.search": "言語を検索：名前またはコード…",
   "text.languages.none": "ダウンロード済みにその言語はありません。",
   "text.listen": "パソコンの音",
