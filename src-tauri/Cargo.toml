@@ -97,6 +97,8 @@ features = [
   "Win32_Graphics_Direct3D_Fxc",
   # native/: окна выбора и подтверждения — ввод иероглифов (IME) в поле поиска
   "Win32_UI_Input_Ime",
+  # transcribe.rs: аудио и видео файлы в текст — декодирование через Media Foundation
+  "Win32_Media_MediaFoundation",
 ]
 
 [profile.release]

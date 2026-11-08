@@ -55,6 +55,7 @@ pub mod speech;
 pub mod spellcheck;
 pub mod system;
 pub mod textnorm;
+pub mod transcribe;
 pub mod traymenu;
 pub mod typing;
 pub mod uilang;
