@@ -419,16 +419,6 @@ pub fn voice_adapt_status(app: AppHandle, config: State<'_, LiveConfig>) -> Opti
     }))
 }
 
-/// Калибровку «скажите „ривер“ 10 раз» требует свежая установка (config::voice_intro_pending).
-pub fn voice_intro_pending() -> bool {
-    crate::config::voice_intro_pending()
-}
-
-/// Обязательная калибровка закончена — до следующей установки не спрашивать.
-pub fn voice_intro_done() {
-    crate::config::clear_voice_intro_pending();
-}
-
 /// Убрать подстройку для всех весов — снова общий детектор, и тихая подстройка
 /// начинается заново.
 pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> Result<(), String> {

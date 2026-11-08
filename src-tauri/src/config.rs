@@ -288,20 +288,6 @@ fn installer_dir() -> Option<PathBuf> {
     std::env::var_os("LOCALAPPDATA").map(|dir| PathBuf::from(dir).join("com.troid.reever"))
 }
 
-/// ВРЕМЕННО, ДО ФИНАЛЬНОГО РЕЛИЗА (docs/release-todo.md): установщик при каждой установке
-/// кладёт `voice-intro-pending.txt`, и программа заново требует 10 «ривер» на шарике, даже
-/// если данные не чистили, — чтобы проверять первый запуск глазами нового пользователя.
-/// Файл стирается, когда калибровка закончена.
-pub fn voice_intro_pending() -> bool {
-    installer_dir().is_some_and(|dir| dir.join("voice-intro-pending.txt").is_file())
-}
-
-pub fn clear_voice_intro_pending() {
-    if let Some(dir) = installer_dir() {
-        let _ = std::fs::remove_file(dir.join("voice-intro-pending.txt"));
-    }
-}
-
 /// Языки интерфейса, отмеченные в установщике после прошлого запуска; файл удаляется.
 fn take_installer_ui_languages() -> Option<Vec<String>> {
     let path = installer_dir()?.join("ui-languages-pending.txt");

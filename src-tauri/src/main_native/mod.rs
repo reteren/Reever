@@ -370,7 +370,6 @@ fn first_run(app: &AppHandle) {
         .unwrap_or_default();
     let adapted = status.get("report").is_some_and(|r| !r.is_null());
     let collected = status.get("passive").and_then(|p| p.get("collected")).and_then(|c| c.as_u64()).unwrap_or(0) > 0;
-    let pending = crate::commands_api::voice_intro_pending();
     let seen = |what: &str| intro_flag(app, what).is_some_and(|p| p.is_file());
     if !seen("mascot") && !adapted && !collected {
         mark_intro(app, "mascot");
@@ -392,7 +391,8 @@ fn first_run(app: &AppHandle) {
         }
         app.unlisten(id);
     }
-    if pending || (!seen("voice") && !adapted) {
+    // калибровка — один раз на пользователя: переустановка и обновление её не повторяют
+    if !seen("voice") && !adapted {
         send(Msg::VoiceIntro);
     }
 }
@@ -562,7 +562,6 @@ fn act(app: &AppHandle, a: Act) {
             };
             // подстройка не применилась из-за ошибки — всё равно отпускаем, иначе программа заперта
             if intro {
-                crate::commands_api::voice_intro_done();
                 mark_intro(app, "voice");
             }
             refresh(app);
