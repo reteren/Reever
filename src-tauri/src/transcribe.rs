@@ -66,15 +66,14 @@ impl Recognizer {
     }
 }
 
-/// Коды языков из списка программы (английский — всегда первым).
+/// Коды языков из списка программы; ни одного известного — английский.
 pub fn known_languages(languages: &[String]) -> Vec<&'static str> {
-    let mut out = vec!["en"];
-    for code in crate::config::RECOGNITION_LANGUAGES {
-        if *code != "en" && languages.iter().any(|l| l.eq_ignore_ascii_case(code)) {
-            out.push(code);
-        }
-    }
-    out
+    let out: Vec<&'static str> = crate::config::RECOGNITION_LANGUAGES
+        .iter()
+        .copied()
+        .filter(|code| languages.iter().any(|l| l.eq_ignore_ascii_case(code)))
+        .collect();
+    if out.is_empty() { vec!["en"] } else { out }
 }
 
 /// Склейка фраз в текст: пробел, после долгой паузы — новая строка; без «Пунктуации» —
@@ -390,8 +389,9 @@ mod tests {
     }
 
     #[test]
-    fn languages_keep_english_and_drop_unknown() {
-        assert_eq!(known_languages(&["ru".into(), "xx".into()]), vec!["en", "ru"]);
+    fn languages_drop_unknown_and_fall_back_to_english() {
+        assert_eq!(known_languages(&["ru".into(), "xx".into()]), vec!["ru"]);
+        assert_eq!(known_languages(&["xx".into()]), vec!["en"]);
     }
 
     #[test]
