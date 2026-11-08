@@ -197,41 +197,10 @@ pub fn opens_self(text: &str, wake_words: &[String]) -> Option<SelfPage> {
     (is_wake(name) || (stem.chars().count() >= 4 && is_wake(stem))).then_some(page)
 }
 
-const LISTEN_VERBS: &[&str] = &[
-    "слушай", "послушай", "прослушай", "слушать", "слухай", "послухай", "listen",
-    // языки интерфейса: подсказки вкладки «Текст» называют команду по-своему
-    "escucha", "ecoute", "écoute", "ascolta", "ouve", "luister", "słuchaj", "sluchaj", "poslouchej", "počúvaj",
-    "pocuvaj", "poslušaj", "poslusaj", "slušaj", "slusaj", "figyelj", "ascultă", "asculta", "lyssna", "lyt",
-    "kuuntele", "kuula", "klausies", "klausyk", "άκου", "ακου", "isma", "استمع", "hör", "hor", "hore",
-];
-const LISTEN_WHAT: &[&str] = &["звук", "звуки", "компьютер", "компьютера", "комп", "что", "тут", "to", "the", "computer", "sound", "audio", "up"];
-
-/// «слушай», «послушай звук компьютера», «listen to the computer»: звук компьютера в текст.
-pub fn is_listen(text: &str) -> bool {
-    // «слушай» — и вводное слово («слушай, открой …»): снятие вводных его бы съело
-    let normalized = normalize(text);
-    let whole = |s: &str| {
-        let words: Vec<&str> = s.split_whitespace().collect();
-        match words.split_first() {
-            Some((verb, rest)) => LISTEN_VERBS.contains(verb) && rest.len() <= 3 && rest.iter().all(|w| LISTEN_WHAT.contains(w)),
-            None => false,
-        }
-    };
-    whole(&normalized) || whole(&strip_leading_fillers(&normalized))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{is_bare_verb, is_listen, opens_self, parse, ReeverCommand, SelfPage};
+    use super::{is_bare_verb, opens_self, parse, ReeverCommand, SelfPage};
 
-    #[test]
-    fn listen_command() {
-        assert!(is_listen("слушай"));
-        assert!(is_listen("Послушай звук компьютера"));
-        assert!(is_listen("listen to the computer"));
-        assert!(!is_listen("слушай музыку на ютубе"));
-        assert!(!is_listen("открой слушай"));
-    }
 
     #[test]
     fn open_self_window_and_settings() {

@@ -117,6 +117,8 @@ pub enum Route {
     Calc(Vec<String>),
     /// Нажать клавишу или сочетание: кандидаты названия (русский и английский варианты).
     Key(Vec<String>),
+    /// «Слушай»: звук компьютера в текст (listen.rs).
+    Listen,
     /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
     /// (он сам печатает текст); сюда она доходит только из eval и тестов.
     Dictate(String),
@@ -186,6 +188,10 @@ pub fn route(
         } else if let Some(alt_payload) = alt_payload {
             push_unique(&mut payloads, &alt_payload);
         }
+        // «слушай» — без цели: что сказано после глагола, не важно
+        if trigger.intent.kind == IntentKind::Listen {
+            return Route::Listen;
+        }
         if trigger.intent.kind == IntentKind::Dictate {
             return Route::Dictate(payloads[0].clone());
         }
@@ -201,6 +207,7 @@ pub fn route(
             IntentKind::Kill => Route::Kill(payloads),
             IntentKind::Calc => Route::Calc(payloads),
             IntentKind::Key => Route::Key(payloads),
+            IntentKind::Listen => Route::Listen,
             IntentKind::Dictate => Route::Dictate(join_cjk(&payloads[0])),
             IntentKind::Find | IntentKind::FindFolder | IntentKind::FindFile => Route::Find {
                 scope: match trigger.intent.kind {
@@ -369,14 +376,6 @@ pub fn dispatch(
 ) -> DispatchResult {
     // Копируем снапшоты под короткими локами; поиск и запуск приложений идут
     // уже без удержания общих mutex, чтобы не задерживать обновления грамматики/UI.
-    // «слушай» — звук компьютера в текст (listen.rs).
-    if [Some(text), alt].into_iter().flatten().any(crate::commands::is_listen) {
-        let started = crate::listen::start(app);
-        if !started {
-            ui_log(app, crate::msg!("log.computer.already"));
-        }
-        return DispatchResult::Done(started);
-    }
     // «открой ривер» / «открой настройки ривера» — окно самого Reever, раньше действий и папок.
     if let Some(page) = [Some(text), alt]
         .into_iter()
@@ -457,6 +456,13 @@ pub fn dispatch(
                 ),
             );
             DispatchResult::Done(false)
+        }
+        Route::Listen => {
+            let started = crate::listen::start(app);
+            if !started {
+                ui_log(app, crate::msg!("log.computer.already"));
+            }
+            DispatchResult::Done(started)
         }
         Route::Key(candidates) => {
             let parsed: Vec<_> = candidates.iter().map(|candidate| crate::keys::parse(candidate)).collect();
@@ -880,6 +886,17 @@ mod tests {
             Route::Launch(actions) => actions.into_iter().map(|action| action.id).collect(),
             other => panic!("ожидался Route::Launch, получено {other:?}"),
         }
+    }
+
+    #[test]
+    fn listen_routes_from_the_grammar() {
+        let grammar = Grammar::defaults();
+        let actions = actions();
+        for text in ["слушай", "послушай звук компьютера", "listen"] {
+            assert!(matches!(route(text, &grammar, &actions, THRESHOLD), Route::Listen), "{text}");
+        }
+        // «слушай, открой …» — вводное слово, команда — открыть
+        assert!(!matches!(route("слушай открой фотошоп", &grammar, &actions, THRESHOLD), Route::Listen));
     }
 
     #[test]

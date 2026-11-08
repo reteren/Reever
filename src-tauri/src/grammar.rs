@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 13;
+const GRAMMAR_VERSION: u32 = 14;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -23,6 +23,7 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (7, &["chat_gpt", "chat_claude"]),
     (8, &["find", "find_folder", "find_file"]),
     (12, &["key"]),
+    (14, &["listen"]),
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
 /// Версия 10 — «отмена» языков из языковых пакетов (models.rs).
@@ -155,6 +156,28 @@ const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[
 /// нечаянно совпали бы с русской речью. Японские глаголы стоят в конце фразы
 /// («メモ帳を開いて») — их `match_trigger` ищет и в конце (`TRAILING_LANGUAGES`).
 pub(crate) const LANGUAGE_TRIGGERS: &[(&str, &str, &[&str])] = &[
+    ("uk", "listen", &["слухай", "послухай"]),
+    ("de", "listen", &["hör zu", "zuhören"]),
+    ("es", "listen", &["escucha"]),
+    ("fr", "listen", &["écoute"]),
+    ("it", "listen", &["ascolta"]),
+    ("pt", "listen", &["ouve", "escuta"]),
+    ("nl", "listen", &["luister"]),
+    ("pl", "listen", &["słuchaj"]),
+    ("cs", "listen", &["poslouchej"]),
+    ("sk", "listen", &["počúvaj"]),
+    ("sl", "listen", &["poslušaj"]),
+    ("hr", "listen", &["slušaj"]),
+    ("hu", "listen", &["figyelj"]),
+    ("ro", "listen", &["ascultă"]),
+    ("sv", "listen", &["lyssna"]),
+    ("da", "listen", &["lyt"]),
+    ("fi", "listen", &["kuuntele"]),
+    ("et", "listen", &["kuula"]),
+    ("lv", "listen", &["klausies"]),
+    ("lt", "listen", &["klausyk"]),
+    ("el", "listen", &["άκου"]),
+    ("mt", "listen", &["isma"]),
     ("de", "launch", &["öffne", "öffnen", "starte", "starten"]),
     ("de", "folder", &["ordner", "öffne ordner", "öffne den ordner"]),
     ("de", "web_google", &["suche bei google", "google suche"]),
@@ -755,6 +778,8 @@ pub enum IntentKind {
     FindFile,
     /// «Кнопка энтер», «кнопка контрол эс» — нажать клавишу или сочетание (keys.rs).
     Key,
+    /// «Слушай» — звук компьютера в текст (listen.rs); цели нет.
+    Listen,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -990,6 +1015,13 @@ impl Grammar {
                     IntentKind::Kill,
                     "завершить программу (как в диспетчере задач)",
                     &["заверши", "kill", "end task"],
+                    "",
+                ),
+                intent(
+                    "listen",
+                    IntentKind::Listen,
+                    "звук компьютера в текст",
+                    &["слушай", "послушай", "прослушай", "listen"],
                     "",
                 ),
                 intent(
@@ -1407,7 +1439,8 @@ impl Grammar {
     /// «открой»): Engine должен дослушать продолжение, а не выполнять обрубок.
     pub fn is_incomplete(&self, text: &str) -> bool {
         self.match_trigger(text).is_some_and(|matched| {
-            matched.payload.is_empty()
+            // «слушай» — команда целиком, без цели
+            (matched.payload.is_empty() && matched.intent.kind != IntentKind::Listen)
                 // «найди отчёт формат» + пауза — формат скажут следом.
                 || (matches!(
                     matched.intent.kind,
@@ -2084,6 +2117,22 @@ mod tests {
     }
 
     #[test]
+    fn version_thirteen_migration_adds_listen() {
+        let path = temporary_path("v13-listen");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 13;
+        legacy.intents.retain(|intent| intent.id != "listen");
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let listen = migrated.intents.iter().find(|intent| intent.id == "listen").unwrap();
+        assert!(listen.enabled && listen.triggers.iter().any(|t| t == "слушай"));
+        // «слушай» — команда целиком: не ждать продолжения
+        assert!(!migrated.is_incomplete("слушай"));
+        assert!(migrated.validate().is_ok());
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn version_two_migration_adds_calc_and_disables_it_on_phrase_conflict() {
         let path = temporary_path("v2-calc-conflict");
         let mut legacy = Grammar::defaults();
@@ -2155,7 +2204,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 13);
+        assert_eq!(Grammar::defaults().version, 14);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

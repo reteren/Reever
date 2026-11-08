@@ -110,6 +110,11 @@ impl Ctx<'_> {
                 let label = if label.is_empty() { self.t("example.chatDefault", &[]) } else { label };
                 (x, self.t("example.chat", &[("label", &label)]))
             }
+            IntentKind::Listen => {
+                let stop = if ru { "стоп" } else { "stop" };
+                let cancel = self.pick(&self.heard_cancel_words(&g.cancel_words).into_iter().filter(|w| !["стоп", "stop", "хватит", "остановись"].contains(&w.trim().to_lowercase().as_str())).collect::<Vec<_>>(), if ru { "отмена" } else { "cancel" });
+                (format!("{wake} {trigger}"), self.t("example.listen", &[("wake", wake), ("stop", stop), ("cancel", &cancel)]))
+            }
             IntentKind::Dictate => {
                 let stop = self.pick(&self.heard_cancel_words(&g.dictation_stop), if ru { "стоп ввод" } else { "stop typing" });
                 // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs)
