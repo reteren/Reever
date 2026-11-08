@@ -99,6 +99,8 @@ features = [
   "Win32_UI_Input_Ime",
   # transcribe.rs: аудио и видео файлы в текст — декодирование через Media Foundation
   "Win32_Media_MediaFoundation",
+  # вкладка «Текст»: окно «Открыть» с фильтром аудио и видео
+  "Win32_UI_Shell_Common",
 ]
 
 [profile.release]

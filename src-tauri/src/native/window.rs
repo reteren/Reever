@@ -45,6 +45,24 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{WM_GETOBJECT, WM_IME_STARTCOMPOSITION, WM_KILLFOCUS, WM_SETFOCUS};
+use windows::Win32::UI::Shell::{DragAcceptFiles, DragFinish, DragQueryFileW, HDROP};
+use windows::Win32::UI::WindowsAndMessaging::WM_DROPFILES;
+
+/// Пути брошенных файлов; дескриптор освобождается.
+fn dropped_files(drop: HDROP) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    unsafe {
+        let count = DragQueryFileW(drop, u32::MAX, None);
+        for i in 0..count {
+            let len = DragQueryFileW(drop, i, None) as usize;
+            let mut buf = vec![0u16; len + 1];
+            let got = DragQueryFileW(drop, i, Some(&mut buf)) as usize;
+            out.push(std::path::PathBuf::from(String::from_utf16_lossy(&buf[..got])));
+        }
+        DragFinish(drop);
+    }
+    out
+}
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, RegisterClassExW,
     SetWindowLongPtrW, SetWindowPos, ShowWindow, CREATESTRUCTW, GWLP_USERDATA, HTCLIENT,
@@ -82,6 +100,8 @@ pub(crate) enum WinEventKind {
     Close,
     /// действие экранного диктора
     A11y(super::a11y::accesskit::ActionRequest),
+    /// в окно бросили файлы (только окна с кнопкой на панели задач)
+    Files(Vec<std::path::PathBuf>),
     Paint,
     Destroyed,
     DisplayChange,
@@ -332,6 +352,11 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
             push(hwnd, WinEventKind::Close);
             return LRESULT(0);
         }
+        WM_DROPFILES => {
+            let files = dropped_files(HDROP(wp.0 as *mut _));
+            push(hwnd, WinEventKind::Files(files));
+            return LRESULT(0);
+        }
         WM_GETOBJECT => {
             if let Some(s) = shared {
                 if let Ok(mut a) = s.a11y.try_borrow_mut() {
@@ -543,6 +568,10 @@ impl NativeWindow {
                 return Err(e);
             }
         };
+        // главное окно принимает файлы из Проводника (вкладка «Текст»)
+        if spec.taskbar {
+            unsafe { DragAcceptFiles(hwnd, true) };
+        }
         let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
         let size_px = (dip_to_px(spec.width, dpi), dip_to_px(spec.height, dpi));
         unsafe {

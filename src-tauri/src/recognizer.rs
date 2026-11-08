@@ -1661,6 +1661,18 @@ impl Worker<'_> {
             let _ = self.app.emit("reever://heard", text.to_string());
             crate::mascot::heard(text);
         }
+        // идёт «слушай»: «ривер стоп» заканчивает его (текст остаётся), «ривер отмена» — стирает
+        if crate::listen::active() {
+            // «стоп» есть и среди слов отмены — сначала он, как в диктовке
+            let stop = crate::engine::is_dictation_stop(text);
+            let cancel = !stop && textnorm::is_cancel(text, &self.cancel_words);
+            if stop || cancel {
+                crate::listen::stop(cancel);
+                self.sound(if cancel { "error.wav" } else { "success.wav" });
+                set_state(self.app, "idle");
+                return;
+            }
+        }
         if textnorm::is_cancel(text, &self.cancel_words) {
             ui_log(self.app, crate::msg!("log.cancelled"));
             self.sound("error.wav");

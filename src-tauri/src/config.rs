@@ -129,6 +129,13 @@ pub struct Settings {
     /// его нет.
     #[serde(default = "default_dictation_ellipsis_pause_ms")]
     pub dictation_ellipsis_pause_ms: u32,
+    /// «ривер слушай»: сколько секунд без нового текста слушать звук компьютера (3–10);
+    /// больше 10 — до команды «ривер стоп / отмена».
+    #[serde(default = "default_listen_silence_s")]
+    pub listen_silence_s: u32,
+    /// Вкладка «Текст»: языки файла (пусто — языки распознавания).
+    #[serde(default)]
+    pub transcribe_languages: Vec<String>,
     /// «ривер гемини …»: сразу отправлять вопрос (Enter), а не только вводить.
     #[serde(default = "default_true")]
     pub webchat_send: bool,
@@ -377,6 +384,9 @@ fn default_dictation_pause_ms() -> u32 {
 fn default_dictation_ellipsis_pause_ms() -> u32 {
     2_000
 }
+fn default_listen_silence_s() -> u32 {
+    5
+}
 fn default_dictation_idle_ms() -> u32 {
     3_000
 }
@@ -502,6 +512,8 @@ fn parse_settings(text: &str) -> Settings {
     restore!("dictation_punctuation", dictation_punctuation, bool);
     restore!("dictation_ellipsis", dictation_ellipsis, bool);
     restore!("dictation_ellipsis_pause_ms", dictation_ellipsis_pause_ms, u32);
+    restore!("listen_silence_s", listen_silence_s, u32);
+    restore!("transcribe_languages", transcribe_languages, Vec<String>);
     restore!("webchat_send", webchat_send, bool);
     restore!("wake_blackbox", wake_blackbox, bool);
     restore!("ui_language", ui_language, String);
@@ -555,6 +567,8 @@ impl Default for Settings {
             dictation_punctuation: true,
             dictation_ellipsis: true,
             dictation_ellipsis_pause_ms: default_dictation_ellipsis_pause_ms(),
+            listen_silence_s: default_listen_silence_s(),
+            transcribe_languages: Vec::new(),
             webchat_send: true,
             wake_blackbox: false,
             ui_language: default_ui_language(),

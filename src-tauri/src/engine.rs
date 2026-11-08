@@ -270,7 +270,7 @@ fn mid_phrase_wake(
 
 /// Слова, которые в диктовке после «ривер» заканчивают её, оставляя текст («ривер стоп»);
 /// остальные слова отмены («ривер отмена») стирают продиктованное.
-fn is_dictation_stop(text: &str) -> bool {
+pub(crate) fn is_dictation_stop(text: &str) -> bool {
     let words: Vec<String> = normalize(text)
         .split_whitespace()
         .map(String::from)
@@ -2933,6 +2933,19 @@ mod tests {
         assert!(contains(&two.push_audio(&phrase(123, 120)), &EngineEvent::WakeHeard));
         let events = two.push_audio(&phrase(123, 120));
         assert!(contains(&events, &EngineEvent::Command { text: "открой ривер".into(), alt: None }), "{events:?}");
+    }
+
+    #[test]
+    fn listen_command_reaches_dispatch() {
+        // «слушай» — и вводное слово перед обращением; после «ривер» это команда
+        let (mut one, _, _, _) = engine(test_config(), &["ривер слушай"]);
+        let events = one.push_audio(&phrase(123, 120));
+        assert!(contains(&events, &EngineEvent::Command { text: "слушай".into(), alt: None }), "{events:?}");
+
+        let (mut two, _, _, _) = engine(test_config(), &["ривер", "слушай"]);
+        assert!(contains(&two.push_audio(&phrase(123, 120)), &EngineEvent::WakeHeard));
+        let events = two.push_audio(&phrase(123, 120));
+        assert!(contains(&events, &EngineEvent::Command { text: "слушай".into(), alt: None }), "{events:?}");
     }
 
     #[test]

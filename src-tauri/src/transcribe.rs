@@ -5,11 +5,13 @@
 //! Файл декодирует Media Foundation (mp3, m4a/aac, wav, wma, flac, звуковая дорожка mp4…)
 //! сразу в 16 кГц mono; дальше — нарезка на фразы детектором речи, как у микрофона.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use anyhow::{bail, Context};
 
+use crate::app::AppHandle;
 use crate::asr::AsrSet;
 use crate::models::{self, ModelDirs};
 use crate::segmenter::{SegmentEvent, Segmenter, SegmenterConfig};
@@ -235,6 +237,138 @@ pub fn decode(path: &Path) -> anyhow::Result<Vec<i16>> {
         }
         Ok(pcm)
     }
+}
+
+// ── Задачи для вкладки «Текст» ─────────────────────────────────────────────
+
+/// Откуда текст.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum JobKind {
+    #[default]
+    File,
+    /// «ривер слушай»: звук компьютера.
+    Listen,
+}
+
+/// Чем кончилась задача.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum JobEnd {
+    /// Файл распознан до конца.
+    Done,
+    /// Прослушивание: долго не было текста.
+    Silence,
+    /// «ривер стоп» или кнопка «Стоп».
+    Stopped,
+    /// «ривер отмена» или кнопка «Отмена»: текст отброшен.
+    Cancelled,
+    Error,
+}
+
+/// Состояние задачи для вкладки: что распознаётся, сколько сделано, текст.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct TextJob {
+    pub kind: JobKind,
+    /// имя файла (у прослушивания пусто)
+    pub name: String,
+    pub running: bool,
+    /// доля 0..1 (у прослушивания нет)
+    pub progress: Option<f32>,
+    pub text: String,
+    pub end: Option<JobEnd>,
+    pub error: String,
+    /// текст положен в буфер обмена
+    pub copied: bool,
+}
+
+static LAST: Mutex<Option<TextJob>> = Mutex::new(None);
+static FILE_CANCEL: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
+
+/// Последняя задача — окну, открытому после её начала.
+pub fn last() -> Option<TextJob> {
+    LAST.lock().ok().and_then(|l| l.clone())
+}
+
+pub(crate) fn publish(job: &TextJob) {
+    if let Ok(mut l) = LAST.lock() {
+        *l = Some(job.clone());
+    }
+    crate::main_native::send(crate::main_native::Msg::TextJob(job.clone()));
+}
+
+/// «Очистить»: убрать последний текст (идущую задачу — нет).
+pub fn clear() {
+    if let Ok(mut l) = LAST.lock() {
+        if l.as_ref().is_some_and(|j| !j.running) {
+            *l = None;
+        }
+    }
+}
+
+/// Идёт распознавание файла.
+pub fn file_running() -> bool {
+    FILE_CANCEL.lock().map(|c| c.is_some()).unwrap_or(false)
+}
+
+/// Бросить распознавание файла (текст, что успели, остаётся).
+pub fn cancel_file() {
+    if let Some(cancel) = FILE_CANCEL.lock().ok().and_then(|c| c.clone()) {
+        cancel.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Распознать файл в фоне; ход и текст — во вкладку «Текст».
+pub fn start_file(app: &AppHandle, path: PathBuf, languages: Vec<String>) {
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let Ok(mut slot) = FILE_CANCEL.lock() else { return };
+        if slot.is_some() {
+            return;
+        }
+        *slot = Some(cancel.clone());
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        let mut job = TextJob { kind: JobKind::File, name: name.clone(), running: true, progress: Some(0.0), ..TextJob::default() };
+        publish(&job);
+        crate::events::ui_log(&app, crate::msg!("log.text.file", name = &name));
+        let started = std::time::Instant::now();
+        let result = (|| -> anyhow::Result<String> {
+            let cfg = app.state::<crate::config::LiveConfig>().get();
+            let s = &cfg.settings;
+            let pcm = decode(&path)?;
+            let mut recognizer = Recognizer::load(&languages, &cfg.model_dirs, &cfg.vad_model_path, s.vad_threshold, s.asr_threads as i32)?;
+            let mut last_publish = std::time::Instant::now();
+            transcribe(&mut recognizer, &pcm, s.dictation_punctuation, &cancel, |done, text| {
+                job.progress = Some(done);
+                job.text = text.to_string();
+                if last_publish.elapsed() >= std::time::Duration::from_millis(250) || done >= 1.0 {
+                    last_publish = std::time::Instant::now();
+                    publish(&job);
+                }
+            })
+        })();
+        job.running = false;
+        match result {
+            Ok(text) => {
+                job.text = text;
+                job.end = Some(if cancel.load(Ordering::Relaxed) { JobEnd::Stopped } else { JobEnd::Done });
+                crate::events::ui_log(
+                    &app,
+                    crate::msg!("log.text.done", chars = job.text.chars().count(), seconds = started.elapsed().as_secs()),
+                );
+            }
+            Err(error) => {
+                job.end = Some(JobEnd::Error);
+                job.error = format!("{error:#}");
+                crate::events::ui_log(&app, crate::msg!("log.text.failed", error = &job.error));
+            }
+        }
+        if let Ok(mut slot) = FILE_CANCEL.lock() {
+            *slot = None;
+        }
+        publish(&job);
+    });
 }
 
 #[cfg(test)]

@@ -369,6 +369,14 @@ pub fn dispatch(
 ) -> DispatchResult {
     // Копируем снапшоты под короткими локами; поиск и запуск приложений идут
     // уже без удержания общих mutex, чтобы не задерживать обновления грамматики/UI.
+    // «слушай» — звук компьютера в текст (listen.rs).
+    if [Some(text), alt].into_iter().flatten().any(crate::commands::is_listen) {
+        let started = crate::listen::start(app);
+        if !started {
+            ui_log(app, crate::msg!("log.computer.already"));
+        }
+        return DispatchResult::Done(started);
+    }
     // «открой ривер» / «открой настройки ривера» — окно самого Reever, раньше действий и папок.
     if let Some(page) = [Some(text), alt]
         .into_iter()

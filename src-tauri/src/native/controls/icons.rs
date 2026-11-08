@@ -41,6 +41,8 @@ pub fn path(name: &str) -> Option<&'static str> {
         "stack" => "M4 6.5h3M10 6.5h10M4 12h3M10 12h10M4 17.5h3M10 17.5h7",
         "tune" => "M4 7h7M15 7h5M13 4.5v5M4 17h3M11 17h9M9 14.5v5M4 12h12M18 12h2",
         "term" => "M3.5 5h17v14h-17zM7.5 9.5l3 2.5-3 2.5M12.5 15h4",
+        // вкладка «Текст»: звуковая волна и строки текста
+        "wave" => "M3.5 9v6M6.5 6.5v11M9.5 9v6M13 8h7.5M13 12h7.5M13 16h5",
         "min" => "M6.5 12h11",
         "shade" => "M6 8.5h12M8 12l4 3.5 4-3.5",
         "mic" => "M12 3.5a3 3 0 013 3V12a3 3 0 01-6 0V6.5a3 3 0 013-3zM6.5 11.5a5.5 5.5 0 0011 0M12 17v3.5",
@@ -281,7 +283,7 @@ mod tests {
 
     #[test]
     fn all_icons_build() {
-        for name in ["tray", "play", "folder", "file", "search", "warn", "x", "orb", "stack", "tune", "term", "min", "shade", "mic"] {
+        for name in ["tray", "play", "folder", "file", "search", "warn", "x", "orb", "stack", "tune", "term", "wave", "min", "shade", "mic"] {
             assert!(geometry(name).is_some(), "{name}");
         }
     }

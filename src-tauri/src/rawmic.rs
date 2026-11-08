@@ -39,7 +39,7 @@ const AUDCLNT_BUFFERFLAGS_SILENT: u32 = 2;
 const BUFFER_HNS: i64 = 1_000_000;
 
 #[derive(Clone, Copy)]
-enum Sample {
+pub(crate) enum Sample {
     F32,
     I16,
 }
@@ -157,7 +157,7 @@ unsafe fn capture(
 }
 
 /// Частота, каналы и тип сэмплов формата микшера (float32 или int16).
-unsafe fn parse_format(format: *const WAVEFORMATEX) -> anyhow::Result<(usize, usize, Sample)> {
+pub(crate) unsafe fn parse_format(format: *const WAVEFORMATEX) -> anyhow::Result<(usize, usize, Sample)> {
     let base = std::ptr::read_unaligned(format);
     let (tag, bits) = (base.wFormatTag, base.wBitsPerSample);
     let sample = match tag {

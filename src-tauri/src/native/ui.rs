@@ -342,6 +342,11 @@ impl Ui {
                     }
                 }
                 WinEventKind::Close => w.handler.close_requested(),
+                WinEventKind::Files(files) => {
+                    if w.handler.files_dropped(files) {
+                        w.dirty = true;
+                    }
+                }
                 WinEventKind::Destroyed => {
                     // окно закрыла система (или его владелец) — забываем без второго DestroyWindow
                     self.windows.remove(i);

@@ -34,11 +34,13 @@ pub(super) enum KFocus {
 const HOME_EDITOR: u64 = 1000;
 const ACTIONS: u64 = 2000;
 const SETTINGS: u64 = 6000;
+/// элементы вкладки «Текст» — с запасом над настройками
+const TEXT: u64 = 50_000;
 
 impl MainView {
     /// Порядок Tab по окну.
     fn view_order(&self) -> Vec<KFocus> {
-        let mut o: Vec<KFocus> = (0..3).map(KFocus::Lunka).chain((0..4).map(KFocus::Tab)).collect();
+        let mut o: Vec<KFocus> = (0..3).map(KFocus::Lunka).chain((0..TABS.len()).map(KFocus::Tab)).collect();
         o.push(KFocus::Pause);
         match TABS[self.tab] {
             "home" => {
@@ -55,7 +57,7 @@ impl MainView {
                     }
                 }
             }
-            "actions" | "settings" => o.push(KFocus::Content),
+            "actions" | "settings" | "text" => o.push(KFocus::Content),
             _ => {}
         }
         o
@@ -70,6 +72,7 @@ impl MainView {
                 self.actions_tab.kbd_enter(back);
                 true
             }
+            KFocus::Content if TABS[self.tab] == "text" => self.text_tab.form.focus_edge(back),
             KFocus::Content => self.settings_tab.form.focus_edge(back),
             _ => true,
         }
@@ -81,6 +84,7 @@ impl MainView {
             KFocus::Content => {
                 self.actions_tab.kbd_leave();
                 self.settings_tab.form.blur();
+                self.text_tab.form.blur();
             }
             _ => {}
         }
@@ -123,6 +127,7 @@ impl MainView {
             "home" if self.form.has_focus() => self.kfocus = KFocus::Editor,
             "actions" if self.actions_tab.kbd_active() => self.kfocus = KFocus::Content,
             "settings" if self.settings_tab.form.has_focus() => self.kfocus = KFocus::Content,
+            "text" if self.text_tab.form.has_focus() => self.kfocus = KFocus::Content,
             _ => {}
         }
     }
@@ -158,7 +163,13 @@ impl MainView {
                 };
             }
             KFocus::Content | KFocus::Editor => {
-                let form = if self.kfocus == KFocus::Editor { &self.form } else { &self.settings_tab.form };
+                let form = if self.kfocus == KFocus::Editor {
+                    &self.form
+                } else if TABS[self.tab] == "text" {
+                    &self.text_tab.form
+                } else {
+                    &self.settings_tab.form
+                };
                 if tab && form.at_edge(!ev.shift) {
                     self.move_focus(ev.shift);
                     return Some(true);
@@ -272,7 +283,7 @@ impl MainView {
         tabs.set_label(self.t("nav.sections"));
         tabs.set_bounds(b(rail_r()));
         let mut tab_ids = Vec::new();
-        for i in 0..4 {
+        for i in 0..TABS.len() {
             let id = NodeId(6 + i as u64);
             let mut n = Node::new(Role::Tab);
             n.set_label(self.t(TAB_KEYS[i]));
@@ -383,6 +394,14 @@ impl MainView {
                     focus = afocus;
                 }
             }
+            "text" => {
+                let (fnodes, fkids, ffocus) = self.text_tab.form.a11y(TEXT, s);
+                nodes.extend(fnodes);
+                ckids.extend(fkids);
+                if self.kfocus == KFocus::Content {
+                    focus = ffocus;
+                }
+            }
             _ => {
                 let (fnodes, fkids, ffocus) = self.settings_tab.form.a11y(SETTINGS, s);
                 nodes.extend(fnodes);
@@ -454,6 +473,15 @@ impl MainView {
                 self.kfocus = KFocus::Content;
                 if let Some(out) = out {
                     self.actions_out(out);
+                }
+                self.touch_static();
+                return redraw;
+            }
+        } else if id >= TEXT {
+            if let Some((redraw, out)) = self.text_tab.a11y_action(TEXT, &req) {
+                self.kfocus = KFocus::Content;
+                if let Some(out) = out {
+                    self.text_out(out);
                 }
                 self.touch_static();
                 return redraw;

@@ -59,6 +59,7 @@ const GROUPS: &[(&str, &[(&str, &str)])] = &[
             ("webchat_send", "bool"),
         ],
     ),
+    ("speech_text", &[("listen_silence_s", "listen_silence")]),
     ("search", &[("local_index", "bool")]),
     ("system", &[("confirm_dangerous", "bool"), ("confirm_close", "bool"), ("raise_result", "bool")]),
 ];
@@ -354,6 +355,17 @@ impl SettingsTab {
                 items.push(Item::Slider { id: key.into(), min: 1.0, max: 5.0, step: 1.0, value: v, text: format!("{} / 5", v as i64) });
                 items.push(Item::Help { text: self.t(&format!("settings.{key}.{}", v as i64)), indent: false });
                 return;
+            }
+            "listen_silence" => {
+                // 3–10 с; правее 10 — «до команды»
+                let until = crate::listen::SILENCE_UNTIL_COMMAND as f32;
+                let v = self.num(key).unwrap_or(5.0).clamp(3.0, until as f64) as f32;
+                let text = if v >= until {
+                    self.t("settings.listen_silence_s.untilCommand")
+                } else {
+                    t(&self.locale, "settings.dictation_ellipsis_pause_ms.seconds", &[("n", &(v as i64).to_string())])
+                };
+                items.push(Item::Slider { id: key.into(), min: 3.0, max: until, step: 1.0, value: v, text });
             }
             "ellipsis_pause" => {
                 // до конца диктовки по молчанию: дольше пауза бывает, только когда диктовка кончилась

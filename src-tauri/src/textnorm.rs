@@ -210,7 +210,8 @@ pub(crate) fn strip_leading_fillers(text: &str) -> String {
     let mut words = normalize(text);
     loop {
         let Some((first, rest)) = words.split_once(' ') else {
-            if fillers.contains(&words.as_str()) {
+            // «слушай» одно — команда «звук компьютера в текст» (listen.rs), не вводное слово
+            if fillers.contains(&words.as_str()) && words != "слушай" {
                 words.clear();
             }
             break;

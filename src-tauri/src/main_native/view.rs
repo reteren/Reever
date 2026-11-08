@@ -97,13 +97,13 @@ const FRAME_STATIC: bool = true;
 
 
 
-const TABS: [&str; 4] = ["home", "actions", "settings", "logs"];
+pub(crate) const TABS: [&str; 5] = ["home", "actions", "settings", "logs", "text"];
 #[path = "access.rs"]
 mod access;
 use access::KFocus;
 
-const TAB_ICONS: [&str; 4] = ["orb", "stack", "tune", "term"];
-const TAB_KEYS: [&str; 4] = ["nav.home", "nav.actions", "nav.settings", "nav.log"];
+const TAB_ICONS: [&str; 5] = ["orb", "stack", "tune", "term", "wave"];
+const TAB_KEYS: [&str; 5] = ["nav.home", "nav.actions", "nav.settings", "nav.log", "nav.text"];
 const LOG_LIMIT: usize = 250;
 
 /// Сообщения окну из распознавания и Rust.
@@ -148,6 +148,8 @@ pub enum Msg {
     ScrollSettings(f32),
     /// Выбрать действие на вкладке «Действия» (проверка)
     SelectAction(String),
+    /// Вкладка «Текст»: ход и текст распознавания файла или звука компьютера.
+    TextJob(crate::transcribe::TextJob),
 }
 
 /// Сведения для экранов, которые не приходят событиями.
@@ -396,6 +398,7 @@ pub struct MainView {
     form_blink: Option<Instant>,
     actions_tab: super::actions_tab::ActionsTab,
     settings_tab: super::settings_tab::SettingsTab,
+    text_tab: super::text_tab::TextTab,
     /// окно поверх (калибровка, голос, выбор программы)
     overlay: Option<super::overlays::Overlay>,
     /// компактный режим (полоска) и её содержимое
@@ -524,6 +527,7 @@ impl MainView {
             form_blink: None,
             actions_tab: super::actions_tab::ActionsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             settings_tab: super::settings_tab::SettingsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
+            text_tab: super::text_tab::TextTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             overlay: None,
             shade: None,
             shaded: false,
@@ -593,6 +597,7 @@ impl MainView {
         v.web.label = v.t("main.openWeb");
         v.set_state(&snapshot.state);
         v.actions_tab.sync(list0, hidden0);
+        v.text_tab.sync(settings0.clone());
         v.settings_tab.sync(settings0);
         v
     }
@@ -754,6 +759,7 @@ impl MainView {
                     }
                 }
                 self.settings_tab.sync(i.settings.clone());
+                self.text_tab.sync(i.settings.clone());
                 self.info = i;
             }
             Msg::Orb(_) => {}
@@ -767,6 +773,7 @@ impl MainView {
                 }
             },
             Msg::SettingsMsg(m) => self.settings_tab.msg = m,
+            Msg::TextJob(job) => self.text_tab.set_job(job),
             Msg::Key(key, shift) => {
                 let ev = KeyEvent { key, ctrl: false, shift, alt: false, repeat: false };
                 let handled = <Self as WindowHandler>::key(self, ev);
@@ -1056,17 +1063,18 @@ impl MainView {
     }
 
     fn tab_rect(i: usize) -> Rect {
-        // рельс: 4 клавиши поровну, внизу — счётчик действий (~52 px)
+        // рельс: клавиши поровну, внизу — счётчик действий (~52 px)
         let inner = Rect::new(rail_r().x + 6.0, rail_r().y + 8.0, rail_r().w - 12.0, rail_r().h - 16.0);
         let counter = 52.0;
-        let h = (inner.h - counter - 4.0 * 4.0) / 4.0;
+        let n = TABS.len() as f32;
+        let h = (inner.h - counter - 4.0 * n) / n;
         Rect::new(inner.x, inner.y + i as f32 * (h + 4.0), inner.w, h)
     }
 
     fn draw_rail(&mut self, cx: &mut RenderCx<'_>) {
         let r = rail_r();
         lcd_background(cx, r, 12.0);
-        for i in 0..4 {
+        for i in 0..TABS.len() {
             let tr = Self::tab_rect(i);
             let on = i == self.tab;
             let hover = self.tab_hover == Some(i) && !on;
@@ -1106,7 +1114,7 @@ impl MainView {
             }
         }
         // счётчик действий
-        let last = Self::tab_rect(3);
+        let last = Self::tab_rect(TABS.len() - 1);
         let cy = last.y + last.h + 4.0;
         self.scene.flush(cx);
         dotted_hline(cx, last.x, cy, last.w, ACC_4);
@@ -1236,6 +1244,10 @@ impl MainView {
             "settings" => {
                 self.settings_tab.draw(&mut self.scene, cx, body);
                 self.form_blink = self.settings_tab.form.next_blink(cx.now);
+            }
+            "text" => {
+                self.text_tab.draw(&mut self.scene, cx, body);
+                self.form_blink = self.text_tab.form.next_blink(cx.now);
             }
             _ => self.draw_logs(cx, body),
         }
@@ -1689,6 +1701,10 @@ impl MainView {
             }
         }
         self.touch_static();
+    }
+
+    pub(super) fn text_out(&mut self, out: super::text_tab::TextOut) {
+        (self.host)(Act::Text(out));
     }
 
     fn settings_out(&mut self, out: super::settings_tab::SettingsOut) {
@@ -2189,7 +2205,7 @@ impl MainView {
                 return Some(Target::Lunka(i));
             }
         }
-        for i in 0..4 {
+        for i in 0..TABS.len() {
             if native::controls::inside(Self::tab_rect(i), x, y) {
                 return Some(Target::Tab(i));
             }
@@ -2270,6 +2286,23 @@ impl WindowHandler for MainView {
         self.form = Form::new(hwnd, self.rtl);
         self.actions_tab.set_hwnd(hwnd);
         self.settings_tab.set_hwnd(hwnd);
+        self.text_tab.set_hwnd(hwnd);
+    }
+
+    /// Файлы брошены в окно: первый — во вкладку «Текст».
+    fn files_dropped(&mut self, files: Vec<std::path::PathBuf>) -> bool {
+        let Some(path) = files.into_iter().next() else { return false };
+        if let Some(i) = TABS.iter().position(|t| *t == "text") {
+            if self.tab != i {
+                self.tab = i;
+                (self.host)(Act::Tab("text".into()));
+            }
+        }
+        if let Some(out) = self.text_tab.dropped(path) {
+            (self.host)(Act::Text(out));
+        }
+        self.touch_static();
+        true
     }
 
     /// «Закрыть окно» из меню значка на панели задач и Alt+F4 — как кнопка закрытия: окно
@@ -2657,6 +2690,37 @@ impl WindowHandler for MainView {
                 }
             }
         }
+        if TABS[self.tab] == "text" {
+            let over = native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0;
+            let skin = MouseEvent { kind: ev.kind, x, y };
+            let busy = self.text_tab.form.popup_open() || self.text_tab.form.sliding();
+            let mine = match ev.kind {
+                MouseKind::Down(_) | MouseKind::DoubleClick => over || busy,
+                MouseKind::Up(_) => (over && self.pressed.is_none()) || busy,
+                _ => busy,
+            };
+            if matches!(ev.kind, MouseKind::Move | MouseKind::Leave | MouseKind::Up(_)) || mine {
+                let (redraw, out) = self.text_tab.mouse(skin);
+                if let Some(out) = out {
+                    self.text_out(out);
+                }
+                if redraw {
+                    self.touch_static();
+                }
+                if mine {
+                    return true;
+                }
+                if ev.kind == MouseKind::Move && over {
+                    let c = match self.text_tab.cursor(x, y) {
+                        Some(true) => Cursor::Hand,
+                        Some(false) => Cursor::Text,
+                        None => Cursor::Arrow,
+                    };
+                    set_cursor(self.hwnd, c);
+                    return redraw;
+                }
+            }
+        }
         if TABS[self.tab] == "actions" {
             let over = native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0;
             let skin = MouseEvent { kind: ev.kind, x, y };
@@ -2836,6 +2900,16 @@ impl WindowHandler for MainView {
         if let Some(r) = self.kbd(ev) {
             return r;
         }
+        if TABS[self.tab] == "text" {
+            let (redraw, out) = self.text_tab.key(ev);
+            if let Some(out) = out {
+                self.text_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if TABS[self.tab] == "settings" {
             let (redraw, out) = self.settings_tab.key(ev);
             if let Some(out) = out {
@@ -2873,6 +2947,16 @@ impl WindowHandler for MainView {
                 self.touch_static();
             }
             return r;
+        }
+        if TABS[self.tab] == "text" {
+            let (redraw, out) = self.text_tab.char_input(c);
+            if let Some(out) = out {
+                self.text_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
         }
         if TABS[self.tab] == "settings" {
             let (redraw, out) = self.settings_tab.char_input(c);
@@ -2920,6 +3004,10 @@ impl WindowHandler for MainView {
                 self.static_dirty = true;
             }
             return r;
+        }
+        if TABS[self.tab] == "text" && self.text_tab.wheel(x, y, delta) {
+            self.static_dirty = true;
+            return true;
         }
         if TABS[self.tab] == "settings" && self.settings_tab.wheel(x, y, delta) {
             self.static_dirty = true;

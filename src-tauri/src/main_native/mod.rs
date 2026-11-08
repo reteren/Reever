@@ -15,6 +15,7 @@ mod overlays;
 mod say;
 mod settings_tab;
 mod shade;
+mod text_tab;
 mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -59,6 +60,8 @@ pub enum Act {
     AddScanned(Vec<overlays::ScanApp>),
     /// компактный режим: полоска поверх всех окон
     Shade(bool),
+    /// вкладка «Текст»
+    Text(text_tab::TextOut),
 }
 
 pub fn is_open() -> bool {
@@ -174,6 +177,68 @@ fn settings_info(app: &AppHandle) -> settings_tab::SettingsInfo {
 }
 
 /// Изменение на вкладке «Настройки» — теми же командами, что у веб-окна; итог — строкой под формой.
+/// Вкладка «Текст»: файл, звук компьютера, буфер обмена, языки файла.
+fn text_act(app: &AppHandle, out: text_tab::TextOut) {
+    use text_tab::TextOut;
+    match out {
+        TextOut::PickFile(languages) => {
+            let owner = WIN.lock().ok().and_then(|w| *w).map(|(_, h)| h).unwrap_or(0);
+            if let Some(path) = pick_audio_file(owner) {
+                crate::transcribe::start_file(app, path, languages);
+            }
+        }
+        TextOut::File(path, languages) => crate::transcribe::start_file(app, path, languages),
+        TextOut::CancelFile => crate::transcribe::cancel_file(),
+        TextOut::Listen => {
+            crate::listen::start(app);
+        }
+        TextOut::ListenStop(cancel) => {
+            crate::listen::stop(cancel);
+        }
+        TextOut::Copy(text) => {
+            let _ = crate::typing::set_clipboard(&text);
+        }
+        TextOut::Clear => crate::transcribe::clear(),
+        TextOut::Languages(codes) => {
+            let mut patch = serde_json::Map::new();
+            patch.insert("transcribe_languages".into(), serde_json::json!(codes));
+            apply_setting(app, settings_tab::SettingsOut::Patch(patch));
+        }
+    }
+}
+
+/// Окно «Открыть» Windows для аудио и видео; None — закрыли.
+fn pick_audio_file(owner: isize) -> Option<std::path::PathBuf> {
+    use windows::core::{w, PCWSTR};
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED};
+    use windows::Win32::UI::Shell::Common::COMDLG_FILTERSPEC;
+    use windows::Win32::UI::Shell::{FileOpenDialog, IFileOpenDialog, SIGDN_FILESYSPATH};
+    unsafe {
+        let com = CoInitializeEx(None, COINIT_APARTMENTTHREADED).is_ok();
+        let result = (|| -> windows::core::Result<std::path::PathBuf> {
+            let dialog: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
+            let locale = crate::uilang::current().to_string();
+            let media = windows::core::HSTRING::from(crate::ui_text::t(&locale, "text.file.types", &[]));
+            let filters = [
+                COMDLG_FILTERSPEC { pszName: PCWSTR(media.as_ptr()), pszSpec: w!("*.mp3;*.m4a;*.aac;*.wav;*.wma;*.flac;*.ogg;*.opus;*.mp4;*.m4v;*.mov;*.avi;*.mkv;*.wmv;*.webm;*.3gp;*.amr") },
+                COMDLG_FILTERSPEC { pszName: w!("*.*"), pszSpec: w!("*.*") },
+            ];
+            dialog.SetFileTypes(&filters)?;
+            dialog.Show(HWND(owner as *mut _))?;
+            let item = dialog.GetResult()?;
+            let name = item.GetDisplayName(SIGDN_FILESYSPATH)?;
+            let path = name.to_string().unwrap_or_default();
+            windows::Win32::System::Com::CoTaskMemFree(Some(name.0 as *const _));
+            Ok(std::path::PathBuf::from(path))
+        })();
+        if com {
+            CoUninitialize();
+        }
+        result.ok()
+    }
+}
+
 fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
     use settings_tab::SettingsOut;
     let locale = crate::uilang::current().to_string();
@@ -379,6 +444,7 @@ fn act(app: &AppHandle, a: Act) {
             refresh(app);
         }
         Act::Settings(out) => apply_setting(app, out),
+        Act::Text(out) => text_act(app, out),
         Act::Shade(on) => set_shade(app, on),
         Act::Calibrate(a) => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {

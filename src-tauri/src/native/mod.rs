@@ -207,6 +207,10 @@ pub trait WindowHandler: std::any::Any {
     }
     /// Окно просят закрыть (Alt+F4) — решает обработчик.
     fn close_requested(&mut self) {}
+    /// В окно бросили файлы (Проводник); true — нужна перерисовка.
+    fn files_dropped(&mut self, _files: Vec<std::path::PathBuf>) -> bool {
+        false
+    }
     /// Дерево элементов для экранного диктора (UI Automation); None — окно без него.
     /// Зовётся после каждого кадра; границы — в физических пикселях окна (`a11y::bounds`).
     fn a11y_tree(&mut self, _scale: f32) -> Option<a11y::accesskit::TreeUpdate> {

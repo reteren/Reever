@@ -183,6 +183,29 @@ pub fn start(app: &AppHandle) {
             std::thread::sleep(Duration::from_millis(300));
             shoot(&app, &format!("settings-{}", i + 1));
         }
+        // вкладка «Текст»: пустая и с распознанным файлом (без моделей — готовый итог)
+        crate::main_native::send(crate::main_native::Msg::Tab("text".into()));
+        std::thread::sleep(Duration::from_millis(500));
+        shoot(&app, "text");
+        crate::transcribe::publish(&crate::transcribe::TextJob {
+            kind: crate::transcribe::JobKind::File,
+            name: "lecture.m4a".into(),
+            running: true,
+            progress: Some(0.42),
+            text: "Сегодня поговорим о том, как устроен звук. Сначала - немного истории.".into(),
+            ..Default::default()
+        });
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "text-running");
+        crate::transcribe::publish(&crate::transcribe::TextJob {
+            kind: crate::transcribe::JobKind::Listen,
+            text: "Welcome back to the channel. Today we are testing speech to text.\nВторая часть - по-русски.".into(),
+            end: Some(crate::transcribe::JobEnd::Silence),
+            copied: true,
+            ..Default::default()
+        });
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "text-done");
         crate::main_native::send(crate::main_native::Msg::Tab("actions".into()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "actions");
