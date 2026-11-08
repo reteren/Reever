@@ -3066,6 +3066,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn rounded_shape_covers_the_whole_window_but_the_corners() {
+        // углы [x0, y0, x1, y1]: вся высота и ширина, кроме скруглений
+        let (w, h) = (980.0f32, 640.0f32);
+        let rects = rounded_rects(w, h, 18.0);
+        let inside = |x: f64, y: f64| rects.iter().any(|[x0, y0, x1, y1]| x >= *x0 && x < *x1 && y >= *y0 && y < *y1);
+        for r in &rects {
+            assert!(r[2] > r[0] && r[3] > r[1], "{r:?}");
+        }
+        // середины краёв — в окне (раньше верх 18 px и низ 36 px срезались)
+        for (x, y) in [(490.0, 0.5), (490.0, 639.5), (0.5, 320.0), (979.5, 320.0), (490.0, 10.0), (490.0, 620.0)] {
+            assert!(inside(x, y), "({x}, {y})");
+        }
+        // самые углы — нет
+        assert!(!inside(0.5, 0.5) && !inside(979.5, 639.5));
+    }
+
+    #[test]
     fn shape_covers_the_panel_and_skips_empty_corners() {
         let (w, h) = (skin_w() as usize, skin_h() as usize);
         let alpha = vec![0u8; w * h];
@@ -3110,13 +3127,17 @@ fn crt_on(r: Rect, p: f32) -> (Rect, f32) {
 pub fn rounded_rects(w: f32, h: f32, r: f32) -> Vec<[f64; 4]> {
     let mut out = Vec::new();
     let ri = r.ceil() as i32;
+    // углы [x0, y0, x1, y1], как у shape_rects и skin::apply_region (раньше здесь были
+    // ширина и высота — у лёгкого окна срезались верхние r и нижние 2r пикселей)
+    let (w, h) = (w as f64, h as f64);
     for row in 0..ri {
         let dy = r - row as f32 - 0.5;
         let dx = r - (r * r - dy * dy).max(0.0).sqrt();
         let x0 = dx.round() as f64;
-        out.push([x0, row as f64, w as f64 - 2.0 * x0, 1.0]);
-        out.push([x0, (h as i32 - 1 - row) as f64, w as f64 - 2.0 * x0, 1.0]);
+        let row = row as f64;
+        out.push([x0, row, w - x0, row + 1.0]);
+        out.push([x0, h - 1.0 - row, w - x0, h - row]);
     }
-    out.push([0.0, ri as f64, w as f64, (h as i32 - 2 * ri) as f64]);
+    out.push([0.0, ri as f64, w, h - ri as f64]);
     out
 }
