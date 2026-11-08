@@ -356,7 +356,6 @@
   "settings.indexState.ready": "klart",
   "hotkey.none": "inte inställt",
   "hotkey.press": "tryck en kombination… (Esc - avbryt)",
-  "hotkey.needModifier": "en modifieringstangent behövs (Ctrl/Alt/Shift)",
   "hotkey.applied": "kortkommandot tillämpat: {combo}",
   "hotkey.error": "kortkommando: {error}",
   "error.prefix": "Fel - {context}: {message}",

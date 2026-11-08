@@ -356,7 +356,6 @@
   "settings.indexState.ready": "gereed",
   "hotkey.none": "niet ingesteld",
   "hotkey.press": "druk op een combinatie… (Esc - annuleren)",
-  "hotkey.needModifier": "een wijzigingstoets is nodig (Ctrl/Alt/Shift)",
   "hotkey.applied": "sneltoets toegepast: {combo}",
   "hotkey.error": "sneltoets: {error}",
   "error.prefix": "Fout - {context}: {message}",

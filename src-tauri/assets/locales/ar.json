@@ -360,7 +360,6 @@
   "settings.indexState.ready": "جاهز",
   "hotkey.none": "غير معيّن",
   "hotkey.press": "اضغط مجموعة مفاتيح… (Esc - إلغاء)",
-  "hotkey.needModifier": "يلزم مفتاح تعديل (Ctrl/Alt/Shift)",
   "hotkey.applied": "تم تطبيق مفتاح الاختصار: {combo}",
   "hotkey.error": "مفتاح الاختصار: {error}",
   "error.prefix": "خطأ - {context}: {message}",

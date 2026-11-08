@@ -355,7 +355,6 @@
   "settings.indexState.ready": "就緒",
   "hotkey.none": "未設定",
   "hotkey.press": "撳一組按鍵…（Esc - 取消）",
-  "hotkey.needModifier": "要有修飾鍵（Ctrl/Alt/Shift）",
   "hotkey.applied": "快捷鍵已套用：{combo}",
   "hotkey.error": "快捷鍵：{error}",
   "error.prefix": "出錯 - {context}：{message}",

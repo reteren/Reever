@@ -359,7 +359,6 @@
   "settings.indexState.ready": "lest",
   "hotkey.none": "mhux issettjat",
   "hotkey.press": "agħfas kombinazzjoni… (Esc - ikkanċella)",
-  "hotkey.needModifier": "hemm bżonn ta' modifier (Ctrl/Alt/Shift)",
   "hotkey.applied": "shortcut applikat: {combo}",
   "hotkey.error": "shortcut: {error}",
   "error.prefix": "Żball - {context}: {message}",

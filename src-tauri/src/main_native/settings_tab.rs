@@ -693,7 +693,7 @@ impl SettingsTab {
         self.form_result(r)
     }
 
-    /// Запись сочетания (как onKey в app.js): Esc — отмена, нужен модификатор, кроме F-клавиш.
+    /// Запись клавиши или сочетания: Esc — отмена; модификатор не обязателен (PgUp, Home, F5…).
     fn record(&mut self, key: &str, ev: KeyEvent) -> Option<SettingsOut> {
         let k = ev.key;
         if k == VK_ESCAPE.0 as u32 {
@@ -706,19 +706,8 @@ impl SettingsTab {
         if matches!(k, 0x10 | 0x11 | 0x12 | 0xA0..=0xA5 | 0x5B | 0x5C) {
             return None;
         }
-        let main = match k {
-            0x41..=0x5A => char::from_u32(k).map(|c| c.to_string()),
-            0x30..=0x39 => char::from_u32(k).map(|c| c.to_string()),
-            0x70..=0x87 => Some(format!("F{}", k - 0x6F)),
-            0x20 => Some("Space".into()),
-            0x0D => Some("Enter".into()),
-            0x09 => Some("Tab".into()),
-            0x25 => Some("Left".into()),
-            0x26 => Some("Up".into()),
-            0x27 => Some("Right".into()),
-            0x28 => Some("Down".into()),
-            _ => None,
-        }?;
+        // любая клавиша, которую можно зарегистрировать, — и без модификатора (PgUp, Home, F5…)
+        let main = crate::hotkeys::key_name(k)?;
         let mut mods = Vec::new();
         if ev.ctrl {
             mods.push("Ctrl");
@@ -728,11 +717,6 @@ impl SettingsTab {
         }
         if ev.shift {
             mods.push("Shift");
-        }
-        if mods.is_empty() && !main.starts_with('F') {
-            self.hotkey_note = Some((key.to_string(), self.t("hotkey.needModifier")));
-            self.rebuild();
-            return None;
         }
         let combo = mods.into_iter().map(String::from).chain(std::iter::once(main)).collect::<Vec<_>>().join("+");
         self.recording = None;
@@ -923,14 +907,22 @@ mod tests {
     }
 
     #[test]
-    fn hotkey_recording_needs_a_modifier_and_escape_cancels() {
+    fn hotkey_recording_takes_any_key_and_escape_cancels() {
         let mut t = tab();
         t.on_event(FormEvent::Click("hk:hotkey".into()));
         assert!(t.recording());
-        assert_eq!(t.record("hotkey", key(0x41, false)), None);
+        // одни модификаторы — ждём основную клавишу
+        assert_eq!(t.record("hotkey", key(0x11, true)), None);
         assert!(t.recording());
         let out = t.record("hotkey", key(0x41, true));
         assert_eq!(out, Some(SettingsOut::Hotkey { mute: false, combo: "Ctrl+A".into(), mode: "both".into() }));
+        // одна клавиша без модификатора — тоже (PgDn, Home)
+        t.on_event(FormEvent::Click("hk:hotkey".into()));
+        let out = t.record("hotkey", key(0x22, false));
+        assert_eq!(out, Some(SettingsOut::Hotkey { mute: false, combo: "PageDown".into(), mode: "both".into() }));
+        t.on_event(FormEvent::Click("hk:hotkey".into()));
+        let out = t.record("hotkey", key(0x24, false));
+        assert_eq!(out, Some(SettingsOut::Hotkey { mute: false, combo: "Home".into(), mode: "both".into() }));
         t.on_event(FormEvent::Click("hk:mute_hotkey".into()));
         t.record("mute_hotkey", key(VK_ESCAPE.0 as u32, false));
         assert!(!t.recording());

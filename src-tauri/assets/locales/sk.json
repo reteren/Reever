@@ -358,7 +358,6 @@
   "settings.indexState.ready": "pripravený",
   "hotkey.none": "nenastavené",
   "hotkey.press": "stlačte kombináciu… (Esc - zrušiť)",
-  "hotkey.needModifier": "je potrebný modifikátor (Ctrl/Alt/Shift)",
   "hotkey.applied": "skratka použitá: {combo}",
   "hotkey.error": "skratka: {error}",
   "error.prefix": "Chyba - {context}: {message}",

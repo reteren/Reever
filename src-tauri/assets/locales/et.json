@@ -356,7 +356,6 @@
   "settings.indexState.ready": "valmis",
   "hotkey.none": "pole määratud",
   "hotkey.press": "vajuta klahvikombinatsiooni… (Esc - loobu)",
-  "hotkey.needModifier": "vaja on muuteklahvi (Ctrl/Alt/Shift)",
   "hotkey.applied": "kiirklahv rakendatud: {combo}",
   "hotkey.error": "kiirklahv: {error}",
   "error.prefix": "Viga - {context}: {message}",

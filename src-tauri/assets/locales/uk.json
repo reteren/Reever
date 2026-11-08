@@ -358,7 +358,6 @@
   "settings.indexState.ready": "готовий",
   "hotkey.none": "не задано",
   "hotkey.press": "натисніть комбінацію… (Esc - скасувати)",
-  "hotkey.needModifier": "потрібен модифікатор (Ctrl/Alt/Shift)",
   "hotkey.applied": "гарячу клавішу застосовано: {combo}",
   "hotkey.error": "гаряча клавіша: {error}",
   "error.prefix": "Помилка - {context}: {message}",

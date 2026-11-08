@@ -355,7 +355,6 @@
   "settings.indexState.ready": "준비됨",
   "hotkey.none": "설정 안 됨",
   "hotkey.press": "조합을 누르세요… (Esc - 취소)",
-  "hotkey.needModifier": "보조 키가 필요합니다 (Ctrl/Alt/Shift)",
   "hotkey.applied": "단축키 적용: {combo}",
   "hotkey.error": "단축키: {error}",
   "error.prefix": "오류 - {context}: {message}",

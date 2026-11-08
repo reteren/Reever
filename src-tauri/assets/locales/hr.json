@@ -357,7 +357,6 @@
   "settings.indexState.ready": "spreman",
   "hotkey.none": "nije postavljeno",
   "hotkey.press": "pritisnite kombinaciju… (Esc - odustani)",
-  "hotkey.needModifier": "potreban je modifikator (Ctrl/Alt/Shift)",
   "hotkey.applied": "prečac primijenjen: {combo}",
   "hotkey.error": "prečac: {error}",
   "error.prefix": "Pogreška - {context}: {message}",

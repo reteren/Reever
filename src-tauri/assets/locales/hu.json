@@ -356,7 +356,6 @@
   "settings.indexState.ready": "kész",
   "hotkey.none": "nincs beállítva",
   "hotkey.press": "nyomj meg egy kombinációt… (Esc - mégse)",
-  "hotkey.needModifier": "módosítóbillentyű szükséges (Ctrl/Alt/Shift)",
   "hotkey.applied": "billentyűparancs alkalmazva: {combo}",
   "hotkey.error": "billentyűparancs: {error}",
   "error.prefix": "Hiba - {context}: {message}",

@@ -356,7 +356,6 @@
   "settings.indexState.ready": "pronto",
   "hotkey.none": "não definido",
   "hotkey.press": "pressione uma combinação… (Esc - cancelar)",
-  "hotkey.needModifier": "é preciso um modificador (Ctrl/Alt/Shift)",
   "hotkey.applied": "atalho aplicado: {combo}",
   "hotkey.error": "atalho: {error}",
   "error.prefix": "Erro - {context}: {message}",

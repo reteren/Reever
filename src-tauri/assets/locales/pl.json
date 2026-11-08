@@ -358,7 +358,6 @@
   "settings.indexState.ready": "gotowy",
   "hotkey.none": "nie ustawiono",
   "hotkey.press": "naciśnij kombinację… (Esc - anuluj)",
-  "hotkey.needModifier": "potrzebny modyfikator (Ctrl/Alt/Shift)",
   "hotkey.applied": "skrót zastosowany: {combo}",
   "hotkey.error": "skrót: {error}",
   "error.prefix": "Błąd - {context}: {message}",

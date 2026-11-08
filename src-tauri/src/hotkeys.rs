@@ -47,6 +47,62 @@ impl Shortcut {
     }
 }
 
+/// Имя клавиши по коду VK — для записи сочетания в настройках; `Shortcut::parse` понимает его
+/// обратно. None — клавиша, которую зарегистрировать нельзя (модификаторы, Esc и т. п.).
+pub fn key_name(vk: u32) -> Option<String> {
+    Some(match vk {
+        0x41..=0x5A | 0x30..=0x39 => char::from_u32(vk)?.to_string(),
+        0x70..=0x87 => format!("F{}", vk - 0x6F),
+        0x60..=0x69 => format!("Numpad{}", vk - 0x60),
+        _ => match vk {
+            0x08 => "Backspace",
+            0x09 => "Tab",
+            0x0D => "Enter",
+            0x13 => "Pause",
+            0x14 => "CapsLock",
+            0x20 => "Space",
+            0x21 => "PageUp",
+            0x22 => "PageDown",
+            0x23 => "End",
+            0x24 => "Home",
+            0x25 => "Left",
+            0x26 => "Up",
+            0x27 => "Right",
+            0x28 => "Down",
+            0x2C => "PrintScreen",
+            0x2D => "Insert",
+            0x2E => "Delete",
+            0x6A => "NumpadMultiply",
+            0x6B => "NumpadAdd",
+            0x6D => "NumpadSubtract",
+            0x6E => "NumpadDecimal",
+            0x6F => "NumpadDivide",
+            0x90 => "NumLock",
+            0x91 => "ScrollLock",
+            0xAD => "VolumeMute",
+            0xAE => "VolumeDown",
+            0xAF => "VolumeUp",
+            0xB0 => "MediaTrackNext",
+            0xB1 => "MediaTrackPrev",
+            0xB2 => "MediaStop",
+            0xB3 => "MediaPlayPause",
+            0xBA => ";",
+            0xBB => "=",
+            0xBC => ",",
+            0xBD => "-",
+            0xBE => ".",
+            0xBF => "/",
+            0xC0 => "`",
+            0xDB => "[",
+            0xDC => "\\",
+            0xDD => "]",
+            0xDE => "'",
+            _ => return None,
+        }
+        .to_string(),
+    })
+}
+
 fn key_code(key: &str) -> Option<u32> {
     let key = key
         .strip_prefix("KEY")
@@ -322,5 +378,35 @@ mod tests {
         assert!(Shortcut::parse("Ctrl+").is_err());
         assert!(Shortcut::parse("Ctrl+G+Shift").is_err());
         assert!(Shortcut::parse("Ctrl+F25").is_err());
+    }
+
+    #[test]
+    #[ignore = "регистрирует клавиши в системе на миг"]
+    fn single_keys_register_without_a_modifier() {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{RegisterHotKey, UnregisterHotKey, HOT_KEY_MODIFIERS, MOD_NOREPEAT};
+        for (i, name) in ["PageDown", "Home", "Pause", "F9"].iter().enumerate() {
+            let s = Shortcut::parse(name).unwrap();
+            let id = 0x7000 + i as i32;
+            unsafe { RegisterHotKey(None, id, HOT_KEY_MODIFIERS(s.modifiers | MOD_NOREPEAT.0), s.vk) }.unwrap_or_else(|e| panic!("{name}: {e}"));
+            unsafe { UnregisterHotKey(None, id) }.unwrap();
+        }
+    }
+
+    #[test]
+    fn every_recordable_key_parses_back_without_a_modifier() {
+        let mut n = 0;
+        for vk in 0..=0xFF {
+            if let Some(name) = super::key_name(vk) {
+                let parsed = Shortcut::parse(&name).unwrap_or_else(|e| panic!("{name}: {e}"));
+                assert_eq!(parsed.vk, vk, "{name}");
+                assert_eq!(parsed.modifiers, 0, "{name}");
+                n += 1;
+            }
+        }
+        assert!(n > 90, "{n}");
+        for name in ["PageUp", "PageDown", "Home", "End", "Insert", "Delete", "Numpad5"] {
+            assert!(Shortcut::parse(name).is_ok(), "{name}");
+        }
+        assert_eq!(Shortcut::parse("Shift+PageDown").unwrap().vk, 0x22);
     }
 }

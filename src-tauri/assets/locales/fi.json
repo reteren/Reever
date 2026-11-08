@@ -356,7 +356,6 @@
   "settings.indexState.ready": "valmis",
   "hotkey.none": "ei asetettu",
   "hotkey.press": "paina yhdistelmää… (Esc - peruuta)",
-  "hotkey.needModifier": "tarvitaan muokkausnäppäin (Ctrl/Alt/Shift)",
   "hotkey.applied": "pikanäppäin otettu käyttöön: {combo}",
   "hotkey.error": "pikanäppäin: {error}",
   "error.prefix": "Virhe - {context}: {message}",

@@ -358,7 +358,6 @@
   "settings.indexState.ready": "pripravljen",
   "hotkey.none": "ni nastavljeno",
   "hotkey.press": "pritisnite kombinacijo… (Esc - prekliči)",
-  "hotkey.needModifier": "potrebna je spreminjevalna tipka (Ctrl/Alt/Shift)",
   "hotkey.applied": "bližnjica uveljavljena: {combo}",
   "hotkey.error": "bližnjica: {error}",
   "error.prefix": "Napaka - {context}: {message}",

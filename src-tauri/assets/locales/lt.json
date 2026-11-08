@@ -358,7 +358,6 @@
   "settings.indexState.ready": "paruoštas",
   "hotkey.none": "nenustatyta",
   "hotkey.press": "paspauskite derinį… (Esc - atšaukti)",
-  "hotkey.needModifier": "reikia modifikatoriaus (Ctrl/Alt/Shift)",
   "hotkey.applied": "spartusis klavišas pritaikytas: {combo}",
   "hotkey.error": "spartusis klavišas: {error}",
   "error.prefix": "Klaida - {context}: {message}",

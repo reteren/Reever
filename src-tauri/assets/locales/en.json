@@ -356,7 +356,6 @@
   "settings.indexState.ready": "ready",
   "hotkey.none": "not set",
   "hotkey.press": "press a combination… (Esc - cancel)",
-  "hotkey.needModifier": "a modifier is needed (Ctrl/Alt/Shift)",
   "hotkey.applied": "hotkey applied: {combo}",
   "hotkey.error": "hotkey: {error}",
   "error.prefix": "Error - {context}: {message}",

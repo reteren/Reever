@@ -356,7 +356,6 @@
   "settings.indexState.ready": "bereit",
   "hotkey.none": "nicht festgelegt",
   "hotkey.press": "Tastenkombination drücken… (Esc - abbrechen)",
-  "hotkey.needModifier": "ein Modifikator ist erforderlich (Ctrl/Alt/Shift)",
   "hotkey.applied": "Tastenkürzel übernommen: {combo}",
   "hotkey.error": "Tastenkürzel: {error}",
   "error.prefix": "Fehler - {context}: {message}",

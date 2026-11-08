@@ -357,7 +357,6 @@
   "settings.indexState.ready": "gata",
   "hotkey.none": "nesetată",
   "hotkey.press": "apasă o combinație… (Esc - anulează)",
-  "hotkey.needModifier": "e nevoie de o tastă modificatoare (Ctrl/Alt/Shift)",
   "hotkey.applied": "tastă rapidă aplicată: {combo}",
   "hotkey.error": "tastă rapidă: {error}",
   "error.prefix": "Eroare - {context}: {message}",

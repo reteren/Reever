@@ -356,7 +356,6 @@
   "settings.indexState.ready": "έτοιμο",
   "hotkey.none": "δεν έχει οριστεί",
   "hotkey.press": "πατήστε έναν συνδυασμό… (Esc - ακύρωση)",
-  "hotkey.needModifier": "χρειάζεται πλήκτρο τροποποίησης (Ctrl/Alt/Shift)",
   "hotkey.applied": "η συντόμευση εφαρμόστηκε: {combo}",
   "hotkey.error": "συντόμευση: {error}",
   "error.prefix": "Σφάλμα - {context}: {message}",

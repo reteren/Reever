@@ -355,7 +355,6 @@
   "settings.indexState.ready": "準備完了",
   "hotkey.none": "未設定",
   "hotkey.press": "キーの組み合わせを押してください…（Escでキャンセル）",
-  "hotkey.needModifier": "修飾キーが必要です（Ctrl/Alt/Shift）",
   "hotkey.applied": "ホットキーを適用しました：{combo}",
   "hotkey.error": "ホットキー：{error}",
   "error.prefix": "エラー - {context}：{message}",

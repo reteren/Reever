@@ -356,7 +356,6 @@
   "settings.indexState.ready": "готов",
   "hotkey.none": "не е зададен",
   "hotkey.press": "натиснете комбинация… (Esc - отказ)",
-  "hotkey.needModifier": "нужен е модификатор (Ctrl/Alt/Shift)",
   "hotkey.applied": "клавишът е приложен: {combo}",
   "hotkey.error": "клавиш: {error}",
   "error.prefix": "Грешка - {context}: {message}",

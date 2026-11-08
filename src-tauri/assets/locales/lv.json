@@ -357,7 +357,6 @@
   "settings.indexState.ready": "gatavs",
   "hotkey.none": "nav iestatīts",
   "hotkey.press": "nospiediet kombināciju… (Esc - atcelt)",
-  "hotkey.needModifier": "vajadzīgs modificētājs (Ctrl/Alt/Shift)",
   "hotkey.applied": "īsinājumtaustiņš lietots: {combo}",
   "hotkey.error": "īsinājumtaustiņš: {error}",
   "error.prefix": "Kļūda - {context}: {message}",

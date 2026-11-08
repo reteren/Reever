@@ -357,7 +357,6 @@
   "settings.indexState.ready": "prêt",
   "hotkey.none": "non défini",
   "hotkey.press": "appuyez sur une combinaison… (Esc pour annuler)",
-  "hotkey.needModifier": "une touche de modification est requise (Ctrl/Alt/Shift)",
   "hotkey.applied": "raccourci clavier appliqué : {combo}",
   "hotkey.error": "raccourci clavier : {error}",
   "error.prefix": "Erreur - {context} : {message}",

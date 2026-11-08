@@ -353,7 +353,6 @@
   "settings.indexState.ready": "готов",
   "hotkey.none": "не задан",
   "hotkey.press": "нажми сочетание… (Esc - отмена)",
-  "hotkey.needModifier": "нужен модификатор (Ctrl/Alt/Shift)",
   "hotkey.applied": "хоткей применён: {combo}",
   "hotkey.error": "хоткей: {error}",
   "error.prefix": "Ошибка - {context}: {message}",

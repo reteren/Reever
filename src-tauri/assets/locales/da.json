@@ -356,7 +356,6 @@
   "settings.indexState.ready": "klar",
   "hotkey.none": "ikke angivet",
   "hotkey.press": "tryk på en kombination… (Esc - annuller)",
-  "hotkey.needModifier": "en ændringstast er nødvendig (Ctrl/Alt/Shift)",
   "hotkey.applied": "genvejstast anvendt: {combo}",
   "hotkey.error": "genvejstast: {error}",
   "error.prefix": "Fejl - {context}: {message}",

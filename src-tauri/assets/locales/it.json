@@ -356,7 +356,6 @@
   "settings.indexState.ready": "pronto",
   "hotkey.none": "non impostata",
   "hotkey.press": "premi una combinazione… (Esc - annulla)",
-  "hotkey.needModifier": "serve un tasto modificatore (Ctrl/Alt/Shift)",
   "hotkey.applied": "scorciatoia applicata: {combo}",
   "hotkey.error": "scorciatoia: {error}",
   "error.prefix": "Errore - {context}: {message}",
