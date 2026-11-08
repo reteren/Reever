@@ -10,6 +10,10 @@ use std::time::{Duration, Instant};
 use crate::app::AppHandle;
 use crate::transcribe::{publish, JobEnd, JobKind, Joiner, Recognizer, TextJob};
 
+/// До первой речи в звуке компьютера ждать не меньше этого: команду сказали, видео ещё не
+/// включили.
+const FIRST_SPEECH_WAIT: Duration = Duration::from_secs(10);
+
 /// Секунд без текста больше этого — слушать до команды.
 pub const SILENCE_UNTIL_COMMAND: u32 = 11;
 
@@ -101,7 +105,13 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
     let mut segmenter = Recognizer::segmenter();
     let mut joiner = Joiner::new(s.dictation_punctuation);
     let mut phrases = Vec::new();
-    let mut last_text = Instant::now();
+    // тишина считается по звуку: пока в нём речь (фраза ещё не кончилась — текста нет),
+    // прослушивание идёт; до первой речи — не меньше FIRST_SPEECH_WAIT (успеть включить видео)
+    let started = Instant::now();
+    let mut quiet_since = Instant::now();
+    let mut heard = false;
+    // открытое окно — на вкладку «Текст»: там идёт текст
+    crate::main_native::send(crate::main_native::Msg::Tab("text".into()));
     let end = loop {
         match flag.load(Ordering::SeqCst) {
             STOP => break JobEnd::Stopped,
@@ -111,13 +121,21 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
         if let Ok(packet) = rx.recv_timeout(Duration::from_millis(100)) {
             recognizer.push(&mut segmenter, &packet, &mut phrases);
         }
+        if segmenter.in_speech() {
+            quiet_since = Instant::now();
+            heard = true;
+        }
         for phrase in phrases.drain(..) {
             match recognizer.phrase(&phrase) {
                 Ok(text) if !text.is_empty() => {
                     joiner.push(&text, false);
                     job.text = joiner.text.clone();
-                    last_text = Instant::now();
+                    quiet_since = Instant::now();
+                    heard = true;
                     publish(job);
+                    // фраза — в бегущую строку окна и пузырь маскота
+                    let _ = app.emit("reever://partial", format!("🎧 {text}"));
+                    let _ = app.emit("reever://said", text.clone());
                 }
                 Ok(_) => {}
                 Err(e) => {
@@ -129,11 +147,15 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
         if !job.error.is_empty() {
             break JobEnd::Error;
         }
-        if limit.is_some_and(|l| last_text.elapsed() >= l) && !segmenter.in_speech() {
-            break JobEnd::Silence;
+        if let Some(l) = limit {
+            let waited = if heard { quiet_since.elapsed() } else { started.elapsed().saturating_sub(FIRST_SPEECH_WAIT.saturating_sub(l)) };
+            if waited >= l && !segmenter.in_speech() {
+                break JobEnd::Silence;
+            }
         }
     };
     drop(capture);
+    let _ = app.emit("reever://partial", String::new());
     // «стоп» посреди фразы — дослушанное тоже в текст
     if matches!(end, JobEnd::Stopped) {
         if let Some(rest) = segmenter.finish_now() {
