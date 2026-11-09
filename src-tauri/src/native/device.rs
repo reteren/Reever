@@ -49,6 +49,18 @@ impl Gfx {
         Ok(Self { d3d, dxgi_factory, dc, dcomp, generation, software, _d2d_device: d2d_device })
     }
 
+    /// Отдать неиспользуемое: Direct2D держит промежуточные текстуры эффектов (свечение текста),
+    /// атласы глифов и геометрию, пока его не попросить; драйвер — свои запасы. Ресурсы, не
+    /// нужные дольше `unused_ms`, освобождаются; понадобятся — создадутся заново.
+    pub fn trim(&self, unused_ms: u32) {
+        unsafe {
+            self._d2d_device.ClearResources(unused_ms);
+            if let Ok(dxgi) = self.d3d.cast::<windows::Win32::Graphics::Dxgi::IDXGIDevice3>() {
+                dxgi.Trim();
+            }
+        }
+    }
+
     /// Устройство потеряно (драйвер сброшен или видеокарту убрали).
     pub fn is_lost(&self) -> bool {
         unsafe { self.d3d.GetDeviceRemovedReason().is_err() }

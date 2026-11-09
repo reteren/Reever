@@ -75,6 +75,8 @@ pub fn start(app: &AppHandle) {
         let mut fresh = (*config.get()).clone();
         // REEVER_MAIN_DEMO_LITE=1 — лёгкий вид (lite.css)
         fresh.settings.lite_ui = std::env::var_os("REEVER_MAIN_DEMO_LITE").is_some();
+        // REEVER_MAIN_DEMO_NO_MONITOR=1 — без мониторчика лёгкого вида (замер его цены)
+        fresh.settings.lite_monitor = std::env::var_os("REEVER_MAIN_DEMO_NO_MONITOR").is_none();
         // REEVER_MAIN_DEMO_LOCALE=ar — язык интерфейса (арабский: зеркальная раскладка)
         if let Ok(code) = std::env::var("REEVER_MAIN_DEMO_LOCALE") {
             let resolved = crate::uilang::resolve(&code);
@@ -113,12 +115,36 @@ pub fn start(app: &AppHandle) {
         std::thread::sleep(Duration::from_millis(120));
         eprintln!("[main-demo] windows added by a double show: {}", visible_windows() - before);
         shoot(&app, "power-on");
+        memory(started, "power-on");
         step(started, "window shown");
+        // REEVER_MAIN_DEMO_SOAK=<с> — столько «слушаю» с анимацией, память каждые 5 с
+        // (растёт ли с каждым кадром или выходит на полку)
+        if let Some(soak) = std::env::var("REEVER_MAIN_DEMO_SOAK").ok().and_then(|v| v.parse::<u64>().ok()) {
+            let nostate = std::env::var_os("REEVER_MAIN_DEMO_SOAK_NOSTATE").is_some();
+            if !nostate {
+                events::set_state(&app, "listening");
+            }
+            let t = Instant::now();
+            let mut next = 0u64;
+            while t.elapsed() < Duration::from_secs(soak) {
+                let s = t.elapsed().as_secs_f32();
+                let _ = app.emit("reever://level", 0.02 + 0.08 * (s * 7.0).sin().abs());
+                if t.elapsed().as_secs() >= next {
+                    memory(started, &format!("soak {next} s, frames {:?}", crate::main_native::frames(&app)));
+                    next += 5;
+                }
+                std::thread::sleep(Duration::from_millis(33));
+            }
+            events::set_state(&app, "idle");
+            std::thread::sleep(Duration::from_secs(3));
+            memory(started, "soak idle 3 s");
+        }
         let _ = app.emit("reever://status", serde_json::json!({ "asr": "ready", "model": "parakeet-v3" }));
         events::ui_log(&app, "[main-demo] журнал: первая строка");
         events::ui_log(&app, "[main-demo] a second line that is long enough to wrap across the log screen of the native main window");
         std::thread::sleep(Duration::from_millis(1500));
         shoot(&app, "home-idle");
+        memory(started, "home-idle");
         memory(started, "idle, window open");
         let images0 = crate::main_native::image_stats(&app);
         let frames0 = crate::main_native::frames(&app);
@@ -156,6 +182,7 @@ pub fn start(app: &AppHandle) {
             std::thread::sleep(Duration::from_millis(33));
         }
         shoot(&app, "home-listening");
+        memory(started, "home-listening");
         eprintln!("[main-demo] cpu listening 3 s: {:?}", cpu.finish());
         eprintln!(
             "[main-demo] listening 3 s: frames {:?}, fps limit {:?}",
@@ -166,6 +193,7 @@ pub fn start(app: &AppHandle) {
         events::set_state(&app, "busy");
         std::thread::sleep(Duration::from_millis(900));
         shoot(&app, "home-heard");
+        memory(started, "home-heard");
         events::set_state(&app, "idle");
         let _ = app.emit("reever://partial", "");
         std::thread::sleep(Duration::from_millis(1200));
@@ -174,10 +202,12 @@ pub fn start(app: &AppHandle) {
         crate::main_native::send(crate::main_native::Msg::Tab("logs".into()));
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "logs");
+        memory(started, "logs");
         step(started, "settings tab");
         crate::main_native::send(crate::main_native::Msg::Tab("settings".into()));
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "settings");
+        memory(started, "settings");
         for (i, d) in [900.0f32, 650.0, 650.0, 300.0].iter().enumerate() {
             crate::main_native::send(crate::main_native::Msg::ScrollSettings(*d));
             std::thread::sleep(Duration::from_millis(300));
@@ -187,6 +217,7 @@ pub fn start(app: &AppHandle) {
         crate::main_native::send(crate::main_native::Msg::Tab("text".into()));
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "text");
+        memory(started, "text");
         crate::transcribe::publish(&crate::transcribe::TextJob {
             kind: crate::transcribe::JobKind::File,
             name: "lecture.m4a".into(),
@@ -197,6 +228,7 @@ pub fn start(app: &AppHandle) {
         });
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "text-running");
+        memory(started, "text-running");
         crate::transcribe::publish(&crate::transcribe::TextJob {
             kind: crate::transcribe::JobKind::Listen,
             text: "Welcome back to the channel. Today we are testing speech to text.\nВторая часть - по-русски.".into(),
@@ -206,12 +238,15 @@ pub fn start(app: &AppHandle) {
         });
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "text-done");
+        memory(started, "text-done");
         crate::main_native::send(crate::main_native::Msg::Tab("actions".into()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "actions");
+        memory(started, "actions");
         crate::main_native::send(crate::main_native::Msg::SelectAction(String::new()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "actions-edit");
+        memory(started, "actions-edit");
         for which in ["calibration", "voice", "apps", "scan"] {
             crate::main_native::send(crate::main_native::Msg::TestOverlay(which.into()));
             std::thread::sleep(Duration::from_millis(match which {
@@ -232,6 +267,7 @@ pub fn start(app: &AppHandle) {
         }
         std::thread::sleep(Duration::from_millis(300));
         shoot(&app, "kbd-home");
+        memory(started, "kbd-home");
         key(0x09, false); // первая строка «Что можно сказать»
         key(0x28, false); // ↓ — вторая
         key(0x0D, false); // Enter — раскрыть её редактор
@@ -239,6 +275,7 @@ pub fn start(app: &AppHandle) {
         key(0x09, false); // поле подписи
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "kbd-editor");
+        memory(started, "kbd-editor");
         key(0x1B, false);
         crate::main_native::send(crate::main_native::Msg::GrammarDone(None));
         crate::main_native::send(crate::main_native::Msg::Tab("settings".into()));
@@ -248,28 +285,34 @@ pub fn start(app: &AppHandle) {
         }
         std::thread::sleep(Duration::from_millis(300));
         shoot(&app, "kbd-settings");
+        memory(started, "kbd-settings");
         crate::main_native::send(crate::main_native::Msg::Tab("home".into()));
         // компактный режим: полоска, бегущая строка, обратно
         crate::main_native::shade_for_test(&app, true);
         let _ = app.emit("reever://partial", "открой папку загрузки и найди там файл отчёта");
         std::thread::sleep(Duration::from_millis(700));
         shoot(&app, "shade");
+        memory(started, "shade");
         let _ = app.emit("reever://partial", "");
         crate::main_native::shade_for_test(&app, false);
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "unshaded");
+        memory(started, "unshaded");
         // редактор «Что можно сказать»: общий (wake-слова) и под строкой диктовки
         crate::main_native::send(crate::main_native::Msg::EditGrammar("general".into()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "grammar-general");
+        memory(started, "grammar-general");
         crate::main_native::send(crate::main_native::Msg::EditGrammar("dictate".into()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "grammar-dictate");
+        memory(started, "grammar-dictate");
         crate::main_native::send(crate::main_native::Msg::GrammarDone(None));
         step(started, "paused");
         events::set_state(&app, "paused");
         std::thread::sleep(Duration::from_millis(1200));
         shoot(&app, "home-paused");
+        memory(started, "home-paused");
         events::set_state(&app, "idle");
         std::thread::sleep(Duration::from_millis(800));
         memory(started, "end, window open");

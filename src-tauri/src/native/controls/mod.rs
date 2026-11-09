@@ -130,7 +130,8 @@ impl TextCache {
         if let Some(l) = self.map.get(&key) {
             return Some(l.clone());
         }
-        if self.map.len() > 2000 {
+        // разметка длинной строки журнала — десятки КБ; 2000 штук держали десятки МБ
+        if self.map.len() > 500 {
             self.map.clear();
         }
         let l = Rc::new(text.layout(s, style, width).ok()?);

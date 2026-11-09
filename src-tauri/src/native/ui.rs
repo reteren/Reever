@@ -43,6 +43,8 @@ pub struct Ui {
     factory: ID2D1Factory1,
     gfx: Option<Gfx>,
     generation: u64,
+    /// Когда последний раз отдавали кэши устройства (`Gfx::trim`).
+    last_trim: Instant,
     text: Text,
     images: Images,
     windows: Vec<NativeWindow>,
@@ -67,6 +69,7 @@ impl Ui {
             factory: create_d2d_factory()?,
             gfx: None,
             generation: 0,
+            last_trim: Instant::now(),
             text: Text::new()?,
             images: Images::new()?,
             windows: Vec::new(),
@@ -461,6 +464,13 @@ impl Ui {
         if lost {
             self.recover_device("устройство потеряно");
         }
+        // раз в TRIM_EVERY — отдать то, что Direct2D и драйвер копят между кадрами
+        if now.saturating_duration_since(self.last_trim) >= TRIM_EVERY {
+            self.last_trim = now;
+            if let Some(gfx) = &self.gfx {
+                gfx.trim(TRIM_UNUSED_MS);
+            }
+        }
         self.frames += 1;
         self.clock.frame_done(now);
     }
@@ -516,6 +526,10 @@ impl Ui {
 }
 
 /// Частота обновления экрана по данным DWM (для лимита «как монитор»).
+/// Как часто отдавать кэши Direct2D и драйвера и что считать ненужным (не использовалось дольше).
+const TRIM_EVERY: Duration = Duration::from_secs(20);
+const TRIM_UNUSED_MS: u32 = 10_000;
+
 fn refresh_hz() -> f64 {
     let mut info = DWM_TIMING_INFO { cbSize: std::mem::size_of::<DWM_TIMING_INFO>() as u32, ..Default::default() };
     if unsafe { DwmGetCompositionTimingInfo(HWND::default(), &mut info) }.is_ok() && info.rateRefresh.uiDenominator != 0 {
