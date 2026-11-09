@@ -246,8 +246,14 @@ fn apply_setting(app: &AppHandle, out: settings_tab::SettingsOut) {
     let err = |e: String| tr("settings.error", &[("error", &e)]);
     let saved = tr("settings.saved", &[]);
     let msg = match out {
-        SettingsOut::Patch(map) => crate::commands_api::save_settings(app.clone(), app.state(), app.state(), serde_json::Value::Object(map))
-            .map_or_else(err, |_| saved.clone()),
+        SettingsOut::Patch(map) => {
+            let monitor = map.contains_key("lite_monitor");
+            let r = crate::commands_api::save_settings(app.clone(), app.state(), app.state(), serde_json::Value::Object(map));
+            if monitor {
+                crate::bubble::configure_monitor(app);
+            }
+            r.map_or_else(err, |_| saved.clone())
+        }
         SettingsOut::LiteUi(on) => crate::commands_api::set_lite_ui(app.clone(), app.state(), on).map_or_else(err, |_| saved.clone()),
         SettingsOut::Autostart(on) => match crate::commands_api::set_autostart(app.clone(), on) {
             Ok(()) => tr("settings.autostartState", &[("state", &tr(if on { "common.on" } else { "common.off" }, &[]))]),

@@ -257,6 +257,8 @@
   "settings.ui_languages": "Oberflächensprachen",
   "settings.lite_ui": "Leichte Oberfläche",
   "settings.lite_ui.help": "Einfacheres, leichteres Design.",
+  "settings.lite_monitor": "Textmonitor in der Ecke",
+  "settings.lite_monitor.help": "Im leichten Aussehen zeigt ein kleiner Bildschirm unten rechts, was Sie sagen und tippen - wie die Blase über dem Oktopus, nur ohne ihn.",
   "settings.native_mascot": "Natives Maskottchen",
   "settings.native_mascot.help": "Das Maskottchen wird ohne Web-Engine gezeichnet: weniger Speicher und schnelleres Erscheinen. Experimentell.",
   "settings.native_dialogs": "Native Auswahl- und Bestätigungsfenster",

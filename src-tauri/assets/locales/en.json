@@ -257,6 +257,8 @@
   "settings.ui_languages": "Interface languages",
   "settings.lite_ui": "Lite interface",
   "settings.lite_ui.help": "A simpler, lighter design.",
+  "settings.lite_monitor": "Text monitor in the corner",
+  "settings.lite_monitor.help": "In the lite look, a small screen at the bottom right shows what you are saying and typing - like the bubble above the octopus, only without it.",
   "settings.native_mascot": "Native mascot",
   "settings.native_mascot.help": "The mascot is drawn without the web engine: it uses less memory and appears faster. Experimental.",
   "settings.native_dialogs": "Native choice and confirmation windows",

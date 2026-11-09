@@ -259,6 +259,8 @@
   "settings.ui_languages": "Jeziki vmesnika",
   "settings.lite_ui": "Lahek vmesnik",
   "settings.lite_ui.help": "Preprostejši in lažji videz.",
+  "settings.lite_monitor": "Zaslonček z besedilom v kotu",
+  "settings.lite_monitor.help": "V lahkem videzu se spodaj desno prikaže majhen zaslon s tem, kar govorite in tipkate - kot oblaček nad hobotnico, le brez nje.",
   "settings.native_mascot": "Izvorna maskota",
   "settings.native_mascot.help": "Maskota se riše brez spletnega pogona: porabi manj pomnilnika in se prikaže hitreje. Poskusno.",
   "settings.native_dialogs": "Izvorna okna za izbiro in potrditev",

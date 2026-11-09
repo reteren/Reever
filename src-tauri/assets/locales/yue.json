@@ -256,6 +256,8 @@
   "settings.ui_languages": "介面語言清單",
   "settings.lite_ui": "輕量介面",
   "settings.lite_ui.help": "更簡潔、更輕量嘅介面。",
+  "settings.lite_monitor": "角落嘅文字細芒",
+  "settings.lite_monitor.help": "輕量外觀下，右下角嘅細芒會顯示你講緊同打緊嘅嘢——好似八爪魚上面嘅泡泡，不過冇八爪魚。",
   "settings.native_mascot": "原生吉祥物",
   "settings.native_mascot.help": "吉祥物唔再經網頁引擎繪製：用少啲記憶體，出現得更快。實驗性功能。",
   "settings.native_dialogs": "原生選擇同確認窗口",

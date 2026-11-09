@@ -258,6 +258,8 @@
   "settings.ui_languages": "Langues de l'interface",
   "settings.lite_ui": "Interface légère",
   "settings.lite_ui.help": "Un design plus simple et plus léger.",
+  "settings.lite_monitor": "Moniteur de texte dans le coin",
+  "settings.lite_monitor.help": "Avec l'apparence légère, un petit écran en bas à droite montre ce que vous dites et tapez - comme la bulle au-dessus de la pieuvre, mais sans elle.",
   "settings.native_mascot": "Mascotte native",
   "settings.native_mascot.help": "La mascotte est dessinée sans moteur web : moins de mémoire et apparition plus rapide. Expérimental.",
   "settings.native_dialogs": "Fenêtres natives de choix et de confirmation",

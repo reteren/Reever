@@ -258,6 +258,8 @@
   "settings.ui_languages": "Limbile interfeței",
   "settings.lite_ui": "Interfață ușoară",
   "settings.lite_ui.help": "Un design mai simplu și mai ușor.",
+  "settings.lite_monitor": "Monitor de text în colț",
+  "settings.lite_monitor.help": "În aspectul ușor, un mic ecran în dreapta jos arată ce spui și tastezi - ca balonul de deasupra caracatiței, dar fără ea.",
   "settings.native_mascot": "Mascotă nativă",
   "settings.native_mascot.help": "Mascota este desenată fără motor web: folosește mai puțină memorie și apare mai repede. Experimental.",
   "settings.native_dialogs": "Ferestre native de alegere și confirmare",

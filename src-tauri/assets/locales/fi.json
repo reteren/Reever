@@ -257,6 +257,8 @@
   "settings.ui_languages": "Käyttöliittymän kielet",
   "settings.lite_ui": "Kevyt käyttöliittymä",
   "settings.lite_ui.help": "Yksinkertaisempi ja kevyempi ulkoasu.",
+  "settings.lite_monitor": "Tekstinäyttö kulmassa",
+  "settings.lite_monitor.help": "Kevyessä ulkoasussa oikeaan alakulmaan tulee pieni näyttö siitä, mitä sanot ja kirjoitat - kuin kuplan mustekalan yllä, mutta ilman sitä.",
   "settings.native_mascot": "Natiivi maskotti",
   "settings.native_mascot.help": "Maskotti piirretään ilman verkkomoottoria: vie vähemmän muistia ja ilmestyy nopeammin. Kokeellinen.",
   "settings.native_dialogs": "Natiivit valinta- ja vahvistusikkunat",

@@ -257,6 +257,8 @@
   "settings.ui_languages": "A felület nyelvei",
   "settings.lite_ui": "Könnyű felület",
   "settings.lite_ui.help": "Egyszerűbb, könnyebb megjelenés.",
+  "settings.lite_monitor": "Szövegmonitor a sarokban",
+  "settings.lite_monitor.help": "Könnyű nézetben jobb alul egy kis képernyő mutatja, amit mond és gépel - mint a buborék a polip felett, csak polip nélkül.",
   "settings.native_mascot": "Natív kabala",
   "settings.native_mascot.help": "A kabala webmotor nélkül rajzolódik ki: kevesebb memóriát használ, és gyorsabban jelenik meg. Kísérleti.",
   "settings.native_dialogs": "Natív választó- és megerősítőablakok",

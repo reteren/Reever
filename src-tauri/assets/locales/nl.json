@@ -257,6 +257,8 @@
   "settings.ui_languages": "Interfacetalen",
   "settings.lite_ui": "Lichte interface",
   "settings.lite_ui.help": "Een eenvoudiger, lichter ontwerp.",
+  "settings.lite_monitor": "Tekstmonitor in de hoek",
+  "settings.lite_monitor.help": "In de lichte weergave toont een klein scherm rechtsonder wat u zegt en typt - zoals de ballon boven de octopus, maar zonder hem.",
   "settings.native_mascot": "Native mascotte",
   "settings.native_mascot.help": "De mascotte wordt zonder webengine getekend: minder geheugen en sneller zichtbaar. Experimenteel.",
   "settings.native_dialogs": "Native keuze- en bevestigingsvensters",

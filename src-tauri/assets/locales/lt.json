@@ -259,6 +259,8 @@
   "settings.ui_languages": "Sąsajos kalbos",
   "settings.lite_ui": "Lengva sąsaja",
   "settings.lite_ui.help": "Paprastesnis ir lengvesnis dizainas.",
+  "settings.lite_monitor": "Teksto monitorius kampe",
+  "settings.lite_monitor.help": "Lengvame vaizde apačioje dešinėje atsiranda mažas ekranas su tuo, ką sakote ir rašote - kaip burbulas virš aštuonkojo, tik be jo.",
   "settings.native_mascot": "Vietinis talismanas",
   "settings.native_mascot.help": "Talismanas piešiamas be žiniatinklio variklio: užima mažiau atminties ir pasirodo greičiau. Eksperimentinė funkcija.",
   "settings.native_dialogs": "Vietiniai pasirinkimo ir patvirtinimo langai",

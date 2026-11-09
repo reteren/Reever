@@ -637,7 +637,8 @@ impl WindowHandler for BubbleView {
         unsafe {
             if box_op > 0.001 {
                 // translateY(3px) scale(.5, .12) от хвостика — в долях скрытости
-                let (o_x, o_y) = (self.ax, bottom);
+                // мониторчик (ax < 0) раскрывается от середины
+                let (o_x, o_y) = (if self.ax < 0.0 { WIN_W / 2.0 } else { self.ax }, bottom);
                 let m = translate(-o_x, -o_y) * scale(1.0 - 0.5 * hide, 1.0 - 0.88 * hide) * translate(o_x, o_y + 3.0 * hide);
                 dc.SetTransform(&m);
                 let factory = dc.GetFactory();
@@ -702,7 +703,8 @@ impl WindowHandler for BubbleView {
                     dc.PopLayer();
                 }
             }
-            if tail_op > 0.001 {
+            // у мониторчика лёгкого вида хвостика нет: маскота, на которого он указывал бы, нет
+            if tail_op > 0.001 && self.ax >= 0.0 {
                 let x = self.ax.clamp(34.0, WIN_W - 34.0);
                 let m = scale(tail_sc, tail_sc) * translate(x, WIN_H);
                 dc.SetTransform(&m);

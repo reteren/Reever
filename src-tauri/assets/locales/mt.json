@@ -260,6 +260,8 @@
   "settings.ui_languages": "Lingwi tal-interfaċċa",
   "settings.lite_ui": "Interfaċċja ħafifa",
   "settings.lite_ui.help": "Disinn aktar sempliċi u eħfef.",
+  "settings.lite_monitor": "Monitor tat-test fil-kantuniera",
+  "settings.lite_monitor.help": "Fid-dehra ħafifa, skrin żgħir isfel fuq il-lemin juri dak li qed tgħid u tikteb - bħall-bużżieqa fuq il-qarnit, iżda mingħajru.",
   "settings.native_mascot": "Maskot nattiv",
   "settings.native_mascot.help": "Il-maskot jinġibed mingħajr magna tal-web: juża inqas memorja u jidher aktar malajr. Sperimentali.",
   "settings.native_dialogs": "Twieqi nattivi tal-għażla u l-konferma",

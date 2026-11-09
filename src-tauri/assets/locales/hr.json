@@ -258,6 +258,8 @@
   "settings.ui_languages": "Jezici sučelja",
   "settings.lite_ui": "Lagano sučelje",
   "settings.lite_ui.help": "Jednostavniji i lakši izgled.",
+  "settings.lite_monitor": "Monitor teksta u kutu",
+  "settings.lite_monitor.help": "U laganom izgledu dolje desno pojavi se mali zaslon s onim što govorite i tipkate - kao oblačić iznad hobotnice, samo bez nje.",
   "settings.native_mascot": "Izvorna maskota",
   "settings.native_mascot.help": "Maskota se crta bez web-pogona: troši manje memorije i brže se pojavljuje. Eksperimentalno.",
   "settings.native_dialogs": "Izvorni prozori za odabir i potvrdu",

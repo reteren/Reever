@@ -22,6 +22,7 @@ const GROUPS: &[(&str, &[(&str, &str)])] = &[
         "interface",
         &[
             ("lite_ui", "lite_ui"),
+            ("lite_monitor", "bool"),
             ("fps_limit", "fps"),
             ("ui_language", "ui_language"),
             ("ui_languages", "ui_languages"),
@@ -221,7 +222,7 @@ impl SettingsTab {
     fn flag(&self, key: &str) -> bool {
         match self.get(key) {
             Value::Bool(b) => b,
-            Value::Null => matches!(key, "mascot_bubble" | "dictation_punctuation" | "dictation_ellipsis"),
+            Value::Null => matches!(key, "mascot_bubble" | "dictation_punctuation" | "dictation_ellipsis" | "lite_monitor"),
             _ => false,
         }
     }
@@ -294,8 +295,10 @@ impl SettingsTab {
     }
 
     fn field(&self, items: &mut Vec<Item>, key: &str, kind: &str) {
-        // троеточие — часть пунктуации модели, порог паузы — часть троеточия
-        if (key.starts_with("dictation_ellipsis") && !self.flag("dictation_punctuation"))
+        // троеточие — часть пунктуации модели, порог паузы — часть троеточия; мониторчик —
+        // только у лёгкого вида
+        if (key == "lite_monitor" && !self.flag("lite_ui"))
+            || (key.starts_with("dictation_ellipsis") && !self.flag("dictation_punctuation"))
             || (key == "dictation_ellipsis_pause_ms" && !self.flag("dictation_ellipsis"))
         {
             return;
@@ -351,7 +354,7 @@ impl SettingsTab {
                 items.push(Item::Slider { id: key.into(), min: 100.0, max: 500.0, step: 25.0, value: v, text: format!("{}%", v as i64) });
             }
             "strength" => {
-                let v = self.num(key).unwrap_or(3.0).round().clamp(1.0, 5.0) as f32;
+                let v = self.num(key).unwrap_or(crate::anglicism::DEFAULT_STRENGTH as f64).round().clamp(1.0, 5.0) as f32;
                 items.push(Item::Slider { id: key.into(), min: 1.0, max: 5.0, step: 1.0, value: v, text: format!("{} / 5", v as i64) });
                 items.push(Item::Help { text: self.t(&format!("settings.{key}.{}", v as i64)), indent: false });
                 return;

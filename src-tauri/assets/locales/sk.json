@@ -259,6 +259,8 @@
   "settings.ui_languages": "Jazyky rozhrania",
   "settings.lite_ui": "Ľahké rozhranie",
   "settings.lite_ui.help": "Jednoduchší a ľahší vzhľad.",
+  "settings.lite_monitor": "Textový monitor v rohu",
+  "settings.lite_monitor.help": "V ľahkom vzhľade sa vpravo dole objaví malá obrazovka s tým, čo hovoríte a píšete - ako bublina nad chobotnicou, len bez nej.",
   "settings.native_mascot": "Natívny maskot",
   "settings.native_mascot.help": "Maskot sa vykresľuje bez webového jadra: zaberá menej pamäte a objavuje sa rýchlejšie. Experimentálne.",
   "settings.native_dialogs": "Natívne okná výberu a potvrdenia",

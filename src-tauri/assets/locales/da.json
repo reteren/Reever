@@ -257,6 +257,8 @@
   "settings.ui_languages": "Brugerfladesprog",
   "settings.lite_ui": "Let brugerflade",
   "settings.lite_ui.help": "Et enklere og lettere design.",
+  "settings.lite_monitor": "Tekstskærm i hjørnet",
+  "settings.lite_monitor.help": "I det lette udseende viser en lille skærm nederst til højre, hvad du siger og skriver - som boblen over blæksprutten, bare uden den.",
   "settings.native_mascot": "Indbygget maskot",
   "settings.native_mascot.help": "Maskotten tegnes uden webmotor: bruger mindre hukommelse og vises hurtigere. Eksperimentel.",
   "settings.native_dialogs": "Indbyggede valg- og bekræftelsesvinduer",

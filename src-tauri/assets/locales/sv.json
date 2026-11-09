@@ -257,6 +257,8 @@
   "settings.ui_languages": "Gränssnittsspråk",
   "settings.lite_ui": "Lätt gränssnitt",
   "settings.lite_ui.help": "En enklare och lättare design.",
+  "settings.lite_monitor": "Textskärm i hörnet",
+  "settings.lite_monitor.help": "I det lätta utseendet visar en liten skärm nere till höger vad du säger och skriver - som bubblan över bläckfisken, fast utan den.",
   "settings.native_mascot": "Inbyggd maskot",
   "settings.native_mascot.help": "Maskoten ritas utan webbmotor: använder mindre minne och visas snabbare. Experimentell.",
   "settings.native_dialogs": "Inbyggda val- och bekräftelsefönster",

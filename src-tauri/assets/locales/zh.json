@@ -256,6 +256,8 @@
   "settings.ui_languages": "界面语言",
   "settings.lite_ui": "轻量界面",
   "settings.lite_ui.help": "更简洁、更轻量的界面。",
+  "settings.lite_monitor": "角落里的文字小屏",
+  "settings.lite_monitor.help": "轻量外观下，右下角的小屏幕会显示你正在说和输入的内容——就像章鱼上方的气泡，只是没有章鱼。",
   "settings.native_mascot": "原生吉祥物",
   "settings.native_mascot.help": "吉祥物不再通过网页引擎绘制：占用内存更少，出现更快。实验性功能。",
   "settings.native_dialogs": "原生选择与确认窗口",

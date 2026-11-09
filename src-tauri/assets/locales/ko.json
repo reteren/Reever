@@ -256,6 +256,8 @@
   "settings.ui_languages": "인터페이스 언어 목록",
   "settings.lite_ui": "가벼운 인터페이스",
   "settings.lite_ui.help": "더 단순하고 가벼운 디자인.",
+  "settings.lite_monitor": "모서리의 텍스트 모니터",
+  "settings.lite_monitor.help": "가벼운 화면에서는 오른쪽 아래 작은 화면에 말하고 입력하는 내용이 보입니다. 문어 위 말풍선과 같지만 문어는 없습니다.",
   "settings.native_mascot": "네이티브 마스코트",
   "settings.native_mascot.help": "마스코트를 웹 엔진 없이 그립니다. 메모리를 덜 쓰고 더 빨리 나타납니다. 실험적 기능입니다.",
   "settings.native_dialogs": "네이티브 선택·확인 창",

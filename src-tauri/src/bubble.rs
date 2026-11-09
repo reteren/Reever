@@ -21,6 +21,11 @@ use crate::mascot;
 
 /// Настройка включена.
 static ENABLED: AtomicBool = AtomicBool::new(false);
+/// Лёгкий вид с мониторчиком (`lite_ui` и `lite_monitor`): пузырь без маскота, справа внизу,
+/// без хвостика.
+static MONITOR: AtomicBool = AtomicBool::new(false);
+/// Отступ мониторчика от края рабочей области, логические px.
+const MONITOR_MARGIN: f64 = 16.0;
 /// Где хвостик пузыря по горизонтали, в десятых логического пикселя окна пузыря.
 static ARROW_X: AtomicI32 = AtomicI32::new(1700);
 /// Голова осьминога в покое — на столько логических пикселей (при 100 %) выше центра
@@ -65,6 +70,21 @@ fn enabled() -> bool {
     ENABLED.load(Ordering::Relaxed) || mascot::intro_active()
 }
 
+/// Мониторчик лёгкого вида — по настройкам (`lite_ui` и `lite_monitor`).
+pub fn configure_monitor(app: &AppHandle) {
+    let on = app
+        .try_state::<crate::config::LiveConfig>()
+        .is_some_and(|c| {
+            let s = &c.get().settings;
+            s.lite_ui && s.lite_monitor
+        });
+    bubble_native::init(app);
+    if MONITOR.swap(on, Ordering::Relaxed) != on {
+        sync(app);
+        place(app);
+    }
+}
+
 pub fn configure(app: &AppHandle, on: bool) {
     // подписка нативного пузыря на события — сразу при старте (mascot::spawn), см. init
     bubble_native::init(app);
@@ -75,7 +95,7 @@ pub fn configure(app: &AppHandle, on: bool) {
 /// Окно пузыря есть, только пока он может понадобиться: настройка включена и маскот
 /// вообще бывает на экране (не режим `never`).
 pub fn sync(app: &AppHandle) {
-    let want = enabled() && mascot::mode() != "never";
+    let want = (enabled() && mascot::mode() != "never") || MONITOR.load(Ordering::Relaxed);
     match (want, win(app)) {
         (true, None) => create(app),
         (false, Some(window)) => window.destroy(),
@@ -107,6 +127,10 @@ pub(crate) fn raise(app: &AppHandle) {
 
 /// Можно ли сейчас показывать пузырь и где хвостик (логические px окна).
 pub fn bubble_layout() -> (bool, f64) {
+    // мониторчик: всегда можно, хвостика нет (ax < 0)
+    if MONITOR.load(Ordering::Relaxed) {
+        return (true, -1.0);
+    }
     (
         enabled() && mascot::on_screen(),
         ARROW_X.load(Ordering::Relaxed) as f64 / 10.0,
@@ -115,6 +139,10 @@ pub fn bubble_layout() -> (bool, f64) {
 
 /// Поставить пузырь над головой маскота (в пределах рабочей области его монитора).
 pub fn place(app: &AppHandle) {
+    if MONITOR.load(Ordering::Relaxed) {
+        place_monitor(app);
+        return;
+    }
     let (Some(bubble), Some((position, size, scale_factor, monitor))) = (win(app), mascot::geometry(app)) else {
         return;
     };
@@ -140,6 +168,26 @@ pub fn place(app: &AppHandle) {
 
 /// Нативный пузырь уже создаётся (окна ещё нет, а sync могут позвать снова).
 static CREATING: AtomicBool = AtomicBool::new(false);
+
+/// Мониторчик — в правый нижний угол рабочей области основного монитора.
+fn place_monitor(app: &AppHandle) {
+    use windows::Win32::Foundation::POINT;
+    use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTOPRIMARY};
+    let Some(bubble) = win(app) else { return };
+    let Some((bw, bh)) = bubble.outer_size() else { return };
+    let scale = bubble.scale_factor().unwrap_or(1.0);
+    let area = unsafe {
+        let mon = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
+        let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
+        let _ = GetMonitorInfoW(mon, &mut info);
+        info.rcWork
+    };
+    let margin = MONITOR_MARGIN * scale;
+    let x = area.right as f64 - bw - margin;
+    let y = area.bottom as f64 - bh - margin;
+    bubble.set_position(x.round() as i32, y.round() as i32);
+    notify(app);
+}
 
 fn create(app: &AppHandle) {
     if CREATING.swap(true, Ordering::SeqCst) {

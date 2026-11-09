@@ -436,7 +436,9 @@ pub fn reset_voice_adapt(app: AppHandle, state: State<'_, Arc<SharedState>>) -> 
 /// Прочитать settings.json (для UI).
 pub fn get_settings(config: State<'_, LiveConfig>) -> Result<serde_json::Value, String> {
     let config = config.get();
-    let txt = std::fs::read_to_string(&config.settings_path).map_err(|e| e.to_string())?;
+    // файла ещё нет (свежая установка) — значения по умолчанию, а не ошибка: иначе форма
+    // рисовала бы свои запасные значения (сила англицизмов 3 вместо 2)
+    let txt = std::fs::read_to_string(&config.settings_path).unwrap_or_default();
     let mut settings = match serde_json::from_str::<serde_json::Value>(&txt) {
         Ok(serde_json::Value::Object(object)) => serde_json::Value::Object(object),
         _ => serde_json::Value::Object(serde_json::Map::new()),
@@ -596,6 +598,7 @@ pub fn set_lite_ui(app: AppHandle, config: State<'_, LiveConfig>, lite: bool) ->
     config.set(Arc::new(fresh));
     crate::config::write_installer_ui_style(lite);
     crate::mascot::apply(&app, &mode, scale);
+    crate::bubble::configure_monitor(&app);
     crate::rebuild_main(&app);
     Ok(())
 }

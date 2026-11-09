@@ -257,6 +257,8 @@
   "settings.ui_languages": "Liidese keeled",
   "settings.lite_ui": "Kerge kasutajaliides",
   "settings.lite_ui.help": "Lihtsam ja kergem kujundus.",
+  "settings.lite_monitor": "Tekstimonitor nurgas",
+  "settings.lite_monitor.help": "Kerges vaates näitab väike ekraan all paremal, mida räägid ja kirjutad - nagu mull kaheksajala kohal, aga ilma temata.",
   "settings.native_mascot": "Natiivne maskott",
   "settings.native_mascot.help": "Maskott joonistatakse ilma veebimootorita: võtab vähem mälu ja ilmub kiiremini. Katseline.",
   "settings.native_dialogs": "Natiivsed valiku- ja kinnitusaknad",

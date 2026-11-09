@@ -257,6 +257,8 @@
   "settings.ui_languages": "Idiomas da interface",
   "settings.lite_ui": "Interface leve",
   "settings.lite_ui.help": "Um design mais simples e leve.",
+  "settings.lite_monitor": "Monitor de texto no canto",
+  "settings.lite_monitor.help": "No aspeto leve, um pequeno ecrã no canto inferior direito mostra o que diz e escreve - como o balão sobre o polvo, mas sem ele.",
   "settings.native_mascot": "Mascote nativo",
   "settings.native_mascot.help": "O mascote é desenhado sem o motor web: usa menos memória e aparece mais depressa. Experimental.",
   "settings.native_dialogs": "Janelas nativas de escolha e confirmação",

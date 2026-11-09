@@ -256,6 +256,8 @@
   "settings.ui_languages": "インターフェイスの言語",
   "settings.lite_ui": "ライトインターフェース",
   "settings.lite_ui.help": "よりシンプルで軽いデザイン。",
+  "settings.lite_monitor": "隅のテキストモニター",
+  "settings.lite_monitor.help": "ライト表示では右下の小さな画面に、話している内容と入力中の文字が出ます。タコの上の吹き出しと同じで、タコはいません。",
   "settings.native_mascot": "ネイティブのマスコット",
   "settings.native_mascot.help": "マスコットをウェブエンジンなしで描画します。メモリ使用量が減り、表示も速くなります。試験的な機能です。",
   "settings.native_dialogs": "ネイティブの選択・確認ウィンドウ",

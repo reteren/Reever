@@ -261,6 +261,8 @@
   "settings.ui_languages": "لغات الواجهة",
   "settings.lite_ui": "واجهة خفيفة",
   "settings.lite_ui.help": "تصميم أبسط وأخف.",
+  "settings.lite_monitor": "شاشة نص في الزاوية",
+  "settings.lite_monitor.help": "في المظهر الخفيف تظهر شاشة صغيرة أسفل اليمين بما تقوله وتكتبه - مثل الفقاعة فوق الأخطبوط لكن دونه.",
   "settings.native_mascot": "تميمة أصلية",
   "settings.native_mascot.help": "تُرسم التميمة دون محرك الويب: تستهلك ذاكرة أقل وتظهر أسرع. ميزة تجريبية.",
   "settings.native_dialogs": "نوافذ اختيار وتأكيد أصلية",

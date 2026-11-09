@@ -188,6 +188,10 @@ pub struct Settings {
     /// включён, маскота нет при любом `mascot_mode` (сам выбор сохраняется на потом).
     #[serde(default)]
     pub lite_ui: bool,
+    /// Лёгкий вид: мониторчик справа внизу с тем, что сейчас говорится и печатается
+    /// (пузырь маскота без маскота, bubble.rs).
+    #[serde(default = "default_true")]
+    pub lite_monitor: bool,
     /// «Плавность»: 0 — как у монитора, 60 или 30 кадров.
     #[serde(default)]
     pub fps_limit: u32,
@@ -510,6 +514,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("mascot_bubble", mascot_bubble, bool);
     restore!("mascot_position", mascot_position, Option<[i32; 2]>);
     restore!("lite_ui", lite_ui, bool);
+    restore!("lite_monitor", lite_monitor, bool);
     restore!("fps_limit", fps_limit, u32);
 
     if !invalid.is_empty() {
@@ -569,6 +574,7 @@ impl Default for Settings {
             mascot_bubble: true,
             mascot_position: None,
             lite_ui: false,
+            lite_monitor: true,
             fps_limit: 0,
         }
     }

@@ -259,6 +259,8 @@
   "settings.ui_languages": "Języki interfejsu",
   "settings.lite_ui": "Lekki interfejs",
   "settings.lite_ui.help": "Prostszy, lżejszy wygląd.",
+  "settings.lite_monitor": "Monitor tekstu w rogu",
+  "settings.lite_monitor.help": "W lekkim wyglądzie w prawym dolnym rogu pojawia się mały ekran z tym, co mówisz i piszesz - jak dymek nad ośmiornicą, tylko bez niej.",
   "settings.native_mascot": "Natywna maskotka",
   "settings.native_mascot.help": "Maskotka jest rysowana bez silnika WWW: zajmuje mniej pamięci i pojawia się szybciej. Eksperymentalne.",
   "settings.native_dialogs": "Natywne okna wyboru i potwierdzenia",

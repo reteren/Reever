@@ -257,6 +257,8 @@
   "settings.ui_languages": "Idiomas de la interfaz",
   "settings.lite_ui": "Interfaz ligera",
   "settings.lite_ui.help": "Un diseño más sencillo y ligero.",
+  "settings.lite_monitor": "Monitor de texto en la esquina",
+  "settings.lite_monitor.help": "En el aspecto ligero, una pequeña pantalla abajo a la derecha muestra lo que dices y escribes, como el globo sobre el pulpo, pero sin él.",
   "settings.native_mascot": "Mascota nativa",
   "settings.native_mascot.help": "La mascota se dibuja sin motor web: usa menos memoria y aparece más rápido. Experimental.",
   "settings.native_dialogs": "Ventanas nativas de elección y confirmación",

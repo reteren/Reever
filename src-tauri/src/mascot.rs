@@ -431,6 +431,7 @@ pub fn spawn(app: &AppHandle) {
     set_pinned(settings.mascot_position);
     apply(app, settings.effective_mascot_mode(), settings.mascot_scale);
     bubble::configure(app, settings.mascot_bubble);
+    bubble::configure_monitor(app);
 }
 
 /// Применяет режим и размер: создаёт, показывает, прячет или уничтожает окно.
