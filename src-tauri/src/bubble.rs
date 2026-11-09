@@ -24,6 +24,49 @@ static ENABLED: AtomicBool = AtomicBool::new(false);
 /// Лёгкий вид с мониторчиком (`lite_ui` и `lite_monitor`): пузырь без маскота, справа внизу,
 /// без хвостика.
 static MONITOR: AtomicBool = AtomicBool::new(false);
+/// Идёт «ривер слушай»: пузырь — мониторчиком в углу, в любом виде.
+static LISTENING: AtomicBool = AtomicBool::new(false);
+/// Номер сеанса прослушивания: угол отпускается, только если новый не начался.
+static LISTEN_GEN: AtomicI32 = AtomicI32::new(0);
+
+/// Пузырь сейчас — мониторчик в углу (лёгкий вид или «слушай»).
+fn monitor_active() -> bool {
+    MONITOR.load(Ordering::Relaxed) || LISTENING.load(Ordering::Relaxed)
+}
+
+/// «Ривер слушай» начался или кончился: пузырь — в правый нижний угол с текстом с чистого
+/// листа; после конца текст ещё держится, и пузырь возвращается к маскоту.
+pub fn set_listening(app: &AppHandle, on: bool) {
+    let gen = LISTEN_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    bubble_native::init(app);
+    let app = app.clone();
+    if on {
+        LISTENING.store(true, Ordering::Relaxed);
+        sync(&app);
+        // окно создаётся в своём потоке — дождаться его
+        std::thread::spawn(move || {
+            for _ in 0..100 {
+                if win(&app).is_some() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            place(&app);
+            bubble_native::send(Msg::Session(true));
+        });
+    } else {
+        bubble_native::send(Msg::Session(false));
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(2_400));
+            if LISTEN_GEN.load(Ordering::SeqCst) == gen {
+                LISTENING.store(false, Ordering::Relaxed);
+                sync(&app);
+                place(&app);
+            }
+        });
+    }
+}
+
 /// Отступ мониторчика от края рабочей области, логические px.
 const MONITOR_MARGIN: f64 = 16.0;
 /// Где хвостик пузыря по горизонтали, в десятых логического пикселя окна пузыря.
@@ -95,7 +138,7 @@ pub fn configure(app: &AppHandle, on: bool) {
 /// Окно пузыря есть, только пока он может понадобиться: настройка включена и маскот
 /// вообще бывает на экране (не режим `never`).
 pub fn sync(app: &AppHandle) {
-    let want = (enabled() && mascot::mode() != "never") || MONITOR.load(Ordering::Relaxed);
+    let want = (enabled() && mascot::mode() != "never") || monitor_active();
     match (want, win(app)) {
         (true, None) => create(app),
         (false, Some(window)) => window.destroy(),
@@ -128,7 +171,7 @@ pub(crate) fn raise(app: &AppHandle) {
 /// Можно ли сейчас показывать пузырь и где хвостик (логические px окна).
 pub fn bubble_layout() -> (bool, f64) {
     // мониторчик: всегда можно, хвостика нет (ax < 0)
-    if MONITOR.load(Ordering::Relaxed) {
+    if monitor_active() {
         return (true, -1.0);
     }
     (
@@ -139,7 +182,7 @@ pub fn bubble_layout() -> (bool, f64) {
 
 /// Поставить пузырь над головой маскота (в пределах рабочей области его монитора).
 pub fn place(app: &AppHandle) {
-    if MONITOR.load(Ordering::Relaxed) {
+    if monitor_active() {
         place_monitor(app);
         return;
     }

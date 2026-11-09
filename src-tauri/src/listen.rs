@@ -1,7 +1,10 @@
-//! «ривер слушай»: звук компьютера (loopback.rs) — в текст во вкладке «Текст».
-//! Кончается само, если `listen_silence_s` секунд не было нового текста (больше 10 — только
-//! командой), по «ривер стоп» (текст остаётся и уходит в буфер обмена) и «ривер отмена»
-//! (текст отброшен). Модели — свои, под языки распознавания (transcribe.rs).
+//! «ривер слушай»: звук компьютера (loopback.rs) — в текст. Тихо: ни маскота, ни главного
+//! окна; распознанное по ходу речи видно в пузыре-мониторчике справа внизу (bubble.rs), в конце
+//! текст молча уходит в буфер обмена и остаётся во вкладке «Текст» (скопировать ещё раз).
+//! Кончается само, если `listen_silence_s` секунд в звуке не было речи (больше 10 — только
+//! командой), по «ривер стоп» (текст остаётся) и «ривер отмена» (текст отброшен). Новое
+//! «слушай» во время прослушивания начинает запись заново. Модели — свои, под языки
+//! распознавания (transcribe.rs).
 
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
@@ -40,18 +43,32 @@ pub fn silence_limit(seconds: u32) -> Option<Duration> {
     (seconds < SILENCE_UNTIL_COMMAND).then(|| Duration::from_secs(seconds.clamp(3, 10) as u64))
 }
 
-/// Начать слушать звук компьютера. `false` — уже слушает.
+/// Промежуточный текст фразы в пузыре — не чаще этого (и не чаще, чем вдвое дольше его счёта).
+const PARTIAL_EVERY: Duration = Duration::from_millis(700);
+
+/// Начать слушать звук компьютера. Уже слушает — та запись отбрасывается и начинается новая.
 pub fn start(app: &AppHandle) -> bool {
     let flag = Arc::new(AtomicU8::new(RUN));
-    {
-        let Ok(mut slot) = SESSION.lock() else { return false };
-        if slot.is_some() {
-            return false;
-        }
-        *slot = Some(flag.clone());
+    let previous = SESSION.lock().ok().and_then(|s| s.clone());
+    if let Some(old) = &previous {
+        old.store(CANCEL, Ordering::SeqCst);
     }
     let app = app.clone();
     std::thread::spawn(move || {
+        // прежняя запись отпускает захват и модели — дождаться её конца
+        for _ in 0..200 {
+            match SESSION.lock() {
+                Ok(mut slot) if slot.is_none() => {
+                    *slot = Some(flag.clone());
+                    break;
+                }
+                _ => std::thread::sleep(Duration::from_millis(25)),
+            }
+        }
+        if !SESSION.lock().is_ok_and(|s| s.as_ref().is_some_and(|f| Arc::ptr_eq(f, &flag))) {
+            return;
+        }
+        crate::bubble::set_listening(&app, true);
         let mut job = TextJob { kind: JobKind::Listen, running: true, ..TextJob::default() };
         publish(&job);
         let end = run(&app, &flag, &mut job);
@@ -72,6 +89,7 @@ pub fn start(app: &AppHandle) -> bool {
             *slot = None;
         }
         publish(&job);
+        crate::bubble::set_listening(&app, false);
     });
     true
 }
@@ -110,8 +128,7 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
     let started = Instant::now();
     let mut quiet_since = Instant::now();
     let mut heard = false;
-    // открытое окно — на вкладку «Текст»: там идёт текст
-    crate::main_native::send(crate::main_native::Msg::Tab("text".into()));
+    let (mut partial_at, mut partial_cost) = (Instant::now(), Duration::ZERO);
     let end = loop {
         match flag.load(Ordering::SeqCst) {
             STOP => break JobEnd::Stopped,
@@ -133,9 +150,8 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
                     quiet_since = Instant::now();
                     heard = true;
                     publish(job);
-                    // фраза — в бегущую строку окна и пузырь маскота
-                    let _ = app.emit("reever://partial", format!("🎧 {text}"));
-                    let _ = app.emit("reever://said", text.clone());
+                    // готовая фраза — в пузырь (дописывается к прежним)
+                    crate::bubble_native::send(crate::bubble_native::Msg::Said(text.clone()));
                 }
                 Ok(_) => {}
                 Err(e) => {
@@ -147,6 +163,18 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
         if !job.error.is_empty() {
             break JobEnd::Error;
         }
+        // недоговорённая фраза — в пузырь по ходу речи, как при диктовке
+        let audio = segmenter.current_audio();
+        if audio.len() > crate::speech::samples(500) && partial_at.elapsed() >= PARTIAL_EVERY.max(partial_cost * 2) {
+            let t = Instant::now();
+            if let Ok(text) = recognizer.phrase(audio) {
+                if !text.is_empty() {
+                    crate::bubble_native::send(crate::bubble_native::Msg::Partial(text));
+                }
+            }
+            partial_cost = t.elapsed();
+            partial_at = Instant::now();
+        }
         if let Some(l) = limit {
             let waited = if heard { quiet_since.elapsed() } else { started.elapsed().saturating_sub(FIRST_SPEECH_WAIT.saturating_sub(l)) };
             if waited >= l && !segmenter.in_speech() {
@@ -155,7 +183,6 @@ fn run(app: &AppHandle, flag: &AtomicU8, job: &mut TextJob) -> JobEnd {
         }
     };
     drop(capture);
-    let _ = app.emit("reever://partial", String::new());
     // «стоп» посреди фразы — дослушанное тоже в текст
     if matches!(end, JobEnd::Stopped) {
         if let Some(rest) = segmenter.finish_now() {

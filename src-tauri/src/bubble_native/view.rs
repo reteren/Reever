@@ -74,6 +74,9 @@ pub enum Msg {
     Layout { allowed: bool, ax: f32 },
     /// реплики знакомства (bubble_intro)
     Intro(Vec<String>),
+    /// «ривер слушай» начался (`true`: текст с чистого листа, пузырь открыт, пока идёт) или
+    /// кончился (`false`: текст ещё чуть держится и пузырь закрывается).
+    Session(bool),
 }
 
 // ── cubic-bezier, как в CSS ─────────────────────────────────────────────
@@ -172,6 +175,10 @@ pub struct BubbleView {
     committed: String,
     live: String,
     hold_until: Option<Instant>,
+    /// идёт «ривер слушай»: пузырь открыт, пока не кончится
+    session: bool,
+    /// Reever слушает или занят (State)
+    busy: bool,
     intro_lines: Vec<String>,
     intro: Option<Intro>,
     intro_text: Option<String>,
@@ -212,6 +219,8 @@ impl BubbleView {
             committed: String::new(),
             live: String::new(),
             hold_until: None,
+            session: false,
+            busy: false,
             intro_lines: Vec::new(),
             intro: None,
             intro_text: None,
@@ -238,6 +247,7 @@ impl BubbleView {
         let now = Instant::now();
         match msg {
             Msg::State(s) => {
+                self.busy = s == "listening" || s == "busy" || s == "loading";
                 if s == "listening" || s == "busy" {
                     if !self.active || self.hold_until.is_some() {
                         if !self.active {
@@ -247,7 +257,7 @@ impl BubbleView {
                         self.active = true;
                     }
                     self.hold_until = None;
-                } else if s != "loading" && self.active && self.hold_until.is_none() {
+                } else if s != "loading" && self.active && self.hold_until.is_none() && !self.session {
                     // текст остаётся до следующей команды: пузырь закрывается вместе с ним
                     self.hold_until = Some(now + HOLD);
                 }
@@ -257,6 +267,23 @@ impl BubbleView {
                 if !self.live.is_empty() && !self.active {
                     self.active = true;
                     self.committed.clear();
+                }
+                // текст пришёл, когда Reever ни слушает, ни занят, — закрыться самому: иначе
+                // пузырь, открытый таким текстом, висел бы до следующей команды
+                if self.active && !self.busy && !self.session {
+                    self.hold_until = Some(now + HOLD);
+                }
+            }
+            Msg::Session(on) => {
+                self.session = on;
+                if on {
+                    self.committed.clear();
+                    self.live.clear();
+                    self.active = true;
+                    self.hold_until = None;
+                } else {
+                    self.live.clear();
+                    self.hold_until = Some(now + HOLD);
                 }
             }
             Msg::Said(v) => {
