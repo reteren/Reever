@@ -354,7 +354,7 @@
   "settings.models_unload_after_s.never": "не вивантажувати",
   "settings.models_unload_after_s.seconds": "{n} с",
   "settings.local_index": "Індекс дисків",
-  "settings.local_index.help": "Потрібен, щоб шукати файли й папки голосом. Займає приблизно 80–155 МБ пам'яті; коли вимкнено, пошук файлів голосом не працює.",
+  "settings.local_index.help": "Потрібен, щоб шукати файли й папки голосом. Займає приблизно 30–60 МБ пам'яті; коли вимкнено, пошук файлів голосом не працює.",
   "settings.indexStatus": "Індекс: {state} · {entries} записів · {size}",
   "settings.indexState.off": "вимкнено",
   "settings.indexState.scanning": "сканування",

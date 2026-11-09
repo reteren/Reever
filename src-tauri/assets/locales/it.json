@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "mai",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Indice dei dischi",
-  "settings.local_index.help": "Serve per trovare file e cartelle con la voce. Occupa circa 80–155 MB di memoria; se disattivato, la ricerca di file con la voce non funziona.",
+  "settings.local_index.help": "Serve per trovare file e cartelle con la voce. Occupa circa 30–60 MB di memoria; se disattivato, la ricerca di file con la voce non funziona.",
   "settings.indexStatus": "Indice: {state} · {entries} voci · {size}",
   "settings.indexState.off": "disattivato",
   "settings.indexState.scanning": "scansione",

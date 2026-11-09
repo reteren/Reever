@@ -353,7 +353,7 @@
   "settings.models_unload_after_s.never": "niciodată",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Indexul discurilor",
-  "settings.local_index.help": "Necesar pentru a găsi fișiere și foldere cu vocea. Folosește aproximativ 80–155 MB de memorie; când e oprit, căutarea fișierelor cu vocea nu funcționează.",
+  "settings.local_index.help": "Necesar pentru a găsi fișiere și foldere cu vocea. Folosește aproximativ 30–60 MB de memorie; când e oprit, căutarea fișierelor cu vocea nu funcționează.",
   "settings.indexStatus": "Index: {state} · {entries} intrări · {size}",
   "settings.indexState.off": "oprit",
   "settings.indexState.scanning": "se scanează",

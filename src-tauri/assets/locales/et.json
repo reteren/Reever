@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "mitte kunagi",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Kettaindeks",
-  "settings.local_index.help": "Vajalik failide ja kaustade häälega otsimiseks. Võtab umbes 80–155 MB mälu; väljalülitatuna häälega failiotsing ei tööta.",
+  "settings.local_index.help": "Vajalik failide ja kaustade häälega otsimiseks. Võtab umbes 30–60 MB mälu; väljalülitatuna häälega failiotsing ei tööta.",
   "settings.indexStatus": "Indeks: {state} · {entries} kirjet · {size}",
   "settings.indexState.off": "väljas",
   "settings.indexState.scanning": "skannin",

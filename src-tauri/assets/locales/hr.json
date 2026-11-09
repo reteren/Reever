@@ -353,7 +353,7 @@
   "settings.models_unload_after_s.never": "nikad",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Indeks diskova",
-  "settings.local_index.help": "Potreban za pretraživanje datoteka i mapa glasom. Zauzima oko 80–155 MB memorije; kad je isključen, glasovno pretraživanje datoteka ne radi.",
+  "settings.local_index.help": "Potreban za pretraživanje datoteka i mapa glasom. Zauzima oko 30–60 MB memorije; kad je isključen, glasovno pretraživanje datoteka ne radi.",
   "settings.indexStatus": "Indeks: {state} · {entries} unosa · {size}",
   "settings.indexState.off": "isključen",
   "settings.indexState.scanning": "skeniranje",

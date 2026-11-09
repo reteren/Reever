@@ -356,7 +356,7 @@
   "settings.models_unload_after_s.never": "أبدًا",
   "settings.models_unload_after_s.seconds": "{n} ث",
   "settings.local_index": "فهرس الأقراص",
-  "settings.local_index.help": "مطلوب للعثور على الملفات والمجلدات بالصوت. يستهلك نحو 80–155 ميغابايت من الذاكرة؛ عند إيقافه لا يعمل البحث عن الملفات بالصوت.",
+  "settings.local_index.help": "مطلوب للعثور على الملفات والمجلدات بالصوت. يستهلك نحو 30–60 ميغابايت من الذاكرة؛ عند إيقافه لا يعمل البحث عن الملفات بالصوت.",
   "settings.indexStatus": "الفهرس: {state} · {entries} إدخال · {size}",
   "settings.indexState.off": "متوقف",
   "settings.indexState.scanning": "جارٍ الفحص",

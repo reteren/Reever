@@ -354,7 +354,7 @@
   "settings.models_unload_after_s.never": "nikoli",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Indeks diskov",
-  "settings.local_index.help": "Potreben za iskanje datotek in map z glasom. Porabi približno 80–155 MB pomnilnika; ko je izklopljen, glasovno iskanje datotek ne deluje.",
+  "settings.local_index.help": "Potreben za iskanje datotek in map z glasom. Porabi približno 30–60 MB pomnilnika; ko je izklopljen, glasovno iskanje datotek ne deluje.",
   "settings.indexStatus": "Indeks: {state} · {entries} vnosov · {size}",
   "settings.indexState.off": "izklopljen",
   "settings.indexState.scanning": "pregledovanje",

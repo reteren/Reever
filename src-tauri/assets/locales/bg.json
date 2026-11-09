@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "никога",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Индекс на дисковете",
-  "settings.local_index.help": "Нужен е за търсене на файлове и папки с глас. Заема около 80–155 MB памет; когато е изключен, гласовото търсене на файлове не работи.",
+  "settings.local_index.help": "Нужен е за търсене на файлове и папки с глас. Заема около 30–60 MB памет; когато е изключен, гласовото търсене на файлове не работи.",
   "settings.indexStatus": "Индекс: {state} · {entries} записа · {size}",
   "settings.indexState.off": "изключен",
   "settings.indexState.scanning": "сканиране",

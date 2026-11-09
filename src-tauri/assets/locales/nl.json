@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "nooit",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Schijfindex",
-  "settings.local_index.help": "Nodig om bestanden en mappen met je stem te zoeken. Gebruikt ongeveer 80–155 MB geheugen; uitgeschakeld werkt zoeken naar bestanden met spraak niet.",
+  "settings.local_index.help": "Nodig om bestanden en mappen met je stem te zoeken. Gebruikt ongeveer 30–60 MB geheugen; uitgeschakeld werkt zoeken naar bestanden met spraak niet.",
   "settings.indexStatus": "Index: {state} · {entries} items · {size}",
   "settings.indexState.off": "uit",
   "settings.indexState.scanning": "scannen",

@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "nie",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Laufwerksindex",
-  "settings.local_index.help": "Wird gebraucht, um Dateien und Ordner per Stimme zu finden. Belegt etwa 80–155 MB Arbeitsspeicher; ausgeschaltet funktioniert die Dateisuche per Stimme nicht.",
+  "settings.local_index.help": "Wird gebraucht, um Dateien und Ordner per Stimme zu finden. Belegt etwa 30–60 MB Arbeitsspeicher; ausgeschaltet funktioniert die Dateisuche per Stimme nicht.",
   "settings.indexStatus": "Index: {state} · {entries} Einträge · {size}",
   "settings.indexState.off": "aus",
   "settings.indexState.scanning": "wird gescannt",

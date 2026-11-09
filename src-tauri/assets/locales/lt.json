@@ -354,7 +354,7 @@
   "settings.models_unload_after_s.never": "niekada",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Diskų indeksas",
-  "settings.local_index.help": "Reikalingas failams ir aplankams ieškoti balsu. Užima apie 80–155 MB atminties; išjungus failų paieška balsu neveikia.",
+  "settings.local_index.help": "Reikalingas failams ir aplankams ieškoti balsu. Užima apie 30–60 MB atminties; išjungus failų paieška balsu neveikia.",
   "settings.indexStatus": "Indeksas: {state} · {entries} įrašai · {size}",
   "settings.indexState.off": "išjungtas",
   "settings.indexState.scanning": "nuskaitoma",

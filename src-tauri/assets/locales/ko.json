@@ -351,7 +351,7 @@
   "settings.models_unload_after_s.never": "내리지 않음",
   "settings.models_unload_after_s.seconds": "{n}초",
   "settings.local_index": "디스크 색인",
-  "settings.local_index.help": "음성으로 파일과 폴더를 찾는 데 필요합니다. 메모리를 약 80–155MB 사용하며, 끄면 음성 파일 검색이 작동하지 않습니다.",
+  "settings.local_index.help": "음성으로 파일과 폴더를 찾는 데 필요합니다. 메모리를 약 30–60MB 사용하며, 끄면 음성 파일 검색이 작동하지 않습니다.",
   "settings.indexStatus": "색인: {state} · 항목 {entries}개 · {size}",
   "settings.indexState.off": "꺼짐",
   "settings.indexState.scanning": "검사 중",

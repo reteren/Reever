@@ -129,6 +129,22 @@ impl DiskIndex {
         self.records.len()
     }
 
+    /// Отпечаток содержимого (записи и имена): изменился ли индекс после перескана.
+    fn fingerprint(&self) -> u64 {
+        let mut h = 0xcbf2_9ce4_8422_2325_u64;
+        let mut mix = |b: u8| h = (h ^ b as u64).wrapping_mul(0x0100_0000_01b3);
+        for r in &self.records {
+            for b in r.parent.to_le_bytes().into_iter().chain(r.name_offset.to_le_bytes()).chain(r.name_len.to_le_bytes()) {
+                mix(b);
+            }
+            mix(r.flags);
+        }
+        for &b in &self.names {
+            mix(b);
+        }
+        h
+    }
+
     /// Ёмкость основных массивов и вспомогательного поиска, без накладных расходов Arc/Vec.
     pub fn memory_bytes(&self) -> usize {
         self.records.capacity() * std::mem::size_of::<Record>()
@@ -590,6 +606,28 @@ fn excluded_directory(path: &Path, options: &ScanOptions) -> bool {
         return true;
     }
     if parts.len() >= 2 && parts[1] == "windows" {
+        return true;
+    }
+    // AppData профилей: кэши и данные программ (браузеры, Discord, сам Reever — его журнал и
+    // снимок этого индекса). Голосом там не ищут, а меняется там всё постоянно: каждое
+    // изменение будило бы перескан всех дисков, а файлов там сотни тысяч.
+    if parts.len() >= 4 && parts[1] == "users" && parts[3] == "appdata" {
+        return true;
+    }
+    // Служебные деревья, где голосом ничего не ищут, а файлов — сотни тысяч (замер 2026-11-09:
+    // 2,15 млн записей, из них ~1,4 млн — здесь):
+    // скрытые папки инструментов (.cargo, .rustup, .claude, .vscode…) и окружения Python;
+    if parts.iter().skip(1).any(|p| (p.starts_with('.') && p.len() > 1) || matches!(*p, "venv" | "__pycache__" | "site-packages" | "packagecache")) {
+        return true;
+    }
+    // игры Steam — сама папка игры есть («найди папку dota»), её ресурсы — нет;
+    if let Some(i) = parts.iter().position(|p| *p == "steamapps") {
+        if parts.len() > i + 3 {
+            return true;
+        }
+    }
+    // Program Files и ProgramData — программы и одна вложенная папка, без глубины.
+    if parts.len() > 4 && matches!(parts[1], "program files" | "program files (x86)" | "programdata") {
         return true;
     }
     if let Some(local) = std::env::var_os("LOCALAPPDATA") {
@@ -1116,8 +1154,9 @@ struct RuntimeStatus {
 /// Индекс в памяти держится столько после последнего поиска (или «ривер»), потом
 /// выгружается: в покое он лежит только снимком на диске.
 const HOT_FOR: Duration = Duration::from_secs(60);
-/// Пересканирование после изменений на дисках — не чаще: каждое строит весь индекс заново.
-const RESCAN_EVERY: Duration = Duration::from_secs(60);
+/// Пересканирование после изменений на дисках — не чаще: каждое обходит все диски и строит
+/// весь индекс заново (миллионы записей, сотни МБ на время сборки).
+const RESCAN_EVERY: Duration = Duration::from_secs(600);
 
 struct ManagerInner {
     snapshot_path: PathBuf,
@@ -1364,6 +1403,8 @@ fn run_manager(inner: Arc<ManagerInner>, stop: Arc<AtomicBool>, stop_event: usiz
         publish(&inner, index, true);
     }
     let options = ScanOptions::default();
+    // отпечаток последнего сохранённого снимка: тот же индекс второй раз не пишется
+    let mut saved: Option<u64> = None;
     while !stop.load(Ordering::Relaxed) {
         if let Ok(mut status) = inner.status.lock() {
             status.scanning = true;
@@ -1379,8 +1420,13 @@ fn run_manager(inner: Arc<ManagerInner>, stop: Arc<AtomicBool>, stop_event: usiz
         if stop.load(Ordering::Relaxed) {
             break;
         }
-        let _ = save_snapshot(&index, &inner.snapshot_path);
+        let print = index.fingerprint();
+        if saved != Some(print) && save_snapshot(&index, &inner.snapshot_path).is_ok() {
+            saved = Some(print);
+        }
         publish(&inner, index, false);
+        // сборка индекса оставляет в куче много освобождённых мелких блоков — вернуть их системе
+        trim_heap();
         let scanned = Instant::now();
         // Любое изменение и переполнение уведомителя сводятся к debounce + перескану, но не
         // чаще `RESCAN_EVERY`. Пока ждём — выгружаем давно не нужный индекс из памяти.
@@ -1408,6 +1454,38 @@ fn run_manager(inner: Arc<ManagerInner>, stop: Arc<AtomicBool>, stop_event: usiz
     }
     for watcher in watchers {
         let _ = watcher.join();
+    }
+}
+
+/// Есть ли в ответе ReadDirectoryChangesW изменение вне исключённых папок.
+fn relevant_change(root: &Path, buffer: &[u8]) -> bool {
+    let options = ScanOptions::default();
+    let mut offset = 0usize;
+    loop {
+        // FILE_NOTIFY_INFORMATION: NextEntryOffset, Action, FileNameLength (байты), FileName
+        let Some(head) = buffer.get(offset..offset + 12) else { return true };
+        let next = u32::from_le_bytes(head[0..4].try_into().unwrap()) as usize;
+        let len = u32::from_le_bytes(head[8..12].try_into().unwrap()) as usize;
+        let Some(name) = buffer.get(offset + 12..offset + 12 + len) else { return true };
+        let wide: Vec<u16> = name.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        let path = root.join(OsString::from_wide(&wide));
+        if !path.parent().is_some_and(|dir| excluded_directory(dir, &options)) {
+            return true;
+        }
+        if next == 0 {
+            return false;
+        }
+        offset += next;
+    }
+}
+
+/// Вернуть системе свободную память кучи процесса (после сборки индекса).
+fn trim_heap() {
+    use windows::Win32::System::Memory::{GetProcessHeap, HeapCompact, HEAP_FLAGS};
+    unsafe {
+        if let Ok(heap) = GetProcessHeap() {
+            let _ = HeapCompact(heap, HEAP_FLAGS(0));
+        }
     }
 }
 
@@ -1487,9 +1565,11 @@ fn watch_root(
             continue;
         }
         request_pending = false;
-        // Нулевой размер означает переполнение буфера и требует полной сверки.
-        let _overflow = bytes == 0;
-        let _ = changed.try_send(());
+        // Нулевой размер означает переполнение буфера и требует полной сверки; иначе —
+        // только если что-то изменилось вне исключённых папок (кэши, Temp, AppData).
+        if bytes == 0 || relevant_change(&root, &buffer[..bytes as usize]) {
+            let _ = changed.try_send(());
+        }
     }
     if !announced_ready {
         let _ = ready.send(());
@@ -1676,6 +1756,64 @@ mod tests {
         assert_eq!(loaded.entries(), index.entries());
         assert_eq!(loaded.path(2), "Z:\\Memory_Vault\\bilingual.md");
         assert_eq!(loaded.memory_bytes(), index.memory_bytes());
+    }
+
+    #[test]
+    #[ignore = "обходит все фиксированные диски; запускать вручную"]
+    fn biggest_folders_in_the_index() {
+        let index = scan_roots_with_progress(&fixed_drive_roots(), &ScanOptions::default(), Arc::new(AtomicBool::new(false)), None);
+        let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for id in 0..index.entries() as u32 {
+            let path = index.path(id);
+            let parts: Vec<&str> = path.split('\\').filter(|p| !p.is_empty()).collect();
+            for depth in 2..=4 {
+                if parts.len() > depth {
+                    *counts.entry(parts[..depth].join("\\")).or_default() += 1;
+                }
+            }
+        }
+        let mut top: Vec<_> = counts.into_iter().collect();
+        top.sort_by(|a, b| b.1.cmp(&a.1));
+        println!("entries {}", index.entries());
+        for (dir, n) in top.iter().take(40) {
+            println!("{n:>9}  {dir}");
+        }
+    }
+
+    #[test]
+    fn appdata_and_excluded_changes_do_not_wake_a_rescan() {
+        let options = ScanOptions::default();
+        assert!(excluded_directory(Path::new("C:\\Users\\u\\AppData\\Roaming\\com.troid.reever"), &options));
+        assert!(excluded_directory(Path::new("C:\\Users\\u\\AppData\\Local\\Discord\\Cache"), &options));
+        assert!(!excluded_directory(Path::new("C:\\Users\\u\\Documents\\AppData"), &options));
+        // служебные деревья
+        assert!(excluded_directory(Path::new("C:\\Users\\u\\.cargo\\registry"), &options));
+        assert!(excluded_directory(Path::new("D:\\proj\\venv\\Lib"), &options));
+        assert!(!excluded_directory(Path::new("D:\\SteamLibrary\\steamapps\\common"), &options));
+        assert!(!excluded_directory(Path::new("D:\\SteamLibrary\\steamapps\\common\\Dota 2"), &options));
+        assert!(excluded_directory(Path::new("D:\\SteamLibrary\\steamapps\\common\\Dota 2\\game"), &options));
+        assert!(!excluded_directory(Path::new("C:\\Program Files\\Adobe\\Photoshop"), &options));
+        assert!(!excluded_directory(Path::new("C:\\Program Files\\Adobe"), &options));
+        assert!(excluded_directory(Path::new("C:\\Program Files\\Adobe\\Photoshop\\Plug-ins"), &options));
+        assert!(!excluded_directory(Path::new("C:\\Users\\u\\Documents\\Projects"), &options));
+        // ответ ReadDirectoryChangesW: один файл в AppData, один в Documents
+        let entry = |name: &str, last: bool| {
+            let wide: Vec<u8> = name.encode_utf16().flat_map(|c| c.to_le_bytes()).collect();
+            let size = (12 + wide.len()).div_ceil(4) * 4;
+            let mut b = Vec::new();
+            b.extend_from_slice(&(if last { 0u32 } else { size as u32 }).to_le_bytes());
+            b.extend_from_slice(&1u32.to_le_bytes());
+            b.extend_from_slice(&(wide.len() as u32).to_le_bytes());
+            b.extend_from_slice(&wide);
+            b.resize(size, 0);
+            b
+        };
+        let root = Path::new("C:\\");
+        let appdata = entry("Users\\u\\AppData\\Local\\com.troid.reever\\index-v1.bin", true);
+        assert!(!relevant_change(root, &appdata));
+        let mut both = entry("Users\\u\\AppData\\Local\\Temp\\x.tmp", false);
+        both.extend(entry("Users\\u\\Documents\\report.docx", true));
+        assert!(relevant_change(root, &both));
     }
 
     #[test]

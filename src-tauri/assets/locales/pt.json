@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "nunca",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Índice de discos",
-  "settings.local_index.help": "Necessário para encontrar arquivos e pastas por voz. Ocupa cerca de 80–155 MB de memória; desligado, a pesquisa de arquivos por voz não funciona.",
+  "settings.local_index.help": "Necessário para encontrar arquivos e pastas por voz. Ocupa cerca de 30–60 MB de memória; desligado, a pesquisa de arquivos por voz não funciona.",
   "settings.indexStatus": "Índice: {state} · {entries} entradas · {size}",
   "settings.indexState.off": "desativado",
   "settings.indexState.scanning": "a analisar",

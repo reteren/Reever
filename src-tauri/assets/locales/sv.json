@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "aldrig",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Diskindex",
-  "settings.local_index.help": "Behövs för att söka filer och mappar med rösten. Använder ungefär 80–155 MB minne; avstängt fungerar inte filsökning med rösten.",
+  "settings.local_index.help": "Behövs för att söka filer och mappar med rösten. Använder ungefär 30–60 MB minne; avstängt fungerar inte filsökning med rösten.",
   "settings.indexStatus": "Index: {state} · {entries} poster · {size}",
   "settings.indexState.off": "av",
   "settings.indexState.scanning": "söker igenom",

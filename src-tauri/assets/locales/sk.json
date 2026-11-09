@@ -354,7 +354,7 @@
   "settings.models_unload_after_s.never": "nikdy",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Index diskov",
-  "settings.local_index.help": "Potrebný na hľadanie súborov a priečinkov hlasom. Zaberá asi 80–155 MB pamäte; keď je vypnutý, hľadanie súborov hlasom nefunguje.",
+  "settings.local_index.help": "Potrebný na hľadanie súborov a priečinkov hlasom. Zaberá asi 30–60 MB pamäte; keď je vypnutý, hľadanie súborov hlasom nefunguje.",
   "settings.indexStatus": "Index: {state} · {entries} položiek · {size}",
   "settings.indexState.off": "vypnutý",
   "settings.indexState.scanning": "prehľadávanie",

@@ -354,7 +354,7 @@
   "settings.models_unload_after_s.never": "nigdy",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Indeks dysków",
-  "settings.local_index.help": "Potrzebny do szukania plików i folderów głosem. Zajmuje około 80–155 MB pamięci; gdy jest wyłączony, wyszukiwanie plików głosem nie działa.",
+  "settings.local_index.help": "Potrzebny do szukania plików i folderów głosem. Zajmuje około 30–60 MB pamięci; gdy jest wyłączony, wyszukiwanie plików głosem nie działa.",
   "settings.indexStatus": "Indeks: {state} · {entries} wpisów · {size}",
   "settings.indexState.off": "wyłączony",
   "settings.indexState.scanning": "skanowanie",

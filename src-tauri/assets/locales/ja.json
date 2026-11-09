@@ -351,7 +351,7 @@
   "settings.models_unload_after_s.never": "解放しない",
   "settings.models_unload_after_s.seconds": "{n} 秒",
   "settings.local_index": "ディスクのインデックス",
-  "settings.local_index.help": "音声でファイルやフォルダーを探すのに必要です。メモリを約 80–155 MB 使用します。オフにすると音声でのファイル検索はできません。",
+  "settings.local_index.help": "音声でファイルやフォルダーを探すのに必要です。メモリを約 30–60 MB 使用します。オフにすると音声でのファイル検索はできません。",
   "settings.indexStatus": "インデックス：{state} · {entries} 件 · {size}",
   "settings.indexState.off": "オフ",
   "settings.indexState.scanning": "スキャン中",

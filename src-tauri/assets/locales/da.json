@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "aldrig",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Diskindeks",
-  "settings.local_index.help": "Nødvendigt for at finde filer og mapper med stemmen. Bruger ca. 80–155 MB hukommelse; når det er slået fra, virker filsøgning med stemmen ikke.",
+  "settings.local_index.help": "Nødvendigt for at finde filer og mapper med stemmen. Bruger ca. 30–60 MB hukommelse; når det er slået fra, virker filsøgning med stemmen ikke.",
   "settings.indexStatus": "Indeks: {state} · {entries} poster · {size}",
   "settings.indexState.off": "fra",
   "settings.indexState.scanning": "scanner",

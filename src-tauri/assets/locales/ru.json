@@ -349,7 +349,7 @@
   "settings.models_unload_after_s.never": "не выгружать",
   "settings.models_unload_after_s.seconds": "{n} с",
   "settings.local_index": "Индекс дисков",
-  "settings.local_index.help": "Нужен, чтобы искать файлы и папки голосом. Занимает в памяти около 80–155 МБ; без него файлы голосом не ищутся.",
+  "settings.local_index.help": "Нужен, чтобы искать файлы и папки голосом. Занимает в памяти около 30–60 МБ; без него файлы голосом не ищутся.",
   "settings.indexStatus": "Индекс: {state} · записей: {entries} · {size}",
   "settings.indexState.off": "выключен",
   "settings.indexState.scanning": "сканирует",

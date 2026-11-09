@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "ποτέ",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Ευρετήριο δίσκων",
-  "settings.local_index.help": "Χρειάζεται για αναζήτηση αρχείων και φακέλων με τη φωνή. Καταλαμβάνει περίπου 80–155 MB μνήμης· όταν είναι ανενεργό, η φωνητική αναζήτηση αρχείων δεν λειτουργεί.",
+  "settings.local_index.help": "Χρειάζεται για αναζήτηση αρχείων και φακέλων με τη φωνή. Καταλαμβάνει περίπου 30–60 MB μνήμης· όταν είναι ανενεργό, η φωνητική αναζήτηση αρχείων δεν λειτουργεί.",
   "settings.indexStatus": "Ευρετήριο: {state} · {entries} εγγραφές · {size}",
   "settings.indexState.off": "ανενεργό",
   "settings.indexState.scanning": "σάρωση",

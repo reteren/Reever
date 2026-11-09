@@ -353,7 +353,7 @@
   "settings.models_unload_after_s.never": "nekad",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Disku indekss",
-  "settings.local_index.help": "Vajadzīgs, lai failus un mapes meklētu ar balsi. Aizņem apmēram 80–155 MB atmiņas; kad izslēgts, failu meklēšana ar balsi nedarbojas.",
+  "settings.local_index.help": "Vajadzīgs, lai failus un mapes meklētu ar balsi. Aizņem apmēram 30–60 MB atmiņas; kad izslēgts, failu meklēšana ar balsi nedarbojas.",
   "settings.indexStatus": "Indekss: {state} · {entries} ieraksti · {size}",
   "settings.indexState.off": "izslēgts",
   "settings.indexState.scanning": "skenēšana",

@@ -351,7 +351,7 @@
   "settings.models_unload_after_s.never": "从不卸载",
   "settings.models_unload_after_s.seconds": "{n} 秒",
   "settings.local_index": "磁盘索引",
-  "settings.local_index.help": "用于语音查找文件和文件夹。占用约 80–155 MB 内存；关闭后无法用语音搜索文件。",
+  "settings.local_index.help": "用于语音查找文件和文件夹。占用约 30–60 MB 内存；关闭后无法用语音搜索文件。",
   "settings.indexStatus": "索引：{state} · {entries} 条记录 · {size}",
   "settings.indexState.off": "关闭",
   "settings.indexState.scanning": "扫描中",

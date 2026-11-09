@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "never",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Disk index",
-  "settings.local_index.help": "Needed to find files and folders by voice. Uses about 80–155 MB of memory; when off, file search by voice doesn't work.",
+  "settings.local_index.help": "Needed to find files and folders by voice. Uses about 30–60 MB of memory; when off, file search by voice doesn't work.",
   "settings.indexStatus": "Index: {state} · {entries} entries · {size}",
   "settings.indexState.off": "off",
   "settings.indexState.scanning": "scanning",

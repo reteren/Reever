@@ -351,7 +351,7 @@
   "settings.models_unload_after_s.never": "永遠唔卸載",
   "settings.models_unload_after_s.seconds": "{n} 秒",
   "settings.local_index": "磁碟索引",
-  "settings.local_index.help": "用聲音搵檔案同資料夾就要用到。大約用 80–155 MB 記憶體；熄咗就唔可以用聲音搵檔案。",
+  "settings.local_index.help": "用聲音搵檔案同資料夾就要用到。大約用 30–60 MB 記憶體；熄咗就唔可以用聲音搵檔案。",
   "settings.indexStatus": "索引：{state} · {entries} 個項目 · {size}",
   "settings.indexState.off": "熄咗",
   "settings.indexState.scanning": "掃描緊",

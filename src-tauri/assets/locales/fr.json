@@ -353,7 +353,7 @@
   "settings.models_unload_after_s.never": "jamais",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Index des disques",
-  "settings.local_index.help": "Nécessaire pour trouver fichiers et dossiers à la voix. Occupe environ 80–155 Mo de mémoire ; désactivé, la recherche de fichiers à la voix ne fonctionne pas.",
+  "settings.local_index.help": "Nécessaire pour trouver fichiers et dossiers à la voix. Occupe environ 30–60 Mo de mémoire ; désactivé, la recherche de fichiers à la voix ne fonctionne pas.",
   "settings.indexStatus": "Index : {state} · {entries} entrées · {size}",
   "settings.indexState.off": "désactivé",
   "settings.indexState.scanning": "analyse en cours",

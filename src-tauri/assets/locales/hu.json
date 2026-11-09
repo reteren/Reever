@@ -352,7 +352,7 @@
   "settings.models_unload_after_s.never": "soha",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Lemezindex",
-  "settings.local_index.help": "Fájlok és mappák hanggal való kereséséhez szükséges. Körülbelül 80–155 MB memóriát használ; kikapcsolva a hangalapú fájlkeresés nem működik.",
+  "settings.local_index.help": "Fájlok és mappák hanggal való kereséséhez szükséges. Körülbelül 30–60 MB memóriát használ; kikapcsolva a hangalapú fájlkeresés nem működik.",
   "settings.indexStatus": "Index: {state} · {entries} bejegyzés · {size}",
   "settings.indexState.off": "ki",
   "settings.indexState.scanning": "átvizsgálás",

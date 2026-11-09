@@ -355,7 +355,7 @@
   "settings.models_unload_after_s.never": "qatt",
   "settings.models_unload_after_s.seconds": "{n} s",
   "settings.local_index": "Indiċi tad-diski",
-  "settings.local_index.help": "Meħtieġ biex issib fajls u folders bil-vuċi. Juża madwar 80–155 MB memorja; meta jkun mitfi, it-tfittxija tal-fajls bil-vuċi ma taħdimx.",
+  "settings.local_index.help": "Meħtieġ biex issib fajls u folders bil-vuċi. Juża madwar 30–60 MB memorja; meta jkun mitfi, it-tfittxija tal-fajls bil-vuċi ma taħdimx.",
   "settings.indexStatus": "Indiċi: {state} · {entries} entrati · {size}",
   "settings.indexState.off": "mitfi",
   "settings.indexState.scanning": "qed jiskennja",
