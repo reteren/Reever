@@ -97,13 +97,14 @@ const FRAME_STATIC: bool = true;
 
 
 
-pub(crate) const TABS: [&str; 5] = ["home", "actions", "settings", "logs", "text"];
+/// «index» — не страница, а кнопка: открывает окно поиска по индексу (как «ривер индекс»).
+pub(crate) const TABS: [&str; 6] = ["home", "actions", "settings", "logs", "text", "index"];
 #[path = "access.rs"]
 mod access;
 use access::KFocus;
 
-const TAB_ICONS: [&str; 5] = ["orb", "stack", "tune", "term", "wave"];
-const TAB_KEYS: [&str; 5] = ["nav.home", "nav.actions", "nav.settings", "nav.log", "nav.text"];
+const TAB_ICONS: [&str; 6] = ["orb", "stack", "tune", "term", "wave", "lens"];
+const TAB_KEYS: [&str; 6] = ["nav.home", "nav.actions", "nav.settings", "nav.log", "nav.text", "nav.index"];
 const LOG_LIMIT: usize = 250;
 
 /// Сообщения окну из распознавания и Rust.
@@ -855,7 +856,7 @@ impl MainView {
                 self.open_editor(&key);
             }
             Msg::Tab(t) => {
-                if let Some(i) = TABS.iter().position(|x| *x == t) {
+                if let Some(i) = TABS.iter().position(|x| *x == t && *x != "index") {
                     self.tab = i;
                     self.log_scroll = 0.0;
                     self.home_scroll = 0.0;
@@ -2237,6 +2238,7 @@ impl MainView {
             Target::Lunka(0) => (self.host)(Act::Minimize),
             Target::Lunka(2) => (self.host)(Act::Tray),
             Target::Lunka(_) => (self.host)(Act::Shade(true)),
+            Target::Tab(i) if TABS[i] == "index" => (self.host)(Act::Index),
             Target::Tab(i) => {
                 if self.tab != i {
                     if !lite() {

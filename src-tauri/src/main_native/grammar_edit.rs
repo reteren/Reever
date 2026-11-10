@@ -55,6 +55,7 @@ fn kind_icon(k: IntentKind) -> &'static str {
         IntentKind::FindFile => "file",
         IntentKind::WebChat => "spark",
         IntentKind::Listen => "wave",
+        IntentKind::Index => "lens",
     }
 }
 
@@ -70,7 +71,8 @@ fn minimum_triggers(k: IntentKind) -> usize {
         | IntentKind::Find
         | IntentKind::FindFolder
         | IntentKind::FindFile
-        | IntentKind::Listen => 1,
+        | IntentKind::Listen
+        | IntentKind::Index => 1,
         _ => 0,
     }
 }

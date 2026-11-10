@@ -220,7 +220,7 @@ impl MainView {
         if step != 0 {
             match self.kfocus {
                 KFocus::Tab(i) => {
-                    self.kfocus = KFocus::Tab((i as i32 + step).rem_euclid(4) as usize);
+                    self.kfocus = KFocus::Tab((i as i32 + step).rem_euclid(TABS.len() as i32) as usize);
                 }
                 KFocus::Row(i) => {
                     let keyed: Vec<usize> = self.info.say.rows.iter().enumerate().filter(|(_, r)| r.key.is_some()).map(|(i, _)| i).collect();
@@ -285,7 +285,8 @@ impl MainView {
         let mut tab_ids = Vec::new();
         for i in 0..TABS.len() {
             let id = NodeId(6 + i as u64);
-            let mut n = Node::new(Role::Tab);
+            // «Индекс» не страница, а кнопка: открывает окно поиска
+            let mut n = Node::new(if TABS[i] == "index" { Role::Button } else { Role::Tab });
             n.set_label(self.t(TAB_KEYS[i]));
             n.set_selected(i == self.tab);
             n.set_bounds(b(Self::tab_rect(i)));
@@ -448,7 +449,8 @@ impl MainView {
         let focus = req.action == Action::Focus;
         let target = match id {
             2..=4 => Some((KFocus::Lunka((id - 2) as usize), Target::Lunka((id - 2) as usize))),
-            6..=9 => Some((KFocus::Tab((id - 6) as usize), Target::Tab((id - 6) as usize))),
+            // вкладки: 6.. по числу клавиш рельса (13 — пауза)
+            6..=11 => Some((KFocus::Tab((id - 6) as usize), Target::Tab((id - 6) as usize))),
             13 => Some((KFocus::Pause, Target::Pause)),
             21 => Some((KFocus::Web, Target::Web)),
             100..=299 => Some((KFocus::Row((id - 100) as usize), Target::Row((id - 100) as usize))),

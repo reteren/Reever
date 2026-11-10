@@ -102,6 +102,7 @@ impl Ctx<'_> {
                 let keys = if ru { "энтер, контрол эс, виндоус дэ" } else { "enter, ctrl s, windows d" };
                 (x, self.t("example.key", &[("keys", keys)]))
             }
+            IntentKind::Index => (format!("{wake} {trigger}"), self.t("example.index", &[])),
             IntentKind::Find => (x, self.t("example.findBoth", &[])),
             IntentKind::FindFolder => (x, self.t("example.findFolders", &[])),
             IntentKind::FindFile => (x, self.t("example.findFiles", &[])),

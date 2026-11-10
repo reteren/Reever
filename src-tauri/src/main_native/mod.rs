@@ -62,6 +62,8 @@ pub enum Act {
     Shade(bool),
     /// вкладка «Текст»
     Text(text_tab::TextOut),
+    /// кнопка «Индекс»: окно поиска по индексу с пустым полем
+    Index,
 }
 
 pub fn is_open() -> bool {
@@ -451,6 +453,11 @@ fn act(app: &AppHandle, a: Act) {
         }
         Act::Settings(out) => apply_setting(app, out),
         Act::Text(out) => text_act(app, out),
+        Act::Index => {
+            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
+                crate::picker::show_index(app, &state, "");
+            }
+        }
         Act::Shade(on) => set_shade(app, on),
         Act::Calibrate(a) => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {

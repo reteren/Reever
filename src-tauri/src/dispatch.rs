@@ -119,6 +119,8 @@ pub enum Route {
     Key(Vec<String>),
     /// «Слушай»: звук компьютера в текст (listen.rs).
     Listen,
+    /// «Индекс»: окно поиска по индексу; в поле — что сказали после команды (обычно пусто).
+    Index(String),
     /// Диктовка с первым куском текста. Обычно её перехватывает Engine раньше `route`
     /// (он сам печатает текст); сюда она доходит только из eval и тестов.
     Dictate(String),
@@ -192,6 +194,9 @@ pub fn route(
         if trigger.intent.kind == IntentKind::Listen {
             return Route::Listen;
         }
+        if trigger.intent.kind == IntentKind::Index {
+            return Route::Index(join_cjk(&payloads[0]));
+        }
         if trigger.intent.kind == IntentKind::Dictate {
             return Route::Dictate(payloads[0].clone());
         }
@@ -208,6 +213,7 @@ pub fn route(
             IntentKind::Calc => Route::Calc(payloads),
             IntentKind::Key => Route::Key(payloads),
             IntentKind::Listen => Route::Listen,
+            IntentKind::Index => Route::Index(join_cjk(&payloads[0])),
             IntentKind::Dictate => Route::Dictate(join_cjk(&payloads[0])),
             IntentKind::Find | IntentKind::FindFolder | IntentKind::FindFile => Route::Find {
                 scope: match trigger.intent.kind {
@@ -463,6 +469,11 @@ pub fn dispatch(
                 ui_log(app, crate::msg!("log.computer.already"));
             }
             DispatchResult::Done(started)
+        }
+        Route::Index(query) => {
+            ui_log(app, crate::msg!("log.index.open"));
+            crate::picker::show_index(app, shared, &query);
+            DispatchResult::Done(true)
         }
         Route::Key(candidates) => {
             let parsed: Vec<_> = candidates.iter().map(|candidate| crate::keys::parse(candidate)).collect();
@@ -892,6 +903,10 @@ mod tests {
     fn listen_routes_from_the_grammar() {
         let grammar = Grammar::defaults();
         let actions = actions();
+        for text in ["индекс", "index"] {
+            assert!(matches!(route(text, &grammar, &actions, THRESHOLD), Route::Index(q) if q.is_empty()), "{text}");
+        }
+        assert!(matches!(route("индекс отчёт", &grammar, &actions, THRESHOLD), Route::Index(q) if q.starts_with("отч")), "запрос после «индекс» идёт в поле");
         for text in ["слушай", "послушай звук компьютера", "listen"] {
             assert!(matches!(route(text, &grammar, &actions, THRESHOLD), Route::Listen), "{text}");
         }

@@ -37,6 +37,9 @@ pub struct Payload {
     pub query: String,
     pub scope: FindScope,
     pub items: Vec<FindItem>,
+    /// Окно индекса («ривер индекс», кнопка «Индекс»): заголовок «Индекс», поле пустое
+    /// или с тем, что сказали после команды, и поиск сразу по нему.
+    pub browse: bool,
 }
 
 /// Что окно просит у picker.rs (вызывается не из потока окон).
@@ -168,9 +171,19 @@ impl PickerView {
         self.search_due = None;
         self.searching = false;
         self.pending_choose = None;
-        self.query.set_text(if p.query.is_empty() { &p.title } else { &p.query });
+        if p.browse {
+            self.query.set_text(&p.query);
+        } else {
+            self.query.set_text(if p.query.is_empty() { &p.title } else { &p.query });
+        }
         self.set_scope(p.scope);
         self.render_list(p.title.trim());
+        if p.browse {
+            self.title = t("picker.indexTitle");
+            if !p.query.trim().is_empty() {
+                self.schedule_search(Duration::ZERO);
+            }
+        }
         self.set_focus(Focus::Query, false);
         self.query.select_all();
     }
@@ -1106,7 +1119,7 @@ mod tests {
         let items = (0..n)
             .map(|i| FindItem { name: format!("item {i}"), path: format!("C:\\x\\{i}"), folder: i % 2 == 0, frequent: i < 2, score: 0.0 })
             .collect();
-        v.apply(Payload { title: "q".into(), query: "q".into(), scope: FindScope::Any, items });
+        v.apply(Payload { title: "q".into(), query: "q".into(), scope: FindScope::Any, items, browse: false });
         (v, mock)
     }
 

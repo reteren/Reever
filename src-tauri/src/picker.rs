@@ -40,6 +40,24 @@ pub fn show(
     scope: FindScope,
     items: &[FindItem],
 ) -> u64 {
+    show_payload(app, shared, title, query, scope, items, false)
+}
+
+/// Окно индекса: то же окно поиска, но без найденного голосом — человек печатает сам.
+/// `query` — что сказали после «индекс» («ривер индекс отчёт»), обычно пусто.
+pub fn show_index(app: &AppHandle, shared: &SharedState, query: &str) -> u64 {
+    show_payload(app, shared, "", query, FindScope::Any, &[], true)
+}
+
+fn show_payload(
+    app: &AppHandle,
+    shared: &SharedState,
+    title: &str,
+    query: &str,
+    scope: FindScope,
+    items: &[FindItem],
+    browse: bool,
+) -> u64 {
     crate::dialog_demo::asked("picker");
     let session = shared.picker_session.fetch_add(1, Ordering::SeqCst) + 1;
     SEARCH_GENERATION.fetch_add(1, Ordering::SeqCst);
@@ -52,6 +70,7 @@ pub fn show(
         query: query.to_string(),
         scope,
         items: items.to_vec(),
+        browse,
     };
     crate::dialogs_native::picker::show(app, Arc::new(NativeHost { app: app.clone() }), payload);
     session

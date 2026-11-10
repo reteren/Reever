@@ -12,7 +12,7 @@ use crate::actions::Action;
 use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 14;
+const GRAMMAR_VERSION: u32 = 15;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -24,6 +24,7 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (8, &["find", "find_folder", "find_file"]),
     (12, &["key"]),
     (14, &["listen"]),
+    (15, &["index"]),
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
 /// Версия 10 — «отмена» языков из языковых пакетов (models.rs).
@@ -780,6 +781,8 @@ pub enum IntentKind {
     Key,
     /// «Слушай» — звук компьютера в текст (listen.rs); цели нет.
     Listen,
+    /// «Индекс» — окно поиска по индексу дисков, поле пустое: человек печатает сам.
+    Index,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -1029,6 +1032,13 @@ impl Grammar {
                     IntentKind::Key,
                     "нажать клавишу или сочетание",
                     &["кнопка", "клавиша", "нажми", "press", "press key"],
+                    "",
+                ),
+                intent(
+                    "index",
+                    IntentKind::Index,
+                    "окно поиска по индексу",
+                    &["индекс", "index"],
                     "",
                 ),
             ],
@@ -1439,8 +1449,8 @@ impl Grammar {
     /// «открой»): Engine должен дослушать продолжение, а не выполнять обрубок.
     pub fn is_incomplete(&self, text: &str) -> bool {
         self.match_trigger(text).is_some_and(|matched| {
-            // «слушай» — команда целиком, без цели
-            (matched.payload.is_empty() && matched.intent.kind != IntentKind::Listen)
+            // «слушай» и «индекс» — команды целиком, без цели
+            (matched.payload.is_empty() && !matches!(matched.intent.kind, IntentKind::Listen | IntentKind::Index))
                 // «найди отчёт формат» + пауза — формат скажут следом.
                 || (matches!(
                     matched.intent.kind,
@@ -2117,6 +2127,22 @@ mod tests {
     }
 
     #[test]
+    fn version_fourteen_migration_adds_index() {
+        let path = temporary_path("v14-index");
+        let mut legacy = Grammar::defaults();
+        legacy.version = 14;
+        legacy.intents.retain(|intent| intent.id != "index");
+        std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
+        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let index = migrated.intents.iter().find(|intent| intent.id == "index").unwrap();
+        assert!(index.enabled && index.triggers.iter().any(|t| t == "индекс"));
+        // «индекс» — команда целиком: окно открывается без цели
+        assert!(!migrated.is_incomplete("индекс"));
+        assert!(migrated.validate().is_ok());
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
     fn version_thirteen_migration_adds_listen() {
         let path = temporary_path("v13-listen");
         let mut legacy = Grammar::defaults();
@@ -2204,7 +2230,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 14);
+        assert_eq!(Grammar::defaults().version, 15);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()
