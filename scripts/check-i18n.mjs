@@ -42,7 +42,9 @@ for (const code of SUPPORTED.filter(code => code !== 'en')) {
   if (extra.length) problems.push(`${code}: extra keys: ${extra.slice(0, 8).join(', ')}`);
   for (const [key, entry] of Object.entries(dictionary)) {
     if (!(key in reference)) continue;
-    if (texts(entry).some(text => typeof text !== 'string' || !text.trim())) problems.push(`${code}: ${key} is empty`);
+    // Хвост после ссылки («…Suffix») бывает пустым: точек в конце фраз интерфейс не ставит.
+    const mayBeEmpty = key.endsWith('Suffix');
+    if (texts(entry).some(text => typeof text !== 'string' || (!mayBeEmpty && !text.trim()))) problems.push(`${code}: ${key} is empty`);
     if (typeof entry !== 'string' && !('other' in entry)) problems.push(`${code}: ${key} plural has no "other"`);
     // {count} в русском «{count} фр.» есть; подстановки не должны теряться или появляться.
     if (!same(placeholders(entry), placeholders(reference[key]))) problems.push(`${code}: ${key} placeholders differ from en`);
