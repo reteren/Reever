@@ -90,10 +90,18 @@ const NAMED: &[(&[&str], Key)] = &[
 ];
 
 /// Слова между клавишами, которые ничего не значат: «контрол плюс эс», «стрелка вверх».
+/// Падежи и число тоже: модель пишет «нажми кнопки виндоус д», «нажми на кнопку энтер».
 const FILLER: &[&str] = &[
-    "плюс", "+", "и", "and", "plus", "кнопка", "кнопку", "клавиша", "клавишу", "стрелка", "стрелку",
-    "key", "button", "arrow",
+    "плюс", "+", "и", "and", "plus", "кнопка", "кнопку", "кнопки", "кнопок", "кнопкой", "клавиша",
+    "клавишу", "клавиши", "клавиш", "клавишей", "стрелка", "стрелку", "стрелки", "сочетание",
+    "комбинацию", "на", "key", "keys", "button", "buttons", "arrow", "on", "the",
 ];
+
+/// «Виндос», «виндоса», «виндоусе» — модель пишет Windows по-русски как попало, и перечислить
+/// все варианты нельзя. Ни одна другая клавиша на «винд»/«window» не начинается.
+fn windows_key(word: &str) -> Option<Key> {
+    (word.starts_with("винд") || word.starts_with("window")).then(|| ext(0x5B, "Win"))
+}
 
 const NUMBERS: &[(&[&str], u8)] = &[
     (&["ноль", "zero"], 0),
@@ -206,6 +214,7 @@ pub fn parse(text: &str) -> Result<Vec<Key>, String> {
             continue;
         }
         let found = single(word)
+            .or_else(|| windows_key(word))
             .or_else(|| number(word).filter(|n| *n <= 9).and_then(|n| single(DIGIT_NAMES[n as usize])))
             .ok_or_else(|| word.to_string())?;
         keys.push(found);
@@ -298,6 +307,18 @@ mod tests {
         assert_eq!(names("windows + д"), "Win+D");
         assert_eq!(names("контрол с"), "Ctrl+S");
         assert_eq!(names("вин в"), "Win+V");
+    }
+
+    #[test]
+    fn plural_fillers_and_loose_windows_spelling() {
+        // из журнала пользователя: «кнопки» и «виндос» были «unknown key»
+        assert_eq!(names("кнопки виндоус д"), "Win+D");
+        assert_eq!(names("кнопку виндос плюс д"), "Win+D");
+        assert_eq!(names("виндос плюс д"), "Win+D");
+        assert_eq!(names("на кнопку энтер"), "Enter");
+        assert_eq!(names("сочетание клавиш контрол плюс эс"), "Ctrl+S");
+        assert_eq!(names("виндоуса плюс эр"), "Win+R");
+        assert_eq!(names("window plus d"), "Win+D");
     }
 
     #[test]
