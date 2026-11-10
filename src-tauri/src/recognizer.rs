@@ -345,7 +345,6 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut last_chunk = std::time::Instant::now();
     let mut stalled = false;
     let mut voice_recording = false;
-    let mut picker_muted = false;
     let mut voice_progress = std::time::Instant::now();
     let mut reload_waiting: Option<std::time::Instant> = None;
     loop {
@@ -505,19 +504,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
             continue;
         }
         voice_recording = false;
-        // Окно выбора («найди папку …») открыто — голос не слушаем: в нём печатают и
-        // выбирают мышью, а разговор рядом не должен стать командой.
-        if crate::picker::is_open() {
-            if !picker_muted {
-                picker_muted = true;
-                worker.choice_session = None;
-                engine.reset();
-                set_state(app, "idle");
-            }
-            chunk.fill(0);
-            continue;
-        }
-        picker_muted = false;
+        // Окно выбора и индекса голос не глушит: команды идут как обычно, через wake-слово
+        // (разговор рядом без «ривер» командой не станет). Раньше окно выключало распознавание
+        // целиком, и Reever переставал слушать, пока индекс открыт.
         worker.sync_grammar(&mut engine);
         worker.sync_targets(&mut engine);
         let model_ready = asr.is_loaded();
@@ -1691,8 +1680,9 @@ impl Worker<'_> {
                     self.app,
                     crate::msg!("log.choose", count = count),
                 );
-                self.choice_session = Some(self.shared.picker_session.load(Ordering::SeqCst));
-                engine.listen_choice();
+                // Номер голосом без «ривер» больше не ждём: окно открыто, а Reever слушает
+                // обычные команды — разговор рядом не должен стать «выбором».
+                set_state(self.app, "idle");
             }
             DispatchResult::Confirm(pending) => {
                 ui_log(
