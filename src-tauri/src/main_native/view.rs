@@ -97,7 +97,6 @@ const FRAME_STATIC: bool = true;
 
 
 
-/// «index» — не страница, а кнопка: открывает окно поиска по индексу (как «ривер индекс»).
 pub(crate) const TABS: [&str; 6] = ["home", "actions", "settings", "logs", "text", "index"];
 #[path = "access.rs"]
 mod access;
@@ -151,6 +150,8 @@ pub enum Msg {
     SelectAction(String),
     /// Вкладка «Текст»: ход и текст распознавания файла или звука компьютера.
     TextJob(crate::transcribe::TextJob),
+    /// Вкладка «Индекс»: найденное по запросу номер `seq` или ошибка (`index-off`).
+    IndexResults(u64, Result<Vec<crate::find::FindItem>, String>),
 }
 
 /// Сведения для экранов, которые не приходят событиями.
@@ -400,6 +401,7 @@ pub struct MainView {
     actions_tab: super::actions_tab::ActionsTab,
     settings_tab: super::settings_tab::SettingsTab,
     text_tab: super::text_tab::TextTab,
+    index_tab: super::index_tab::IndexTab,
     /// окно поверх (калибровка, голос, выбор программы)
     overlay: Option<super::overlays::Overlay>,
     /// компактный режим (полоска) и её содержимое
@@ -529,6 +531,7 @@ impl MainView {
             actions_tab: super::actions_tab::ActionsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             settings_tab: super::settings_tab::SettingsTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             text_tab: super::text_tab::TextTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
+            index_tab: super::index_tab::IndexTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             overlay: None,
             shade: None,
             shaded: false,
@@ -775,6 +778,7 @@ impl MainView {
             },
             Msg::SettingsMsg(m) => self.settings_tab.msg = m,
             Msg::TextJob(job) => self.text_tab.set_job(job),
+            Msg::IndexResults(seq, result) => self.index_tab.results(seq, result),
             Msg::Key(key, shift) => {
                 let ev = KeyEvent { key, ctrl: false, shift, alt: false, repeat: false };
                 let handled = <Self as WindowHandler>::key(self, ev);
@@ -856,7 +860,7 @@ impl MainView {
                 self.open_editor(&key);
             }
             Msg::Tab(t) => {
-                if let Some(i) = TABS.iter().position(|x| *x == t && *x != "index") {
+                if let Some(i) = TABS.iter().position(|x| *x == t) {
                     self.tab = i;
                     self.log_scroll = 0.0;
                     self.home_scroll = 0.0;
@@ -1249,6 +1253,10 @@ impl MainView {
             "text" => {
                 self.text_tab.draw(&mut self.scene, cx, body);
                 self.form_blink = self.text_tab.form.next_blink(cx.now);
+            }
+            "index" => {
+                self.index_tab.draw(&mut self.scene, cx, body);
+                self.form_blink = self.index_tab.form.next_blink(cx.now);
             }
             _ => self.draw_logs(cx, body),
         }
@@ -1706,6 +1714,10 @@ impl MainView {
 
     pub(super) fn text_out(&mut self, out: super::text_tab::TextOut) {
         (self.host)(Act::Text(out));
+    }
+
+    pub(super) fn index_out(&mut self, out: super::index_tab::IndexOut) {
+        (self.host)(Act::Index(out));
     }
 
     fn settings_out(&mut self, out: super::settings_tab::SettingsOut) {
@@ -2187,6 +2199,8 @@ impl MainView {
             let caret = if let Some(o) = &self.overlay { o.ime_caret() } else { match TABS[self.tab] {
                 "actions" => self.actions_tab.ime_caret(),
                 "settings" => self.settings_tab.form.ime_caret(),
+                "text" => self.text_tab.form.ime_caret(),
+                "index" => self.index_tab.form.ime_caret(),
                 _ => self.form.ime_caret(),
             } };
             native::set_ime_caret(self.hwnd, caret.map(|(x, y, h)| (x * k, y * k, h * k)));
@@ -2238,7 +2252,6 @@ impl MainView {
             Target::Lunka(0) => (self.host)(Act::Minimize),
             Target::Lunka(2) => (self.host)(Act::Tray),
             Target::Lunka(_) => (self.host)(Act::Shade(true)),
-            Target::Tab(i) if TABS[i] == "index" => (self.host)(Act::Index),
             Target::Tab(i) => {
                 if self.tab != i {
                     if !lite() {
@@ -2256,6 +2269,9 @@ impl MainView {
                         self.close_editor();
                     }
                     self.static_dirty = true;
+                    if TABS[i] == "index" {
+                        self.index_tab.focus();
+                    }
                     (self.host)(Act::Tab(TABS[i].to_string()));
                 }
             }
@@ -2289,6 +2305,7 @@ impl WindowHandler for MainView {
         self.actions_tab.set_hwnd(hwnd);
         self.settings_tab.set_hwnd(hwnd);
         self.text_tab.set_hwnd(hwnd);
+        self.index_tab.set_hwnd(hwnd);
     }
 
     /// Файлы брошены в окно: первый — во вкладку «Текст».
@@ -2692,6 +2709,37 @@ impl WindowHandler for MainView {
                 }
             }
         }
+        if TABS[self.tab] == "index" {
+            let over = native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0;
+            let skin = MouseEvent { kind: ev.kind, x, y };
+            let busy = self.index_tab.form.popup_open();
+            let mine = match ev.kind {
+                MouseKind::Down(_) | MouseKind::DoubleClick => over || busy,
+                MouseKind::Up(_) => (over && self.pressed.is_none()) || busy,
+                _ => busy,
+            };
+            if matches!(ev.kind, MouseKind::Move | MouseKind::Leave | MouseKind::Up(_)) || mine {
+                let (redraw, out) = self.index_tab.mouse(skin);
+                if let Some(out) = out {
+                    self.index_out(out);
+                }
+                if redraw {
+                    self.touch_static();
+                }
+                if mine {
+                    return true;
+                }
+                if ev.kind == MouseKind::Move && over {
+                    let c = match self.index_tab.cursor(x, y) {
+                        Some(true) => Cursor::Hand,
+                        Some(false) => Cursor::Text,
+                        None => Cursor::Arrow,
+                    };
+                    set_cursor(self.hwnd, c);
+                    return redraw;
+                }
+            }
+        }
         if TABS[self.tab] == "text" {
             let over = native::controls::inside(screen_r(), x, y) && y >= screen_r().y + 34.0;
             let skin = MouseEvent { kind: ev.kind, x, y };
@@ -2902,6 +2950,16 @@ impl WindowHandler for MainView {
         if let Some(r) = self.kbd(ev) {
             return r;
         }
+        if TABS[self.tab] == "index" {
+            let (redraw, out) = self.index_tab.key(ev);
+            if let Some(out) = out {
+                self.index_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
+        }
         if TABS[self.tab] == "text" {
             let (redraw, out) = self.text_tab.key(ev);
             if let Some(out) = out {
@@ -2949,6 +3007,16 @@ impl WindowHandler for MainView {
                 self.touch_static();
             }
             return r;
+        }
+        if TABS[self.tab] == "index" {
+            let (redraw, out) = self.index_tab.char_input(c);
+            if let Some(out) = out {
+                self.index_out(out);
+            }
+            if redraw {
+                self.touch_static();
+            }
+            return redraw;
         }
         if TABS[self.tab] == "text" {
             let (redraw, out) = self.text_tab.char_input(c);
@@ -3006,6 +3074,10 @@ impl WindowHandler for MainView {
                 self.static_dirty = true;
             }
             return r;
+        }
+        if TABS[self.tab] == "index" && self.index_tab.wheel(x, y, delta) {
+            self.static_dirty = true;
+            return true;
         }
         if TABS[self.tab] == "text" && self.text_tab.wheel(x, y, delta) {
             self.static_dirty = true;

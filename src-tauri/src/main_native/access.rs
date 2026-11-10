@@ -36,6 +36,9 @@ const ACTIONS: u64 = 2000;
 const SETTINGS: u64 = 6000;
 /// элементы вкладки «Текст» — с запасом над настройками
 const TEXT: u64 = 50_000;
+/// вкладка «Индекс»: форма и строки найденного
+const INDEX: u64 = 60_000;
+const INDEX_ROWS: u64 = 70_000;
 
 impl MainView {
     /// Порядок Tab по окну.
@@ -57,7 +60,7 @@ impl MainView {
                     }
                 }
             }
-            "actions" | "settings" | "text" => o.push(KFocus::Content),
+            "actions" | "settings" | "text" | "index" => o.push(KFocus::Content),
             _ => {}
         }
         o
@@ -73,6 +76,7 @@ impl MainView {
                 true
             }
             KFocus::Content if TABS[self.tab] == "text" => self.text_tab.form.focus_edge(back),
+            KFocus::Content if TABS[self.tab] == "index" => self.index_tab.form.focus_edge(back),
             KFocus::Content => self.settings_tab.form.focus_edge(back),
             _ => true,
         }
@@ -128,6 +132,7 @@ impl MainView {
             "actions" if self.actions_tab.kbd_active() => self.kfocus = KFocus::Content,
             "settings" if self.settings_tab.form.has_focus() => self.kfocus = KFocus::Content,
             "text" if self.text_tab.form.has_focus() => self.kfocus = KFocus::Content,
+            "index" if self.index_tab.form.has_focus() => self.kfocus = KFocus::Content,
             _ => {}
         }
     }
@@ -167,6 +172,8 @@ impl MainView {
                     &self.form
                 } else if TABS[self.tab] == "text" {
                     &self.text_tab.form
+                } else if TABS[self.tab] == "index" {
+                    &self.index_tab.form
                 } else {
                     &self.settings_tab.form
                 };
@@ -403,6 +410,32 @@ impl MainView {
                     focus = ffocus;
                 }
             }
+            "index" => {
+                let (fnodes, fkids, ffocus) = self.index_tab.form.a11y(INDEX, s);
+                nodes.extend(fnodes);
+                ckids.extend(fkids);
+                if self.kfocus == KFocus::Content {
+                    focus = ffocus;
+                }
+                let mut list = Node::new(Role::List);
+                list.set_label(self.t("picker.list"));
+                let mut rows = Vec::new();
+                for (i, (name, path, selected)) in self.index_tab.a11y_rows().into_iter().enumerate() {
+                    let id = NodeId(INDEX_ROWS + i as u64);
+                    let mut n = Node::new(Role::ListItem);
+                    n.set_label(format!("{name}, {path}"));
+                    n.set_selected(selected);
+                    if let Some(r) = self.index_tab.rows.get(i) {
+                        n.set_bounds(b(*r));
+                    }
+                    n.add_action(Action::Click);
+                    nodes.push((id, n));
+                    rows.push(id);
+                }
+                list.set_children(rows);
+                nodes.push((NodeId(INDEX_ROWS - 1), list));
+                ckids.push(NodeId(INDEX_ROWS - 1));
+            }
             _ => {
                 let (fnodes, fkids, ffocus) = self.settings_tab.form.a11y(SETTINGS, s);
                 nodes.extend(fnodes);
@@ -475,6 +508,22 @@ impl MainView {
                 self.kfocus = KFocus::Content;
                 if let Some(out) = out {
                     self.actions_out(out);
+                }
+                self.touch_static();
+                return redraw;
+            }
+        } else if id >= INDEX_ROWS {
+            if click {
+                if let Some(out) = self.index_tab.open_row((id - INDEX_ROWS) as usize) {
+                    self.index_out(out);
+                }
+            }
+            return click;
+        } else if id >= INDEX {
+            if let Some((redraw, out)) = self.index_tab.a11y_action(INDEX, &req) {
+                self.kfocus = KFocus::Content;
+                if let Some(out) = out {
+                    self.index_out(out);
                 }
                 self.touch_static();
                 return redraw;

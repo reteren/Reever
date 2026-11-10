@@ -16,6 +16,7 @@ mod say;
 mod settings_tab;
 mod shade;
 mod text_tab;
+mod index_tab;
 mod view;
 
 use std::sync::{Arc, Mutex, Once, OnceLock};
@@ -62,8 +63,8 @@ pub enum Act {
     Shade(bool),
     /// вкладка «Текст»
     Text(text_tab::TextOut),
-    /// кнопка «Индекс»: окно поиска по индексу с пустым полем
-    Index,
+    /// вкладка «Индекс»
+    Index(index_tab::IndexOut),
 }
 
 pub fn is_open() -> bool {
@@ -180,6 +181,38 @@ fn settings_info(app: &AppHandle) -> settings_tab::SettingsInfo {
 
 /// Изменение на вкладке «Настройки» — теми же командами, что у веб-окна; итог — строкой под формой.
 /// Вкладка «Текст»: файл, звук компьютера, буфер обмена, языки файла.
+/// Номер последнего набранного во вкладке «Индекс»: ответ на устаревший не нужен.
+static INDEX_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn index_act(app: &AppHandle, out: index_tab::IndexOut) {
+    use std::sync::atomic::Ordering;
+    use index_tab::IndexOut;
+    let Some(shared) = app.try_state::<Arc<crate::actions::SharedState>>().map(|s| s.inner().clone()) else { return };
+    let app = app.clone();
+    match out {
+        IndexOut::Search { seq, query, scope } => {
+            INDEX_SEQ.store(seq, Ordering::SeqCst);
+            std::thread::spawn(move || {
+                // набор подряд: искать только последнее, как поле окна выбора (120 мс)
+                std::thread::sleep(std::time::Duration::from_millis(120));
+                if INDEX_SEQ.load(Ordering::SeqCst) != seq {
+                    return;
+                }
+                let result = crate::picker::search_index(&app, &shared, &query, scope);
+                if INDEX_SEQ.load(Ordering::SeqCst) == seq {
+                    send(Msg::IndexResults(seq, result));
+                }
+            });
+        }
+        IndexOut::Open(item) => {
+            std::thread::spawn(move || {
+                let cfg = app.state::<crate::config::LiveConfig>().get();
+                crate::picker::open(&app, &shared, &cfg, &item);
+            });
+        }
+    }
+}
+
 fn text_act(app: &AppHandle, out: text_tab::TextOut) {
     use text_tab::TextOut;
     match out {
@@ -453,11 +486,7 @@ fn act(app: &AppHandle, a: Act) {
         }
         Act::Settings(out) => apply_setting(app, out),
         Act::Text(out) => text_act(app, out),
-        Act::Index => {
-            if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {
-                crate::picker::show_index(app, &state, "");
-            }
-        }
+        Act::Index(out) => index_act(app, out),
         Act::Shade(on) => set_shade(app, on),
         Act::Calibrate(a) => {
             if let Some(state) = app.try_state::<Arc<crate::actions::SharedState>>() {

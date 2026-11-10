@@ -174,6 +174,19 @@ fn windows_recent() -> Arc<HashMap<String, u64>> {
     }
 }
 
+/// Поиск во вкладке «Индекс» главного окна: то же, что поле окна выбора, но список окна
+/// выбора не трогает. Индекс выключен или строится — ошибка `index-off`.
+pub fn search_index(app: &AppHandle, shared: &SharedState, query: &str, scope: FindScope) -> Result<Vec<FindItem>, String> {
+    let manager = app
+        .try_state::<crate::local_index::IndexManager>()
+        .map(|manager| manager.inner().clone());
+    let Some(index) = manager.and_then(|manager| manager.snapshot()) else {
+        return Err("index-off".to_string());
+    };
+    let usage = Usage::load(&shared.usage_path);
+    Ok(crate::find::search_typed(&index, query, scope, &usage, &windows_recent()))
+}
+
 /// Поиск, набранный в окне: варианты по индексу дисков (`find::search_typed`). Найденное
 /// становится списком окна — его номера выбирают и голосом, и клавишами. `None` в ответе —
 /// пришёл более новый запрос, этот ответ устарел. Индекс выключен — ошибка `index-off`.

@@ -239,6 +239,20 @@ pub fn start(app: &AppHandle) {
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "text-done");
         memory(started, "text-done");
+        // вкладка «Индекс»: пустая и со списком (индекс во временной папке выключен — готовый ответ;
+        // номер 0 — ещё ничего не набирали)
+        crate::main_native::send(crate::main_native::Msg::Tab("index".into()));
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "index");
+        let item = |name: &str, path: &str, folder: bool| crate::find::FindItem { name: name.into(), path: path.into(), folder, frequent: false, score: 0.0 };
+        let items = vec![
+            item("Downloads", r"C:\Users\user\Downloads", true),
+            item("report-2026.docx", r"C:\Users\user\Documents\Work\Very long folder name to check clipping\report-2026.docx", false),
+            item("Отчёт за октябрь.xlsx", r"D:\Документы\Отчёт за октябрь.xlsx", false),
+        ];
+        crate::main_native::send(crate::main_native::Msg::IndexResults(0, Ok(items)));
+        std::thread::sleep(Duration::from_millis(400));
+        shoot(&app, "index-results");
         crate::main_native::send(crate::main_native::Msg::Tab("actions".into()));
         std::thread::sleep(Duration::from_millis(400));
         shoot(&app, "actions");
