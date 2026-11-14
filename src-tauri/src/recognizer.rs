@@ -232,9 +232,15 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     };
     let vad = SileroVad::new(&cfg.vad_model_path, s.vad_threshold)
         .inspect_err(|_| set_asr_status(app, &status, "error"))?;
+    // Слова «ривер» и отмены — из грамматики (их правит редактор команд).
+    let (wake_words, cancel_words) = shared
+        .grammar
+        .lock()
+        .map(|g| (g.wake_words.clone(), g.cancel_words.clone()))
+        .unwrap_or_default();
     let mut engine = Engine::new(
         EngineConfig {
-            wake_words: s.wake_words.clone(),
+            wake_words: wake_words.clone(),
             wake_enabled: s.activation_mode != "hotkey",
             wake_pause_ms: s.wake_pause_ms,
             command_pause_ms: s.command_pause_ms,
@@ -305,7 +311,7 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         confirm_op: None,
         confirm_session: 0,
         calibrating: None,
-        cancel_words: cfg.settings.cancel_words.clone(),
+        cancel_words: cancel_words.clone(),
         grammar_version: None,
         targets_fingerprint: None,
         targets_checked: None,
@@ -323,8 +329,8 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
         app,
         crate::msg!(
             "log.ready",
-            wake = crate::uilang::spoken(&s.wake_words, "ривер", "reever"),
-            cancel = crate::uilang::spoken(&cfg.settings.cancel_words, "отмена", "cancel")
+            wake = crate::uilang::spoken(&wake_words, "ривер", "reever"),
+            cancel = crate::uilang::spoken(&cancel_words, "отмена", "cancel")
         ),
     );
 
@@ -1119,6 +1125,10 @@ impl Worker<'_> {
         self.cfg.settings.private_log
     }
 
+    fn wake_words(&self) -> Vec<String> {
+        self.shared.grammar.lock().map(|g| g.wake_words.clone()).unwrap_or_default()
+    }
+
     /// Грамматику редактирует UI-поток; сверка атомика на каждом чанке дешёвая, а клон
     /// под мьютексом — только когда версия действительно сменилась.
     fn sync_grammar<T, V>(&mut self, engine: &mut Engine<T, V>)
@@ -1344,7 +1354,7 @@ impl Worker<'_> {
             crate::msg!(
                 "log.dictation.start",
                 seconds = idle_s,
-                wake = crate::uilang::spoken(&self.cfg.settings.wake_words, "ривер", "reever"),
+                wake = crate::uilang::spoken(&self.wake_words(), "ривер", "reever"),
                 stop = if crate::uilang::current() == "ru" && self.cfg.russian_enabled() { "стоп" } else { "stop" },
                 cancel = crate::uilang::spoken(&self.cancel_words, "отмена", "cancel")
             ),

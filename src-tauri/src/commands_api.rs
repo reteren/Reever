@@ -448,12 +448,10 @@ pub fn get_settings(config: State<'_, LiveConfig>) -> Result<serde_json::Value, 
         // Keep comments and future/unknown keys, while returning recovered known fields
         // so one malformed value cannot break the settings form.
         for (key, value) in defaults {
-            // Legacy compatibility fields stay absent in newly written settings files,
-            // but existing values remain available to older installations.
-            if (key == "endpoint_ms" || key == "english_enabled") && !object.contains_key(key) {
-                continue;
-            }
             object.insert(key.clone(), value.clone());
+        }
+        for key in crate::config::LEGACY_SETTINGS {
+            object.remove(*key);
         }
     }
     Ok(settings)
@@ -480,6 +478,10 @@ pub fn save_settings(
     if let (Some(into), Some(from)) = (merged.as_object_mut(), settings.as_object()) {
         for (key, value) in from {
             into.insert(key.clone(), value.clone());
+        }
+        // Ключи, которые Reever больше не читает, при первом же сохранении уходят из файла.
+        for key in crate::config::LEGACY_SETTINGS {
+            into.remove(*key);
         }
     } else {
         return Err("settings must be an object".into());

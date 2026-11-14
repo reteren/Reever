@@ -1,14 +1,7 @@
 {
   "_comment_languages": "Языки распознавания: английский включён всегда, остальным нужен скачанный пакет модели (установщик). По умолчанию — английский и язык Windows.",
-  "_comment_wake": "Как ASR слышит wake-слово. Добавляй свои варианты; активация — если любое слово фразы совпало с этим списком.",
   "activation_mode": "both",
   "asr_threads": 4,
-  "cancel_words": [
-    "отмена",
-    "стоп",
-    "отбой",
-    "забудь"
-  ],
   "command_pause_ms": 900,
   "command_wait_ms": 5000,
   "confirm_close": false,
@@ -30,14 +23,6 @@
   "ui_language": "auto",
   "vad_threshold": 0.5,
   "wake_pause_ms": 600,
-  "wake_sound": true,
-  "wake_spotter": true,
-  "wake_words": [
-    "ривер",
-    "ревер",
-    "ривьер",
-    "ливер"
-  ],
   "webchat_send": true,
   "models_unload_after_s": 10,
   "local_index": true

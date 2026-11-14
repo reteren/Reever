@@ -32,15 +32,9 @@ impl Aliases {
 /// Настройки из resources/settings.json.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Settings {
-    /// Как модель «слышит» wake-word. Активация, если любое слово фразы совпало.
-    #[serde(default = "default_wake_words")]
-    pub wake_words: Vec<String>,
     /// Порог fuzzy-совпадения фразы с действием (0..1). Выше — строже.
     #[serde(default = "default_match_threshold")]
     pub match_threshold: f64,
-    /// Устарело (до 0.3.6): английский теперь включён всегда, см. `languages`.
-    #[serde(default = "default_true")]
-    pub english_enabled: bool,
     /// Языки распознавания (`RECOGNITION_LANGUAGES`). Английский включён всегда, даже если
     /// его нет в списке; язык без скачанного пакета модели пропускается (models.rs).
     #[serde(default = "default_languages")]
@@ -63,9 +57,6 @@ pub struct Settings {
     /// Показывать распознанный текст команды до её завершения.
     #[serde(default = "default_true")]
     pub partial_results: bool,
-    /// Слова отмены команды (стоп/передумал).
-    #[serde(default = "default_cancel_words")]
-    pub cancel_words: Vec<String>,
     /// Поднимать открытое окно на передний план (best-effort).
     #[serde(default = "default_true")]
     pub raise_result: bool,
@@ -93,10 +84,6 @@ pub struct Settings {
     /// Хоткей мгновенного «заглушить микрофон» (panic-mute). Пусто — выкл.
     #[serde(default)]
     pub mute_hotkey: String,
-    /// Пауза конца фразы (мс): сколько тишины ждать перед финализацией. Меньше —
-    /// быстрее реакция, но слишком мало рискует обрезать фразу между словами.
-    #[serde(default = "default_endpoint_ms")]
-    pub endpoint_ms: u64,
     /// Диктовка: пауза (мс), после которой сказанный кусок печатается; диктовка идёт дальше.
     #[serde(default = "default_dictation_pause_ms")]
     pub dictation_pause_ms: u32,
@@ -200,6 +187,19 @@ pub struct Settings {
 fn default_dictation_english_level() -> u8 {
     crate::anglicism::DEFAULT_STRENGTH
 }
+/// Ключи settings.json, которые больше ничего не значат: слова «ривер» и отмены живут в
+/// grammar.json, английский включён всегда, остальное убрано вместе со своим кодом.
+/// Сохранение настроек вычищает их из файла.
+pub const LEGACY_SETTINGS: &[&str] = &[
+    "wake_words",
+    "cancel_words",
+    "english_enabled",
+    "endpoint_ms",
+    "wake_sound",
+    "wake_spotter",
+    "_comment_wake",
+];
+
 /// Наибольшая задержка выгрузки; всё, что больше, — «не выгружать».
 pub const MODELS_UNLOAD_MAX_S: u32 = 120;
 
@@ -381,9 +381,6 @@ fn default_dictation_idle_ms() -> u32 {
     3_000
 }
 
-fn default_endpoint_ms() -> u64 {
-    250
-}
 
 fn default_asr_threads() -> u32 {
     4
@@ -401,22 +398,11 @@ fn default_command_wait_ms() -> u32 {
     5000
 }
 
-fn default_wake_words() -> Vec<String> {
-    vec!["ривер".into(), "ревер".into(), "ривьер".into()]
-}
 fn default_match_threshold() -> f64 {
     0.7
 }
 fn default_true() -> bool {
     true
-}
-fn default_cancel_words() -> Vec<String> {
-    vec![
-        "отмена".into(),
-        "стоп".into(),
-        "отбой".into(),
-        "забудь".into(),
-    ]
 }
 fn default_activation() -> String {
     "both".into()
@@ -463,16 +449,13 @@ fn parse_settings(text: &str) -> Settings {
         };
     }
 
-    restore!("wake_words", wake_words, Vec<String>);
     restore!("match_threshold", match_threshold, f64);
-    restore!("english_enabled", english_enabled, bool);
     restore!("asr_threads", asr_threads, u32);
     restore!("vad_threshold", vad_threshold, f32);
     restore!("wake_pause_ms", wake_pause_ms, u32);
     restore!("command_pause_ms", command_pause_ms, u32);
     restore!("command_wait_ms", command_wait_ms, u32);
     restore!("partial_results", partial_results, bool);
-    restore!("cancel_words", cancel_words, Vec<String>);
     restore!("raise_result", raise_result, bool);
     restore!("activation_mode", activation_mode, String);
     restore!("hotkey", hotkey, String);
@@ -482,7 +465,6 @@ fn parse_settings(text: &str) -> Settings {
     restore!("private_log", private_log, bool);
     restore!("offline_mode", offline_mode, bool);
     restore!("mute_hotkey", mute_hotkey, String);
-    restore!("endpoint_ms", endpoint_ms, u64);
     restore!("dictation_pause_ms", dictation_pause_ms, u32);
     restore!("dictation_idle_ms", dictation_idle_ms, u32);
     restore!("models_unload_after_s", models_unload_after_s, u32);
@@ -529,16 +511,13 @@ fn parse_settings(text: &str) -> Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            wake_words: default_wake_words(),
             match_threshold: default_match_threshold(),
-            english_enabled: true,
             asr_threads: default_asr_threads(),
             vad_threshold: default_vad_threshold(),
             wake_pause_ms: default_wake_pause_ms(),
             command_pause_ms: default_command_pause_ms(),
             command_wait_ms: default_command_wait_ms(),
             partial_results: true,
-            cancel_words: default_cancel_words(),
             raise_result: true,
             activation_mode: default_activation(),
             hotkey: default_hotkey(),
@@ -548,7 +527,6 @@ impl Default for Settings {
             private_log: false,
             offline_mode: false,
             mute_hotkey: String::new(),
-            endpoint_ms: default_endpoint_ms(),
             dictation_pause_ms: default_dictation_pause_ms(),
             dictation_idle_ms: default_dictation_idle_ms(),
             dictation_clipboard: true,

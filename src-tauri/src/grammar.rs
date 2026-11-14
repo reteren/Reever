@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use strsim::{jaro_winkler, levenshtein};
 
 use crate::actions::Action;
-use crate::config::Settings;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
 const GRAMMAR_VERSION: u32 = 15;
@@ -1045,15 +1044,10 @@ impl Grammar {
         }
     }
 
-    /// Читает `grammar.json`. Файла нет → `defaults()` с `wake_words`/`cancel_words`,
-    /// перенесёнными из старых настроек, и поисковыми действиями, перенесёнными из
+    /// Читает `grammar.json`. Файла нет → `defaults()` с поисковыми действиями, перенесёнными из
     /// реестра (они удаляются из `actions`; вернуть `true`, если `actions` изменён).
     /// Битый файл → defaults + предупреждение в stderr, файл не перезаписывается молча.
-    pub fn load_or_migrate(
-        path: &Path,
-        settings: &Settings,
-        actions: &mut Vec<Action>,
-    ) -> (Self, bool) {
+    pub fn load_or_migrate(path: &Path, actions: &mut Vec<Action>) -> (Self, bool) {
         if path.exists() {
             let loaded = std::fs::read_to_string(path)
                 .ok()
@@ -1092,36 +1086,6 @@ impl Grammar {
         }
 
         let mut grammar = Self::defaults();
-        let configured_wake_words: Vec<String> = settings
-            .wake_words
-            .iter()
-            .filter(|word| !normalize(word).is_empty())
-            .cloned()
-            .collect();
-        if !configured_wake_words.is_empty() {
-            grammar.wake_words = configured_wake_words;
-            if let Some(river) = grammar
-                .wake_words
-                .iter()
-                .position(|word| normalize(word) == "ривер")
-            {
-                let canonical = grammar.wake_words.remove(river);
-                grammar.wake_words.insert(0, canonical);
-            }
-        }
-        let configured_cancel_words: Vec<String> = settings
-            .cancel_words
-            .iter()
-            .filter(|word| !normalize(word).is_empty())
-            .cloned()
-            .collect();
-        // Слова из настроек — в дополнение к словам по умолчанию (английским и языков
-        // пакетов), а не вместо них.
-        for word in configured_cancel_words {
-            if !grammar.cancel_words.iter().any(|existing| normalize(existing) == normalize(&word)) {
-                grammar.cancel_words.push(word);
-            }
-        }
 
         // Первый запуск: системные действия из resources/actions.json — с фразами на
         // английском и языках из языковых пакетов.
@@ -1735,7 +1699,6 @@ mod tests {
 
     use super::{Grammar, Intent, IntentKind};
     use crate::actions::Action;
-    use crate::config::Settings;
 
     #[test]
     fn editor_hides_builtin_phrases_of_inactive_languages() {
@@ -1790,7 +1753,7 @@ mod tests {
             verbs: Vec::new(),
             phrases: vec!["следующий трек".into()],
         }];
-        let (migrated, actions_changed) = Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+        let (migrated, actions_changed) = Grammar::load_or_migrate(&path, &mut actions);
         assert!(actions_changed);
         assert_eq!(actions[0].phrases[..2], ["следующий трек", "next track"]);
         assert!(actions[0].phrases.iter().any(|phrase| phrase == "nächster titel"));
@@ -1803,7 +1766,7 @@ mod tests {
         assert!(migrated.cancel_words.iter().any(|w| w == "cancel"));
         assert!(migrated.dictation_stop.iter().any(|w| w == "stop typing"));
         assert!(migrated.validate().is_ok());
-        let (reloaded, changed_again) = Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+        let (reloaded, changed_again) = Grammar::load_or_migrate(&path, &mut actions);
         assert_eq!(reloaded, migrated);
         assert!(!changed_again);
         assert_eq!(actions[0].phrases.len(), phrase_count);
@@ -2022,7 +1985,7 @@ mod tests {
 
         let mut actions = Vec::new();
         let (migrated, actions_changed) =
-            Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+            Grammar::load_or_migrate(&path, &mut actions);
         assert!(!actions_changed);
         assert_eq!(migrated.version, super::GRAMMAR_VERSION);
         assert_eq!(
@@ -2068,7 +2031,7 @@ mod tests {
             .unwrap()
             .contains(&format!("\"version\": {}", super::GRAMMAR_VERSION)));
 
-        let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (reloaded, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(reloaded, migrated);
         assert_eq!(
             reloaded
@@ -2110,7 +2073,7 @@ mod tests {
             .push("закрой".into());
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
 
-        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         let close = migrated
             .intents
             .iter()
@@ -2133,7 +2096,7 @@ mod tests {
         legacy.version = 14;
         legacy.intents.retain(|intent| intent.id != "index");
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
-        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         let index = migrated.intents.iter().find(|intent| intent.id == "index").unwrap();
         assert!(index.enabled && index.triggers.iter().any(|t| t == "индекс"));
         // «индекс» — команда целиком: окно открывается без цели
@@ -2149,7 +2112,7 @@ mod tests {
         legacy.version = 13;
         legacy.intents.retain(|intent| intent.id != "listen");
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
-        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         let listen = migrated.intents.iter().find(|intent| intent.id == "listen").unwrap();
         assert!(listen.enabled && listen.triggers.iter().any(|t| t == "слушай"));
         // «слушай» — команда целиком: не ждать продолжения
@@ -2169,7 +2132,7 @@ mod tests {
             .push("посчитай".into());
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
 
-        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(migrated.version, super::GRAMMAR_VERSION);
         let calc = migrated
             .intents
@@ -2179,7 +2142,7 @@ mod tests {
         assert!(!calc.enabled);
         assert_eq!(russian(&calc.triggers), ["сколько будет"]);
         assert!(migrated.validate().is_ok());
-        let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (reloaded, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(reloaded, migrated);
         assert_eq!(
             reloaded
@@ -2201,7 +2164,7 @@ mod tests {
             .retain(|intent| intent.id != "close" && intent.id != "kill" && intent.id != "calc");
         std::fs::write(&path, serde_json::to_string_pretty(&current).unwrap()).unwrap();
 
-        let (loaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (loaded, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(loaded.version, super::GRAMMAR_VERSION);
         assert!(!loaded
             .intents
@@ -2240,12 +2203,12 @@ mod tests {
         let path = temporary_path("partial");
         std::fs::write(&path, r#"{"intents":[]}"#).unwrap();
         let (loaded, migrated) =
-            Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+            Grammar::load_or_migrate(&path, &mut Vec::new());
         assert!(!migrated);
         assert_eq!(loaded.wake_words, Grammar::defaults().wake_words);
         assert_eq!(loaded.cancel_words, Grammar::defaults().cancel_words);
         std::fs::write(&path, r#"{"wake_words":[],"cancel_words":[],"intents":[]}"#).unwrap();
-        let (loaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (loaded, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(loaded.wake_words, Grammar::defaults().wake_words);
         let _ = std::fs::remove_file(path);
     }
@@ -2253,9 +2216,6 @@ mod tests {
     #[test]
     fn migration_replaces_legacy_search_triggers_and_keeps_custom_phrases() {
         let path = temporary_path("migrate");
-        let mut settings = Settings::default();
-        settings.wake_words = vec!["речной".into(), "ривер".into(), "река".into()];
-        settings.cancel_words = vec!["не надо".into()];
         let mut actions = vec![
             action(
                 "web_google",
@@ -2278,11 +2238,9 @@ mod tests {
             action("app", "shell", "app.exe", &["приложение"]),
         ];
 
-        let (grammar, changed) = Grammar::load_or_migrate(&path, &settings, &mut actions);
+        let (grammar, changed) = Grammar::load_or_migrate(&path, &mut actions);
         assert!(changed);
         assert_eq!(grammar.wake_words[0], "ривер");
-        // Слово из настроек дописано к словам по умолчанию, английские не потерялись.
-        assert_eq!(grammar.cancel_words.last().map(String::as_str), Some("не надо"));
         assert!(grammar.cancel_words.iter().any(|word| word == "cancel"));
         assert_eq!(
             actions
@@ -2327,7 +2285,7 @@ mod tests {
             &["загугли"],
         )];
         let (grammar, changed) =
-            Grammar::load_or_migrate(&path, &Settings::default(), &mut actions);
+            Grammar::load_or_migrate(&path, &mut actions);
         assert!(!changed);
         assert_eq!(grammar, Grammar::defaults());
         assert_eq!(
@@ -2346,12 +2304,12 @@ mod tests {
         legacy.version = 4;
         intent_mut(&mut legacy, "dictate").triggers = vec!["напиши".into(), "диктовка".into()];
         std::fs::write(&path, serde_json::to_string_pretty(&legacy).unwrap()).unwrap();
-        let (migrated, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(
             russian(&migrated.intents.iter().find(|i| i.id == "dictate").unwrap().triggers),
             ["напиши", "диктовка", "запиши"]
         );
-        let (reloaded, _) = Grammar::load_or_migrate(&path, &Settings::default(), &mut Vec::new());
+        let (reloaded, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         assert_eq!(reloaded, migrated);
         let _ = std::fs::remove_file(path);
     }

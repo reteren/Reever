@@ -396,7 +396,6 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::{word_overlap_score, Action, SharedState};
-    use crate::config::Settings;
 
     fn actions() -> Vec<Action> {
         serde_json::from_str(include_str!("../resources/actions.json"))
@@ -556,11 +555,7 @@ mod tests {
         let actions_path = root.join(format!("{name}-actions.json"));
         let grammar_path = root.join(format!("{name}-grammar.json"));
 
-        let state = SharedState::new(
-            actions_path.clone(),
-            grammar_path.clone(),
-            &Settings::default(),
-        );
+        let state = SharedState::new(actions_path.clone(), grammar_path.clone());
         assert!(grammar_path.exists());
         state.bump_grammar();
         assert_eq!(state.grammar_version.load(Ordering::SeqCst), 1);
@@ -618,20 +613,15 @@ pub struct SharedState {
 }
 
 impl SharedState {
-    /// `grammar_path` — `grammar.json`; `settings` нужны только для переноса старых
-    /// `wake_words`/`cancel_words` при первом создании грамматики.
-    pub fn new(
-        actions_path: PathBuf,
-        grammar_path: PathBuf,
-        settings: &crate::config::Settings,
-    ) -> Self {
+    /// `grammar_path` — `grammar.json`.
+    pub fn new(actions_path: PathBuf, grammar_path: PathBuf) -> Self {
         let grammar_is_new = !grammar_path.exists();
         let mut actions = load_actions(&actions_path);
         let removed = remove_obsolete(&mut actions);
         let added = merge_defaults(&mut actions);
         let seeded = seed_default_sites(&mut actions, &seen_sites_path(&actions_path));
         let (grammar, migrated_actions) =
-            crate::grammar::Grammar::load_or_migrate(&grammar_path, settings, &mut actions);
+            crate::grammar::Grammar::load_or_migrate(&grammar_path, &mut actions);
         let usage_path = actions_path.with_file_name("usage.json");
         let state = Self {
             usage_path,

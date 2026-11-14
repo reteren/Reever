@@ -273,7 +273,7 @@ fn setup(app: &AppHandle) -> Result<(), String> {
     // Все конфиги полностью редактируемы пользователем (release -> %APPDATA%).
     let actions_path = config::user_config_path(app, "actions.json");
     let grammar_path = config::user_config_path(app, "grammar.json");
-    let shared = Arc::new(SharedState::new(actions_path, grammar_path, &cfg.settings));
+    let shared = Arc::new(SharedState::new(actions_path, grammar_path));
 
     app.manage(LiveConfig::new(cfg.clone()));
     app.manage(shared.clone());
