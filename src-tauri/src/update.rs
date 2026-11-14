@@ -1,19 +1,24 @@
 //! Автообновление через релизы GitHub.
 //!
-//! Раз в несколько часов Reever спрашивает у GitHub последний релиз
-//! (`releases/latest`: без черновиков и пре-релизов). Если его версия новее, установщик
-//! `Reever_<версия>_x64-setup.exe` скачивается в `%LOCALAPPDATA%\com.troid.reever\update`
-//! (с докачкой), сверяется с размером и SHA-256, которые отдаёт GitHub, и ставится молча,
+//! При каждом запуске (через `FIRST_CHECK`) и дальше раз в `CHECK_EVERY` Reever спрашивает
+//! у GitHub последний релиз (`releases/latest`: без черновиков и пре-релизов). Если его версия
+//! новее, установщик `Reever_<версия>_x64-setup.exe` скачивается в
+//! `%LOCALAPPDATA%\com.troid.reever\update` (с докачкой) и сверяется с размером и SHA-256,
+//! которые отдаёт GitHub. Затем в углу экрана выезжает уведомление (dialogs_native/update.rs):
+//! «Обновить» ставит сразу, а с галочкой «Обновлять автоматически» версия ставится и сама,
 //! когда Reever ничем не занят: окно закрыто, распознавание в покое, клавиатурой и мышью
 //! давно не пользовались. Установщик (`/S /UPDATE /R`) сам закрывает Reever, не трогает
-//! ярлыки и языковые пакеты и запускает новую версию в трее.
+//! ярлыки и языковые пакеты и запускает новую версию.
 //!
-//! Сеть — через `curl.exe` из Windows, как и в установщике. Офлайн-режим, выключенная
-//! галочка, dev- и тестовая сборка, копия без `uninstall.exe` рядом — без обновлений.
+//! Сеть — через `curl.exe` из Windows, как и в установщике. Офлайн-режим, dev- и тестовая
+//! сборка, копия без `uninstall.exe` рядом — без обновлений. `REEVER_DIALOG_DEMO=1
+//! REEVER_UPDATE_DEMO=1` — показать уведомление с выдуманной версией рядом с установленным
+//! Reever (снимок в `REEVER_UPDATE_SHOTS`, `REEVER_UPDATE_DEMO_MANUAL=1` — без автообновления).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -23,11 +28,11 @@ use crate::config::LiveConfig;
 use crate::events::ui_log;
 
 const LATEST: &str = "https://api.github.com/repos/reteren/Reever/releases/latest";
-/// Первая проверка — не сразу после старта: Reever грузит модели, сеть может ещё не подняться.
-const FIRST_CHECK: Duration = Duration::from_secs(3 * 60);
+/// Первая проверка после запуска: сеть после входа в Windows поднимается не сразу.
+const FIRST_CHECK: Duration = Duration::from_secs(20);
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
 /// Как часто смотреть, не пора ли поставить уже скачанное.
-const IDLE_POLL: Duration = Duration::from_secs(60);
+const IDLE_POLL: Duration = Duration::from_secs(30);
 /// Сколько без клавиатуры и мыши считается «не пользуются».
 const USER_IDLE: Duration = Duration::from_secs(5 * 60);
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -50,12 +55,19 @@ struct Asset {
 }
 
 /// Скачанный и проверенный установщик новой версии.
+#[derive(Clone)]
 struct Staged {
     version: String,
     path: PathBuf,
 }
 
+static STAGED: Mutex<Option<Staged>> = Mutex::new(None);
+
 pub fn spawn(app: &AppHandle) {
+    if std::env::var_os("REEVER_UPDATE_DEMO").is_some() {
+        demo(app);
+        return;
+    }
     if cfg!(debug_assertions) || !installed_copy() {
         return;
     }
@@ -68,49 +80,110 @@ pub fn spawn(app: &AppHandle) {
         .name("reever-update".into())
         .spawn(move || {
             std::thread::sleep(FIRST_CHECK);
-            let mut staged: Option<Staged> = None;
-            let mut next_check = std::time::Instant::now();
+            let mut next_check = Instant::now();
             loop {
-                if enabled(&app) {
-                    if staged.is_none() && std::time::Instant::now() >= next_check {
-                        next_check = std::time::Instant::now() + CHECK_EVERY;
-                        match fetch_newer(&dir) {
-                            Ok(Some(ready)) => {
-                                ui_log(
-                                    &app,
-                                    crate::msg!("log.update.ready", version = ready.version),
-                                );
-                                staged = Some(ready);
-                            }
-                            Ok(None) => {}
-                            Err(error) => {
-                                ui_log(&app, crate::msg!("log.update.failed", error = error))
-                            }
-                        }
-                    }
-                    if let Some(ready) = &staged {
-                        if quiet() {
+                let (online, auto) = settings(&app);
+                if online && staged().is_none() && Instant::now() >= next_check {
+                    next_check = Instant::now() + CHECK_EVERY;
+                    match fetch_newer(&dir) {
+                        Ok(Some(ready)) => {
                             ui_log(
                                 &app,
-                                crate::msg!("log.update.installing", version = ready.version),
+                                crate::msg!("log.update.ready", version = ready.version),
                             );
-                            match install(&ready.path) {
-                                Ok(()) => {
-                                    crate::traymenu::remove_icon();
-                                    app.exit(0);
-                                    return;
-                                }
-                                Err(error) => {
-                                    ui_log(&app, crate::msg!("log.update.failed", error = error));
-                                    staged = None;
-                                }
+                            let version = ready.version.clone();
+                            if let Ok(mut s) = STAGED.lock() {
+                                *s = Some(ready);
                             }
+                            notify(&app, version, auto);
                         }
+                        Ok(None) => {}
+                        Err(error) => ui_log(&app, crate::msg!("log.update.failed", error = error)),
                     }
+                }
+                if online && auto && staged().is_some() && quiet() {
+                    install_staged(&app);
                 }
                 std::thread::sleep(IDLE_POLL);
             }
         });
+}
+
+fn staged() -> Option<Staged> {
+    STAGED.lock().ok().and_then(|s| s.clone())
+}
+
+/// Уведомление в углу: «Обновить» — поставить сейчас.
+fn notify(app: &AppHandle, version: String, auto: bool) {
+    let handle = app.clone();
+    crate::dialogs_native::update::show(
+        app,
+        version,
+        auto,
+        Arc::new(move |now| {
+            crate::dialogs_native::update::hide(&handle);
+            if now {
+                install_staged(&handle);
+            }
+        }),
+    );
+}
+
+/// Поставить скачанную версию: установщик закроет Reever и запустит новую.
+fn install_staged(app: &AppHandle) {
+    let Some(ready) = STAGED.lock().ok().and_then(|mut s| s.take()) else {
+        return;
+    };
+    ui_log(
+        app,
+        crate::msg!("log.update.installing", version = ready.version),
+    );
+    match install(&ready.path, !crate::events::main_visible()) {
+        Ok(()) => {
+            crate::traymenu::remove_icon();
+            app.exit(0);
+        }
+        Err(error) => ui_log(app, crate::msg!("log.update.failed", error = error)),
+    }
+}
+
+/// Проверка уведомления без сети: выдуманная версия, снимок окна, ответ — в stderr.
+fn demo(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(2));
+        let auto = std::env::var_os("REEVER_UPDATE_DEMO_MANUAL").is_none();
+        crate::dialogs_native::update::show(
+            &app,
+            "0.9.0".into(),
+            auto,
+            Arc::new(|now| {
+                eprintln!(
+                    "[update-demo] answer: {}",
+                    if now { "now" } else { "later" }
+                )
+            }),
+        );
+        std::thread::sleep(Duration::from_millis(1500));
+        let Some(dir) = std::env::var_os("REEVER_UPDATE_SHOTS").map(PathBuf::from) else {
+            return;
+        };
+        let Some((w, h, rgba)) = crate::dialogs_native::update::snapshot(&app) else {
+            eprintln!("[update-demo] no shot");
+            return;
+        };
+        let _ = std::fs::create_dir_all(&dir);
+        let Ok(file) = std::fs::File::create(dir.join("update.png")) else {
+            return;
+        };
+        let mut enc = png::Encoder::new(std::io::BufWriter::new(file), w, h);
+        enc.set_color(png::ColorType::Rgba);
+        enc.set_depth(png::BitDepth::Eight);
+        if let Ok(mut wr) = enc.write_header() {
+            let _ = wr.write_image_data(&rgba);
+        }
+        eprintln!("[update-demo] shot");
+    });
 }
 
 /// Установленная копия: установщик кладёт `uninstall.exe` рядом с `reever.exe`.
@@ -121,11 +194,13 @@ fn installed_copy() -> bool {
         .unwrap_or(false)
 }
 
-fn enabled(app: &AppHandle) -> bool {
-    app.try_state::<LiveConfig>().is_some_and(|config| {
-        let settings = &config.get().settings;
-        settings.auto_update && !settings.offline_mode
-    })
+/// (можно в сеть, ставить само).
+fn settings(app: &AppHandle) -> (bool, bool) {
+    app.try_state::<LiveConfig>()
+        .map_or((false, false), |config| {
+            let settings = &config.get().settings;
+            (!settings.offline_mode, settings.auto_update)
+        })
 }
 
 /// Reever ничем не занят, и за компьютером, похоже, никого: перезапуск никому не помешает.
@@ -242,10 +317,14 @@ fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
 }
 
 /// Тихая установка поверх: установщик закроет Reever и запустит новый в трее.
-fn install(path: &Path) -> Result<(), String> {
+fn install(path: &Path, hidden: bool) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
+    let mut args = vec!["/S", "/UPDATE", "/R"];
+    if hidden {
+        args.extend(["/ARGS", "--hidden"]);
+    }
     Command::new(path)
-        .args(["/S", "/UPDATE", "/R", "/ARGS", "--hidden"])
+        .args(args)
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map(|_| ())

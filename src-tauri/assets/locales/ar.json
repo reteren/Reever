@@ -612,8 +612,14 @@
   "log.window.noConfig": "⚠ النافذة «{window}» غير مهيأة",
   "log.window.failed": "⚠ لم يتم إنشاء النافذة «{window}»: {error}",
   "settings.auto_update": "التحديث تلقائيًا",
-  "settings.auto_update.help": "تُثبَّت الإصدارات الجديدة من GitHub تلقائيًا عندما يكون Reever خاملًا ولست أمام الحاسوب. معطّل في وضع عدم الاتصال",
+  "settings.auto_update.help": "يتحقق Reever من GitHub عند كل تشغيل. مفعّل: يُثبَّت الإصدار الجديد تلقائيًا عندما يكون Reever خاملًا ولست أمام الحاسوب. معطّل: يقترح التحديث فقط",
   "log.update.ready": "⬇ تم تنزيل الإصدار {version} وسيُثبَّت عندما يكون Reever متفرغًا",
   "log.update.installing": "⬇ جارٍ تثبيت الإصدار {version}، سيُعاد تشغيل Reever",
-  "log.update.failed": "⚠ فشل التحديث: {error}"
+  "log.update.failed": "⚠ فشل التحديث: {error}",
+  "update.title": "تحديث",
+  "update.ready": "Reever {version} جاهز",
+  "update.hint.auto": "سيُثبَّت تلقائيًا عندما يكون Reever متفرغًا",
+  "update.hint.manual": "يستغرق أقل من دقيقة، وسيُعاد تشغيل Reever",
+  "update.now": "تحديث",
+  "update.later": "لاحقًا"
 }

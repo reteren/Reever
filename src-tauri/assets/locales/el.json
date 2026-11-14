@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ το παράθυρο «{window}» δεν έχει ρυθμιστεί",
   "log.window.failed": "⚠ το παράθυρο «{window}» δεν δημιουργήθηκε: {error}",
   "settings.auto_update": "Αυτόματη ενημέρωση",
-  "settings.auto_update.help": "Οι νέες εκδόσεις από το GitHub εγκαθίστανται μόνες τους όταν το Reever είναι αδρανές και λείπετε. Ανενεργό σε λειτουργία εκτός σύνδεσης",
+  "settings.auto_update.help": "Το Reever ελέγχει το GitHub σε κάθε εκκίνηση. Ενεργό: η νέα έκδοση εγκαθίσταται μόνη της όταν το Reever είναι αδρανές και λείπετε. Ανενεργό: μόνο προτείνει ενημέρωση",
   "log.update.ready": "⬇ η έκδοση {version} κατέβηκε και θα εγκατασταθεί όταν το Reever είναι ελεύθερο",
   "log.update.installing": "⬇ εγκατάσταση της έκδοσης {version}, το Reever θα επανεκκινήσει",
-  "log.update.failed": "⚠ η ενημέρωση απέτυχε: {error}"
+  "log.update.failed": "⚠ η ενημέρωση απέτυχε: {error}",
+  "update.title": "Ενημέρωση",
+  "update.ready": "Το Reever {version} είναι έτοιμο",
+  "update.hint.auto": "Θα εγκατασταθεί μόνο του όταν το Reever είναι ελεύθερο",
+  "update.hint.manual": "Διαρκεί λιγότερο από ένα λεπτό, το Reever θα επανεκκινήσει",
+  "update.now": "Ενημέρωση",
+  "update.later": "Αργότερα"
 }

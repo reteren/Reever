@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ venster «{window}» is niet geconfigureerd",
   "log.window.failed": "⚠ venster «{window}» is niet gemaakt: {error}",
   "settings.auto_update": "Automatisch bijwerken",
-  "settings.auto_update.help": "Nieuwe versies van GitHub installeren zichzelf als Reever niets doet en je niet achter de pc zit. Uit in offlinemodus",
+  "settings.auto_update.help": "Reever kijkt bij elke start op GitHub. Aan: een nieuwe versie installeert zichzelf als Reever niets doet en je niet achter de pc zit. Uit: alleen een voorstel om bij te werken",
   "log.update.ready": "⬇ versie {version} is gedownload en wordt geïnstalleerd zodra Reever vrij is",
   "log.update.installing": "⬇ versie {version} wordt geïnstalleerd, Reever start opnieuw",
-  "log.update.failed": "⚠ bijwerken mislukt: {error}"
+  "log.update.failed": "⚠ bijwerken mislukt: {error}",
+  "update.title": "Update",
+  "update.ready": "Reever {version} staat klaar",
+  "update.hint.auto": "Installeert zichzelf zodra Reever vrij is",
+  "update.hint.manual": "Duurt minder dan een minuut, Reever start opnieuw",
+  "update.now": "Bijwerken",
+  "update.later": "Later"
 }

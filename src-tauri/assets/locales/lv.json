@@ -606,8 +606,14 @@
   "log.window.noConfig": "⚠ logs «{window}» nav konfigurēts",
   "log.window.failed": "⚠ logs «{window}» netika izveidots: {error}",
   "settings.auto_update": "Atjaunināt automātiski",
-  "settings.auto_update.help": "Jaunās versijas no GitHub instalējas pašas, kad Reever neko nedara un jūs neesat pie datora. Bezsaistes režīmā izslēgts",
+  "settings.auto_update.help": "Reever pārbauda GitHub katrā palaišanā. Ieslēgts: jaunā versija instalējas pati, kad Reever neko nedara un jūs neesat pie datora. Izslēgts: tikai piedāvā atjaunināt",
   "log.update.ready": "⬇ versija {version} ir lejupielādēta un tiks instalēta, kad Reever būs brīvs",
   "log.update.installing": "⬇ instalēju versiju {version}, Reever restartēsies",
-  "log.update.failed": "⚠ atjaunināšana neizdevās: {error}"
+  "log.update.failed": "⚠ atjaunināšana neizdevās: {error}",
+  "update.title": "Atjauninājums",
+  "update.ready": "Reever {version} ir gatavs",
+  "update.hint.auto": "Instalēsies pats, kad Reever būs brīvs",
+  "update.hint.manual": "Aizņem mazāk par minūti, Reever restartēsies",
+  "update.now": "Atjaunināt",
+  "update.later": "Vēlāk"
 }

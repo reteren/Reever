@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ прозорецът «{window}» не е описан в конфигурацията",
   "log.window.failed": "⚠ прозорецът «{window}» не е създаден: {error}",
   "settings.auto_update": "Автоматично обновяване",
-  "settings.auto_update.help": "Новите версии от GitHub се инсталират сами, когато Reever не е зает и не сте на компютъра. Не работи в офлайн режим",
+  "settings.auto_update.help": "Reever проверява GitHub при всяко стартиране. Включено: новата версия се инсталира сама, когато Reever не е зает и не сте на компютъра. Изключено: само предлага обновяване",
   "log.update.ready": "⬇ версия {version} е изтеглена и ще се инсталира, когато Reever е свободен",
   "log.update.installing": "⬇ инсталиране на версия {version}, Reever ще се рестартира",
-  "log.update.failed": "⚠ обновяването не успя: {error}"
+  "log.update.failed": "⚠ обновяването не успя: {error}",
+  "update.title": "Обновяване",
+  "update.ready": "Reever {version} е готов за инсталиране",
+  "update.hint.auto": "Ще се инсталира сам, когато Reever е свободен",
+  "update.hint.manual": "Отнема под минута, Reever ще се рестартира",
+  "update.now": "Обнови",
+  "update.later": "По-късно"
 }

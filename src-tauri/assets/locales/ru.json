@@ -603,8 +603,14 @@
   "log.window.noConfig": "⚠ окно «{window}» не описано в конфиге",
   "log.window.failed": "⚠ окно «{window}» не создано: {error}",
   "settings.auto_update": "Обновляться автоматически",
-  "settings.auto_update.help": "Новые версии с GitHub ставятся сами, когда Reever ничем не занят и тебя нет за компьютером. В офлайн-режиме не работает",
+  "settings.auto_update.help": "Reever проверяет GitHub при каждом запуске. Включено: новая версия ставится сама, когда Reever ничем не занят и тебя нет за компьютером. Выключено: только предлагает обновиться",
   "log.update.ready": "⬇ версия {version} скачана, установится, когда Reever будет свободен",
   "log.update.installing": "⬇ ставлю версию {version}, Reever перезапустится",
-  "log.update.failed": "⚠ обновление не удалось: {error}"
+  "log.update.failed": "⚠ обновление не удалось: {error}",
+  "update.title": "Обновление",
+  "update.ready": "Reever {version} готов к установке",
+  "update.hint.auto": "Поставлю сам, когда Reever будет свободен",
+  "update.hint.manual": "Займёт меньше минуты, Reever перезапустится",
+  "update.now": "Обновить",
+  "update.later": "Позже"
 }

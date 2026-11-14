@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ aken «{window}» pole seadistatud",
   "log.window.failed": "⚠ akent «{window}» ei loodud: {error}",
   "settings.auto_update": "Uuenda automaatselt",
-  "settings.auto_update.help": "Uued versioonid GitHubist paigalduvad ise, kui Reever on jõude ja sind pole arvuti taga. Võrguühenduseta režiimis väljas",
+  "settings.auto_update.help": "Reever kontrollib GitHubi igal käivitusel. Sees: uus versioon paigaldub ise, kui Reever on jõude ja sind pole arvuti taga. Väljas: ainult pakub uuendust",
   "log.update.ready": "⬇ versioon {version} on alla laaditud ja paigaldub, kui Reever on vaba",
   "log.update.installing": "⬇ paigaldan versiooni {version}, Reever taaskäivitub",
-  "log.update.failed": "⚠ uuendamine ebaõnnestus: {error}"
+  "log.update.failed": "⚠ uuendamine ebaõnnestus: {error}",
+  "update.title": "Uuendus",
+  "update.ready": "Reever {version} on valmis",
+  "update.hint.auto": "Paigaldub ise, kui Reever on vaba",
+  "update.hint.manual": "Võtab alla minuti, Reever taaskäivitub",
+  "update.now": "Uuenda",
+  "update.later": "Hiljem"
 }

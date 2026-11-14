@@ -606,8 +606,14 @@
   "log.window.noConfig": "⚠ fereastra «{window}» nu este configurată",
   "log.window.failed": "⚠ fereastra «{window}» nu a fost creată: {error}",
   "settings.auto_update": "Actualizare automată",
-  "settings.auto_update.help": "Versiunile noi de pe GitHub se instalează singure când Reever nu e ocupat și nu ești la calculator. Dezactivat în modul offline",
+  "settings.auto_update.help": "Reever verifică GitHub la fiecare pornire. Activat: versiunea nouă se instalează singură când Reever nu e ocupat și nu ești la calculator. Dezactivat: doar propune actualizarea",
   "log.update.ready": "⬇ versiunea {version} a fost descărcată și se va instala când Reever e liber",
   "log.update.installing": "⬇ se instalează versiunea {version}, Reever repornește",
-  "log.update.failed": "⚠ actualizarea a eșuat: {error}"
+  "log.update.failed": "⚠ actualizarea a eșuat: {error}",
+  "update.title": "Actualizare",
+  "update.ready": "Reever {version} este gata",
+  "update.hint.auto": "Se instalează singur când Reever e liber",
+  "update.hint.manual": "Durează sub un minut, Reever repornește",
+  "update.now": "Actualizează",
+  "update.later": "Mai târziu"
 }

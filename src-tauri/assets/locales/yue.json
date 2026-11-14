@@ -602,8 +602,14 @@
   "log.window.noConfig": "⚠ 視窗«{window}»冇設定",
   "log.window.failed": "⚠ 開唔到視窗«{window}»：{error}",
   "settings.auto_update": "自動更新",
-  "settings.auto_update.help": "Reever 得閒又冇人用電腦嗰陣，自動安裝 GitHub 上面嘅新版本。離線模式下關閉",
+  "settings.auto_update.help": "Reever 每次啟動都會檢查 GitHub。開啟：Reever 得閒又冇人用電腦嗰陣自動安裝新版本。關閉：淨係提你更新",
   "log.update.ready": "⬇ 版本 {version} 已經下載，Reever 得閒嗰陣會安裝",
   "log.update.installing": "⬇ 安裝緊版本 {version}，Reever 會重新啟動",
-  "log.update.failed": "⚠ 更新失敗：{error}"
+  "log.update.failed": "⚠ 更新失敗：{error}",
+  "update.title": "更新",
+  "update.ready": "Reever {version} 準備好",
+  "update.hint.auto": "Reever 得閒嗰陣會自動安裝",
+  "update.hint.manual": "唔使一分鐘，Reever 會重新啟動",
+  "update.now": "更新",
+  "update.later": "遲啲"
 }

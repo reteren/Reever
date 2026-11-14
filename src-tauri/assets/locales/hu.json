@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ a(z) «{window}» ablak nincs beállítva",
   "log.window.failed": "⚠ a(z) «{window}» ablak nem jött létre: {error}",
   "settings.auto_update": "Automatikus frissítés",
-  "settings.auto_update.help": "Az új verziók a GitHubról maguktól települnek, amikor a Reever tétlen, és nem vagy a gépnél. Offline módban kikapcsolva",
+  "settings.auto_update.help": "A Reever minden indításkor megnézi a GitHubot. Be: az új verzió magától települ, amikor a Reever tétlen, és nem vagy a gépnél. Ki: csak felajánlja a frissítést",
   "log.update.ready": "⬇ a(z) {version} verzió letöltve, akkor települ, amikor a Reever szabad",
   "log.update.installing": "⬇ a(z) {version} verzió telepítése, a Reever újraindul",
-  "log.update.failed": "⚠ a frissítés nem sikerült: {error}"
+  "log.update.failed": "⚠ a frissítés nem sikerült: {error}",
+  "update.title": "Frissítés",
+  "update.ready": "A Reever {version} készen áll",
+  "update.hint.auto": "Magától települ, amikor a Reever szabad",
+  "update.hint.manual": "Egy percnél rövidebb, a Reever újraindul",
+  "update.now": "Frissítés",
+  "update.later": "Később"
 }

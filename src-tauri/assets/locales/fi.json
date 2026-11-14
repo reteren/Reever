@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ ikkunaa «{window}» ei ole määritetty",
   "log.window.failed": "⚠ ikkunaa «{window}» ei luotu: {error}",
   "settings.auto_update": "Päivitä automaattisesti",
-  "settings.auto_update.help": "Uudet versiot GitHubista asentuvat itsestään, kun Reever on joutilaana etkä ole koneella. Pois päältä offline-tilassa",
+  "settings.auto_update.help": "Reever tarkistaa GitHubin joka käynnistyksessä. Päällä: uusi versio asentuu itsestään, kun Reever on joutilaana etkä ole koneella. Pois: tarjoaa vain päivitystä",
   "log.update.ready": "⬇ versio {version} on ladattu ja asentuu, kun Reever on vapaana",
   "log.update.installing": "⬇ asennetaan versio {version}, Reever käynnistyy uudelleen",
-  "log.update.failed": "⚠ päivitys epäonnistui: {error}"
+  "log.update.failed": "⚠ päivitys epäonnistui: {error}",
+  "update.title": "Päivitys",
+  "update.ready": "Reever {version} on valmis",
+  "update.hint.auto": "Asentuu itsestään, kun Reever on vapaana",
+  "update.hint.manual": "Kestää alle minuutin, Reever käynnistyy uudelleen",
+  "update.now": "Päivitä",
+  "update.later": "Myöhemmin"
 }

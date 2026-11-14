@@ -606,8 +606,14 @@
   "log.window.noConfig": "⚠ prozor «{window}» nije konfiguriran",
   "log.window.failed": "⚠ prozor «{window}» nije stvoren: {error}",
   "settings.auto_update": "Automatski ažuriraj",
-  "settings.auto_update.help": "Nove verzije s GitHuba instaliraju se same kad Reever ništa ne radi i niste za računalom. U izvanmrežnom načinu isključeno",
+  "settings.auto_update.help": "Reever provjerava GitHub pri svakom pokretanju. Uključeno: nova verzija instalira se sama kad Reever ništa ne radi i niste za računalom. Isključeno: samo nudi ažuriranje",
   "log.update.ready": "⬇ verzija {version} je preuzeta i instalirat će se kad Reever bude slobodan",
   "log.update.installing": "⬇ instaliram verziju {version}, Reever će se ponovno pokrenuti",
-  "log.update.failed": "⚠ ažuriranje nije uspjelo: {error}"
+  "log.update.failed": "⚠ ažuriranje nije uspjelo: {error}",
+  "update.title": "Ažuriranje",
+  "update.ready": "Reever {version} je spreman",
+  "update.hint.auto": "Instalirat će se sam kad Reever bude slobodan",
+  "update.hint.manual": "Traje manje od minute, Reever će se ponovno pokrenuti",
+  "update.now": "Ažuriraj",
+  "update.later": "Kasnije"
 }

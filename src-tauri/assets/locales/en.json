@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ window «{window}» is not configured",
   "log.window.failed": "⚠ window «{window}» was not created: {error}",
   "settings.auto_update": "Update automatically",
-  "settings.auto_update.help": "New versions from GitHub install themselves when Reever is idle and you are away. Off in offline mode",
+  "settings.auto_update.help": "Reever checks GitHub on every start. On: a new version installs itself when Reever is idle and you are away. Off: it only offers to update",
   "log.update.ready": "⬇ version {version} is downloaded and will install when Reever is idle",
   "log.update.installing": "⬇ installing version {version}, Reever will restart",
-  "log.update.failed": "⚠ update failed: {error}"
+  "log.update.failed": "⚠ update failed: {error}",
+  "update.title": "Update",
+  "update.ready": "Reever {version} is ready",
+  "update.hint.auto": "Installs by itself when Reever is idle",
+  "update.hint.manual": "Takes under a minute, Reever will restart",
+  "update.now": "Update",
+  "update.later": "Later"
 }

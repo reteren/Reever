@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ fönstret «{window}» är inte konfigurerat",
   "log.window.failed": "⚠ fönstret «{window}» skapades inte: {error}",
   "settings.auto_update": "Uppdatera automatiskt",
-  "settings.auto_update.help": "Nya versioner från GitHub installeras av sig själva när Reever är ledigt och du inte sitter vid datorn. Av i offlineläge",
+  "settings.auto_update.help": "Reever kollar GitHub vid varje start. På: en ny version installeras av sig själv när Reever är ledigt och du inte sitter vid datorn. Av: erbjuder bara uppdatering",
   "log.update.ready": "⬇ version {version} är hämtad och installeras när Reever är ledigt",
   "log.update.installing": "⬇ installerar version {version}, Reever startar om",
-  "log.update.failed": "⚠ uppdateringen misslyckades: {error}"
+  "log.update.failed": "⚠ uppdateringen misslyckades: {error}",
+  "update.title": "Uppdatering",
+  "update.ready": "Reever {version} är redo",
+  "update.hint.auto": "Installeras av sig själv när Reever är ledigt",
+  "update.hint.manual": "Tar under en minut, Reever startar om",
+  "update.now": "Uppdatera",
+  "update.later": "Senare"
 }

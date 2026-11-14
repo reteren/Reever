@@ -608,8 +608,14 @@
   "log.window.noConfig": "⚠ langas «{window}» nesukonfigūruotas",
   "log.window.failed": "⚠ langas «{window}» nesukurtas: {error}",
   "settings.auto_update": "Atnaujinti automatiškai",
-  "settings.auto_update.help": "Naujos versijos iš GitHub įsidiegia pačios, kai Reever nieko nedaro ir jūsų nėra prie kompiuterio. Neprisijungus išjungta",
+  "settings.auto_update.help": "Reever tikrina GitHub kiekvieno paleidimo metu. Įjungta: nauja versija įsidiegia pati, kai Reever nieko nedaro ir jūsų nėra prie kompiuterio. Išjungta: tik siūlo atnaujinti",
   "log.update.ready": "⬇ versija {version} atsisiųsta ir bus įdiegta, kai Reever bus laisvas",
   "log.update.installing": "⬇ diegiama versija {version}, Reever pasileis iš naujo",
-  "log.update.failed": "⚠ atnaujinti nepavyko: {error}"
+  "log.update.failed": "⚠ atnaujinti nepavyko: {error}",
+  "update.title": "Atnaujinimas",
+  "update.ready": "Reever {version} paruoštas",
+  "update.hint.auto": "Įsidiegs pats, kai Reever bus laisvas",
+  "update.hint.manual": "Užtruks mažiau nei minutę, Reever pasileis iš naujo",
+  "update.now": "Atnaujinti",
+  "update.later": "Vėliau"
 }

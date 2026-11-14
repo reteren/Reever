@@ -606,8 +606,14 @@
   "log.window.noConfig": "⚠ la fenêtre «{window}» n’est pas configurée",
   "log.window.failed": "⚠ la fenêtre «{window}» n’a pas été créée : {error}",
   "settings.auto_update": "Mettre à jour automatiquement",
-  "settings.auto_update.help": "Les nouvelles versions GitHub s’installent seules quand Reever est inactif et que vous êtes absent. Désactivé en mode hors ligne",
+  "settings.auto_update.help": "Reever vérifie GitHub à chaque démarrage. Activé : la nouvelle version s’installe seule quand Reever est inactif et que vous êtes absent. Désactivé : il propose seulement la mise à jour",
   "log.update.ready": "⬇ version {version} téléchargée, elle s’installera quand Reever sera libre",
   "log.update.installing": "⬇ installation de la version {version}, Reever va redémarrer",
-  "log.update.failed": "⚠ échec de la mise à jour : {error}"
+  "log.update.failed": "⚠ échec de la mise à jour : {error}",
+  "update.title": "Mise à jour",
+  "update.ready": "Reever {version} est prêt",
+  "update.hint.auto": "S’installera seul quand Reever sera libre",
+  "update.hint.manual": "Moins d’une minute, Reever va redémarrer",
+  "update.now": "Mettre à jour",
+  "update.later": "Plus tard"
 }

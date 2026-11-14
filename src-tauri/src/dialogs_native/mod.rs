@@ -7,6 +7,7 @@
 
 pub mod confirm;
 pub mod picker;
+pub mod update;
 
 use std::sync::Arc;
 

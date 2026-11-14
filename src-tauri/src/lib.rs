@@ -313,7 +313,12 @@ fn setup(app: &AppHandle) -> Result<(), String> {
     }
     // проверка окон выбора и подтверждения: REEVER_DIALOG_DEMO=1 (dialog_demo.rs)
     if dialog_demo::active() {
-        dialog_demo::start(app);
+        // REEVER_UPDATE_DEMO=1 вдобавок — уведомление об обновлении вместо окон выбора
+        if std::env::var_os("REEVER_UPDATE_DEMO").is_some() {
+            update::spawn(app);
+        } else {
+            dialog_demo::start(app);
+        }
         return Ok(());
     }
 

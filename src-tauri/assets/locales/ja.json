@@ -602,8 +602,14 @@
   "log.window.noConfig": "⚠ ウィンドウ«{window}»が設定されていません",
   "log.window.failed": "⚠ ウィンドウ«{window}»を作成できませんでした：{error}",
   "settings.auto_update": "自動更新",
-  "settings.auto_update.help": "Reever が待機中でパソコンを使っていないとき、GitHub の新しいバージョンを自動でインストールします。オフラインモードでは無効",
+  "settings.auto_update.help": "Reever は起動のたびに GitHub を確認します。オン：Reever が待機中でパソコンを使っていないとき、新しいバージョンを自動でインストール。オフ：更新を提案するだけ",
   "log.update.ready": "⬇ バージョン {version} をダウンロードしました。Reever が空いたらインストールします",
   "log.update.installing": "⬇ バージョン {version} をインストール中。Reever は再起動します",
-  "log.update.failed": "⚠ 更新に失敗しました：{error}"
+  "log.update.failed": "⚠ 更新に失敗しました：{error}",
+  "update.title": "アップデート",
+  "update.ready": "Reever {version} の準備ができました",
+  "update.hint.auto": "Reever が空いたら自動でインストールします",
+  "update.hint.manual": "1 分もかかりません。Reever は再起動します",
+  "update.now": "更新",
+  "update.later": "後で"
 }

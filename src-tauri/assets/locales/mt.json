@@ -610,8 +610,14 @@
   "log.window.noConfig": "⚠ it-tieqa «{window}» mhix ikkonfigurata",
   "log.window.failed": "⚠ it-tieqa «{window}» ma nħolqitx: {error}",
   "settings.auto_update": "Aġġorna awtomatikament",
-  "settings.auto_update.help": "Verżjonijiet ġodda minn GitHub jinstallaw waħedhom meta Reever ma jkunx qed jagħmel xejn u ma tkunx fuq il-kompjuter. Mitfi fil-mod offline",
+  "settings.auto_update.help": "Reever jiċċekkja GitHub kull darba li jibda. Mixgħul: il-verżjoni l-ġdida tinstalla waħedha meta Reever ma jkunx qed jagħmel xejn u ma tkunx fuq il-kompjuter. Mitfi: joffri biss l-aġġornament",
   "log.update.ready": "⬇ il-verżjoni {version} tniżżlet u se tiġi installata meta Reever ikun liberu",
   "log.update.installing": "⬇ qed ninstalla l-verżjoni {version}, Reever jerġa’ jibda",
-  "log.update.failed": "⚠ l-aġġornament falla: {error}"
+  "log.update.failed": "⚠ l-aġġornament falla: {error}",
+  "update.title": "Aġġornament",
+  "update.ready": "Reever {version} lest",
+  "update.hint.auto": "Jinstalla waħdu meta Reever ikun liberu",
+  "update.hint.manual": "Jieħu inqas minn minuta, Reever jerġa’ jibda",
+  "update.now": "Aġġorna",
+  "update.later": "Aktar tard"
 }

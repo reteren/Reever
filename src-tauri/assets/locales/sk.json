@@ -608,8 +608,14 @@
   "log.window.noConfig": "⚠ okno «{window}» nie je nakonfigurované",
   "log.window.failed": "⚠ okno «{window}» sa nepodarilo vytvoriť: {error}",
   "settings.auto_update": "Aktualizovať automaticky",
-  "settings.auto_update.help": "Nové verzie z GitHubu sa nainštalujú samy, keď Reever nič nerobí a nie ste pri počítači. V režime offline vypnuté",
+  "settings.auto_update.help": "Reever kontroluje GitHub pri každom spustení. Zapnuté: nová verzia sa nainštaluje sama, keď Reever nič nerobí a nie ste pri počítači. Vypnuté: iba ponúkne aktualizáciu",
   "log.update.ready": "⬇ verzia {version} je stiahnutá a nainštaluje sa, keď bude Reever voľný",
   "log.update.installing": "⬇ inštalujem verziu {version}, Reever sa reštartuje",
-  "log.update.failed": "⚠ aktualizácia zlyhala: {error}"
+  "log.update.failed": "⚠ aktualizácia zlyhala: {error}",
+  "update.title": "Aktualizácia",
+  "update.ready": "Reever {version} je pripravený",
+  "update.hint.auto": "Nainštaluje sa sám, keď bude Reever voľný",
+  "update.hint.manual": "Trvá menej ako minútu, Reever sa reštartuje",
+  "update.now": "Aktualizovať",
+  "update.later": "Neskôr"
 }

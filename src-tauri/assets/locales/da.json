@@ -604,8 +604,14 @@
   "log.window.noConfig": "⚠ vinduet «{window}» er ikke konfigureret",
   "log.window.failed": "⚠ vinduet «{window}» blev ikke oprettet: {error}",
   "settings.auto_update": "Opdater automatisk",
-  "settings.auto_update.help": "Nye versioner fra GitHub installerer sig selv, når Reever ikke laver noget, og du ikke er ved computeren. Slået fra i offlinetilstand",
+  "settings.auto_update.help": "Reever tjekker GitHub ved hver start. Til: en ny version installerer sig selv, når Reever ikke laver noget, og du ikke er ved computeren. Fra: tilbyder kun at opdatere",
   "log.update.ready": "⬇ version {version} er hentet og installeres, når Reever er ledig",
   "log.update.installing": "⬇ installerer version {version}, Reever genstarter",
-  "log.update.failed": "⚠ opdatering mislykkedes: {error}"
+  "log.update.failed": "⚠ opdatering mislykkedes: {error}",
+  "update.title": "Opdatering",
+  "update.ready": "Reever {version} er klar",
+  "update.hint.auto": "Installeres af sig selv, når Reever er ledig",
+  "update.hint.manual": "Tager under et minut, Reever genstarter",
+  "update.now": "Opdater",
+  "update.later": "Senere"
 }
