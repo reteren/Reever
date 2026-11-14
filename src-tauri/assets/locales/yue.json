@@ -600,5 +600,10 @@
   "log.mic.backAfter": "🎙 個咪 {seconds} 秒後返嚟咗",
   "log.mic.defaultChanged": "🎙 Windows 預設咪轉咗做«{name}» - 轉緊過去",
   "log.window.noConfig": "⚠ 視窗«{window}»冇設定",
-  "log.window.failed": "⚠ 開唔到視窗«{window}»：{error}"
+  "log.window.failed": "⚠ 開唔到視窗«{window}»：{error}",
+  "settings.auto_update": "自動更新",
+  "settings.auto_update.help": "Reever 得閒又冇人用電腦嗰陣，自動安裝 GitHub 上面嘅新版本。離線模式下關閉",
+  "log.update.ready": "⬇ 版本 {version} 已經下載，Reever 得閒嗰陣會安裝",
+  "log.update.installing": "⬇ 安裝緊版本 {version}，Reever 會重新啟動",
+  "log.update.failed": "⚠ 更新失敗：{error}"
 }

@@ -606,5 +606,10 @@
   "log.mic.backAfter": "🎙 мікрофон повернувся через {seconds} с",
   "log.mic.defaultChanged": "🎙 мікрофон Windows за замовчуванням змінився на «{name}» - перемикаюся",
   "log.window.noConfig": "⚠ вікно «{window}» не описане в конфігу",
-  "log.window.failed": "⚠ вікно «{window}» не створено: {error}"
+  "log.window.failed": "⚠ вікно «{window}» не створено: {error}",
+  "settings.auto_update": "Оновлюватися автоматично",
+  "settings.auto_update.help": "Нові версії з GitHub встановлюються самі, коли Reever нічим не зайнятий і тебе немає за комп’ютером. В офлайн-режимі не працює",
+  "log.update.ready": "⬇ версію {version} завантажено, встановиться, коли Reever буде вільний",
+  "log.update.installing": "⬇ встановлюю версію {version}, Reever перезапуститься",
+  "log.update.failed": "⚠ оновлення не вдалося: {error}"
 }

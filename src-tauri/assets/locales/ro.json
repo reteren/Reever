@@ -604,5 +604,10 @@
   "log.mic.backAfter": "🎙 microfonul a revenit după {seconds} s",
   "log.mic.defaultChanged": "🎙 microfonul implicit Windows s-a schimbat în «{name}» - comut pe el",
   "log.window.noConfig": "⚠ fereastra «{window}» nu este configurată",
-  "log.window.failed": "⚠ fereastra «{window}» nu a fost creată: {error}"
+  "log.window.failed": "⚠ fereastra «{window}» nu a fost creată: {error}",
+  "settings.auto_update": "Actualizare automată",
+  "settings.auto_update.help": "Versiunile noi de pe GitHub se instalează singure când Reever nu e ocupat și nu ești la calculator. Dezactivat în modul offline",
+  "log.update.ready": "⬇ versiunea {version} a fost descărcată și se va instala când Reever e liber",
+  "log.update.installing": "⬇ se instalează versiunea {version}, Reever repornește",
+  "log.update.failed": "⚠ actualizarea a eșuat: {error}"
 }

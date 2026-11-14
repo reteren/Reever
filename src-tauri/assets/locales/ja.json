@@ -600,5 +600,10 @@
   "log.mic.backAfter": "🎙 マイクが {seconds} 秒後に戻りました",
   "log.mic.defaultChanged": "🎙 Windows の既定のマイクが«{name}»に変わりました - 切り替えます",
   "log.window.noConfig": "⚠ ウィンドウ«{window}»が設定されていません",
-  "log.window.failed": "⚠ ウィンドウ«{window}»を作成できませんでした：{error}"
+  "log.window.failed": "⚠ ウィンドウ«{window}»を作成できませんでした：{error}",
+  "settings.auto_update": "自動更新",
+  "settings.auto_update.help": "Reever が待機中でパソコンを使っていないとき、GitHub の新しいバージョンを自動でインストールします。オフラインモードでは無効",
+  "log.update.ready": "⬇ バージョン {version} をダウンロードしました。Reever が空いたらインストールします",
+  "log.update.installing": "⬇ バージョン {version} をインストール中。Reever は再起動します",
+  "log.update.failed": "⚠ 更新に失敗しました：{error}"
 }

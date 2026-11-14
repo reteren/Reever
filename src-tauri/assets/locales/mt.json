@@ -608,5 +608,10 @@
   "log.mic.backAfter": "🎙 il-mikrofonu reġa' lura wara {seconds} s",
   "log.mic.defaultChanged": "🎙 il-mikrofonu default ta' Windows inbidel għal «{name}» - qed naqleb għalih",
   "log.window.noConfig": "⚠ it-tieqa «{window}» mhix ikkonfigurata",
-  "log.window.failed": "⚠ it-tieqa «{window}» ma nħolqitx: {error}"
+  "log.window.failed": "⚠ it-tieqa «{window}» ma nħolqitx: {error}",
+  "settings.auto_update": "Aġġorna awtomatikament",
+  "settings.auto_update.help": "Verżjonijiet ġodda minn GitHub jinstallaw waħedhom meta Reever ma jkunx qed jagħmel xejn u ma tkunx fuq il-kompjuter. Mitfi fil-mod offline",
+  "log.update.ready": "⬇ il-verżjoni {version} tniżżlet u se tiġi installata meta Reever ikun liberu",
+  "log.update.installing": "⬇ qed ninstalla l-verżjoni {version}, Reever jerġa’ jibda",
+  "log.update.failed": "⚠ l-aġġornament falla: {error}"
 }

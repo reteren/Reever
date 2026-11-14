@@ -602,5 +602,10 @@
   "log.mic.backAfter": "🎙 mikrofoni palasi {seconds} s:n jälkeen",
   "log.mic.defaultChanged": "🎙 Windowsin oletusmikrofoni on nyt «{name}» - vaihdetaan siihen",
   "log.window.noConfig": "⚠ ikkunaa «{window}» ei ole määritetty",
-  "log.window.failed": "⚠ ikkunaa «{window}» ei luotu: {error}"
+  "log.window.failed": "⚠ ikkunaa «{window}» ei luotu: {error}",
+  "settings.auto_update": "Päivitä automaattisesti",
+  "settings.auto_update.help": "Uudet versiot GitHubista asentuvat itsestään, kun Reever on joutilaana etkä ole koneella. Pois päältä offline-tilassa",
+  "log.update.ready": "⬇ versio {version} on ladattu ja asentuu, kun Reever on vapaana",
+  "log.update.installing": "⬇ asennetaan versio {version}, Reever käynnistyy uudelleen",
+  "log.update.failed": "⚠ päivitys epäonnistui: {error}"
 }

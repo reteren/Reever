@@ -606,5 +606,10 @@
   "log.mic.backAfter": "🎙 mikrofon se je vrnil po {seconds} s",
   "log.mic.defaultChanged": "🎙 privzeti mikrofon sistema Windows je zdaj «{name}» - preklapljam",
   "log.window.noConfig": "⚠ okno «{window}» ni nastavljeno",
-  "log.window.failed": "⚠ okna «{window}» ni bilo mogoče ustvariti: {error}"
+  "log.window.failed": "⚠ okna «{window}» ni bilo mogoče ustvariti: {error}",
+  "settings.auto_update": "Samodejno posodabljaj",
+  "settings.auto_update.help": "Nove različice z GitHuba se namestijo same, ko Reever ne dela ničesar in niste za računalnikom. V načinu brez povezave izklopljeno",
+  "log.update.ready": "⬇ različica {version} je prenesena in se bo namestila, ko bo Reever prost",
+  "log.update.installing": "⬇ nameščam različico {version}, Reever se bo znova zagnal",
+  "log.update.failed": "⚠ posodobitev ni uspela: {error}"
 }

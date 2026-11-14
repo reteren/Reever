@@ -61,6 +61,7 @@ pub mod transcribe;
 pub mod traymenu;
 pub mod typing;
 pub mod uilang;
+pub mod update;
 pub mod ui_text;
 pub mod vad;
 pub mod voice_adapt;
@@ -368,6 +369,9 @@ fn setup(app: &AppHandle) -> Result<(), String> {
         });
         return Ok(());
     }
+
+    // --- обновления с GitHub (только установленная release-копия) ---
+    update::spawn(app);
 
     // --- тихая подстройка под голос и аудио-воркер ---
     let handle = app.clone();

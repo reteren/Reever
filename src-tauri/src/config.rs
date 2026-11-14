@@ -179,6 +179,9 @@ pub struct Settings {
     /// (пузырь маскота без маскота, bubble.rs).
     #[serde(default = "default_true")]
     pub lite_monitor: bool,
+    /// Ставить новые версии с GitHub сами, когда Reever ничем не занят (update.rs).
+    #[serde(default = "default_true")]
+    pub auto_update: bool,
     /// «Плавность»: 0 — как у монитора, 60 или 30 кадров.
     #[serde(default)]
     pub fps_limit: u32,
@@ -498,6 +501,7 @@ fn parse_settings(text: &str) -> Settings {
     restore!("lite_ui", lite_ui, bool);
     restore!("lite_monitor", lite_monitor, bool);
     restore!("fps_limit", fps_limit, u32);
+    restore!("auto_update", auto_update, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -554,6 +558,7 @@ impl Default for Settings {
             lite_ui: false,
             lite_monitor: true,
             fps_limit: 0,
+            auto_update: true,
         }
     }
 }

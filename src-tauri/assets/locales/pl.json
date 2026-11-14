@@ -606,5 +606,10 @@
   "log.mic.backAfter": "🎙 mikrofon wrócił po {seconds} s",
   "log.mic.defaultChanged": "🎙 domyślny mikrofon Windows zmienił się na «{name}» - przełączam",
   "log.window.noConfig": "⚠ okno «{window}» nie jest skonfigurowane",
-  "log.window.failed": "⚠ nie utworzono okna «{window}»: {error}"
+  "log.window.failed": "⚠ nie utworzono okna «{window}»: {error}",
+  "settings.auto_update": "Aktualizuj automatycznie",
+  "settings.auto_update.help": "Nowe wersje z GitHuba instalują się same, gdy Reever nic nie robi, a ciebie nie ma przy komputerze. W trybie offline wyłączone",
+  "log.update.ready": "⬇ wersja {version} pobrana, zainstaluje się, gdy Reever będzie wolny",
+  "log.update.installing": "⬇ instaluję wersję {version}, Reever uruchomi się ponownie",
+  "log.update.failed": "⚠ aktualizacja nie powiodła się: {error}"
 }

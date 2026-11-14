@@ -604,5 +604,10 @@
   "log.mic.backAfter": "🎙 mikrofons atgriezās pēc {seconds} s",
   "log.mic.defaultChanged": "🎙 Windows noklusējuma mikrofons tagad ir «{name}» - pārslēdzos",
   "log.window.noConfig": "⚠ logs «{window}» nav konfigurēts",
-  "log.window.failed": "⚠ logs «{window}» netika izveidots: {error}"
+  "log.window.failed": "⚠ logs «{window}» netika izveidots: {error}",
+  "settings.auto_update": "Atjaunināt automātiski",
+  "settings.auto_update.help": "Jaunās versijas no GitHub instalējas pašas, kad Reever neko nedara un jūs neesat pie datora. Bezsaistes režīmā izslēgts",
+  "log.update.ready": "⬇ versija {version} ir lejupielādēta un tiks instalēta, kad Reever būs brīvs",
+  "log.update.installing": "⬇ instalēju versiju {version}, Reever restartēsies",
+  "log.update.failed": "⚠ atjaunināšana neizdevās: {error}"
 }

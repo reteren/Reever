@@ -600,5 +600,10 @@
   "log.mic.backAfter": "🎙 마이크가 {seconds}초 뒤에 돌아왔습니다",
   "log.mic.defaultChanged": "🎙 Windows 기본 마이크가 «{name}»(으)로 바뀌었습니다 - 전환합니다",
   "log.window.noConfig": "⚠ 창 «{window}»이(가) 설정되지 않았습니다",
-  "log.window.failed": "⚠ 창 «{window}»을(를) 만들지 못했습니다: {error}"
+  "log.window.failed": "⚠ 창 «{window}»을(를) 만들지 못했습니다: {error}",
+  "settings.auto_update": "자동 업데이트",
+  "settings.auto_update.help": "Reever가 쉬고 있고 컴퓨터를 쓰지 않을 때 GitHub의 새 버전을 자동으로 설치합니다. 오프라인 모드에서는 꺼짐",
+  "log.update.ready": "⬇ 버전 {version}을 받았습니다. Reever가 한가할 때 설치합니다",
+  "log.update.installing": "⬇ 버전 {version} 설치 중, Reever가 다시 시작됩니다",
+  "log.update.failed": "⚠ 업데이트 실패: {error}"
 }

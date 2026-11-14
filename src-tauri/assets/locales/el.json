@@ -602,5 +602,10 @@
   "log.mic.backAfter": "🎙 το μικρόφωνο επέστρεψε μετά από {seconds} s",
   "log.mic.defaultChanged": "🎙 το προεπιλεγμένο μικρόφωνο των Windows άλλαξε σε «{name}» - γίνεται εναλλαγή",
   "log.window.noConfig": "⚠ το παράθυρο «{window}» δεν έχει ρυθμιστεί",
-  "log.window.failed": "⚠ το παράθυρο «{window}» δεν δημιουργήθηκε: {error}"
+  "log.window.failed": "⚠ το παράθυρο «{window}» δεν δημιουργήθηκε: {error}",
+  "settings.auto_update": "Αυτόματη ενημέρωση",
+  "settings.auto_update.help": "Οι νέες εκδόσεις από το GitHub εγκαθίστανται μόνες τους όταν το Reever είναι αδρανές και λείπετε. Ανενεργό σε λειτουργία εκτός σύνδεσης",
+  "log.update.ready": "⬇ η έκδοση {version} κατέβηκε και θα εγκατασταθεί όταν το Reever είναι ελεύθερο",
+  "log.update.installing": "⬇ εγκατάσταση της έκδοσης {version}, το Reever θα επανεκκινήσει",
+  "log.update.failed": "⚠ η ενημέρωση απέτυχε: {error}"
 }

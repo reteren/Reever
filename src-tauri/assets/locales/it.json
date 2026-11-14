@@ -602,5 +602,10 @@
   "log.mic.backAfter": "🎙 il microfono è tornato dopo {seconds} s",
   "log.mic.defaultChanged": "🎙 il microfono predefinito di Windows è ora «{name}» - passo a quello",
   "log.window.noConfig": "⚠ la finestra «{window}» non è configurata",
-  "log.window.failed": "⚠ la finestra «{window}» non è stata creata: {error}"
+  "log.window.failed": "⚠ la finestra «{window}» non è stata creata: {error}",
+  "settings.auto_update": "Aggiorna automaticamente",
+  "settings.auto_update.help": "Le nuove versioni da GitHub si installano da sole quando Reever è inattivo e non sei al computer. Disattivato in modalità offline",
+  "log.update.ready": "⬇ versione {version} scaricata, verrà installata quando Reever sarà libero",
+  "log.update.installing": "⬇ installazione della versione {version}, Reever si riavvierà",
+  "log.update.failed": "⚠ aggiornamento non riuscito: {error}"
 }

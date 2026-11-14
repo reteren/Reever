@@ -610,5 +610,10 @@
   "log.mic.backAfter": "🎙 عاد الميكروفون بعد {seconds} ث",
   "log.mic.defaultChanged": "🎙 تغيّر الميكروفون الافتراضي في Windows إلى «{name}» - يجري التبديل إليه",
   "log.window.noConfig": "⚠ النافذة «{window}» غير مهيأة",
-  "log.window.failed": "⚠ لم يتم إنشاء النافذة «{window}»: {error}"
+  "log.window.failed": "⚠ لم يتم إنشاء النافذة «{window}»: {error}",
+  "settings.auto_update": "التحديث تلقائيًا",
+  "settings.auto_update.help": "تُثبَّت الإصدارات الجديدة من GitHub تلقائيًا عندما يكون Reever خاملًا ولست أمام الحاسوب. معطّل في وضع عدم الاتصال",
+  "log.update.ready": "⬇ تم تنزيل الإصدار {version} وسيُثبَّت عندما يكون Reever متفرغًا",
+  "log.update.installing": "⬇ جارٍ تثبيت الإصدار {version}، سيُعاد تشغيل Reever",
+  "log.update.failed": "⚠ فشل التحديث: {error}"
 }

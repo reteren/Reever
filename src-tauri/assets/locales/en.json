@@ -602,5 +602,10 @@
   "log.mic.backAfter": "🎙 microphone is back after {seconds} s",
   "log.mic.defaultChanged": "🎙 Windows default microphone changed to «{name}» - switching to it",
   "log.window.noConfig": "⚠ window «{window}» is not configured",
-  "log.window.failed": "⚠ window «{window}» was not created: {error}"
+  "log.window.failed": "⚠ window «{window}» was not created: {error}",
+  "settings.auto_update": "Update automatically",
+  "settings.auto_update.help": "New versions from GitHub install themselves when Reever is idle and you are away. Off in offline mode",
+  "log.update.ready": "⬇ version {version} is downloaded and will install when Reever is idle",
+  "log.update.installing": "⬇ installing version {version}, Reever will restart",
+  "log.update.failed": "⚠ update failed: {error}"
 }

@@ -602,5 +602,10 @@
   "log.mic.backAfter": "🎙 mikrofonen är tillbaka efter {seconds} s",
   "log.mic.defaultChanged": "🎙 Windows standardmikrofon är nu «{name}» - byter till den",
   "log.window.noConfig": "⚠ fönstret «{window}» är inte konfigurerat",
-  "log.window.failed": "⚠ fönstret «{window}» skapades inte: {error}"
+  "log.window.failed": "⚠ fönstret «{window}» skapades inte: {error}",
+  "settings.auto_update": "Uppdatera automatiskt",
+  "settings.auto_update.help": "Nya versioner från GitHub installeras av sig själva när Reever är ledigt och du inte sitter vid datorn. Av i offlineläge",
+  "log.update.ready": "⬇ version {version} är hämtad och installeras när Reever är ledigt",
+  "log.update.installing": "⬇ installerar version {version}, Reever startar om",
+  "log.update.failed": "⚠ uppdateringen misslyckades: {error}"
 }

@@ -208,7 +208,7 @@ pub fn start(app: &AppHandle) {
         std::thread::sleep(Duration::from_millis(500));
         shoot(&app, "settings");
         memory(started, "settings");
-        for (i, d) in [900.0f32, 650.0, 650.0, 300.0].iter().enumerate() {
+        for (i, d) in [900.0f32, 650.0, 650.0, 300.0, 5000.0].iter().enumerate() {
             crate::main_native::send(crate::main_native::Msg::ScrollSettings(*d));
             std::thread::sleep(Duration::from_millis(300));
             shoot(&app, &format!("settings-{}", i + 1));

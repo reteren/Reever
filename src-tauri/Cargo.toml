@@ -42,6 +42,9 @@ lnk = "0.5"
 png    = "0.17"
 base64 = "0.22"
 
+# update.rs: проверка SHA-256 скачанного установщика обновления
+sha2 = "0.10"
+
 [dependencies.windows]
 version  = "0.58"
 features = [

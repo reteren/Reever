@@ -62,7 +62,7 @@ const GROUPS: &[(&str, &[(&str, &str)])] = &[
     ),
     ("speech_text", &[("listen_silence_s", "listen_silence")]),
     ("search", &[("local_index", "bool")]),
-    ("system", &[("confirm_dangerous", "bool"), ("confirm_close", "bool"), ("raise_result", "bool")]),
+    ("system", &[("confirm_dangerous", "bool"), ("confirm_close", "bool"), ("raise_result", "bool"), ("auto_update", "bool")]),
 ];
 
 const ACTIVATION: [&str; 3] = ["both", "wake", "hotkey"];

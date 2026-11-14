@@ -600,5 +600,10 @@
   "log.mic.backAfter": "🎙 麦克风在 {seconds} 秒后恢复",
   "log.mic.defaultChanged": "🎙 Windows 默认麦克风已改为«{name}» - 正在切换",
   "log.window.noConfig": "⚠ 窗口«{window}»没有配置",
-  "log.window.failed": "⚠ 窗口«{window}»未能创建：{error}"
+  "log.window.failed": "⚠ 窗口«{window}»未能创建：{error}",
+  "settings.auto_update": "自动更新",
+  "settings.auto_update.help": "Reever 空闲且你不在电脑前时，自动安装 GitHub 上的新版本。离线模式下关闭",
+  "log.update.ready": "⬇ 版本 {version} 已下载，将在 Reever 空闲时安装",
+  "log.update.installing": "⬇ 正在安装版本 {version}，Reever 将重新启动",
+  "log.update.failed": "⚠ 更新失败：{error}"
 }

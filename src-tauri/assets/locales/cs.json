@@ -606,5 +606,10 @@
   "log.mic.backAfter": "🎙 mikrofon se vrátil po {seconds} s",
   "log.mic.defaultChanged": "🎙 výchozí mikrofon Windows se změnil na «{name}» - přepínám",
   "log.window.noConfig": "⚠ okno «{window}» není nakonfigurováno",
-  "log.window.failed": "⚠ okno «{window}» se nepodařilo vytvořit: {error}"
+  "log.window.failed": "⚠ okno «{window}» se nepodařilo vytvořit: {error}",
+  "settings.auto_update": "Aktualizovat automaticky",
+  "settings.auto_update.help": "Nové verze z GitHubu se nainstalují samy, když Reever nic nedělá a nejste u počítače. V režimu offline vypnuto",
+  "log.update.ready": "⬇ verze {version} je stažená a nainstaluje se, až bude Reever volný",
+  "log.update.installing": "⬇ instaluji verzi {version}, Reever se restartuje",
+  "log.update.failed": "⚠ aktualizace selhala: {error}"
 }

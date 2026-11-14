@@ -606,5 +606,10 @@
   "log.mic.backAfter": "🎙 mikrofonas grįžo po {seconds} s",
   "log.mic.defaultChanged": "🎙 numatytasis Windows mikrofonas dabar «{name}» - perjungiu",
   "log.window.noConfig": "⚠ langas «{window}» nesukonfigūruotas",
-  "log.window.failed": "⚠ langas «{window}» nesukurtas: {error}"
+  "log.window.failed": "⚠ langas «{window}» nesukurtas: {error}",
+  "settings.auto_update": "Atnaujinti automatiškai",
+  "settings.auto_update.help": "Naujos versijos iš GitHub įsidiegia pačios, kai Reever nieko nedaro ir jūsų nėra prie kompiuterio. Neprisijungus išjungta",
+  "log.update.ready": "⬇ versija {version} atsisiųsta ir bus įdiegta, kai Reever bus laisvas",
+  "log.update.installing": "⬇ diegiama versija {version}, Reever pasileis iš naujo",
+  "log.update.failed": "⚠ atnaujinti nepavyko: {error}"
 }
