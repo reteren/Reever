@@ -441,6 +441,8 @@ impl WindowHandler for ConfirmView {
 
 /// Показать вопрос (создать окно, если его нет) и отдать ему фокус.
 pub fn show(app: &AppHandle, host: std::sync::Arc<dyn Host>, q: Question) {
+    // вид окна (лёгкий или полный) — по настройкам на момент показа
+    super::enabled(app);
     let app = app.clone();
     std::thread::spawn(move || {
         let Some(ui) = crate::mascot_native::ui(&app) else { return };
