@@ -25,8 +25,6 @@ pub fn path(name: &str) -> Option<&'static str> {
         "search" => "M10.5 4.5a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM15 15l5 5",
         "warn" => "M12 3.5l9.5 17h-19zM12 10v4.5M12 17.2v.3",
         "x" => "M6.5 6.5l11 11M17.5 6.5l-11 11",
-        // «развернуть» в полоске: значок шторки, перевёрнутый (#shadeOpen .ico rotate 180)
-        "expand" => "M6 15.5h12M8 12l4-3.5 4 3.5",
         "chev" => "M7 10l5 5 5-5",
         "link" => "M10 14l4-4M8.6 11.4l-2.1 2.1a3 3 0 004.2 4.2l2.1-2.1M15.4 12.6l2.1-2.1a3 3 0 00-4.2-4.2l-2.1 2.1",
         "grid" => "M5 5h5.5v5.5H5zM13.5 5H19v5.5h-5.5zM5 13.5h5.5V19H5zM13.5 13.5H19V19h-5.5z",
@@ -44,7 +42,6 @@ pub fn path(name: &str) -> Option<&'static str> {
         // вкладка «Текст»: звуковая волна и строки текста
         "wave" => "M3.5 9v6M6.5 6.5v11M9.5 9v6M13 8h7.5M13 12h7.5M13 16h5",
         "min" => "M6.5 12h11",
-        "shade" => "M6 8.5h12M8 12l4 3.5 4-3.5",
         "mic" => "M12 3.5a3 3 0 013 3V12a3 3 0 01-6 0V6.5a3 3 0 013-3zM6.5 11.5a5.5 5.5 0 0011 0M12 17v3.5",
         _ => return None,
     })
@@ -283,7 +280,7 @@ mod tests {
 
     #[test]
     fn all_icons_build() {
-        for name in ["tray", "play", "folder", "file", "search", "warn", "x", "orb", "stack", "tune", "term", "wave", "min", "shade", "mic"] {
+        for name in ["tray", "play", "folder", "file", "search", "warn", "x", "orb", "stack", "tune", "term", "wave", "min", "mic"] {
             assert!(geometry(name).is_some(), "{name}");
         }
     }

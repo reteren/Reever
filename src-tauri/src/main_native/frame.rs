@@ -38,7 +38,7 @@ pub struct FrameLight {
     pub sweep_i: f32,
     pub reveal: f32,
     /// x, y, подсветка — для трёх лунок
-    pub lunki: [[f32; 3]; 3],
+    pub lunki: [[f32; 3]; 2],
 }
 
 impl FrameLight {
@@ -71,7 +71,7 @@ struct Constants {
     sweep_i: f32,
     reveal: f32,
     _p1: [f32; 2],
-    lunki: [[f32; 4]; 3],
+    lunki: [[f32; 4]; 2],
 }
 
 const HLSL: &str = r#"
@@ -80,7 +80,7 @@ cbuffer P : register(b0) {
   float2 uMouse; float uMouseOn; float uP0;
   float2 uOrb; float uOrbI; float uSweep;
   float uSweepI; float uReveal; float2 uP1;
-  float4 uLunki[3];
+  float4 uLunki[2];
 };
 Texture2D tColor : register(t0);
 Texture2D tNormal : register(t1);
@@ -128,7 +128,7 @@ float4 ps(float4 pos : SV_Position) : SV_Target {
   add += lerp(float3(1.0, 1.0, 1.0), uAcc, 0.35) * ss * uSweepI * 1.4;
 
   // лунки — подсветка изнутри при наведении
-  [unroll] for (int i = 0; i < 3; i++) {
+  [unroll] for (int i = 0; i < 2; i++) {
     float3 lk = uLunki[i].xyz;
     if (lk.z > 0.001) {
       float2 d = p - lk.xy;
@@ -363,7 +363,7 @@ impl FrameShader {
             sweep_i: light.sweep_i,
             reveal: light.reveal,
             _p1: [0.0; 2],
-            lunki: [lk(0), lk(1), lk(2)],
+            lunki: [lk(0), lk(1)],
         };
         let ctx = gpu.context;
         unsafe {
@@ -417,7 +417,7 @@ mod tests {
             sweep_x: -1.0,
             sweep_i: 0.0,
             reveal: 1800.0,
-            lunki: [[965.0, 100.0, 0.0], [1015.0, 100.0, 0.0], [1065.0, 100.0, 0.0]],
+            lunki: [[1015.0, 100.0, 0.0], [1065.0, 100.0, 0.0]],
         };
         let mut nudged = base;
         nudged.orb_light += 0.0001;

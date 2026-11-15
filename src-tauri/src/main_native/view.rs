@@ -177,7 +177,7 @@ pub struct Info {
 pub struct Assets {
     frame_color: ImageId,
     frame_normal: ImageId,
-    btn: [(ImageId, ImageId); 3],
+    btn: [(ImageId, ImageId); 2],
 }
 
 impl Assets {
@@ -189,7 +189,6 @@ impl Assets {
             frame_normal: add("skin/frame_normal.webp"),
             btn: [
                 (add("skin/btn_min_off.webp"), add("skin/btn_min_on.webp")),
-                (add("skin/btn_shade_off.webp"), add("skin/btn_shade_on.webp")),
                 (add("skin/btn_close_off.webp"), add("skin/btn_close_on.webp")),
             ],
         }
@@ -351,15 +350,15 @@ struct Springs {
     mouse_on: Spring,
     mx: Spring,
     my: Spring,
-    lunki: [Spring; 3],
+    lunki: [Spring; 2],
 }
 
 impl Springs {
-    fn all(&mut self) -> [&mut Spring; 13] {
-        let [l0, l1, l2] = &mut self.lunki;
+    fn all(&mut self) -> [&mut Spring; 12] {
+        let [l0, l1] = &mut self.lunki;
         [
             &mut self.fill, &mut self.energy, &mut self.wave, &mut self.swirl, &mut self.dark, &mut self.glitch,
-            &mut self.orb_light, &mut self.mouse_on, &mut self.mx, &mut self.my, l0, l1, l2,
+            &mut self.orb_light, &mut self.mouse_on, &mut self.mx, &mut self.my, l0, l1,
         ]
     }
 }
@@ -404,10 +403,6 @@ pub struct MainView {
     index_tab: super::index_tab::IndexTab,
     /// окно поверх (калибровка, голос, выбор программы)
     overlay: Option<super::overlays::Overlay>,
-    /// компактный режим (полоска) и её содержимое
-    shade: Option<super::shade::Shade>,
-    shaded: bool,
-    shade_pressed: Option<super::shade::ShadeHit>,
     // клавиатура и диктор (access.rs)
     /// лёгкий вид: уровень жидкости сферы (наливается по «ривер», сливается после команды)
     lite_fill: native::controls::anim::Tween,
@@ -418,7 +413,6 @@ pub struct MainView {
     a11y_dirty: bool,
     // анимации экранов: включение (crtOn), смена канала (chOut/chIn), вспышка «принято»
     power_from: Instant,
-    power_quick: bool,
     channel: Option<(Instant, usize)>,
     invert_until: Instant,
     /// бегущая строка: текст не влезает — рисуется в живом слое и едет
@@ -443,7 +437,7 @@ pub struct MainView {
     t0: Instant,
     springs: Springs,
     // управление
-    lunki: [Lunka; 3],
+    lunki: [Lunka; 2],
     pause: Button,
     web: Button,
     tab_hover: Option<usize>,
@@ -488,13 +482,12 @@ impl MainView {
             tip: crate::ui_text::t(locale, tip, &[]),
         };
         let mut lunki = [
-            lunka(0, (965.0, 100.0), 22.0, "min", "win.minimize"),
-            lunka(1, (1015.0, 100.0), 28.0, "shade", "win.shade"),
-            lunka(2, (1065.0, 100.0), 30.0, "tray", "win.toTray"),
+            lunka(0, (1015.0, 100.0), 28.0, "min", "win.minimize"),
+            lunka(1, (1065.0, 100.0), 30.0, "tray", "win.toTray"),
         ];
         if lite() {
-            // .lunka в полосе #drag: прижаты вправо, отступы справа 84 / 42 / 0, 36×32
-            for (l, x) in lunki.iter_mut().zip([846.0f32, 888.0, 930.0]) {
+            // .lunka в полосе #drag: прижаты вправо, отступы справа 42 / 0, 36×32
+            for (l, x) in lunki.iter_mut().zip([888.0f32, 930.0]) {
                 l.center = (x + 18.0, 30.0);
                 l.box_size = 36.0;
             }
@@ -533,9 +526,6 @@ impl MainView {
             text_tab: super::text_tab::TextTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             index_tab: super::index_tab::IndexTab::new(locale, crate::ui_text::direction(locale) == "rtl", 0),
             overlay: None,
-            shade: None,
-            shaded: false,
-            shade_pressed: None,
             lite_fill: native::controls::anim::Tween::new(0.0),
             kfocus: KFocus::None,
             home_revealed: None,
@@ -543,7 +533,6 @@ impl MainView {
             kswallow: false,
             a11y_dirty: true,
             power_from: Instant::now(),
-            power_quick: false,
             channel: None,
             invert_until: Instant::now(),
             ticker_over: 0.0,
@@ -574,7 +563,7 @@ impl MainView {
                 mouse_on: Spring::new(0.0, 20.0, 9.0),
                 mx: Spring::new(640.0, 90.0, 19.0),
                 my: Spring::new(200.0, 90.0, 19.0),
-                lunki: [Spring::new(0.0, 60.0, 13.0); 3],
+                lunki: [Spring::new(0.0, 60.0, 13.0); 2],
             },
             lunki,
             pause: Button::new("", ButtonKind::Plain),
@@ -616,51 +605,6 @@ impl MainView {
         view.orb_action(if inside { "present" } else { "absent" });
         self.orb = Some(view);
         self.orb_dirty = true;
-    }
-
-    /// Полоска компактного режима (создаётся вместе с окном: нужны картинки и AppHandle).
-    pub fn set_shade_view(&mut self, s: super::shade::Shade) {
-        self.shade = Some(s);
-    }
-
-    /// Картинки лунок «шторка» и «в трей» — для полоски.
-    pub fn shade_buttons(&self) -> [(ImageId, ImageId); 2] {
-        [self.assets.btn[1], self.assets.btn[2]]
-    }
-
-    /// Чья альфа задаёт форму окна: рамки полоски или главной рамки.
-    /// Чья альфа задаёт форму окна и его размер; None у источника — лёгкий вид
-    /// (скруглённый прямоугольник).
-    pub fn shape_source(&self, shaded: bool) -> (Option<ImageId>, u32, u32) {
-        match (&self.shade, shaded) {
-            (Some(s), true) => match s.shape_source() {
-                Some((id, w, h)) => (Some(id), w, h),
-                None => (None, super::shade::shade_w() as u32, super::shade::shade_h() as u32),
-            },
-            _ if lite() => (None, skin_w() as u32, skin_h() as u32),
-            _ => (Some(self.assets.frame_color), skin_w() as u32, skin_h() as u32),
-        }
-    }
-
-    /// Масштаб скина в окне.
-    pub fn k(&self) -> f32 {
-        self.k
-    }
-
-    pub fn shaded(&self) -> bool {
-        self.shaded
-    }
-
-    /// Включить или выключить полоску (окно уже переразмерено, форма — `shape`).
-    pub fn set_shaded(&mut self, on: bool, shape: Vec<[f64; 4]>) {
-        self.shaded = on;
-        self.shape = shape;
-        if !on {
-            self.power_on(true);
-        }
-        self.tooltip.hide();
-        self.overlay = None;
-        self.static_dirty = true;
     }
 
     pub fn set_shape(&mut self, shape: Vec<[f64; 4]>) {
@@ -885,7 +829,7 @@ impl MainView {
                 sweep_x: -1.0,
                 sweep_i: 0.0,
                 reveal: 1800.0,
-                lunki: [lunk(0, 0.0), lunk(1, 0.0), lunk(2, 0.0)],
+                lunki: [lunk(0, 0.0), lunk(1, 0.0)],
             };
         }
         let s = &self.springs;
@@ -897,7 +841,7 @@ impl MainView {
             sweep_x: -1.0,
             sweep_i: 0.0,
             reveal: 1800.0,
-            lunki: [lunk(0, s.lunki[0].v), lunk(1, s.lunki[1].v), lunk(2, s.lunki[2].v)],
+            lunki: [lunk(0, s.lunki[0].v), lunk(1, s.lunki[1].v)],
         }
     }
 
@@ -1604,70 +1548,6 @@ impl MainView {
         redraw
     }
 
-    fn shade_mouse(&mut self, kind: MouseKind, x: f32, y: f32) -> bool {
-        use super::shade::ShadeHit;
-        let Some(s) = self.shade.as_mut() else { return false };
-        let hit = s.hit(x, y);
-        match kind {
-            MouseKind::Move => {
-                let mut r = false;
-                r |= s.lunki[0].set_hover(hit == Some(ShadeHit::Expand));
-                r |= s.lunki[1].set_hover(hit == Some(ShadeHit::Tray));
-                let orb = hit == Some(ShadeHit::Orb);
-                if orb != s.orb_hover {
-                    s.orb_hover = orb;
-                    self.orb_hover = orb;
-                    r = true;
-                }
-                let tip = match hit {
-                    Some(ShadeHit::Expand) => Some((11, s.lunki[0].rect(), s.lunki[0].tip.as_str())),
-                    Some(ShadeHit::Tray) => Some((12, s.lunki[1].rect(), s.lunki[1].tip.as_str())),
-                    _ => None,
-                };
-                r |= self.tooltip.hover(tip);
-                set_cursor(self.hwnd, if hit.is_some() { Cursor::Hand } else { Cursor::Arrow });
-                r
-            }
-            MouseKind::Leave => {
-                let r = s.lunki[0].set_hover(false) | s.lunki[1].set_hover(false);
-                s.orb_hover = false;
-                self.orb_hover = false;
-                r | self.tooltip.hide()
-            }
-            MouseKind::Down(MouseButton::Left) => {
-                self.tooltip.hide();
-                match hit {
-                    Some(ShadeHit::Expand) => s.lunki[0].press.pressed = true,
-                    Some(ShadeHit::Tray) => s.lunki[1].press.pressed = true,
-                    Some(ShadeHit::Orb) => {}
-                    // за плиту полоску таскают (#shadeDrag)
-                    None => native::begin_drag(self.hwnd),
-                }
-                self.shade_pressed = hit;
-                true
-            }
-            MouseKind::Up(MouseButton::Left) => {
-                s.lunki[0].press.pressed = false;
-                s.lunki[1].press.pressed = false;
-                let p = self.shade_pressed.take();
-                if p.is_some() && p == hit {
-                    match p {
-                        Some(ShadeHit::Expand) => (self.host)(Act::Shade(false)),
-                        Some(ShadeHit::Tray) => (self.host)(Act::Tray),
-                        Some(ShadeHit::Orb) => {
-                            self.flash = 0.6;
-                            self.info.paused = !self.info.paused;
-                            (self.host)(Act::TogglePause);
-                        }
-                        None => {}
-                    }
-                }
-                true
-            }
-            _ => false,
-        }
-    }
-
     fn open_overlay(&mut self, kind: super::overlays::Kind) {
         self.overlay = Some(super::overlays::Overlay::new(kind, &self.locale, self.hwnd));
         self.touch_static();
@@ -2125,7 +2005,7 @@ impl MainView {
 
     /// Включение экрана `i` (powerOn в shell.js): 0 — ещё тёмный, 1 — включён.
     fn power(&self, i: usize, now: Instant) -> f32 {
-        let delay = if self.power_quick { i as f32 * 0.05 } else { 0.15 + i as f32 * 0.09 };
+        let delay = 0.15 + i as f32 * 0.09;
         let t = now.saturating_duration_since(self.power_from).as_secs_f32() - delay;
         if t <= 0.0 {
             return 0.0;
@@ -2138,13 +2018,6 @@ impl MainView {
         (0..5).any(|i| self.power(i, now) < 1.0)
             || self.channel.is_some_and(|(t, _)| now.duration_since(t) < Duration::from_millis(140 + 320))
             || now < self.invert_until + Duration::from_millis(20)
-    }
-
-    /// Включить экраны заново (развернули полоску — быстро).
-    pub fn power_on(&mut self, quick: bool) {
-        self.power_from = Instant::now();
-        self.power_quick = quick;
-        self.static_dirty = true;
     }
 
     /// Обновить статичный слой, если нужно. false — слоя нет (рисовать напрямую).
@@ -2250,8 +2123,7 @@ impl MainView {
     fn activate(&mut self, t: Target) {
         match t {
             Target::Lunka(0) => (self.host)(Act::Minimize),
-            Target::Lunka(2) => (self.host)(Act::Tray),
-            Target::Lunka(_) => (self.host)(Act::Shade(true)),
+            Target::Lunka(_) => (self.host)(Act::Tray),
             Target::Tab(i) => {
                 if self.tab != i {
                     if !lite() {
@@ -2334,7 +2206,7 @@ impl WindowHandler for MainView {
         if self.overlay.as_ref().is_some_and(|o| o.animating()) || self.screens_animating(gpu.now) {
             self.static_dirty = true;
         }
-        if TABS[self.tab] == "home" && !self.shaded {
+        if TABS[self.tab] == "home" {
             let phase = (gpu.now.duration_since(self.t0).as_secs_f32() / 0.53) as i64;
             if phase != self.caret_phase {
                 self.caret_phase = phase;
@@ -2361,17 +2233,6 @@ impl WindowHandler for MainView {
         if gpu.generation != self.gpu_generation {
             self.gpu_generation = gpu.generation;
             self.static_layer = None;
-            if let Some(s) = self.shade.as_mut() {
-                s.reset_gpu();
-            }
-        }
-        if self.shaded {
-            let p = self.lens_params();
-            let orb_light = (self.springs.orb_light.v + self.flash * 1.5).max(0.0);
-            if let Some(s) = self.shade.as_mut() {
-                s.prepare(gpu, self.k, &p, orb_light);
-            }
-            return;
         }
         // рамка: шейдер по картинкам, подготовленным в прошлом кадре (render)
         if !self.frame_failed {
@@ -2427,32 +2288,6 @@ impl WindowHandler for MainView {
         let base_scale = cx.scale;
         cx.scale = base_scale * self.k;
         self.scene.begin_frame(cx);
-        if self.shaded && self.shade.is_some() {
-            // syncShadeText: что слышно сейчас, иначе последняя команда, иначе состояние
-            let text = if !self.partial.trim().is_empty() {
-                self.partial.clone()
-            } else if let Some(h) = &self.heard {
-                h.clone()
-            } else {
-                let key = match self.state.as_str() {
-                    s @ ("listening" | "busy" | "loading" | "paused" | "error") => format!("mic.{s}"),
-                    _ => "mic.idle".into(),
-                };
-                self.t(&key)
-            };
-            let orb = self.lite_orb_state(cx.now);
-            let (k, scene) = (self.k, &mut self.scene);
-            if let Some(s) = self.shade.as_mut() {
-                s.set_text(&text);
-                s.render(scene, cx, k, base_scale, &orb);
-            }
-            self.tooltip.draw(&mut self.scene, cx, (super::shade::shade_w(), super::shade::shade_h()));
-            self.scene.flush(cx);
-            cx.scale = base_scale;
-            unsafe { cx.dc().SetDpi(dpi_x, dpi_y) };
-            return;
-        }
-
         // картинки для шейдера рамки — один раз на размер (дальше prepare)
         let size = frame_size(self.k, base_scale);
         let need = !lite() && !self.frame_failed && self.frame_px.is_none() && self.frame.as_ref().map_or(true, |_| false);
@@ -2525,7 +2360,7 @@ impl WindowHandler for MainView {
     fn animating(&self) -> bool {
         let springs_moving = {
             let s = &self.springs;
-            [s.fill, s.energy, s.wave, s.swirl, s.dark, s.glitch, s.orb_light, s.mouse_on, s.mx, s.my, s.lunki[0], s.lunki[1], s.lunki[2]]
+            [s.fill, s.energy, s.wave, s.swirl, s.dark, s.glitch, s.orb_light, s.mouse_on, s.mx, s.my, s.lunki[0], s.lunki[1]]
                 .iter()
                 .any(|s| (s.t - s.v).abs() > 0.012 || s.vel.abs() > 0.025)
         };
@@ -2547,18 +2382,13 @@ impl WindowHandler for MainView {
     fn wake_at(&self) -> Option<Instant> {
         let mut at = self.tooltip.wake_at();
         // мигание курсора на «Главной» (2 раза в секунду), бегущая строка (до 30 кадров)
-        if !self.shaded && TABS[self.tab] == "home" {
+        if TABS[self.tab] == "home" {
             let next = self.t0 + Duration::from_secs_f32(0.53 * (self.caret_phase + 1) as f32);
             at = Some(at.map_or(next, |a| a.min(next)));
         }
-        if !self.shaded && self.ticker_over > 4.0 {
+        if self.ticker_over > 4.0 {
             let next = Instant::now() + Duration::from_millis(33);
             at = Some(at.map_or(next, |a| a.min(next)));
-        }
-        if self.shaded {
-            if let Some(w) = self.shade.as_ref().and_then(|s| s.wake_at()) {
-                at = Some(at.map_or(w, |a| a.min(w)));
-            }
         }
         if let Some(b) = self.form_blink {
             at = Some(at.map_or(b, |a| a.min(b)));
@@ -2622,12 +2452,6 @@ impl WindowHandler for MainView {
             burst: self.burst,
         };
         self.fx.step(&fx, dt);
-        if self.shaded {
-            if let Some(s) = self.shade.as_mut() {
-                // в полоске без нитей (threads && !shaded)
-                s.fx.step(&FxState { threads: false, ..fx }, dt);
-            }
-        }
         // эквалайзер: лента громкости, справа — сейчас
         self.eq_acc += dt;
         if self.eq_acc >= 0.045 {
@@ -2661,9 +2485,6 @@ impl WindowHandler for MainView {
             self.kvisible = false;
             self.static_dirty = true;
             self.a11y_dirty = true;
-        }
-        if self.shaded && self.shade.is_some() {
-            return self.shade_mouse(ev.kind, x, y);
         }
         if self.overlay.is_some() {
             let (redraw, out) = self.overlay.as_mut().map(|o| o.mouse(MouseEvent { kind: ev.kind, x, y })).unwrap_or_default();
@@ -2943,9 +2764,6 @@ impl WindowHandler for MainView {
                 self.touch_static();
             }
             return redraw;
-        }
-        if self.shaded {
-            return false;
         }
         if let Some(r) = self.kbd(ev) {
             return r;

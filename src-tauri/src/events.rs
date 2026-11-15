@@ -27,7 +27,6 @@ static UI_HISTORY: Mutex<VecDeque<LogText>> = Mutex::new(VecDeque::new());
 static UI_STATE: Mutex<String> = Mutex::new(String::new());
 static UI_TAB: Mutex<String> = Mutex::new(String::new());
 static UI_STATUS: Mutex<Option<Value>> = Mutex::new(None);
-static UI_COMPACT: AtomicBool = AtomicBool::new(false);
 static MAIN_VISIBLE: AtomicBool = AtomicBool::new(false);
 static MASCOT_VISIBLE: AtomicBool = AtomicBool::new(false);
 static WAKE_PHRASE: AtomicBool = AtomicBool::new(false);
@@ -38,7 +37,6 @@ pub struct UiSnapshot {
     pub(crate) log: Vec<String>,
     pub(crate) tab: String,
     pub(crate) status: Option<Value>,
-    pub(crate) compact: bool,
 }
 
 fn push_ui_log(log: &mut VecDeque<LogText>, message: LogText) {
@@ -154,10 +152,6 @@ pub fn set_mascot_visible(visible: bool) {
     MASCOT_VISIBLE.store(visible, Ordering::Relaxed);
 }
 
-pub fn set_compact(compact: bool) {
-    UI_COMPACT.store(compact, Ordering::Relaxed);
-}
-
 pub fn set_ui_tab(tab: String) -> Result<(), String> {
     if !is_ui_tab(&tab) {
         return Err("unknown UI tab".into());
@@ -185,7 +179,6 @@ pub fn get_ui_snapshot() -> UiSnapshot {
             .map(|tab| if tab.is_empty() { "home".into() } else { tab.clone() })
             .unwrap_or_else(|_| "home".into()),
         status: UI_STATUS.lock().map(|status| status.clone()).unwrap_or(None),
-        compact: UI_COMPACT.load(Ordering::Relaxed),
     }
 }
 
