@@ -353,7 +353,16 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut voice_recording = false;
     let mut voice_progress = std::time::Instant::now();
     let mut reload_waiting: Option<std::time::Instant> = None;
+    let mut nemora_checked = std::time::Instant::now();
     loop {
+        // Команды Неморы, закончившиеся в фоне, — их звук; установку Неморы — заметить.
+        for ok in crate::nemora::take_outcomes() {
+            worker.sound(if ok { "success.wav" } else { "error.wav" });
+        }
+        if nemora_checked.elapsed() >= NEMORA_CHECK {
+            nemora_checked = std::time::Instant::now();
+            crate::nemora::tick(app);
+        }
         // Перезапуск (сохранены настройки, применилась тихая подстройка) ждёт конца команды:
         // посреди неё он обрывал команду, сигнал и уводил маскота. Но не дольше RELOAD_WAIT_MAX.
         let reload = shared.reload.load(Ordering::Relaxed);
@@ -1081,6 +1090,9 @@ const WAKE_SOUND_REPEAT: Duration = Duration::from_millis(1500);
 /// прошлой команды молчал, потому что «сигнал уже был».
 const SPOT_CONFIRM_WINDOW: Duration = Duration::from_secs(4);
 
+/// Как часто заметить установку или удаление Неморы и закрыть простаивающий nemora-mcp.
+const NEMORA_CHECK: Duration = Duration::from_secs(10);
+
 impl Worker<'_> {
     fn sound(&self, name: &str) {
         self.play(&self.cfg.sound(name));
@@ -1685,6 +1697,8 @@ impl Worker<'_> {
                 self.sound(if ok { "success.wav" } else { "error.wav" });
                 set_state(self.app, "idle");
             }
+            // Немора: звук — когда команда закончится (`run_worker` забирает итоги)
+            DispatchResult::Background => set_state(self.app, "idle"),
             DispatchResult::Choose(count) => {
                 ui_log(
                     self.app,

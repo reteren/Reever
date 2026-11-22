@@ -1516,6 +1516,10 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             {
                 normalize(&found.payload)
             }
+            // «выключи музыку», «лайкни», «что играет» — сказаны целиком, дослушивать нечего
+            Some(found) if found.intent.kind == IntentKind::Music => {
+                return !found.intent.music.needs_target() && found.payload.is_empty();
+            }
             Some(_) => return false,
             None if grammar.allows_bare_launch() => command,
             None => return false,

@@ -4,6 +4,7 @@
 //! Владелец: воркер `grammar`. Типы и `defaults()` — контракт (docs/grammar.md).
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{Deserialize, Serialize};
 use strsim::{jaro_winkler, levenshtein};
@@ -11,7 +12,7 @@ use strsim::{jaro_winkler, levenshtein};
 use crate::actions::Action;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 15;
+const GRAMMAR_VERSION: u32 = 16;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -24,6 +25,22 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (12, &["key"]),
     (14, &["listen"]),
     (15, &["index"]),
+    (16, MUSIC_INTENTS),
+];
+/// Команды Неморы (nemora.rs): в грамматике всегда, но действуют и видны, только пока
+/// Немора установлена (`set_nemora_installed`).
+const MUSIC_INTENTS: &[&str] = &[
+    "music_song",
+    "music_artist",
+    "music_album",
+    "music_playlist",
+    "music_play",
+    "music_pause",
+    "music_smart",
+    "music_shuffle",
+    "music_shuffle_off",
+    "music_like",
+    "music_now",
 ];
 /// Новые слова отмены: (версия, слово). Дописываются один раз, если их ещё нет.
 /// Версия 10 — «отмена» языков из языковых пакетов (models.rs).
@@ -751,6 +768,23 @@ fn legacy_version() -> u32 {
     1
 }
 
+/// Установлена ли Немора: ставит nemora.rs (при запуске, раз в несколько секунд в аудио-потоке
+/// и при открытии окна). Без неё её команды не сравниваются и не показываются.
+static NEMORA_INSTALLED: AtomicBool = AtomicBool::new(false);
+
+pub fn set_nemora_installed(installed: bool) {
+    NEMORA_INSTALLED.store(installed, Ordering::Relaxed);
+}
+
+pub fn nemora_installed() -> bool {
+    NEMORA_INSTALLED.load(Ordering::Relaxed)
+}
+
+/// Намерение сейчас действует: включено и, если это команда Неморы, Немора установлена.
+pub fn intent_available(intent: &Intent, nemora: bool) -> bool {
+    intent.enabled && (intent.kind != IntentKind::Music || nemora)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IntentKind {
@@ -782,6 +816,47 @@ pub enum IntentKind {
     Listen,
     /// «Индекс» — окно поиска по индексу дисков, поле пустое: человек печатает сам.
     Index,
+    /// Музыка в Неморе (nemora.rs, docs/nemora.md); что именно — `Intent::music`.
+    Music,
+}
+
+/// Что делает команда Неморы. Первые четыре ищут названное после ключевой фразы,
+/// остальные — команды целиком, как «слушай».
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MusicOp {
+    #[default]
+    None,
+    /// «Включи трек X»: трек, за ним вся библиотека в Smart Shuffle.
+    Song,
+    /// «Включи исполнителя X»: его песни вперемешку.
+    Artist,
+    /// «Включи альбом X»: альбом по порядку.
+    Album,
+    /// «Включи плейлист X»: плейлист по порядку («избранное» — избранное).
+    Playlist,
+    /// «Включи музыку»: продолжить остановленное или вся библиотека в Smart Shuffle.
+    Play,
+    /// «Выключи музыку»: пауза Неморы, если играет она, иначе медиа-клавиша.
+    Pause,
+    SmartShuffle,
+    Shuffle,
+    ShuffleOff,
+    /// «Лайкни»: играющий трек — в избранное.
+    Like,
+    /// «Что играет»: название в журнал.
+    NowPlaying,
+}
+
+impl MusicOp {
+    pub fn is_none(&self) -> bool {
+        *self == MusicOp::None
+    }
+
+    /// Нужна цель после ключевой фразы («включи трек» без названия — дослушать).
+    pub fn needs_target(self) -> bool {
+        matches!(self, MusicOp::Song | MusicOp::Artist | MusicOp::Album | MusicOp::Playlist)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -804,6 +879,9 @@ pub struct Intent {
     /// (и глобальная настройка `payload_language`), `ru`/`en` — всегда этот язык.
     #[serde(default)]
     pub lang: crate::bilingual::LangMode,
+    /// Только `Music`: что сделать в Неморе.
+    #[serde(default, skip_serializing_if = "MusicOp::is_none")]
+    pub music: MusicOp,
 }
 
 impl Default for Intent {
@@ -816,6 +894,7 @@ impl Default for Intent {
             url: String::new(),
             enabled: true,
             lang: crate::bilingual::LangMode::Auto,
+            music: MusicOp::None,
         }
     }
 }
@@ -865,7 +944,102 @@ fn intent(id: &str, kind: IntentKind, label: &str, triggers: &[&str], url: &str)
         url: url.into(),
         enabled: true,
         lang: crate::bilingual::LangMode::Auto,
+        music: MusicOp::None,
     }
+}
+
+fn music(id: &str, op: MusicOp, label: &str, triggers: &[&str]) -> Intent {
+    Intent {
+        music: op,
+        ..intent(id, IntentKind::Music, label, triggers, "")
+    }
+}
+
+/// Команды Неморы. «Включи X» и «выключи X» отличаются одной буквой, а сравнение фраз
+/// нечёткое: у каждой «включи …» есть пара «выключи …» (и наоборот), чтобы точное совпадение
+/// всегда перевешивало — иначе «выключи музыку» включало бы её.
+fn music_defaults() -> Vec<Intent> {
+    vec![
+        music(
+            "music_song",
+            MusicOp::Song,
+            "включить трек в Неморе",
+            &["включи трек", "включи песню", "поставь трек", "поставь песню", "play song", "play track"],
+        ),
+        music(
+            "music_artist",
+            MusicOp::Artist,
+            "включить исполнителя в Неморе",
+            &["включи исполнителя", "включи артиста", "поставь исполнителя", "play artist"],
+        ),
+        music(
+            "music_album",
+            MusicOp::Album,
+            "включить альбом в Неморе",
+            &["включи альбом", "поставь альбом", "play album"],
+        ),
+        music(
+            "music_playlist",
+            MusicOp::Playlist,
+            "включить плейлист в Неморе",
+            &["включи плейлист", "поставь плейлист", "play playlist"],
+        ),
+        music(
+            "music_play",
+            MusicOp::Play,
+            "включить музыку в Неморе",
+            &["включи музыку", "поставь музыку", "play music"],
+        ),
+        music(
+            "music_pause",
+            MusicOp::Pause,
+            "поставить Немору на паузу",
+            &[
+                "выключи музыку",
+                "останови музыку",
+                "выключи трек",
+                "выключи песню",
+                "pause music",
+                "stop music",
+            ],
+        ),
+        music(
+            "music_smart",
+            MusicOp::SmartShuffle,
+            "Smart Shuffle в Неморе",
+            &["включи смарт шаффл", "смарт шаффл", "умное перемешивание", "smart shuffle"],
+        ),
+        music(
+            "music_shuffle",
+            MusicOp::Shuffle,
+            "перемешать очередь в Неморе",
+            &["перемешай", "включи перемешивание", "включи шаффл", "shuffle", "shuffle on"],
+        ),
+        music(
+            "music_shuffle_off",
+            MusicOp::ShuffleOff,
+            "выключить перемешивание в Неморе",
+            &[
+                "выключи перемешивание",
+                "выключи шаффл",
+                "выключи смарт шаффл",
+                "shuffle off",
+                "stop shuffle",
+            ],
+        ),
+        music(
+            "music_like",
+            MusicOp::Like,
+            "играющий трек — в избранное Неморы",
+            &["лайкни", "лайкни трек", "в избранное", "like song", "like this song"],
+        ),
+        music(
+            "music_now",
+            MusicOp::NowPlaying,
+            "что сейчас играет в Неморе",
+            &["что играет", "что сейчас играет", "что за трек", "what's playing", "what is playing"],
+        ),
+    ]
 }
 
 impl Grammar {
@@ -1040,7 +1214,10 @@ impl Grammar {
                     &["индекс", "index"],
                     "",
                 ),
-            ],
+            ]
+            .into_iter()
+            .chain(music_defaults())
+            .collect(),
         }
     }
 
@@ -1132,8 +1309,7 @@ impl Grammar {
                     label: action.label,
                     triggers: action.phrases,
                     url: action.target,
-                    enabled: true,
-                    lang: crate::bilingual::LangMode::Auto,
+                    ..Intent::default()
                 });
             }
         }
@@ -1232,8 +1408,13 @@ impl Grammar {
     /// Только непустые фразы включённых намерений; сравнение нечёткое, как у поисковых
     /// триггеров раньше («за гугле» = «загугли»), и целыми словами.
     pub fn match_trigger(&self, text: &str) -> Option<TriggerMatch<'_>> {
+        self.match_trigger_nemora(text, nemora_installed())
+    }
+
+    /// `match_trigger` с явным «Немора установлена» (маршрут в тестах и замерах).
+    pub fn match_trigger_nemora(&self, text: &str, nemora: bool) -> Option<TriggerMatch<'_>> {
         let active = ACTIVE_LANGUAGES.read().ok().and_then(|active| active.clone());
-        self.match_trigger_for(text, active.as_deref())
+        self.match_trigger_with(text, active.as_deref(), nemora)
     }
 
     /// Встроенные фразы языков, которые сейчас не распознаются: редактор их не показывает
@@ -1276,8 +1457,20 @@ impl Grammar {
         hidden
     }
 
-    /// `match_trigger` для заданных языков (`None` — все): тесты не трогают общее состояние.
+    /// `match_trigger` для заданных языков (`None` — все) при установленной Неморе: тесты
+    /// не трогают общее состояние.
+    #[cfg(test)]
     fn match_trigger_for(&self, text: &str, active: Option<&[String]>) -> Option<TriggerMatch<'_>> {
+        self.match_trigger_with(text, active, true)
+    }
+
+    /// `match_trigger` для заданных языков и наличия Неморы (`nemora`).
+    pub(crate) fn match_trigger_with(
+        &self,
+        text: &str,
+        active: Option<&[String]>,
+        nemora: bool,
+    ) -> Option<TriggerMatch<'_>> {
         let normalized = strip_leading_fillers(&normalize(text));
         let words: Vec<&str> = normalized.split_whitespace().collect();
         if words.is_empty() {
@@ -1285,7 +1478,7 @@ impl Grammar {
         }
 
         let mut best: Option<(&Intent, &str, usize, usize, f64)> = None;
-        for intent in self.intents.iter().filter(|intent| intent.enabled) {
+        for intent in self.intents.iter().filter(|intent| intent_available(intent, nemora)) {
             for trigger in &intent.triggers {
                 let trigger_words = normalize(trigger);
                 let trigger_count = trigger_words.split_whitespace().count();
@@ -1326,7 +1519,7 @@ impl Grammar {
         }
 
         if best.is_none() {
-            return self.match_trailing_trigger(&words, active);
+            return self.match_trailing_trigger(&words, active, nemora);
         }
         best.map(|(intent, trigger, _, consumed, _)| {
             // Частица после глагола — не часть цели: «открой-ка калькулятор» модель
@@ -1352,9 +1545,10 @@ impl Grammar {
         &self,
         words: &[&str],
         active: Option<&[String]>,
+        nemora: bool,
     ) -> Option<TriggerMatch<'_>> {
         let mut best: Option<(&Intent, &str, usize)> = None;
-        for intent in self.intents.iter().filter(|intent| intent.enabled) {
+        for intent in self.intents.iter().filter(|intent| intent_available(intent, nemora)) {
             for trigger in &intent.triggers {
                 let trigger_words = normalize(trigger);
                 let trigger_words: Vec<&str> = trigger_words.split_whitespace().collect();
@@ -1413,8 +1607,10 @@ impl Grammar {
     /// «открой»): Engine должен дослушать продолжение, а не выполнять обрубок.
     pub fn is_incomplete(&self, text: &str) -> bool {
         self.match_trigger(text).is_some_and(|matched| {
-            // «слушай» и «индекс» — команды целиком, без цели
-            (matched.payload.is_empty() && !matches!(matched.intent.kind, IntentKind::Listen | IntentKind::Index))
+            // «слушай», «индекс», «что играет» — команды целиком, без цели
+            let whole = matches!(matched.intent.kind, IntentKind::Listen | IntentKind::Index)
+                || (matched.intent.kind == IntentKind::Music && !matched.intent.music.needs_target());
+            (matched.payload.is_empty() && !whole)
                 // «найди отчёт формат» + пауза — формат скажут следом.
                 || (matches!(
                     matched.intent.kind,
@@ -1853,6 +2049,79 @@ mod tests {
         }
     }
 
+    fn music_id(grammar: &Grammar, text: &str) -> Option<String> {
+        grammar
+            .match_trigger_with(text, None, true)
+            .filter(|matched| matched.intent.kind == IntentKind::Music)
+            .map(|matched| matched.intent.id.clone())
+    }
+
+    #[test]
+    fn nemora_commands_match_only_while_it_is_installed() {
+        let grammar = Grammar::defaults();
+        assert_eq!(music_id(&grammar, "включи трек нирвана").as_deref(), Some("music_song"));
+        let matched = grammar.match_trigger_with("включи трек нирвана", None, true).unwrap();
+        assert_eq!(matched.payload, "нирвана");
+        assert!(grammar.match_trigger_with("включи трек нирвана", None, false).is_none());
+        assert!(grammar.match_trigger_with("лайкни", None, false).is_none());
+    }
+
+    #[test]
+    fn switching_on_and_off_are_never_confused() {
+        // «включи» и «выключи» отличаются одной буквой, а сравнение нечёткое
+        let grammar = Grammar::defaults();
+        for (text, id) in [
+            ("включи музыку", "music_play"),
+            ("выключи музыку", "music_pause"),
+            ("включи перемешивание", "music_shuffle"),
+            ("выключи перемешивание", "music_shuffle_off"),
+            ("включи шаффл", "music_shuffle"),
+            ("выключи шаффл", "music_shuffle_off"),
+            ("включи смарт шаффл", "music_smart"),
+            ("выключи смарт шаффл", "music_shuffle_off"),
+            ("включи трек белый шум", "music_song"),
+            ("выключи трек", "music_pause"),
+            ("перемешай", "music_shuffle"),
+            ("shuffle off", "music_shuffle_off"),
+            ("what's playing", "music_now"),
+        ] {
+            assert_eq!(music_id(&grammar, text).as_deref(), Some(id), "{text}");
+        }
+    }
+
+    #[test]
+    fn music_target_commands_wait_for_the_name_and_whole_ones_do_not() {
+        let grammar = Grammar::defaults();
+        let incomplete = |text: &str| {
+            grammar.match_trigger_with(text, None, true).is_some_and(|matched| {
+                matched.payload.is_empty()
+                    && matched.intent.kind == IntentKind::Music
+                    && matched.intent.music.needs_target()
+            })
+        };
+        assert!(incomplete("включи трек"));
+        assert!(incomplete("включи плейлист"));
+        assert!(!incomplete("лайкни"));
+        assert!(!incomplete("что играет"));
+    }
+
+    #[test]
+    fn version_fifteen_migration_adds_nemora_commands_once() {
+        let mut old = Grammar::defaults();
+        old.version = 15;
+        old.intents.retain(|intent| intent.kind != IntentKind::Music);
+        let path = temporary_path("music");
+        old.save(&path).unwrap();
+        let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
+        let music: Vec<&Intent> = migrated.intents.iter().filter(|i| i.kind == IntentKind::Music).collect();
+        assert_eq!(music.len(), super::MUSIC_INTENTS.len());
+        assert!(music.iter().all(|i| i.enabled && !i.music.is_none()), "{music:?}");
+        // сохранённый файл читается так же и второй раз ничего не дописывает
+        let (again, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
+        assert_eq!(again, migrated);
+        let _ = std::fs::remove_file(&path);
+    }
+
     #[test]
     fn defaults_are_valid() {
         assert_eq!(Grammar::defaults().validate(), Ok(()));
@@ -1942,8 +2211,7 @@ mod tests {
             label: "Без id".into(),
             triggers: vec!["новая фраза".into()],
             url: String::new(),
-            enabled: true,
-            lang: crate::bilingual::LangMode::Auto,
+            ..Intent::default()
         });
         grammar.intents.push(Intent {
             id: "launch".into(),
@@ -1951,8 +2219,7 @@ mod tests {
             label: "Дубль id".into(),
             triggers: vec!["другая фраза".into()],
             url: String::new(),
-            enabled: true,
-            lang: crate::bilingual::LangMode::Auto,
+            ..Intent::default()
         });
 
         let errors = grammar.validate().unwrap_err().join("\n");
@@ -2193,7 +2460,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 15);
+        assert_eq!(Grammar::defaults().version, 16);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

@@ -116,6 +116,9 @@ impl Ctx<'_> {
                 let cancel = self.pick(&self.heard_cancel_words(&g.cancel_words).into_iter().filter(|w| !["стоп", "stop", "хватит", "остановись"].contains(&w.trim().to_lowercase().as_str())).collect::<Vec<_>>(), if ru { "отмена" } else { "cancel" });
                 (format!("{wake} {trigger}"), self.t("example.listen", &[("wake", wake), ("stop", stop), ("cancel", &cancel)]))
             }
+            // «включи трек X» — с целью; «лайкни», «что играет» — команда целиком
+            IntentKind::Music if intent.music.needs_target() => (x, self.label(intent)),
+            IntentKind::Music => (format!("{wake} {trigger}"), self.label(intent)),
             IntentKind::Dictate => {
                 let stop = self.pick(&self.heard_cancel_words(&g.dictation_stop), if ru { "стоп ввод" } else { "stop typing" });
                 // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs)
@@ -159,15 +162,20 @@ pub fn is_default_label(intent: &Intent) -> bool {
 }
 
 /// Список «Что можно сказать» для языка интерфейса `locale`; `langs` — языки распознавания
-/// (английский распознаётся всегда).
+/// (английский распознаётся всегда). Команды Неморы — только пока она установлена.
 pub fn build(g: &Grammar, locale: &str, langs: &[&str]) -> SayList {
+    build_with(g, locale, langs, crate::grammar::nemora_installed())
+}
+
+/// `build` с явным «Немора установлена» (`nemora`).
+pub fn build_with(g: &Grammar, locale: &str, langs: &[&str], nemora: bool) -> SayList {
     let cx = Ctx { locale, ru: locale == "ru" && langs.contains(&"ru"), langs };
     let wake = cx.wake(g);
     let launch = g.intents.iter().find(|i| i.kind == IntentKind::Launch && i.enabled);
     let open = cx.pick(launch.map_or(&[][..], |i| &i.triggers[..]), if cx.ru { "открой" } else { "open" });
     let hint = cx.t("home.hint", &[("wake", &wake), ("open", &open)]);
     let mut rows = Vec::new();
-    for intent in &g.intents {
+    for intent in g.intents.iter().filter(|i| nemora || i.kind != IntentKind::Music) {
         if let Some((command, desc)) = cx.example(g, intent, &wake) {
             rows.push(SayRow { command, desc, key: Some(intent.id.clone()), off: !intent.enabled });
         }
@@ -198,10 +206,26 @@ mod tests {
     #[test]
     fn every_enabled_intent_has_a_row_plus_shutdown_and_cancel() {
         let g = Grammar::defaults();
-        let list = build(&g, "en", &["en"]);
+        let list = build_with(&g, "en", &["en"], true);
         assert_eq!(list.rows.len(), g.intents.len() + 2);
         assert!(list.rows.iter().all(|r| !r.desc.is_empty() && !r.desc.starts_with("example.")));
+        assert!(list.rows.iter().all(|r| !r.desc.starts_with("intent.")), "{:?}", list.rows);
         assert!(!list.hint.is_empty() && !list.hint.starts_with("home."));
+    }
+
+    #[test]
+    fn nemora_commands_are_listed_only_while_it_is_installed() {
+        let g = Grammar::defaults();
+        let music = g.intents.iter().filter(|i| i.kind == IntentKind::Music).count();
+        assert!(music > 0);
+        let with = build_with(&g, "ru", &["en", "ru"], true);
+        let without = build_with(&g, "ru", &["en", "ru"], false);
+        assert_eq!(with.rows.len(), without.rows.len() + music);
+        assert!(without.rows.iter().all(|r| !r.key.as_deref().unwrap_or("").starts_with("music_")));
+        let song = with.rows.iter().find(|r| r.key.as_deref() == Some("music_song")).unwrap();
+        assert_eq!(song.command, "ривер включи трек X");
+        let now = with.rows.iter().find(|r| r.key.as_deref() == Some("music_now")).unwrap();
+        assert_eq!(now.command, "ривер что играет");
     }
 
     #[test]

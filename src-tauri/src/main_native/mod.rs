@@ -147,6 +147,8 @@ fn info(app: &AppHandle) -> Info {
         .as_ref()
         .and_then(|s| s.grammar.lock().ok().map(|g| g.clone()))
         .unwrap_or_else(crate::grammar::Grammar::defaults);
+    // Немору могли поставить или удалить, пока окно было закрыто
+    crate::nemora::refresh();
     let say = say::build(&grammar, &crate::uilang::current().to_string(), &langs);
     let action_list = shared.as_ref().and_then(|s| s.actions.lock().ok().map(|a| a.clone())).unwrap_or_default();
     let hidden_phrases = app
