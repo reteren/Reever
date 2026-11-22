@@ -16,7 +16,8 @@ use crate::app::AppHandle;
 use crate::events;
 
 pub fn active() -> bool {
-    std::env::var_os("REEVER_MAIN_DEMO").is_some()
+    // анимации для README (readme_demo.rs) запускаются так же: рядом с установленным Reever
+    std::env::var_os("REEVER_MAIN_DEMO").is_some() || crate::readme_demo::active()
 }
 
 fn step(started: Instant, name: &str) {

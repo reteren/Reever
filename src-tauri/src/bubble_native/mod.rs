@@ -118,3 +118,10 @@ pub fn rect() -> Option<(i32, i32, u32, u32)> {
     unsafe { GetWindowRect(HWND(hwnd as *mut _), &mut r) }.ok()?;
     Some((r.left, r.top, (r.right - r.left).max(0) as u32, (r.bottom - r.top).max(0) as u32))
 }
+
+/// Снимок окна вне экрана (RGBA) — для проверок и анимаций README без захвата экрана.
+pub fn snapshot(app: &AppHandle) -> Option<(u32, u32, Vec<u8>)> {
+    let (id, _) = WIN.lock().ok().and_then(|w| *w)?;
+    let ui = crate::mascot_native::ui(app)?;
+    ui.call(move |ui| ui.snapshot(id)).flatten()
+}

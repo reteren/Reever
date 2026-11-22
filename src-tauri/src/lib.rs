@@ -41,6 +41,7 @@ pub mod mascot_demo;
 pub mod mascot_native;
 pub mod main_native;
 pub mod main_demo;
+pub mod readme_demo;
 pub mod models;
 #[cfg(windows)]
 pub mod ortopt;
@@ -304,6 +305,11 @@ fn setup(app: &AppHandle) -> Result<(), String> {
     // проверка маскота без микрофона и горячих клавиш: REEVER_MASCOT_DEMO=1 (mascot_demo.rs)
     if mascot_demo::active() {
         mascot_demo::start(app);
+        return Ok(());
+    }
+    // анимации для README: REEVER_README_DEMO=<папка> (readme_demo.rs)
+    if readme_demo::active() {
+        readme_demo::start(app);
         return Ok(());
     }
     // проверка нативного главного окна: REEVER_MAIN_DEMO=1 (main_demo.rs)

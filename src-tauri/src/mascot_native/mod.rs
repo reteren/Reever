@@ -261,3 +261,10 @@ pub fn over_opaque(cursor: POINT) -> bool {
     MASK_WANTED.store(inside, Ordering::Relaxed);
     inside && hit.mask.is_some_and(|m| m.at(fx, fy) > ALPHA_HIT)
 }
+
+/// Снимок окна вне экрана (RGBA) — для проверок и анимаций README без захвата экрана.
+pub fn snapshot(app: &AppHandle) -> Option<(u32, u32, Vec<u8>)> {
+    let (id, _) = WIN.lock().ok().and_then(|w| *w)?;
+    let ui = ui(app)?;
+    ui.call(move |ui| ui.snapshot(id)).flatten()
+}

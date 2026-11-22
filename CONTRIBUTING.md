@@ -24,6 +24,14 @@ python tools/build_installer.py    # релизный инсталлятор -> 
 bash tools/test_build.sh           # release-exe с ресурсами в test-build/, без установщика
 ```
 
+GIF для README (`docs/media/`) снимаются с самих окон вне экрана, интерфейс на английском:
+
+```bash
+cd src-tauri && cargo build --release
+REEVER_README_DEMO=<папка-кадров> target/release/reever.exe --hidden   # REEVER_README_SCENES=tour,picker — только эти
+python tools/readme_gifs.py <папка-кадров>                              # -> docs/media/*.gif
+```
+
 ## О чём стоит знать до первого коммита
 
 **Debug-сборка меняет файлы репозитория.** В dev-режиме конфиги читаются и пишутся в `src-tauri/resources/`, а не в `%APPDATA%` (см. `src-tauri/src/config.rs:196-251`). Калибровка голосом дописывает фразы прямо в `src-tauri/resources/actions.json`. Проверяйте `git diff` перед коммитом — легко случайно отправить свои личные фразы.
