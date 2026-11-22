@@ -23,6 +23,9 @@
 
 `Grammar { wake_words, cancel_words, intents: Vec<Intent> }`,
 `Intent { id, kind: Launch|Folder|Search, label, triggers: Vec<String>, url, enabled }`.
+Команды Неморы — `kind: Music` с полем `music` (что сделать: `song`, `artist`, `album`,
+`playlist`, `play`, `pause`, `smart_shuffle`, `shuffle`, `shuffle_off`, `like`, `now_playing`);
+сравниваются и показываются, только пока Немора установлена — см. [nemora.md](nemora.md).
 Файл — `grammar.json` в каталоге пользовательских конфигов (как `actions.json`; в dev —
 `src-tauri/resources/grammar.json`, его **не создавать в репозитории вручную** — бандлить не
 нужно, дефолты в коде). `""` в `triggers` = «без ключевого слова», допустимо только у Launch.
