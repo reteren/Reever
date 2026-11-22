@@ -177,6 +177,10 @@ fn route_label(route: &Route) -> &'static str {
         Route::Calc(_) => "calc",
         Route::Dictate(_) => "dictate",
         Route::WebChat { .. } => "web chat",
+        Route::Key(_) => "key",
+        Route::Listen => "listen",
+        Route::Index(_) => "index",
+        _ => "other",
     }
 }
 

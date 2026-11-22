@@ -90,7 +90,7 @@ fn main() -> anyhow::Result<()> {
                         }
                         EngineEvent::Command { text, .. } => woke.push(text),
                         EngineEvent::WakeHeard => woke.push("<wake>".into()),
-                        EngineEvent::Log(message) if message.starts_with("wake:") => woke.push("<починка>".into()),
+                        EngineEvent::Log(message) if message.render("en").starts_with("wake:") => woke.push("<починка>".into()),
                         _ => {}
                     }
                 }

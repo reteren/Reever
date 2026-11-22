@@ -253,7 +253,7 @@ fn test_actions(root: &Path) -> Vec<Action> {
         .collect();
     for (id, phrases) in LANGUAGE_SYSTEM_PHRASES {
         if let Some(action) = actions.iter_mut().find(|action| action.id == *id) {
-            action.phrases.extend(phrases.iter().map(|phrase| phrase.to_string()));
+            action.phrases.extend(phrases.iter().map(|(_, phrase)| phrase.to_string()));
         }
     }
     for (id, phrases) in [

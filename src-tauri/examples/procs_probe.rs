@@ -50,7 +50,7 @@ fn main() -> Result<()> {
             Some(found) => println!(
                 "Совпадение для «{query}»: {} ({}, {:.3})",
                 found.app.exe_path.display(),
-                found.matched_by,
+                found.matched_by.describe("ru"),
                 found.score
             ),
             None => println!("Совпадений для «{query}» нет"),
@@ -187,7 +187,7 @@ fn match_notepad(app: procs::RunningApp, actions: &[actions::Action]) -> Result<
     println!(
         "match_app: {} по {}, score {:.3}, pid {:?}",
         found.app.exe_path.display(),
-        found.matched_by,
+        found.matched_by.describe("ru"),
         found.score,
         found.app.pids
     );
