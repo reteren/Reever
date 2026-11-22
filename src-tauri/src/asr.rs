@@ -422,6 +422,22 @@ impl AsrSet {
         let index = self.pick(pcm);
         &mut self.models[index].1
     }
+
+    /// Распознать моделью языка `code`, а не той, что выбрал бы определитель языка: название
+    /// песни, которое многоязычная модель во фразе записала транслитом («включи трек ай рили
+    /// лайк ю»). Из подходящих — самая узкая. Это может быть и та же многоязычная модель: одно
+    /// название без русских слов вокруг она пишет латиницей (замер 2026-11-22: «I really like
+    /// you part too»). `None` — модели этого языка нет.
+    pub fn transcribe_language(&mut self, code: &str, pcm: &[i16]) -> Option<anyhow::Result<String>> {
+        let index = self
+            .models
+            .iter()
+            .enumerate()
+            .filter(|(_, (covers, _))| covers.contains(&code))
+            .min_by_key(|(_, (covers, _))| covers.len())
+            .map(|(index, _)| index)?;
+        Some(self.models[index].1.transcribe(pcm))
+    }
 }
 
 /// Отпечаток первых 0,5 с: у частичных распознаваний одной фразы он одинаковый.

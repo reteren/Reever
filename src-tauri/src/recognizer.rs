@@ -105,6 +105,21 @@ impl Transcriber for LazyAsr {
     }
 }
 
+/// Английская модель набора (`AsrSet::transcribe_language`) для названий в командах Неморы.
+/// Английской модели нет или она одна — пустой текст: остаётся то, что услышала основная.
+struct EnglishAsr(LazyAsr);
+
+impl Transcriber for EnglishAsr {
+    fn transcribe(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        self.0
+            .inner
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.as_mut().and_then(|asr| asr.transcribe_language("en", pcm)))
+            .unwrap_or_else(|| Ok(String::new()))
+    }
+}
+
 /// Модели, оставшиеся от прошлого запуска потока. Настройки сохраняются на каждое изменение,
 /// и перезапуск ради порога VAD или паузы не должен заново грузить сотни мегабайт: если план
 /// моделей и число потоков те же, новый запуск забирает их отсюда.
@@ -264,6 +279,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     // записать английским словом — это и разрешает english_primary.
     engine.set_bilingual(None, None, LangMode::Ru);
     engine.set_english_primary(true);
+    // Кроме названий в командах Неморы: «включи трек ай рили лайк ю» многоязычная модель пишет
+    // транслитом, и поиск Неморы его не находит — название слушает ещё английская модель.
+    engine.set_music_second(Some(Box::new(EnglishAsr(asr.clone()))));
     log_languages(app, cfg);
     crate::grammar::set_active_languages(&cfg.models.languages());
     // окно прячет встроенные фразы действий на выключенных языках — пусть пересчитает

@@ -270,6 +270,16 @@ fn mid_phrase_wake(
 
 /// Слова, которые в диктовке после «ривер» заканчивают её, оставляя текст («ривер стоп»);
 /// остальные слова отмены («ривер отмена») стирают продиктованное.
+/// Команда Неморы с названием, записанным кириллицей («включи трек хейт мьюзик»): его стоит
+/// переслушать английской моделью. Латиницей модель уже написала сама — не нужно.
+fn needs_music_alt(grammar: &Grammar, command: &str, nemora: bool) -> bool {
+    grammar.match_trigger_nemora(command, nemora).is_some_and(|matched| {
+        matched.intent.kind == IntentKind::Music
+            && matched.intent.music.needs_target()
+            && matched.payload.chars().any(|c| matches!(c, 'а'..='я' | 'ё' | 'і' | 'ї' | 'є' | 'ґ'))
+    })
+}
+
 pub(crate) fn is_dictation_stop(text: &str) -> bool {
     let words: Vec<String> = normalize(text)
         .split_whitespace()
@@ -370,6 +380,11 @@ pub struct Engine<T: Transcriber, V: VoiceDetector> {
     /// (тесты, старт) — встроенный список глаголов `commands::is_bare_verb`.
     grammar: Option<Grammar>,
     second: Option<Box<dyn Transcriber + Send>>,
+    /// Английская модель для названия в командах Неморы («включи трек ай рили лайк ю»):
+    /// общей второй модели нет (`second`), а многоязычная пишет английское название транслитом.
+    music_second: Option<Box<dyn Transcriber + Send>>,
+    /// Установлена ли Немора; `None` — как скажет `grammar::nemora_installed` (тесты задают сами).
+    nemora: Option<bool>,
     lid: Option<Box<dyn LanguageId + Send>>,
     lang_mode: LangMode,
     /// Язык диктовки, выбранный голосом («по-английски»); `None` — автоматически.
@@ -477,6 +492,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             mode_epoch: 0,
             grammar: None,
             second: None,
+            music_second: None,
+            nemora: None,
             lid: None,
             lang_mode: LangMode::Auto,
             dictation_lang: None,
@@ -536,6 +553,16 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
         self.second = second;
         self.lid = lid;
         self.lang_mode = mode;
+    }
+
+    /// Английская модель для названий в командах Неморы (`None` — не переслушивать).
+    pub fn set_music_second(&mut self, second: Option<Box<dyn Transcriber + Send>>) {
+        self.music_second = second;
+    }
+
+    #[cfg(test)]
+    fn set_nemora(&mut self, installed: bool) {
+        self.nemora = Some(installed);
     }
 
     /// Словарь англицизмов для кириллической диктовки и словари Windows её языков;
@@ -2229,8 +2256,9 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
     fn resolve_command(&mut self, audio: &[i16], timed: &Timed, prefix: &str) -> Resolved {
         let fallback_grammar = Grammar::default();
         let grammar = self.grammar.as_ref().unwrap_or(&fallback_grammar).clone();
+        let nemora = self.nemora.unwrap_or_else(crate::grammar::nemora_installed);
         let known = |target: &str| self.known_targets.contains_key(&normalize(target));
-        bilingual::resolve(
+        let resolved = bilingual::resolve_with(
             audio,
             timed,
             prefix,
@@ -2244,7 +2272,33 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
                 .as_deref_mut()
                 .map(|language_id| language_id as &mut dyn LanguageId),
             self.lang_mode,
-        )
+            nemora,
+        );
+        if resolved.alt.is_some() || !needs_music_alt(&grammar, &resolved.text, nemora) {
+            return resolved;
+        }
+        let Some(second) = self.music_second.as_deref_mut() else {
+            return resolved;
+        };
+        // Название кириллицей — его слушает ещё и английская модель. Русский вариант остаётся
+        // первым (русские названия), английский идёт вторым; nemora.rs ищет по обоим.
+        let music = bilingual::resolve_with(
+            audio,
+            timed,
+            prefix,
+            &self.cfg.wake_words,
+            &grammar,
+            &known,
+            Some(second as &mut dyn Transcriber),
+            None,
+            LangMode::Ru,
+            nemora,
+        );
+        if music.text == resolved.text {
+            music
+        } else {
+            resolved
+        }
     }
 
     /// «…ривер стоп» / «…ривер отмена» / «…стоп ввод» в конце фразы: чем закончить диктовку
@@ -3267,6 +3321,43 @@ mod tests {
             EngineEvent::Command { text, alt: Some(alt) }
                 if text == "открой downloads" && alt == "открой загрузки"
         )));
+    }
+
+    #[test]
+    fn english_model_hears_a_cyrillic_song_title_for_nemora() {
+        let (mut engine, _, _, _) = engine(test_config(), &["ривер включи трек ай рили лайк ю"]);
+        engine.set_nemora(true);
+        engine.set_music_second(Some(Box::new(FixedTranscriber::new(&["i really like you"]))));
+
+        let events = engine.push_audio(&phrase(123, 120));
+        assert!(
+            events.iter().any(|event| matches!(event,
+                EngineEvent::Command { text, alt: Some(alt) }
+                    if text == "включи трек ай рили лайк ю" && alt == "включи трек i really like you"
+            )),
+            "{events:?}"
+        );
+    }
+
+    #[test]
+    fn english_model_is_not_asked_without_nemora_or_for_other_commands() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        for (text, nemora) in [
+            ("ривер включи трек ай рили лайк ю", false),
+            ("ривер открой загрузки", true),
+            ("ривер включи трек hate music", true),
+            ("ривер лайкни", true),
+        ] {
+            let (mut engine, _, _, _) = engine(test_config(), &[text]);
+            engine.set_nemora(nemora);
+            engine.set_music_second(Some(Box::new(CountingTranscriber(calls.clone()))));
+            let events = engine.push_audio(&phrase(123, 120));
+            assert!(
+                events.iter().any(|event| matches!(event, EngineEvent::Command { alt: None, .. })),
+                "{text}: {events:?}"
+            );
+        }
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
     }
 
     #[test]

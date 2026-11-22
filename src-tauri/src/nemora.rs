@@ -573,20 +573,297 @@ fn first_found<T>(
     Ok(None)
 }
 
-/// Варианты названия для сравнения: как есть и транслитерацией латиницы в кириллицу
-/// («goat» = «гоат») — русская модель пишет английские названия по-русски.
+/// Номер части словами — цифрами: «part two», «парт ту» и «Pt. 2» должны совпасть, иначе
+/// первая и вторая части для сравнения неразличимы. Только после `NUMBERED`: в остальных
+/// местах «ту» — это «to» («бэк ту блэк»), а «Two Weeks» говорят «ту уикс».
+const NUMBER_WORDS: &[(&str, &str)] = &[
+    ("one", "1"),
+    ("two", "2"),
+    ("too", "2"),
+    ("to", "2"),
+    ("three", "3"),
+    ("four", "4"),
+    ("five", "5"),
+    ("ван", "1"),
+    ("ту", "2"),
+    ("фри", "3"),
+    ("сри", "3"),
+    ("фор", "4"),
+    ("файв", "5"),
+    ("один", "1"),
+    ("два", "2"),
+    ("три", "3"),
+    ("четыре", "4"),
+    ("пять", "5"),
+];
+/// После них — номер части (ASR пишет и «part too»).
+const NUMBERED: &[&str] = &[
+    "part",
+    "pt",
+    "парт",
+    "часть",
+    "vol",
+    "volume",
+    "chapter",
+    "глава",
+];
+
+/// Название к общему виду: нормализация, «pt» → «part», «vol» → «volume», номер части цифрой.
+fn canonical(text: &str) -> String {
+    let words: Vec<String> = normalize(text)
+        .split_whitespace()
+        .map(String::from)
+        .collect();
+    let mut out: Vec<String> = Vec::with_capacity(words.len());
+    for word in words {
+        // «pt2», «vol3» слитно — как «pt 2»
+        if let Some((prefix, digits)) = glued_number(&word) {
+            out.push(prefix.to_string());
+            out.push(digits.to_string());
+            continue;
+        }
+        let after_numbered = out
+            .last()
+            .is_some_and(|last| NUMBERED.contains(&last.as_str()));
+        let word = match word.as_str() {
+            "pt" => "part".to_string(),
+            "vol" => "volume".to_string(),
+            other if after_numbered => NUMBER_WORDS
+                .iter()
+                .find(|(spoken, _)| *spoken == other)
+                .map_or_else(|| other.to_string(), |(_, digit)| digit.to_string()),
+            other => other.to_string(),
+        };
+        out.push(word);
+    }
+    out.join(" ")
+}
+
+/// «pt2» → («part», «2»), «vol3» → («volume», «3»).
+fn glued_number(word: &str) -> Option<(&'static str, &str)> {
+    [
+        ("part", "part"),
+        ("pt", "part"),
+        ("volume", "volume"),
+        ("vol", "volume"),
+    ]
+    .iter()
+    .find_map(|(prefix, full)| {
+        let digits = word.strip_prefix(prefix)?;
+        (!digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()))
+            .then_some((*full, digits))
+    })
+}
+
+/// Варианты названия: целиком и без пометок в скобках («Nevermind (Deluxe Edition)» —
+/// говорят «невермайнд»).
+fn name_variants(name: &str) -> Vec<String> {
+    let mut plain = String::with_capacity(name.len());
+    let mut depth = 0usize;
+    for c in name.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => plain.push(c),
+            _ => {}
+        }
+    }
+    let mut variants = vec![name.to_string()];
+    if !plain.trim().is_empty() && normalize(&plain) != normalize(name) {
+        variants.push(plain);
+    }
+    variants
+}
+
+/// Варианты для сравнения: общий вид названия и его транслитерация латиницы в кириллицу
+/// («goat» = «гоат», «Hate Music» = «хат мьюзик») — русская модель пишет английские
+/// названия по-русски.
 fn forms(text: &str) -> Vec<String> {
-    crate::textnorm::comparison_forms(text)
+    crate::textnorm::comparison_forms(&canonical(text))
 }
 
-fn same(a: &str, b: &str) -> bool {
-    let (a, b) = (forms(a), forms(b));
-    a.iter().any(|form| !form.is_empty() && b.contains(form))
+/// То же название (любой вариант без скобок, с транслитерацией).
+fn same(name: &str, query: &str) -> bool {
+    let query = forms(query);
+    name_variants(name)
+        .iter()
+        .flat_map(|variant| forms(variant))
+        .any(|form| !form.is_empty() && query.contains(&form))
 }
 
-/// Трек из выдачи поиска: точное совпадение названия, иначе первый (выдача ранжирована).
-/// Версии (slowed, reverb — строки с `version` или своим `viewId`) — только если их назвали.
-fn pick_song(found: &Value, query: &str) -> Option<Value> {
+/// Кандидаты по каждому варианту запроса: (запрос, [(название, что вернуть)]) — выдача
+/// Неморы по порядку её ранжирования.
+type Found<T> = Vec<(String, Vec<(String, T)>)>;
+
+/// Похожесть ниже этой — уже не «то самое»: тогда решает ранжирование Неморы.
+const MIN_SIMILAR: f64 = 0.6;
+/// Латинский запрос и такой похожий результат поиска («hate musik» → «Hate Music») —
+/// библиотеку не листаем: опечатки поиск Неморы понимает сам.
+const SEARCH_CONFIDENT: f64 = 0.8;
+
+/// Варианты запроса (русский, английский) без пустых и повторов.
+fn distinct(queries: &[String]) -> Vec<&str> {
+    let mut out: Vec<&str> = Vec::new();
+    for query in queries.iter().map(|q| q.trim()).filter(|q| !q.is_empty()) {
+        if !out.iter().any(|seen| normalize(seen) == normalize(query)) {
+            out.push(query);
+        }
+    }
+    out
+}
+
+/// Насколько название похоже на запрос, 0…1: лучшая пара вариантов по Левенштейну
+/// («goat» и «гоат» сравниваются в одной азбуке). Запрос внутри названия («smells like teen
+/// spirit» в «… (Remastered)») — не меньше 0,85; название внутри запроса — без поблажки,
+/// иначе «I Really Like You» обходил бы «I Really Like You Part 2».
+fn similarity(name: &str, query: &str) -> f64 {
+    let names: Vec<String> = name_variants(name)
+        .iter()
+        .flat_map(|variant| forms(variant))
+        .collect();
+    let queries = forms(query);
+    let mut best = 0.0_f64;
+    for name in &names {
+        for query in &queries {
+            let mut score = strsim::normalized_levenshtein(name, query);
+            if query.chars().count() >= 3 && name.contains(query.as_str()) {
+                score = score.max(0.85);
+            }
+            best = best.max(score);
+        }
+    }
+    best
+}
+
+/// Лучшее совпадение по всем вариантам запроса и его оценка: точное название — 1, иначе
+/// самое похожее, если не меньше `MIN_SIMILAR`. При равенстве — раньше в выдаче и раньше
+/// вариант.
+fn best_similar<T: Clone>(found: &Found<T>) -> Option<(f64, T)> {
+    for (query, items) in found {
+        if let Some((_, item)) = items.iter().find(|(name, _)| same(name, query)) {
+            return Some((1.0, item.clone()));
+        }
+    }
+    let mut best: Option<(f64, &T)> = None;
+    for (query, items) in found {
+        for (name, item) in items {
+            let score = similarity(name, query);
+            if best.is_none_or(|(top, _)| score > top) {
+                best = Some((score, item));
+            }
+        }
+    }
+    best.filter(|(score, _)| *score >= MIN_SIMILAR)
+        .map(|(score, item)| (score, item.clone()))
+}
+
+/// Первый результат первого варианта, по которому что-то нашлось (выдача Неморы ранжирована).
+fn first_result<T: Clone>(found: &Found<T>) -> Option<T> {
+    found
+        .iter()
+        .find_map(|(_, items)| items.first().map(|(_, item)| item.clone()))
+}
+
+/// Лучший кандидат: `best_similar`, иначе `first_result` (`with_library` без библиотеки).
+#[cfg(test)]
+fn choose<T: Clone>(found: &Found<T>) -> Option<T> {
+    best_similar(found)
+        .map(|(_, item)| item)
+        .or_else(|| first_result(found))
+}
+
+fn cyrillic(text: &str) -> bool {
+    text.chars()
+        .any(|c| matches!(c, 'а'..='я' | 'А'..='Я' | 'ё' | 'Ё' | 'і' | 'ї' | 'є' | 'ґ'))
+}
+
+/// Выдача поиска не дала точного совпадения — сравнить со всей библиотекой, если название
+/// сказано кириллицей («хейт мьюзик»: транслит английского поиск Неморы не понимает, а
+/// транслитерация Reever фонетическая — «Hate Music» = «хат мьюзик») или выдача ничего
+/// похожего не дала («i really like you part too» при «… pt2»). Берётся то, что похожее:
+/// лучшее из выдачи или из библиотеки; ничего похожего — первый результат поиска.
+fn with_library<T: Clone>(
+    found: &Found<T>,
+    queries: &[&str],
+    library: impl FnOnce() -> Result<Vec<(String, T)>, CallError>,
+) -> Result<Option<T>, CallError> {
+    let best = best_similar(found);
+    let confident = best.as_ref().map_or(0.0, |(score, _)| *score) >= SEARCH_CONFIDENT;
+    let spoken: Vec<&str> = queries
+        .iter()
+        .copied()
+        .filter(|q| cyrillic(q) || !confident)
+        .collect();
+    if best.as_ref().is_some_and(|(score, _)| *score >= 1.0) || spoken.is_empty() {
+        return Ok(best.map(|(_, item)| item).or_else(|| first_result(found)));
+    }
+    let library = library()?;
+    let everything: Found<T> = spoken
+        .iter()
+        .map(|query| (query.to_string(), library.clone()))
+        .collect();
+    let best = match (best, best_similar(&everything)) {
+        (Some(search), Some(whole)) => Some(if whole.0 > search.0 { whole } else { search }),
+        (search, whole) => search.or(whole),
+    };
+    Ok(best.map(|(_, item)| item).or_else(|| first_result(found)))
+}
+
+/// Все строки списка Неморы (`items_key` — массив в ответе) по страницам.
+fn list_pages<T>(
+    tool: &str,
+    items_key: &str,
+    page: usize,
+    mut row: impl FnMut(&Value) -> Option<T>,
+) -> Result<Vec<T>, CallError> {
+    let mut rows = Vec::new();
+    let mut offset = 0;
+    loop {
+        let reply = call(
+            tool,
+            json!({ "limit": page, "offset": offset }),
+            CALL_TIMEOUT,
+        )?;
+        let items: Vec<&Value> = reply
+            .get(items_key)
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .collect();
+        let total = reply.get("total").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let got = items.len();
+        offset += got;
+        rows.extend(items.into_iter().filter_map(&mut row));
+        if got == 0 || offset >= total.min(LIBRARY_LIMIT) {
+            return Ok(rows);
+        }
+    }
+}
+
+/// Все треки библиотеки для сравнения по названию — и «исполнитель название», если сказали
+/// и исполнителя («включи трек нирвана смэлз лайк тин спирит»).
+fn library_songs() -> Result<Vec<(String, Value)>, CallError> {
+    let songs = list_pages("list_songs", "songs", PAGE, |song| Some(song.clone()))?;
+    let mut rows = Vec::with_capacity(songs.len() * 2);
+    for (title, song) in song_candidates(&json!({ "songs": songs })) {
+        let artists: Vec<&str> = song
+            .get("artists")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .collect();
+        if !artists.is_empty() {
+            rows.push((format!("{} {title}", artists.join(" ")), song.clone()));
+        }
+        rows.push((title, song));
+    }
+    Ok(rows)
+}
+
+/// Треки из выдачи поиска. Версии (slowed, reverb — строки с `version` или своим `viewId`)
+/// — только если ничего, кроме них, не нашлось.
+fn song_candidates(found: &Value) -> Vec<(String, Value)> {
     let songs: Vec<&Value> = found
         .get("songs")
         .and_then(Value::as_array)
@@ -598,32 +875,22 @@ fn pick_song(found: &Value, query: &str) -> Option<Value> {
         let view = song.get("viewId").and_then(Value::as_str);
         !version && view.is_none_or(|view| Some(view) == song.get("songId").and_then(Value::as_str))
     };
-    let candidates: Vec<&Value> = {
-        let plain: Vec<&Value> = songs.iter().copied().filter(plain).collect();
-        if plain.is_empty() {
-            songs
-        } else {
-            plain
-        }
+    let plain_songs: Vec<&Value> = songs.iter().copied().filter(plain).collect();
+    let chosen = if plain_songs.is_empty() {
+        songs
+    } else {
+        plain_songs
     };
-    candidates
-        .iter()
-        .find(|song| {
-            song.get("title")
+    chosen
+        .into_iter()
+        .map(|song| {
+            let title = song
+                .get("title")
                 .and_then(Value::as_str)
-                .is_some_and(|title| same(title, query))
+                .unwrap_or_default();
+            (title.to_string(), song.clone())
         })
-        .or(candidates.first())
-        .map(|song| (*song).clone())
-}
-
-/// Имя из списка (исполнители, альбомы, плейлисты): точное, иначе первое — или `None`.
-fn pick_name<'a>(names: &[&'a str], query: &str) -> Option<&'a str> {
-    names
-        .iter()
-        .copied()
-        .find(|name| same(name, query))
-        .or(names.first().copied())
+        .collect()
 }
 
 /// «Исполнитель — название» для журнала.
@@ -702,9 +969,15 @@ fn enable_smart() -> Result<bool, CallError> {
 /// «Включи трек X»: найденный трек, за ним вся библиотека в Smart Shuffle — музыка не
 /// кончается на одном треке (play без shuffle делает очередь ровно из переданного).
 fn find_song(queries: &[String]) -> Result<Option<Value>, CallError> {
-    first_found(queries, |query| {
-        Ok(pick_song(&search(query, "songs", 10)?, query))
-    })
+    let queries = distinct(queries);
+    let mut found = Vec::new();
+    for query in &queries {
+        found.push((
+            query.to_string(),
+            song_candidates(&search(query, "songs", 10)?),
+        ));
+    }
+    with_library(&found, &queries, library_songs)
 }
 
 fn play_song(run: &Run, queries: &[String]) -> Result<bool, CallError> {
@@ -733,16 +1006,25 @@ fn play_song(run: &Run, queries: &[String]) -> Result<bool, CallError> {
 
 /// «Включи исполнителя X»: все его песни вперемешку.
 fn find_artist(queries: &[String]) -> Result<Option<String>, CallError> {
-    first_found(queries, |query| {
-        let found = search(query, "artists", 10)?;
-        let names: Vec<&str> = found
+    let queries = distinct(queries);
+    let mut found = Vec::new();
+    for query in &queries {
+        let result = search(query, "artists", 10)?;
+        let names: Vec<(String, String)> = result
             .get("artists")
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
             .filter_map(Value::as_str)
+            .map(|name| (name.to_string(), name.to_string()))
             .collect();
-        Ok(pick_name(&names, query).map(String::from))
+        found.push((query.to_string(), names));
+    }
+    with_library(&found, &queries, || {
+        list_pages("list_artists", "items", 500, |artist| {
+            let name = artist.get("name")?.as_str()?.to_string();
+            Some((name.clone(), name))
+        })
     })
 }
 
@@ -766,27 +1048,37 @@ fn play_artist(run: &Run, queries: &[String]) -> Result<bool, CallError> {
 /// «Включи альбом X»: альбом в порядке треков.
 /// Альбом: (ключ для list_songs, название).
 fn find_album(queries: &[String]) -> Result<Option<(String, String)>, CallError> {
-    first_found(queries, |query| {
-        let found = search(query, "albums", 10)?;
-        let albums: Vec<(&str, &str)> = found
+    let queries = distinct(queries);
+    let mut found = Vec::new();
+    for query in &queries {
+        let result = search(query, "albums", 10)?;
+        let albums: Vec<(String, (String, String))> = result
             .get("albums")
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
             .filter_map(|album| {
-                Some((
-                    album.get("key")?.as_str()?,
-                    album
-                        .get("title")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default(),
-                ))
+                let key = album.get("key")?.as_str()?.to_string();
+                let title = album
+                    .get("title")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                Some((title.clone(), (key, title)))
             })
             .collect();
-        let titles: Vec<&str> = albums.iter().map(|(_, title)| *title).collect();
-        Ok(pick_name(&titles, query)
-            .and_then(|title| albums.iter().find(|(_, t)| *t == title))
-            .map(|(key, title)| (key.to_string(), title.to_string())))
+        found.push((query.to_string(), albums));
+    }
+    with_library(&found, &queries, || {
+        list_pages("list_albums", "albums", 500, |album| {
+            let key = album.get("key")?.as_str()?.to_string();
+            let title = album
+                .get("title")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            Some((title.clone(), (key, title)))
+        })
     })
 }
 
@@ -1049,6 +1341,11 @@ mod tests {
         assert_eq!(tool_payload(&error), Err("Nemora is not running.".into()));
     }
 
+    fn pick(found: &Value, query: &str) -> Option<String> {
+        let found: Found<Value> = vec![(query.to_string(), song_candidates(found))];
+        choose(&found).map(|song| song["songId"].as_str().unwrap_or_default().to_string())
+    }
+
     #[test]
     fn exact_title_wins_and_versions_are_skipped() {
         let found = json!({ "songs": [
@@ -1057,26 +1354,157 @@ mod tests {
             { "songId": "c", "title": "Smells Like Teen Spirit", "artists": ["Nirvana"] },
         ]});
         assert_eq!(
-            pick_song(&found, "smells like teen spirit").unwrap()["songId"],
-            "c"
+            pick(&found, "smells like teen spirit").as_deref(),
+            Some("c")
         );
-        assert_eq!(pick_song(&found, "something else").unwrap()["songId"], "a");
+        // ничего похожего — первый в выдаче Неморы
+        assert_eq!(pick(&found, "совсем другое").as_deref(), Some("a"));
         let only_versions = json!({ "songs": [{ "songId": "b", "viewId": "b:v1", "version": "Slowed", "title": "T" }] });
-        assert_eq!(pick_song(&only_versions, "t").unwrap()["songId"], "b");
-        assert!(pick_song(&json!({ "songs": [] }), "t").is_none());
+        assert_eq!(pick(&only_versions, "t").as_deref(), Some("b"));
+        assert_eq!(pick(&json!({ "songs": [] }), "t"), None);
+    }
+
+    #[test]
+    fn english_variant_finds_what_the_transliteration_did_not() {
+        // «включи трек ай рили лайк ю парт ту»: русская модель — транслит, английская — слова
+        let found: Found<&str> = vec![
+            ("ай рили лайк ю парт ту".into(), vec![]),
+            (
+                "i really like you part two".into(),
+                vec![
+                    ("I Really Like You".into(), "short"),
+                    ("I Really Like You Part 2".into(), "part2"),
+                ],
+            ),
+        ];
+        assert_eq!(choose(&found), Some("part2"));
+        // русское название — точное совпадение русского варианта важнее похожего английского
+        let found: Found<&str> = vec![
+            ("группа крови".into(), vec![("Группа крови".into(), "kino")]),
+            (
+                "group of blood".into(),
+                vec![("Blood Group".into(), "other")],
+            ),
+        ];
+        assert_eq!(choose(&found), Some("kino"));
+    }
+
+    #[test]
+    fn cyrillic_title_is_found_in_the_whole_library() {
+        let library = || {
+            Ok(vec![
+                ("Antidepressant".to_string(), "ad"),
+                ("Hate Music".to_string(), "hm"),
+            ])
+        };
+        // поиск Неморы транслит не нашёл — сравнение со всей библиотекой
+        let nothing: Found<&str> = vec![("хейт мьюзик".into(), vec![])];
+        assert_eq!(
+            with_library(&nothing, &["хейт мьюзик"], library),
+            Ok(Some("hm"))
+        );
+        // точное совпадение в выдаче — библиотеку не листаем
+        let exact: Found<&str> = vec![("hate music".into(), vec![("Hate Music".into(), "search")])];
+        let untouched = || -> Result<Vec<(String, &str)>, CallError> { panic!("library listed") };
+        assert_eq!(
+            with_library(&exact, &["hate music"], untouched),
+            Ok(Some("search"))
+        );
+        // латиница, по которой поиск ничего похожего не дал, — листаем
+        let parts = || {
+            Ok(vec![
+                ("I Really Like You, Pt. 1".to_string(), "pt1"),
+                ("I Really Like You pt2".to_string(), "pt2"),
+            ])
+        };
+        let none: Found<&str> = vec![("i really like you part too".into(), vec![])];
+        assert_eq!(
+            with_library(&none, &["i really like you part too"], parts),
+            Ok(Some("pt2"))
+        );
+        // латиница с похожим результатом — не листаем: опечатки поиск Неморы понимает сам
+        let latin: Found<&str> = vec![("hate musik".into(), vec![("Hate Music".into(), "search")])];
+        assert_eq!(
+            with_library(&latin, &["hate musik"], untouched),
+            Ok(Some("search"))
+        );
+        // в библиотеке ничего похожего — первый результат поиска, как раньше
+        let junk: Found<&str> = vec![("хейт мьюзик".into(), vec![("Хейтеры".into(), "ru")])];
+        let unrelated = || Ok(vec![("Antidepressant".to_string(), "ad")]);
+        assert_eq!(
+            with_library(&junk, &["хейт мьюзик"], unrelated),
+            Ok(Some("ru"))
+        );
+    }
+
+    #[test]
+    fn parts_numbers_and_brackets_do_not_hide_the_title() {
+        let parts = |query: &str| -> Found<&'static str> {
+            vec![(
+                query.to_string(),
+                vec![
+                    ("I Really Like You, Pt. 1".into(), "pt1"),
+                    ("I Really Like You, Pt. 2".into(), "pt2"),
+                ],
+            )]
+        };
+        assert_eq!(choose(&parts("ай рили лайк ю парт ту")), Some("pt2"));
+        assert_eq!(choose(&parts("i really like you part too")), Some("pt2"));
+        assert_eq!(choose(&parts("i really like you part one")), Some("pt1"));
+        assert_eq!(canonical("Vol. 3 — part two"), "volume 3 part 2");
+        assert_eq!(
+            canonical("I Really Like You pt2"),
+            "i really like you part 2"
+        );
+        let glued: Found<&str> = vec![(
+            "ай рили лайк ю парт ту".into(),
+            vec![
+                ("I Really Like You, Pt. 1".into(), "pt1"),
+                ("I Really Like You pt2".into(), "pt2"),
+            ],
+        )];
+        assert_eq!(choose(&glued), Some("pt2"));
+        // «ту» вне номера части — «to»: «бэк ту блэк» = «Back to Black»
+        assert_eq!(canonical("бэк ту блэк"), "бэк ту блэк");
+        assert!(
+            same("Back to Black", "бэк ту блэк")
+                || similarity("Back to Black", "бэк ту блэк") >= MIN_SIMILAR
+        );
+        let albums: Found<&str> = vec![(
+            "невермайнд".into(),
+            vec![
+                ("never seen".into(), "wrong"),
+                ("Nevermind (Deluxe Edition)".into(), "right"),
+            ],
+        )];
+        assert_eq!(choose(&albums), Some("right"));
+        assert_eq!(
+            name_variants("Song [Live] (2011)"),
+            vec!["Song [Live] (2011)".to_string(), "Song  ".to_string()]
+        );
     }
 
     #[test]
     fn names_match_exactly_or_fall_back_to_the_first() {
+        let names = |query: &str, list: &[&'static str]| -> Found<&'static str> {
+            vec![(
+                query.to_string(),
+                list.iter().map(|name| (name.to_string(), *name)).collect(),
+            )]
+        };
         assert_eq!(
-            pick_name(&["Nirvanna Tribute", "Nirvana"], "нирвана"),
+            choose(&names("нирвана", &["Nirvanna Tribute", "Nirvana"])),
             Some("Nirvana")
         );
         assert_eq!(
-            pick_name(&["Nirvanna Tribute", "Nirvana"], "Nirvana"),
+            choose(&names("Nirvana", &["Nirvanna Tribute", "Nirvana"])),
             Some("Nirvana")
         );
-        assert_eq!(pick_name(&[], "x"), None);
+        assert_eq!(choose(&names("x", &[])), None);
+        assert_eq!(
+            distinct(&["a".into(), " A ".into(), "".into(), "b".into()]),
+            vec!["a", "b"]
+        );
     }
 
     #[test]
