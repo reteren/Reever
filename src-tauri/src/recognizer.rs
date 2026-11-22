@@ -373,9 +373,10 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut reload_waiting: Option<std::time::Instant> = None;
     let mut nemora_checked = std::time::Instant::now();
     loop {
-        // Команды Неморы, закончившиеся в фоне, — их звук; установку Неморы — заметить.
-        for ok in crate::nemora::take_outcomes() {
-            worker.sound(if ok { "success.wav" } else { "error.wav" });
+        // Команды Неморы, закончившиеся в фоне, — их звук и ответ; установку Неморы — заметить.
+        for outcome in crate::nemora::take_outcomes() {
+            worker.sound(if outcome.ok { "success.wav" } else { "error.wav" });
+            finish_background(app, outcome.answer);
         }
         if nemora_checked.elapsed() >= NEMORA_CHECK {
             nemora_checked = std::time::Instant::now();
@@ -1110,6 +1111,27 @@ const SPOT_CONFIRM_WINDOW: Duration = Duration::from_secs(4);
 
 /// Как часто заметить установку или удаление Неморы и закрыть простаивающий nemora-mcp.
 const NEMORA_CHECK: Duration = Duration::from_secs(10);
+/// Сколько маскот держит ответ («что играет») в пузыре, прежде чем уйти.
+const ANSWER_SHOW: Duration = Duration::from_millis(3500);
+
+/// Фоновая команда закончилась: ответ — в пузырь, и маскот уходит, когда его прочтут. «idle» —
+/// только если всё ещё «выполняю»: новая команда, начатая тем временем, своё состояние ведёт сама.
+fn finish_background(app: &AppHandle, answer: Option<String>) {
+    let Some(answer) = answer else {
+        if crate::events::current_state() == "busy" {
+            set_state(app, "idle");
+        }
+        return;
+    };
+    let _ = app.emit("reever://answer", answer);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ANSWER_SHOW);
+        if crate::events::current_state() == "busy" {
+            set_state(&app, "idle");
+        }
+    });
+}
 
 impl Worker<'_> {
     fn sound(&self, name: &str) {
@@ -1715,8 +1737,9 @@ impl Worker<'_> {
                 self.sound(if ok { "success.wav" } else { "error.wav" });
                 set_state(self.app, "idle");
             }
-            // Немора: звук — когда команда закончится (`run_worker` забирает итоги)
-            DispatchResult::Background => set_state(self.app, "idle"),
+            // Немора: «выполняю», пока команда идёт (маскот на экране); звук и «idle» — когда она
+            // закончится (`run_worker` забирает итоги)
+            DispatchResult::Background => {}
             DispatchResult::Choose(count) => {
                 ui_log(
                     self.app,

@@ -450,11 +450,26 @@ fn call(tool: &str, arguments: Value, timeout: Duration) -> Result<Value, CallEr
 
 // ─── Команды ─────────────────────────────────────────────────────────────────
 
-/// Итоги команд, которые закончились в фоне: воркер играет по ним звук.
-static OUTCOMES: Mutex<Vec<bool>> = Mutex::new(Vec::new());
+/// Чем кончилась команда, выполненная в фоне.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Outcome {
+    pub ok: bool,
+    /// Ответ, который показать в пузыре маскота («что играет»).
+    pub answer: Option<String>,
+}
 
-/// Забрать итоги закончившихся команд (успех / неудача) — для звуков.
-pub fn take_outcomes() -> Vec<bool> {
+/// Итоги команд, которые закончились в фоне: воркер играет по ним звук и показывает ответ.
+static OUTCOMES: Mutex<Vec<Outcome>> = Mutex::new(Vec::new());
+
+fn finish(ok: bool, answer: Option<String>) {
+    OUTCOMES
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .push(Outcome { ok, answer });
+}
+
+/// Забрать итоги закончившихся команд — для звуков и пузыря.
+pub fn take_outcomes() -> Vec<Outcome> {
     std::mem::take(&mut *OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()))
 }
 
@@ -510,14 +525,11 @@ pub fn start(app: &AppHandle, op: MusicOp, queries: Vec<String>, options: Option
     let spawned = std::thread::Builder::new()
         .name("reever-nemora".into())
         .spawn(move || {
-            let ok = run(&app, op, &queries, &options);
-            OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()).push(ok);
+            let (ok, answer) = run(&app, op, &queries, &options);
+            finish(ok, answer);
         });
     if let Err(error) = spawned {
-        OUTCOMES
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .push(false);
+        finish(false, None);
         eprintln!("[reever] nemora: thread: {error}");
     }
 }
@@ -537,11 +549,10 @@ pub fn start_media(app: &AppHandle, op: &str) {
                     crate::system::run_system(&owned)
                 }
             };
-            OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()).push(ok);
+            finish(ok, None);
         });
     if spawned.is_err() {
-        let ok = crate::system::run_system(op);
-        OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()).push(ok);
+        finish(crate::system::run_system(op), None);
     }
 }
 
@@ -583,6 +594,8 @@ struct Run<'a> {
     options: &'a Options,
     /// Немора была открыта, когда пришла команда.
     running: bool,
+    /// Ответ для пузыря маскота.
+    answer: std::cell::RefCell<Option<String>>,
 }
 
 impl Run<'_> {
@@ -616,23 +629,30 @@ impl Run<'_> {
     }
 }
 
-fn run(app: &AppHandle, op: MusicOp, queries: &[String], options: &Options) -> bool {
+/// Выполнить команду: успех и ответ для пузыря (если он есть).
+fn run(
+    app: &AppHandle,
+    op: MusicOp,
+    queries: &[String],
+    options: &Options,
+) -> (bool, Option<String>) {
     let failed = Run {
         app,
         options,
         running: false,
+        answer: Default::default(),
     };
     // app_status не запускает Немору: узнать, открыта ли она и что разрешено агентам
     let status = match call("app_status", json!({}), CALL_TIMEOUT) {
         Ok(status) => status,
-        Err(error) => return failed.failed(&error),
+        Err(error) => return (failed.failed(&error), None),
     };
     if matches!(
         status.get("access").and_then(Value::as_str),
         Some("off" | "read")
     ) {
         ui_log(app, crate::msg!("log.music.noAccess"));
-        return false;
+        return (false, None);
     }
     let running = status
         .get("running")
@@ -642,6 +662,7 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], options: &Options) -> b
         app,
         options,
         running,
+        answer: Default::default(),
     };
     let starts = matches!(
         op,
@@ -683,7 +704,8 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], options: &Options) -> b
         MusicOp::Quieter => volume_step(&run, false),
         MusicOp::None => Ok(false),
     };
-    result.unwrap_or_else(|error| run.failed(&error))
+    let ok = result.unwrap_or_else(|error| run.failed(&error));
+    (ok, run.answer.take())
 }
 
 fn not_running(run: &Run) -> Result<bool, CallError> {
@@ -1861,11 +1883,10 @@ fn now_playing(run: &Run) -> Result<bool, CallError> {
         ui_log(run.app, crate::msg!("log.music.nothing"));
         return Ok(false);
     }
-    // название — ответ на вопрос, его показываем и в приватном журнале
-    ui_log(
-        run.app,
-        crate::msg!("log.music.now", what = song_line(&now)),
-    );
+    // название — ответ на вопрос, его показываем и в приватном журнале, и в пузыре маскота
+    let line = song_line(&now);
+    ui_log(run.app, crate::msg!("log.music.now", what = &line));
+    *run.answer.borrow_mut() = Some(format!("♪ {line}"));
     Ok(true)
 }
 
