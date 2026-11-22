@@ -682,5 +682,16 @@
   "settings.nemora_media_via_app.help": "Точно: Nemora знає, скільки трек уже грав. Вимкнено - медіаклавіші, як для будь-якого плеєра",
   "settings.nemora_pause_fallback": "«Вимкни музику» ставить на паузу інший плеєр, якщо Nemora не грає",
   "intent.music_louder": "Nemora гучніше",
-  "intent.music_quieter": "Nemora тихіше"
+  "intent.music_quieter": "Nemora тихіше",
+  "intent.music_repeat_one": "повторювати поточний трек",
+  "intent.music_repeat_all": "повторювати всю чергу",
+  "intent.music_repeat_off": "вимкнути повтор",
+  "intent.music_queue_next": "трек наступним у черзі",
+  "intent.music_forward": "перемотати вперед",
+  "intent.music_back": "перемотати назад",
+  "log.music.repeatOne": "🎵 🔂 повтор цього треку",
+  "log.music.repeatAll": "🎵 🔁 повтор усієї черги",
+  "log.music.repeatOff": "🎵 повтор вимкнено",
+  "log.music.queuedNext": "🎵 наступним: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

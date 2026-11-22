@@ -686,5 +686,16 @@
   "settings.nemora_media_via_app.help": "دقيق: يعرف Nemora منذ متى تُشغَّل الأغنية. معطّل - مفاتيح الوسائط كأي مشغل",
   "settings.nemora_pause_fallback": "«أوقف الموسيقى» يوقف مشغلًا آخر مؤقتًا إذا لم يكن Nemora يعمل",
   "intent.music_louder": "Nemora أعلى",
-  "intent.music_quieter": "Nemora أخفض"
+  "intent.music_quieter": "Nemora أخفض",
+  "intent.music_repeat_one": "تكرار الأغنية الحالية",
+  "intent.music_repeat_all": "تكرار قائمة الانتظار كلها",
+  "intent.music_repeat_off": "إيقاف التكرار",
+  "intent.music_queue_next": "أغنية تالية في قائمة الانتظار",
+  "intent.music_forward": "تقديم",
+  "intent.music_back": "إرجاع",
+  "log.music.repeatOne": "🎵 🔂 تكرار هذه الأغنية",
+  "log.music.repeatAll": "🎵 🔁 تكرار قائمة الانتظار كلها",
+  "log.music.repeatOff": "🎵 التكرار متوقف",
+  "log.music.queuedNext": "🎵 التالية: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

@@ -676,5 +676,16 @@
   "settings.nemora_media_via_app.help": "정확함: Nemora는 곡이 얼마나 재생됐는지 압니다. 끔: 다른 플레이어처럼 미디어 키",
   "settings.nemora_pause_fallback": "Nemora가 재생 중이 아니면 「음악 꺼」가 다른 플레이어를 일시정지",
   "intent.music_louder": "Nemora 크게",
-  "intent.music_quieter": "Nemora 작게"
+  "intent.music_quieter": "Nemora 작게",
+  "intent.music_repeat_one": "재생 중인 곡 반복",
+  "intent.music_repeat_all": "대기열 전체 반복",
+  "intent.music_repeat_off": "반복 끄기",
+  "intent.music_queue_next": "다음 곡으로 넣기",
+  "intent.music_forward": "앞으로 감기",
+  "intent.music_back": "뒤로 감기",
+  "log.music.repeatOne": "🎵 🔂 이 곡 반복",
+  "log.music.repeatAll": "🎵 🔁 대기열 전체 반복",
+  "log.music.repeatOff": "🎵 반복 꺼짐",
+  "log.music.queuedNext": "🎵 다음 곡: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

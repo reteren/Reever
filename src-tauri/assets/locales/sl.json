@@ -682,5 +682,16 @@
   "settings.nemora_media_via_app.help": "Natančno: Nemora ve, koliko časa skladba že igra. Izklopljeno - medijske tipke kot za vsak predvajalnik",
   "settings.nemora_pause_fallback": "«Izklopi glasbo» ustavi drug predvajalnik, če Nemora ne predvaja",
   "intent.music_louder": "Nemora glasneje",
-  "intent.music_quieter": "Nemora tiše"
+  "intent.music_quieter": "Nemora tiše",
+  "intent.music_repeat_one": "ponavljaj trenutno skladbo",
+  "intent.music_repeat_all": "ponavljaj celo vrsto",
+  "intent.music_repeat_off": "izklopi ponavljanje",
+  "intent.music_queue_next": "skladba kot naslednja v vrsti",
+  "intent.music_forward": "previj naprej",
+  "intent.music_back": "previj nazaj",
+  "log.music.repeatOne": "🎵 🔂 ponavljanje te skladbe",
+  "log.music.repeatAll": "🎵 🔁 ponavljanje cele vrste",
+  "log.music.repeatOff": "🎵 ponavljanje izklopljeno",
+  "log.music.queuedNext": "🎵 naslednja: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

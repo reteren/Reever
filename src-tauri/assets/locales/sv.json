@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Exakt: Nemora vet hur länge låten har spelat. Av - medieknappar som för vilken spelare som helst",
   "settings.nemora_pause_fallback": "«Pausa musiken» pausar en annan spelare om Nemora inte spelar",
   "intent.music_louder": "Nemora högre",
-  "intent.music_quieter": "Nemora lägre"
+  "intent.music_quieter": "Nemora lägre",
+  "intent.music_repeat_one": "upprepa låten som spelas",
+  "intent.music_repeat_all": "upprepa hela kön",
+  "intent.music_repeat_off": "stäng av upprepning",
+  "intent.music_queue_next": "en låt som nästa i kön",
+  "intent.music_forward": "spola framåt",
+  "intent.music_back": "spola bakåt",
+  "log.music.repeatOne": "🎵 🔂 den här låten upprepas",
+  "log.music.repeatAll": "🎵 🔁 hela kön upprepas",
+  "log.music.repeatOff": "🎵 upprepning av",
+  "log.music.queuedNext": "🎵 härnäst: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

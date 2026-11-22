@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Tarkka: Nemora tietää, kauanko kappale on soinut. Pois - mediapainikkeet kuten millä tahansa soittimella",
   "settings.nemora_pause_fallback": "«Pysäytä musiikki» keskeyttää toisen soittimen, jos Nemora ei soita",
   "intent.music_louder": "Nemora kovemmalle",
-  "intent.music_quieter": "Nemora hiljemmalle"
+  "intent.music_quieter": "Nemora hiljemmalle",
+  "intent.music_repeat_one": "toista soivaa kappaletta",
+  "intent.music_repeat_all": "toista koko jonoa",
+  "intent.music_repeat_off": "uudelleentoisto pois",
+  "intent.music_queue_next": "kappale seuraavaksi jonoon",
+  "intent.music_forward": "kelaa eteenpäin",
+  "intent.music_back": "kelaa taaksepäin",
+  "log.music.repeatOne": "🎵 🔂 tätä kappaletta toistetaan",
+  "log.music.repeatAll": "🎵 🔁 koko jonoa toistetaan",
+  "log.music.repeatOff": "🎵 uudelleentoisto pois",
+  "log.music.queuedNext": "🎵 seuraavaksi: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

@@ -645,7 +645,12 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], options: &Options) -> b
     };
     let starts = matches!(
         op,
-        MusicOp::Song | MusicOp::Artist | MusicOp::Album | MusicOp::Playlist | MusicOp::Play
+        MusicOp::Song
+            | MusicOp::Artist
+            | MusicOp::Album
+            | MusicOp::Playlist
+            | MusicOp::Play
+            | MusicOp::QueueNext
     );
     let result = match op {
         // запускать закрытую Немору выключено в настройках
@@ -668,6 +673,12 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], options: &Options) -> b
         MusicOp::NowPlaying if !running => not_running(&run),
         MusicOp::NowPlaying => now_playing(&run),
         MusicOp::Volume => volume(&run, queries, running),
+        MusicOp::RepeatOne => repeat(&run, "one", "log.music.repeatOne"),
+        MusicOp::RepeatAll => repeat(&run, "all", "log.music.repeatAll"),
+        MusicOp::RepeatOff => repeat(&run, "off", "log.music.repeatOff"),
+        MusicOp::QueueNext => queue_next(&run, queries),
+        MusicOp::Forward => seek_by(&run, queries, true),
+        MusicOp::Back => seek_by(&run, queries, false),
         MusicOp::Louder => volume_step(&run, true),
         MusicOp::Quieter => volume_step(&run, false),
         MusicOp::None => Ok(false),
@@ -1666,6 +1677,123 @@ fn volume(run: &Run, queries: &[String], running: bool) -> Result<bool, CallErro
     Ok(true)
 }
 
+/// «Повторяй трек / всё», «выключи повтор». Сказано явно — то, что Reever помнил для возврата
+/// после «повторять этот трек», больше не возвращается.
+fn repeat(run: &Run, mode: &str, done: &'static str) -> Result<bool, CallError> {
+    if !run.running {
+        return not_running(run);
+    }
+    call("set_repeat", json!({ "mode": mode }), CALL_TIMEOUT)?;
+    REPEAT_BEFORE
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    ui_log(
+        run.app,
+        crate::uilang::Msg {
+            key: done,
+            args: Vec::new(),
+        },
+    );
+    Ok(true)
+}
+
+/// «Поставь следующим X»: X сразу после играющего трека. Немора закрыта или ничего не играет —
+/// просто включить X, как «включи трек X».
+fn queue_next(run: &Run, queries: &[String]) -> Result<bool, CallError> {
+    if run.running {
+        let now = call("now_playing", json!({}), CALL_TIMEOUT)?;
+        if now.get("songId").is_some_and(|id| !id.is_null()) {
+            let Some(song) = find_song(queries, run.options.strict)? else {
+                return Ok(run.not_found(queries.first().map_or("", String::as_str)));
+            };
+            let Some(id) = song.get("songId").and_then(Value::as_str) else {
+                return Ok(run.not_found(queries.first().map_or("", String::as_str)));
+            };
+            call(
+                "queue_add",
+                json!({ "song_ids": [id], "next": true }),
+                CALL_TIMEOUT,
+            )?;
+            ui_log(
+                run.app,
+                crate::msg!("log.music.queuedNext", what = run.name(&song_line(&song))),
+            );
+            return Ok(true);
+        }
+    }
+    play_song(run, queries)
+}
+
+/// Перемотка по умолчанию, если не сказано на сколько.
+const SEEK_DEFAULT: f64 = 15.0;
+
+/// На сколько секунд перемотать: «на 30 секунд», «на две минуты», «на минуту», «полминуты»,
+/// «на 45» (секунды). Не сказано — `None`.
+fn seek_seconds(text: &str) -> Option<f64> {
+    let digits = crate::textnorm::digits_in_text(text);
+    let words: Vec<String> = normalize(&digits)
+        .split_whitespace()
+        .map(String::from)
+        .collect();
+    if words
+        .iter()
+        .any(|w| w.starts_with("полминут") || w == "half")
+    {
+        return Some(30.0);
+    }
+    let minutes = words
+        .iter()
+        .any(|w| w.starts_with("мин") || w.starts_with("minute"));
+    let number = words.iter().find_map(|w| w.parse::<f64>().ok());
+    match (number, minutes) {
+        (Some(n), true) => Some(n * 60.0),
+        (Some(n), false) => Some(n),
+        (None, true) => Some(60.0),
+        (None, false) => None,
+    }
+}
+
+/// «М:СС» для журнала.
+fn clock(seconds: f64) -> String {
+    let total = seconds.max(0.0).round() as u64;
+    format!("{}:{:02}", total / 60, total % 60)
+}
+
+/// «Перемотай вперёд / назад [на N]»: от текущей позиции, в пределах трека.
+fn seek_by(run: &Run, queries: &[String], forward: bool) -> Result<bool, CallError> {
+    if !run.running {
+        return not_running(run);
+    }
+    let now = call("now_playing", json!({}), CALL_TIMEOUT)?;
+    if now.get("songId").is_none_or(Value::is_null) {
+        ui_log(run.app, crate::msg!("log.music.nothing"));
+        return Ok(false);
+    }
+    let step = queries
+        .iter()
+        .find_map(|query| seek_seconds(query))
+        .unwrap_or(SEEK_DEFAULT)
+        .min(3600.0);
+    let position = now
+        .get("positionSeconds")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    let duration = now
+        .get("durationSeconds")
+        .and_then(Value::as_f64)
+        .unwrap_or(f64::MAX);
+    let target =
+        (position + if forward { step } else { -step }).clamp(0.0, (duration - 1.0).max(0.0));
+    call("seek", json!({ "seconds": target }), CALL_TIMEOUT)?;
+    let arrow = if forward { "⏩" } else { "⏪" };
+    ui_log(
+        run.app,
+        crate::msg!("log.music.seek", arrow = arrow, position = clock(target)),
+    );
+    Ok(true)
+}
+
 /// «Громче» / «тише»: громкость Неморы на шаг из настроек.
 fn volume_step(run: &Run, up: bool) -> Result<bool, CallError> {
     if !run.running {
@@ -1745,7 +1873,9 @@ fn now_playing(run: &Run) -> Result<bool, CallError> {
 /// (examples/nemora_probe.rs: проверить разбор на своей библиотеке).
 pub fn preview(op: MusicOp, queries: &[String]) -> Result<Option<String>, String> {
     let found = match op {
-        MusicOp::Song => find_song(queries, false).map(|song| song.map(|song| song_line(&song))),
+        MusicOp::Song | MusicOp::QueueNext => {
+            find_song(queries, false).map(|song| song.map(|song| song_line(&song)))
+        }
         MusicOp::Artist => find_artist(queries, false),
         MusicOp::Album => find_album(queries, false).map(|album| album.map(|(_, title)| title)),
         MusicOp::Playlist => find_playlist(queries).map(|playlist| playlist.map(|(_, name)| name)),
@@ -1988,6 +2118,25 @@ mod tests {
         // японское название по буквам не сравнить — ранжирование Неморы остаётся
         let japanese: Found<&str> = vec![("мушоку тенсей".into(), vec![("無職転生".into(), "jp")])];
         assert_eq!(choose(&japanese), Some("jp"));
+    }
+
+    #[test]
+    fn seek_amount_is_read_from_words_and_units() {
+        for (text, want) in [
+            ("на 30 секунд", Some(30.0)),
+            ("на тридцать секунд", Some(30.0)),
+            ("на минуту", Some(60.0)),
+            ("на две минуты", Some(120.0)),
+            ("полминуты", Some(30.0)),
+            ("на 45", Some(45.0)),
+            ("30 seconds", Some(30.0)),
+            ("a minute", Some(60.0)),
+            ("", None),
+        ] {
+            assert_eq!(seek_seconds(text), want, "{text}");
+        }
+        assert_eq!(clock(83.4), "1:23");
+        assert_eq!(clock(5.0), "0:05");
     }
 
     #[test]

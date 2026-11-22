@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Pontos: a Nemora tudja, mióta szól a szám. Kikapcsolva - médiabillentyűk, mint bármelyik lejátszónál",
   "settings.nemora_pause_fallback": "A «zene leállítása» szünetelteti a másik lejátszót, ha a Nemora nem szól",
   "intent.music_louder": "Nemora hangosabban",
-  "intent.music_quieter": "Nemora halkabban"
+  "intent.music_quieter": "Nemora halkabban",
+  "intent.music_repeat_one": "a szóló szám ismétlése",
+  "intent.music_repeat_all": "az egész sor ismétlése",
+  "intent.music_repeat_off": "ismétlés kikapcsolása",
+  "intent.music_queue_next": "szám következőnek a sorban",
+  "intent.music_forward": "előretekerés",
+  "intent.music_back": "visszatekerés",
+  "log.music.repeatOne": "🎵 🔂 ez a szám ismétlődik",
+  "log.music.repeatAll": "🎵 🔁 az egész sor ismétlődik",
+  "log.music.repeatOff": "🎵 ismétlés kikapcsolva",
+  "log.music.queuedNext": "🎵 következő: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

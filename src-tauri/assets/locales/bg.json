@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Точно: Nemora знае колко време песента вече свири. Изключено - медийни клавиши като за всеки плейър",
   "settings.nemora_pause_fallback": "«Спри музиката» паузира друг плейър, ако Nemora не свири",
   "intent.music_louder": "Nemora по-силно",
-  "intent.music_quieter": "Nemora по-тихо"
+  "intent.music_quieter": "Nemora по-тихо",
+  "intent.music_repeat_one": "повтаряй текущата песен",
+  "intent.music_repeat_all": "повтаряй цялата опашка",
+  "intent.music_repeat_off": "изключи повторението",
+  "intent.music_queue_next": "песен като следваща в опашката",
+  "intent.music_forward": "превърти напред",
+  "intent.music_back": "превърти назад",
+  "log.music.repeatOne": "🎵 🔂 повторение на тази песен",
+  "log.music.repeatAll": "🎵 🔁 повторение на цялата опашка",
+  "log.music.repeatOff": "🎵 повторението е изключено",
+  "log.music.queuedNext": "🎵 следваща: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

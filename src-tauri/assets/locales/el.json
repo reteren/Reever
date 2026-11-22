@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Ακριβές: το Nemora ξέρει πόση ώρα παίζει το τραγούδι. Ανενεργό - πλήκτρα πολυμέσων όπως για κάθε πρόγραμμα",
   "settings.nemora_pause_fallback": "Το «σταμάτα τη μουσική» βάζει σε παύση άλλο πρόγραμμα αν το Nemora δεν παίζει",
   "intent.music_louder": "Nemora πιο δυνατά",
-  "intent.music_quieter": "Nemora πιο σιγά"
+  "intent.music_quieter": "Nemora πιο σιγά",
+  "intent.music_repeat_one": "επανάληψη του τρέχοντος τραγουδιού",
+  "intent.music_repeat_all": "επανάληψη όλης της ουράς",
+  "intent.music_repeat_off": "απενεργοποίηση επανάληψης",
+  "intent.music_queue_next": "τραγούδι αμέσως μετά στην ουρά",
+  "intent.music_forward": "μπροστά",
+  "intent.music_back": "πίσω",
+  "log.music.repeatOne": "🎵 🔂 επανάληψη αυτού του τραγουδιού",
+  "log.music.repeatAll": "🎵 🔁 επανάληψη όλης της ουράς",
+  "log.music.repeatOff": "🎵 η επανάληψη απενεργοποιήθηκε",
+  "log.music.queuedNext": "🎵 επόμενο: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

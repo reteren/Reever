@@ -680,5 +680,16 @@
   "settings.nemora_media_via_app.help": "Précis : Nemora sait depuis combien de temps le morceau joue. Désactivé - touches multimédia, comme pour tout lecteur",
   "settings.nemora_pause_fallback": "«Mets la musique en pause» met en pause un autre lecteur si Nemora ne joue pas",
   "intent.music_louder": "Nemora plus fort",
-  "intent.music_quieter": "Nemora moins fort"
+  "intent.music_quieter": "Nemora moins fort",
+  "intent.music_repeat_one": "répéter le morceau en cours",
+  "intent.music_repeat_all": "répéter toute la file",
+  "intent.music_repeat_off": "désactiver la répétition",
+  "intent.music_queue_next": "un morceau juste après dans la file",
+  "intent.music_forward": "avancer",
+  "intent.music_back": "reculer",
+  "log.music.repeatOne": "🎵 🔂 ce morceau en boucle",
+  "log.music.repeatAll": "🎵 🔁 toute la file en boucle",
+  "log.music.repeatOff": "🎵 répétition désactivée",
+  "log.music.queuedNext": "🎵 ensuite : {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

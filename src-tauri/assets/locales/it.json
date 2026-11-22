@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Preciso: Nemora sa da quanto suona il brano. Disattivato - tasti multimediali, come per qualsiasi lettore",
   "settings.nemora_pause_fallback": "«Metti in pausa la musica» mette in pausa un altro lettore se Nemora non suona",
   "intent.music_louder": "Nemora più forte",
-  "intent.music_quieter": "Nemora più piano"
+  "intent.music_quieter": "Nemora più piano",
+  "intent.music_repeat_one": "ripetere il brano in corso",
+  "intent.music_repeat_all": "ripetere tutta la coda",
+  "intent.music_repeat_off": "disattivare la ripetizione",
+  "intent.music_queue_next": "un brano subito dopo nella coda",
+  "intent.music_forward": "andare avanti",
+  "intent.music_back": "tornare indietro",
+  "log.music.repeatOne": "🎵 🔂 questo brano in ripetizione",
+  "log.music.repeatAll": "🎵 🔁 tutta la coda in ripetizione",
+  "log.music.repeatOff": "🎵 ripetizione disattivata",
+  "log.music.queuedNext": "🎵 subito dopo: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

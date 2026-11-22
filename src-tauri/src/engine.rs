@@ -1545,7 +1545,8 @@ impl<T: Transcriber, V: VoiceDetector> Engine<T, V> {
             }
             // «выключи музыку», «лайкни», «что играет» — сказаны целиком, дослушивать нечего
             Some(found) if found.intent.kind == IntentKind::Music => {
-                return !found.intent.music.needs_target() && found.payload.is_empty();
+                let music = found.intent.music;
+                return !music.needs_target() && !music.optional_amount() && found.payload.is_empty();
             }
             Some(_) => return false,
             None if grammar.allows_bare_launch() => command,

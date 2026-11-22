@@ -682,5 +682,16 @@
   "settings.nemora_media_via_app.help": "Dokładnie: Nemora wie, jak długo utwór już gra. Wyłączone - klawisze multimedialne, jak dla każdego odtwarzacza",
   "settings.nemora_pause_fallback": "«Wyłącz muzykę» wstrzymuje inny odtwarzacz, gdy Nemora nie gra",
   "intent.music_louder": "Nemora głośniej",
-  "intent.music_quieter": "Nemora ciszej"
+  "intent.music_quieter": "Nemora ciszej",
+  "intent.music_repeat_one": "powtarzać grający utwór",
+  "intent.music_repeat_all": "powtarzać całą kolejkę",
+  "intent.music_repeat_off": "wyłączyć powtarzanie",
+  "intent.music_queue_next": "utwór jako następny w kolejce",
+  "intent.music_forward": "przewinąć do przodu",
+  "intent.music_back": "przewinąć do tyłu",
+  "log.music.repeatOne": "🎵 🔂 powtarzanie tego utworu",
+  "log.music.repeatAll": "🎵 🔁 powtarzanie całej kolejki",
+  "log.music.repeatOff": "🎵 powtarzanie wyłączone",
+  "log.music.queuedNext": "🎵 następny: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

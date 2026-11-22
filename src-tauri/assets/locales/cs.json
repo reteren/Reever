@@ -682,5 +682,16 @@
   "settings.nemora_media_via_app.help": "Přesně: Nemora ví, jak dlouho skladba hraje. Vypnuto - mediální klávesy jako pro každý přehrávač",
   "settings.nemora_pause_fallback": "«Vypni hudbu» pozastaví jiný přehrávač, když Nemora nehraje",
   "intent.music_louder": "Nemora hlasitěji",
-  "intent.music_quieter": "Nemora tišeji"
+  "intent.music_quieter": "Nemora tišeji",
+  "intent.music_repeat_one": "opakovat hrající skladbu",
+  "intent.music_repeat_all": "opakovat celou frontu",
+  "intent.music_repeat_off": "vypnout opakování",
+  "intent.music_queue_next": "skladba jako další ve frontě",
+  "intent.music_forward": "přetočit dopředu",
+  "intent.music_back": "přetočit dozadu",
+  "log.music.repeatOne": "🎵 🔂 opakuje se tato skladba",
+  "log.music.repeatAll": "🎵 🔁 opakuje se celá fronta",
+  "log.music.repeatOff": "🎵 opakování vypnuto",
+  "log.music.queuedNext": "🎵 jako další: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

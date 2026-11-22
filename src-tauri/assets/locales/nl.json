@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Precies: Nemora weet hoe lang het nummer al speelt. Uit - mediatoetsen, zoals bij elke speler",
   "settings.nemora_pause_fallback": "«Pauzeer muziek» pauzeert een andere speler als Nemora niet speelt",
   "intent.music_louder": "Nemora harder",
-  "intent.music_quieter": "Nemora zachter"
+  "intent.music_quieter": "Nemora zachter",
+  "intent.music_repeat_one": "het huidige nummer herhalen",
+  "intent.music_repeat_all": "de hele wachtrij herhalen",
+  "intent.music_repeat_off": "herhalen uit",
+  "intent.music_queue_next": "een nummer als volgende in de wachtrij",
+  "intent.music_forward": "vooruitspoelen",
+  "intent.music_back": "terugspoelen",
+  "log.music.repeatOne": "🎵 🔂 dit nummer wordt herhaald",
+  "log.music.repeatAll": "🎵 🔁 de wachtrij wordt herhaald",
+  "log.music.repeatOff": "🎵 herhalen is uit",
+  "log.music.queuedNext": "🎵 hierna: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

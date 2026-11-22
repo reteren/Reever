@@ -226,7 +226,7 @@ pub fn route_with(
             if op.is_none() || (op.needs_target() && payloads[0].is_empty()) {
                 return Route::Unknown;
             }
-            let queries = if op.needs_target() {
+            let queries = if op.needs_target() || (op.optional_amount() && !payloads[0].is_empty()) {
                 payloads.iter().map(|p| join_cjk(p)).collect()
             } else {
                 Vec::new()
@@ -966,6 +966,17 @@ mod tests {
         assert_eq!(music("сделай громче", true), Route::Music { op: MusicOp::Louder, queries: vec![] });
         assert_eq!(music("тише", true), Route::Music { op: MusicOp::Quieter, queries: vec![] });
         assert_eq!(music("volume up", true), Route::Music { op: MusicOp::Louder, queries: vec![] });
+        assert_eq!(music("повторяй трек", true), Route::Music { op: MusicOp::RepeatOne, queries: vec![] });
+        assert_eq!(music("на повтор", true), Route::Music { op: MusicOp::RepeatOne, queries: vec![] });
+        assert_eq!(music("повторяй всё", true), Route::Music { op: MusicOp::RepeatAll, queries: vec![] });
+        assert_eq!(music("выключи повтор", true), Route::Music { op: MusicOp::RepeatOff, queries: vec![] });
+        assert_eq!(music("включи повтор", true), Route::Music { op: MusicOp::RepeatOne, queries: vec![] });
+        assert_eq!(music("поставь следующим нирвана", true), Route::Music { op: MusicOp::QueueNext, queries: vec!["нирвана".into()] });
+        assert_eq!(music("перемотай вперёд", true), Route::Music { op: MusicOp::Forward, queries: vec![] });
+        assert!(matches!(music("перемотай назад на 30 секунд", true), Route::Music { op: MusicOp::Back, queries } if !queries.is_empty()));
+        // «назад трек» и «включи следующий» — по-прежнему предыдущий / не очередь
+        assert_eq!(action_id(music("назад трек", true)), "sys_prev");
+        assert!(!matches!(music("включи следующий", true), Route::Music { op: MusicOp::QueueNext, .. }));
         assert!(matches!(music("громкость семьдесят пять", true), Route::Music { op: MusicOp::Volume, .. }));
         // английское число нормализация уже пишет цифрами
         assert_eq!(music("volume fifty", true), Route::Music { op: MusicOp::Volume, queries: vec!["50".into()] });

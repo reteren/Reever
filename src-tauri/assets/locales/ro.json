@@ -680,5 +680,16 @@
   "settings.nemora_media_via_app.help": "Exact: Nemora știe de cât timp cântă piesa. Oprit - taste media, ca pentru orice player",
   "settings.nemora_pause_fallback": "«Oprește muzica» pune pe pauză alt player dacă Nemora nu cântă",
   "intent.music_louder": "Nemora mai tare",
-  "intent.music_quieter": "Nemora mai încet"
+  "intent.music_quieter": "Nemora mai încet",
+  "intent.music_repeat_one": "repetă piesa curentă",
+  "intent.music_repeat_all": "repetă toată coada",
+  "intent.music_repeat_off": "oprește repetarea",
+  "intent.music_queue_next": "o piesă imediat după în coadă",
+  "intent.music_forward": "derulează înainte",
+  "intent.music_back": "derulează înapoi",
+  "log.music.repeatOne": "🎵 🔂 se repetă această piesă",
+  "log.music.repeatAll": "🎵 🔁 se repetă toată coada",
+  "log.music.repeatOff": "🎵 repetarea e oprită",
+  "log.music.queuedNext": "🎵 urmează: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

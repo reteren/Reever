@@ -680,5 +680,16 @@
   "settings.nemora_media_via_app.help": "Točno: Nemora zna koliko pjesma već svira. Isključeno - medijske tipke kao za svaki player",
   "settings.nemora_pause_fallback": "«Ugasi glazbu» pauzira drugi player ako Nemora ne svira",
   "intent.music_louder": "Nemora glasnije",
-  "intent.music_quieter": "Nemora tiše"
+  "intent.music_quieter": "Nemora tiše",
+  "intent.music_repeat_one": "ponavljaj pjesmu koja svira",
+  "intent.music_repeat_all": "ponavljaj cijeli red",
+  "intent.music_repeat_off": "isključi ponavljanje",
+  "intent.music_queue_next": "pjesma kao sljedeća u redu",
+  "intent.music_forward": "premotaj naprijed",
+  "intent.music_back": "premotaj natrag",
+  "log.music.repeatOne": "🎵 🔂 ponavljanje ove pjesme",
+  "log.music.repeatAll": "🎵 🔁 ponavljanje cijelog reda",
+  "log.music.repeatOff": "🎵 ponavljanje isključeno",
+  "log.music.queuedNext": "🎵 sljedeća: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

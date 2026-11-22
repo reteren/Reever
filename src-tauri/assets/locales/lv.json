@@ -680,5 +680,16 @@
   "settings.nemora_media_via_app.help": "Precīzi: Nemora zina, cik ilgi dziesma jau skan. Izslēgts - multivides taustiņi kā jebkuram atskaņotājam",
   "settings.nemora_pause_fallback": "«Izslēdz mūziku» pauzē citu atskaņotāju, ja Nemora neskan",
   "intent.music_louder": "Nemora skaļāk",
-  "intent.music_quieter": "Nemora klusāk"
+  "intent.music_quieter": "Nemora klusāk",
+  "intent.music_repeat_one": "atkārtot skanošo dziesmu",
+  "intent.music_repeat_all": "atkārtot visu rindu",
+  "intent.music_repeat_off": "izslēgt atkārtošanu",
+  "intent.music_queue_next": "dziesma kā nākamā rindā",
+  "intent.music_forward": "attīt uz priekšu",
+  "intent.music_back": "attīt atpakaļ",
+  "log.music.repeatOne": "🎵 🔂 atkārto šo dziesmu",
+  "log.music.repeatAll": "🎵 🔁 atkārto visu rindu",
+  "log.music.repeatOff": "🎵 atkārtošana izslēgta",
+  "log.music.queuedNext": "🎵 nākamā: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

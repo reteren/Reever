@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Genau: Nemora weiß, wie lange der Song schon läuft. Aus - Medientasten wie bei jedem Player",
   "settings.nemora_pause_fallback": "«Musik pausieren» pausiert einen anderen Player, wenn Nemora nicht spielt",
   "intent.music_louder": "Nemora lauter",
-  "intent.music_quieter": "Nemora leiser"
+  "intent.music_quieter": "Nemora leiser",
+  "intent.music_repeat_one": "den laufenden Song wiederholen",
+  "intent.music_repeat_all": "die ganze Warteschlange wiederholen",
+  "intent.music_repeat_off": "Wiederholung aus",
+  "intent.music_queue_next": "Song als Nächstes in der Warteschlange",
+  "intent.music_forward": "vorspulen",
+  "intent.music_back": "zurückspulen",
+  "log.music.repeatOne": "🎵 🔂 dieser Song wird wiederholt",
+  "log.music.repeatAll": "🎵 🔁 die Warteschlange wird wiederholt",
+  "log.music.repeatOff": "🎵 Wiederholung aus",
+  "log.music.queuedNext": "🎵 als Nächstes: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

@@ -12,7 +12,7 @@ use strsim::{jaro_winkler, levenshtein};
 use crate::actions::Action;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 19;
+const GRAMMAR_VERSION: u32 = 20;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -28,6 +28,10 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (16, MUSIC_INTENTS),
     (17, &["music_volume"]),
     (19, &["music_louder", "music_quieter"]),
+    (
+        20,
+        &["music_repeat_one", "music_repeat_all", "music_repeat_off", "music_queue_next", "music_forward", "music_back"],
+    ),
 ];
 /// Команды Неморы (nemora.rs): в грамматике всегда, но действуют и видны, только пока
 /// Немора установлена (`set_nemora_installed`).
@@ -856,6 +860,18 @@ pub enum MusicOp {
     Louder,
     /// «Тише».
     Quieter,
+    /// «Повторяй трек»: повтор одного.
+    RepeatOne,
+    /// «Повторяй всё»: повтор очереди.
+    RepeatAll,
+    /// «Выключи повтор».
+    RepeatOff,
+    /// «Поставь следующим X»: X сразу после играющего трека.
+    QueueNext,
+    /// «Перемотай вперёд [на 30 секунд]».
+    Forward,
+    /// «Перемотай назад [на минуту]».
+    Back,
 }
 
 impl MusicOp {
@@ -870,7 +886,16 @@ impl MusicOp {
 
     /// Цель — название, которое ищут в библиотеке (не число громкости).
     pub fn searches(self) -> bool {
-        matches!(self, MusicOp::Song | MusicOp::Artist | MusicOp::Album | MusicOp::Playlist)
+        matches!(
+            self,
+            MusicOp::Song | MusicOp::Artist | MusicOp::Album | MusicOp::Playlist | MusicOp::QueueNext
+        )
+    }
+
+    /// Цель можно сказать, а можно и нет: «перемотай вперёд» — на 15 с, «… на 30 секунд» —
+    /// на 30. Такую команду дослушивают до полной паузы: число часто договаривают после неё.
+    pub fn optional_amount(self) -> bool {
+        matches!(self, MusicOp::Forward | MusicOp::Back)
     }
 }
 
@@ -1071,6 +1096,44 @@ fn music_defaults() -> Vec<Intent> {
             MusicOp::Quieter,
             "Немора тише",
             &["тише", "сделай тише", "потише", "quieter", "volume down"],
+        ),
+        music(
+            "music_repeat_one",
+            MusicOp::RepeatOne,
+            "повторять играющий трек",
+            &["повторяй трек", "повторяй этот трек", "на повтор", "включи повтор", "repeat song", "repeat this song", "repeat one"],
+        ),
+        music(
+            "music_repeat_all",
+            MusicOp::RepeatAll,
+            "повторять всю очередь",
+            &["повторяй всё", "повтор всего", "повторяй очередь", "repeat all"],
+        ),
+        music(
+            "music_repeat_off",
+            MusicOp::RepeatOff,
+            "выключить повтор",
+            &["выключи повтор", "без повтора", "repeat off", "stop repeat"],
+        ),
+        // голое «следующим» нечётко совпало бы со «следующий трек» — только с глаголом
+        music(
+            "music_queue_next",
+            MusicOp::QueueNext,
+            "трек следующим в очереди",
+            &["поставь следующим", "play next", "queue next"],
+        ),
+        // не «назад на …»: оно совпало бы с «назад трек» (предыдущий трек)
+        music(
+            "music_forward",
+            MusicOp::Forward,
+            "перемотать вперёд",
+            &["перемотай вперёд", "skip forward", "fast forward"],
+        ),
+        music(
+            "music_back",
+            MusicOp::Back,
+            "перемотать назад",
+            &["перемотай назад", "rewind", "skip back"],
         ),
     ]
 }
@@ -2494,7 +2557,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 19);
+        assert_eq!(Grammar::defaults().version, 20);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

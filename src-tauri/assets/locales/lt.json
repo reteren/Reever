@@ -682,5 +682,16 @@
   "settings.nemora_media_via_app.help": "Tiksliai: Nemora žino, kiek laiko daina jau groja. Išjungta - medijos klavišai kaip bet kuriam grotuvui",
   "settings.nemora_pause_fallback": "«Išjunk muziką» pristabdo kitą grotuvą, jei Nemora negroja",
   "intent.music_louder": "Nemora garsiau",
-  "intent.music_quieter": "Nemora tyliau"
+  "intent.music_quieter": "Nemora tyliau",
+  "intent.music_repeat_one": "kartoti grojančią dainą",
+  "intent.music_repeat_all": "kartoti visą eilę",
+  "intent.music_repeat_off": "išjungti kartojimą",
+  "intent.music_queue_next": "daina kita eilėje",
+  "intent.music_forward": "persukti pirmyn",
+  "intent.music_back": "persukti atgal",
+  "log.music.repeatOne": "🎵 🔂 kartojama ši daina",
+  "log.music.repeatAll": "🎵 🔁 kartojama visa eilė",
+  "log.music.repeatOff": "🎵 kartojimas išjungtas",
+  "log.music.queuedNext": "🎵 kita: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

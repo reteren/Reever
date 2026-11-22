@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Täpne: Nemora teab, kaua lugu on mänginud. Väljas - meediaklahvid nagu iga pleieri puhul",
   "settings.nemora_pause_fallback": "«Peata muusika» peatab teise pleieri, kui Nemora ei mängi",
   "intent.music_louder": "Nemora valjemaks",
-  "intent.music_quieter": "Nemora vaiksemaks"
+  "intent.music_quieter": "Nemora vaiksemaks",
+  "intent.music_repeat_one": "korda mängivat lugu",
+  "intent.music_repeat_all": "korda kogu järjekorda",
+  "intent.music_repeat_off": "lülita kordus välja",
+  "intent.music_queue_next": "lugu järgmisena järjekorda",
+  "intent.music_forward": "keri edasi",
+  "intent.music_back": "keri tagasi",
+  "log.music.repeatOne": "🎵 🔂 seda lugu korratakse",
+  "log.music.repeatAll": "🎵 🔁 kogu järjekorda korratakse",
+  "log.music.repeatOff": "🎵 kordus on väljas",
+  "log.music.queuedNext": "🎵 järgmisena: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

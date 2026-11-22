@@ -676,5 +676,16 @@
   "settings.nemora_media_via_app.help": "正確：Nemora は曲がどれだけ再生されたか分かります。オフ：どのプレーヤーとも同じメディアキー",
   "settings.nemora_pause_fallback": "Nemora が再生していないとき「音楽を止めて」で別のプレーヤーを一時停止",
   "intent.music_louder": "Nemora を大きく",
-  "intent.music_quieter": "Nemora を小さく"
+  "intent.music_quieter": "Nemora を小さく",
+  "intent.music_repeat_one": "再生中の曲をリピート",
+  "intent.music_repeat_all": "キュー全体をリピート",
+  "intent.music_repeat_off": "リピートをオフ",
+  "intent.music_queue_next": "曲を次に再生",
+  "intent.music_forward": "早送り",
+  "intent.music_back": "巻き戻し",
+  "log.music.repeatOne": "🎵 🔂 この曲をリピート",
+  "log.music.repeatAll": "🎵 🔁 キュー全体をリピート",
+  "log.music.repeatOff": "🎵 リピートをオフにしました",
+  "log.music.queuedNext": "🎵 次に再生：{what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

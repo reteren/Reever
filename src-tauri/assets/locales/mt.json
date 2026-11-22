@@ -684,5 +684,16 @@
   "settings.nemora_media_via_app.help": "Preċiż: Nemora taf kemm ilha ddoqq il-kanzunetta. Mitfi - buttuni tal-midja bħal għal kull player",
   "settings.nemora_pause_fallback": "«Itfi l-mużika» jwaqqaf player ieħor jekk Nemora mhix qed iddoqq",
   "intent.music_louder": "Nemora aktar għoli",
-  "intent.music_quieter": "Nemora aktar baxx"
+  "intent.music_quieter": "Nemora aktar baxx",
+  "intent.music_repeat_one": "irrepeti l-kanzunetta li qed tindaqq",
+  "intent.music_repeat_all": "irrepeti l-kju kollu",
+  "intent.music_repeat_off": "itfi r-ripetizzjoni",
+  "intent.music_queue_next": "kanzunetta li jmiss fil-kju",
+  "intent.music_forward": "aqbeż 'il quddiem",
+  "intent.music_back": "aqbeż lura",
+  "log.music.repeatOne": "🎵 🔂 qed tirrepeti din il-kanzunetta",
+  "log.music.repeatAll": "🎵 🔁 qed jirrepeti l-kju kollu",
+  "log.music.repeatOff": "🎵 ir-ripetizzjoni mitfija",
+  "log.music.queuedNext": "🎵 li jmiss: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

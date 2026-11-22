@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Præcist: Nemora ved, hvor længe sangen har spillet. Fra - medietaster som til enhver afspiller",
   "settings.nemora_pause_fallback": "«Sæt musikken på pause» sætter en anden afspiller på pause, hvis Nemora ikke spiller",
   "intent.music_louder": "Nemora højere",
-  "intent.music_quieter": "Nemora lavere"
+  "intent.music_quieter": "Nemora lavere",
+  "intent.music_repeat_one": "gentag sangen, der spiller",
+  "intent.music_repeat_all": "gentag hele køen",
+  "intent.music_repeat_off": "slå gentagelse fra",
+  "intent.music_queue_next": "en sang som den næste i køen",
+  "intent.music_forward": "spol frem",
+  "intent.music_back": "spol tilbage",
+  "log.music.repeatOne": "🎵 🔂 denne sang gentages",
+  "log.music.repeatAll": "🎵 🔁 hele køen gentages",
+  "log.music.repeatOff": "🎵 gentagelse er slået fra",
+  "log.music.queuedNext": "🎵 næste: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

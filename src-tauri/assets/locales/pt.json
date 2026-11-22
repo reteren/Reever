@@ -678,5 +678,16 @@
   "settings.nemora_media_via_app.help": "Preciso: o Nemora sabe há quanto tempo a música toca. Desligado - teclas de mídia, como em qualquer player",
   "settings.nemora_pause_fallback": "«Pause a música» pausa outro player se o Nemora não estiver tocando",
   "intent.music_louder": "Nemora mais alto",
-  "intent.music_quieter": "Nemora mais baixo"
+  "intent.music_quieter": "Nemora mais baixo",
+  "intent.music_repeat_one": "repetir a música atual",
+  "intent.music_repeat_all": "repetir toda a fila",
+  "intent.music_repeat_off": "desligar a repetição",
+  "intent.music_queue_next": "uma música a seguir na fila",
+  "intent.music_forward": "avançar",
+  "intent.music_back": "voltar",
+  "log.music.repeatOne": "🎵 🔂 repetindo esta música",
+  "log.music.repeatAll": "🎵 🔁 repetindo a fila",
+  "log.music.repeatOff": "🎵 repetição desligada",
+  "log.music.queuedNext": "🎵 a seguir: {what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }

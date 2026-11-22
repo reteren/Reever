@@ -676,5 +676,16 @@
   "settings.nemora_media_via_app.help": "更准确：Nemora 知道这首歌已经播放了多久。关闭时用媒体键，和任何播放器一样",
   "settings.nemora_pause_fallback": "Nemora 没在播放时，「关掉音乐」暂停其他播放器",
   "intent.music_louder": "Nemora 大声点",
-  "intent.music_quieter": "Nemora 小声点"
+  "intent.music_quieter": "Nemora 小声点",
+  "intent.music_repeat_one": "单曲循环当前歌曲",
+  "intent.music_repeat_all": "循环整个队列",
+  "intent.music_repeat_off": "关闭循环",
+  "intent.music_queue_next": "把歌插到下一首",
+  "intent.music_forward": "快进",
+  "intent.music_back": "快退",
+  "log.music.repeatOne": "🎵 🔂 单曲循环",
+  "log.music.repeatAll": "🎵 🔁 循环整个队列",
+  "log.music.repeatOff": "🎵 已关闭循环",
+  "log.music.queuedNext": "🎵 下一首：{what}",
+  "log.music.seek": "🎵 {arrow} {position}"
 }
