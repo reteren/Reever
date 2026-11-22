@@ -4,15 +4,16 @@
 
 ## Platform
 
-web
+Windows 10/11, нативные окна
 
-Интерфейс — статический HTML/CSS/JS в WebView2 внутри Tauri 2 (Windows 10/11). Окна без системной
-рамки (`decorations: false`, `transparent: true`), два окна: `main` и `picker`.
+С 0.7.3 интерфейс нативный: Direct2D, DirectWrite и DirectComposition через windows-rs, свой
+каркас приложения (`src-tauri/src/app.rs`), Tauri и WebView2 удалены. Окна без системной рамки:
+главное, выбор, подтверждение, маскот, пузырь, уведомление об обновлении.
 
 ## Stack
 
-Существующий: Tauri 2 + Rust, фронтенд без сборщика и фреймворка (`frontend/` копируется как есть,
-`withGlobalTauri`). Всё офлайн: шрифты, библиотеки и картинки лежат локально, никаких CDN.
+Rust, окна на ядре `src-tauri/src/native/`. Всё офлайн: шрифты, кадры маскота, скин и словари
+интерфейса вшиты в exe (`src-tauri/assets/`), никаких CDN.
 
 ## Users
 
@@ -29,7 +30,7 @@ web
 
 ## Positioning
 
-Распознавание целиком на устройстве (GigaAM v3, Parakeet, Silero VAD через sherpa-onnx), голос не
+Распознавание целиком на устройстве (Parakeet, SenseVoice, Whisper LID, Silero VAD через sherpa-onnx), голос не
 покидает ПК; фразы команд и действия пользователь настраивает и калибрует своим голосом.
 
 ## Operating Context
@@ -40,8 +41,8 @@ web
 
 ## Capabilities and Constraints
 
-- Разделы: Главная, Действия, Настройки, Журнал; отдельное окно `picker` для выбора результата.
-- Интерфейс на 10 языках (en, ru, de, es, pt, it, fr, zh, ja, ar с RTL), словари `frontend/i18n/locales/`.
+- Разделы: Главная, Действия, Настройки, Журнал, Текст, Индекс; отдельные окна выбора и подтверждения.
+- Интерфейс на 30 языках (арабский справа налево), словари `src-tauri/assets/locales/`.
 - Приватность и офлайн-режим — механизмы, а не флаги: нулевой сетевой трафик из интерфейса.
 - Приложение резидентное: в скрытом окне интерфейс не должен тратить GPU/CPU.
 
@@ -66,7 +67,7 @@ web
 
 - Референсы пользователя: `%APPDATA%\dev.marknote.app\attachments\image-000044..00004b.png`
   (MMD3, японский скин, Metrix, Elevator Star, Sonique Nekronomikron, Bayonetta UI, Neosdl).
-- Иконка `ico.png`, логотип `frontend/logo.png` (старого мира, не обязательны к сохранению).
+- Иконка `src-tauri/icons/icon.png` и `icon.ico`, исходник рамки `design/reever-frame.blend`.
 
 ## Product Principles
 

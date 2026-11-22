@@ -1,20 +1,21 @@
 /node_modules
-/dist
 /src-tauri/target
 *.log
 
 # Модели распознавания (~225 МБ) — не хранятся в git.
 # Ставятся одной командой: pwsh scripts/fetch-deps.ps1
 /src-tauri/resources/model/
+# Создаются debug-запусками (config.rs: dev читает и пишет конфиги в resources/); в установщик не идут.
+/src-tauri/resources/usage.json
+/src-tauri/resources/grammar.json
 
 # Синтетический корпус (scripts/gen-corpus.ps1); manifest.json хранится в git.
 /testdata/corpus/
 /testdata/live/*.wav
 
-# Рабочие файлы impeccable (локальные)
-/.impeccable/config.local.json
-/.impeccable/questions/
-/.impeccable/build/
+# Рабочие файлы impeccable и чекпоинты сессий агентов (локальные)
+/.impeccable/
+/.agents/
 
 # Промежуточные рендеры рамки (пересобираются из design/reever-frame.blend)
 /design/renders/
