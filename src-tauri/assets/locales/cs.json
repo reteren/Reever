@@ -644,5 +644,8 @@
   "log.music.nothing": "🎵 v Nemoře nic nehraje",
   "log.music.paused": "🎵 ⏸ Nemora je pozastavená",
   "log.music.mediaKey": "🎵 Nemora nehraje: mediální klávesa přehrát/pozastavit",
-  "log.music.empty": "🎵 knihovna Nemory je prázdná"
+  "log.music.empty": "🎵 knihovna Nemory je prázdná",
+  "intent.music_volume": "hlasitost Nemory od 0 do 100",
+  "log.music.volume": "🎵 hlasitost Nemory {percent}%",
+  "log.music.badVolume": "🎵 hlasitost: řekni číslo od 0 do 100"
 }

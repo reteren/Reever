@@ -646,5 +646,8 @@
   "log.music.nothing": "🎵 xejn ma qed jindaqq f'Nemora",
   "log.music.paused": "🎵 ⏸ Nemora waqfet",
   "log.music.mediaKey": "🎵 Nemora mhix qed iddoqq: buttuna tal-midja play/pause",
-  "log.music.empty": "🎵 il-librerija ta' Nemora vojta"
+  "log.music.empty": "🎵 il-librerija ta' Nemora vojta",
+  "intent.music_volume": "il-volum ta' Nemora minn 0 sa 100",
+  "log.music.volume": "🎵 il-volum ta' Nemora {percent}%",
+  "log.music.badVolume": "🎵 volum: għid numru minn 0 sa 100"
 }

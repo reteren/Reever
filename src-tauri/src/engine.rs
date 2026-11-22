@@ -275,7 +275,7 @@ fn mid_phrase_wake(
 fn needs_music_alt(grammar: &Grammar, command: &str, nemora: bool) -> bool {
     grammar.match_trigger_nemora(command, nemora).is_some_and(|matched| {
         matched.intent.kind == IntentKind::Music
-            && matched.intent.music.needs_target()
+            && matched.intent.music.searches()
             && matched.payload.chars().any(|c| matches!(c, 'а'..='я' | 'ё' | 'і' | 'ї' | 'є' | 'ґ'))
     })
 }

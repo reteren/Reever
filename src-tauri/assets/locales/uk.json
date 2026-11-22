@@ -644,5 +644,8 @@
   "log.music.nothing": "🎵 у Nemora нічого не грає",
   "log.music.paused": "🎵 ⏸ Nemora на паузі",
   "log.music.mediaKey": "🎵 Nemora не грає: медіаклавіша пауза/відтворення",
-  "log.music.empty": "🎵 бібліотека Nemora порожня"
+  "log.music.empty": "🎵 бібліотека Nemora порожня",
+  "intent.music_volume": "гучність Nemora від 0 до 100",
+  "log.music.volume": "🎵 гучність Nemora {percent}%",
+  "log.music.badVolume": "🎵 гучність: назви число від 0 до 100"
 }

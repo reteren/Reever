@@ -638,5 +638,8 @@
   "log.music.nothing": "🎵 Nemora 没有在播放",
   "log.music.paused": "🎵 ⏸ Nemora 已暂停",
   "log.music.mediaKey": "🎵 Nemora 未播放：媒体键 播放/暂停",
-  "log.music.empty": "🎵 Nemora 的音乐库是空的"
+  "log.music.empty": "🎵 Nemora 的音乐库是空的",
+  "intent.music_volume": "Nemora 音量 0 到 100",
+  "log.music.volume": "🎵 Nemora 音量 {percent}%",
+  "log.music.badVolume": "🎵 音量：请说 0 到 100 的数字"
 }

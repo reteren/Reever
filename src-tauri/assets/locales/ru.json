@@ -639,5 +639,8 @@
   "log.music.nothing": "🎵 в Неморе ничего не играет",
   "log.music.paused": "🎵 ⏸ Немора на паузе",
   "log.music.mediaKey": "🎵 Немора не играет: медиа-клавиша пауза/воспроизведение",
-  "log.music.empty": "🎵 библиотека Неморы пуста"
+  "log.music.empty": "🎵 библиотека Неморы пуста",
+  "intent.music_volume": "громкость Неморы от 0 до 100",
+  "log.music.volume": "🎵 громкость Неморы {percent}%",
+  "log.music.badVolume": "🎵 громкость: назови число от 0 до 100"
 }

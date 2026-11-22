@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 nothing is playing in Nemora",
   "log.music.paused": "🎵 ⏸ Nemora is paused",
   "log.music.mediaKey": "🎵 Nemora is not playing: media key play/pause",
-  "log.music.empty": "🎵 Nemora's library is empty"
+  "log.music.empty": "🎵 Nemora's library is empty",
+  "intent.music_volume": "Nemora volume from 0 to 100",
+  "log.music.volume": "🎵 Nemora volume {percent}%",
+  "log.music.badVolume": "🎵 volume: say a number from 0 to 100"
 }

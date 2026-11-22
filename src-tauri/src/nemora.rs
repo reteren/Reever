@@ -533,6 +533,7 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], private: bool) -> bool 
         MusicOp::Like => like(&run),
         MusicOp::NowPlaying if !running => not_running(&run),
         MusicOp::NowPlaying => now_playing(&run),
+        MusicOp::Volume => volume(&run, queries, running),
         MusicOp::None => Ok(false),
     };
     result.unwrap_or_else(|error| run.failed(&error))
@@ -1238,6 +1239,92 @@ fn pause(run: &Run, running: bool) -> Result<bool, CallError> {
     Ok(crate::system::run_system("media_play_pause"))
 }
 
+/// Громкость из сказанного: «50», «пятьдесят», «семьдесят пять процентов», «fifty five»,
+/// «максимум». Больше 100 или не число — `None`.
+fn volume_percent(text: &str) -> Option<u8> {
+    let digits = crate::textnorm::digits_in_text(text);
+    let words: Vec<String> = normalize(&digits)
+        .split_whitespace()
+        .map(String::from)
+        .collect();
+    if words.iter().any(|w| {
+        matches!(
+            w.as_str(),
+            "максимум" | "максимальная" | "max" | "maximum" | "full"
+        )
+    }) {
+        return Some(100);
+    }
+    if words.iter().any(|w| {
+        matches!(
+            w.as_str(),
+            "минимум" | "ноль" | "нуль" | "zero" | "min" | "minimum"
+        )
+    }) {
+        return Some(0);
+    }
+    if let Some(number) = words.iter().find_map(|w| w.parse::<u32>().ok()) {
+        return u8::try_from(number).ok().filter(|n| *n <= 100);
+    }
+    // английские числительные: «fifty five», «one hundred»
+    let mut total = 0u32;
+    let mut seen = false;
+    for word in &words {
+        let value = match word.as_str() {
+            "one" => 1,
+            "two" => 2,
+            "three" => 3,
+            "four" => 4,
+            "five" => 5,
+            "six" => 6,
+            "seven" => 7,
+            "eight" => 8,
+            "nine" => 9,
+            "ten" => 10,
+            "eleven" => 11,
+            "twelve" => 12,
+            "thirteen" => 13,
+            "fourteen" => 14,
+            "fifteen" => 15,
+            "sixteen" => 16,
+            "seventeen" => 17,
+            "eighteen" => 18,
+            "nineteen" => 19,
+            "twenty" => 20,
+            "thirty" => 30,
+            "forty" => 40,
+            "fifty" => 50,
+            "sixty" => 60,
+            "seventy" => 70,
+            "eighty" => 80,
+            "ninety" => 90,
+            "hundred" => {
+                total = total.max(1) * 100;
+                seen = true;
+                continue;
+            }
+            _ => continue,
+        };
+        total += value;
+        seen = true;
+    }
+    (seen && total <= 100).then_some(total as u8)
+}
+
+/// «Громкость 50»: громкость самой Неморы (её ползунок, не Windows).
+fn volume(run: &Run, queries: &[String], running: bool) -> Result<bool, CallError> {
+    let Some(percent) = queries.iter().find_map(|query| volume_percent(query)) else {
+        ui_log(run.app, crate::msg!("log.music.badVolume"));
+        return Ok(false);
+    };
+    if !running {
+        return not_running(run);
+    }
+    call("set_volume", json!({ "percent": percent }), CALL_TIMEOUT)?;
+    ui_log(run.app, crate::msg!("log.music.volume", percent = percent));
+    Ok(true)
+}
+
 fn smart_shuffle(run: &Run) -> Result<bool, CallError> {
     if enable_smart()? {
         ui_log(run.app, crate::msg!("log.music.smart"));
@@ -1482,6 +1569,26 @@ mod tests {
             name_variants("Song [Live] (2011)"),
             vec!["Song [Live] (2011)".to_string(), "Song  ".to_string()]
         );
+    }
+
+    #[test]
+    fn volume_is_read_from_digits_and_words() {
+        for (text, want) in [
+            ("50", Some(50)),
+            ("пятьдесят", Some(50)),
+            ("семьдесят пять", Some(75)),
+            ("на 30 процентов", Some(30)),
+            ("сто", Some(100)),
+            ("ноль", Some(0)),
+            ("0", Some(0)),
+            ("максимум", Some(100)),
+            ("fifty five", Some(55)),
+            ("one hundred", Some(100)),
+            ("150", None),
+            ("погромче", None),
+        ] {
+            assert_eq!(volume_percent(text), want, "{text}");
+        }
     }
 
     #[test]

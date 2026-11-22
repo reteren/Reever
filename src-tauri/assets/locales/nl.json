@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 er speelt niets in Nemora",
   "log.music.paused": "🎵 ⏸ Nemora is gepauzeerd",
   "log.music.mediaKey": "🎵 Nemora speelt niet: mediatoets afspelen/pauze",
-  "log.music.empty": "🎵 de bibliotheek van Nemora is leeg"
+  "log.music.empty": "🎵 de bibliotheek van Nemora is leeg",
+  "intent.music_volume": "Nemora-volume van 0 tot 100",
+  "log.music.volume": "🎵 Nemora-volume {percent}%",
+  "log.music.badVolume": "🎵 volume: zeg een getal van 0 tot 100"
 }

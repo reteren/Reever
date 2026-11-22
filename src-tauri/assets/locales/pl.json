@@ -644,5 +644,8 @@
   "log.music.nothing": "🎵 w Nemora nic nie gra",
   "log.music.paused": "🎵 ⏸ Nemora zatrzymana",
   "log.music.mediaKey": "🎵 Nemora nie gra: klawisz multimedialny odtwórz/pauza",
-  "log.music.empty": "🎵 biblioteka Nemora jest pusta"
+  "log.music.empty": "🎵 biblioteka Nemora jest pusta",
+  "intent.music_volume": "głośność Nemora od 0 do 100",
+  "log.music.volume": "🎵 głośność Nemora {percent}%",
+  "log.music.badVolume": "🎵 głośność: powiedz liczbę od 0 do 100"
 }

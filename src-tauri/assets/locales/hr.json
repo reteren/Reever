@@ -642,5 +642,8 @@
   "log.music.nothing": "🎵 u Nemori ništa ne svira",
   "log.music.paused": "🎵 ⏸ Nemora je pauzirana",
   "log.music.mediaKey": "🎵 Nemora ne svira: medijska tipka reprodukcija/pauza",
-  "log.music.empty": "🎵 knjižnica Nemore je prazna"
+  "log.music.empty": "🎵 knjižnica Nemore je prazna",
+  "intent.music_volume": "glasnoća Nemore od 0 do 100",
+  "log.music.volume": "🎵 glasnoća Nemore {percent}%",
+  "log.music.badVolume": "🎵 glasnoća: reci broj od 0 do 100"
 }

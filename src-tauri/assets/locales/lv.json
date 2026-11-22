@@ -642,5 +642,8 @@
   "log.music.nothing": "🎵 Nemora nekas neskan",
   "log.music.paused": "🎵 ⏸ Nemora ir pauzēta",
   "log.music.mediaKey": "🎵 Nemora neatskaņo: multivides taustiņš atskaņot/pauze",
-  "log.music.empty": "🎵 Nemora bibliotēka ir tukša"
+  "log.music.empty": "🎵 Nemora bibliotēka ir tukša",
+  "intent.music_volume": "Nemora skaļums no 0 līdz 100",
+  "log.music.volume": "🎵 Nemora skaļums {percent}%",
+  "log.music.badVolume": "🎵 skaļums: pasaki skaitli no 0 līdz 100"
 }

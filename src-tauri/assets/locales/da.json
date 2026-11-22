@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 intet spiller i Nemora",
   "log.music.paused": "🎵 ⏸ Nemora er på pause",
   "log.music.mediaKey": "🎵 Nemora spiller ikke: medietast afspil/pause",
-  "log.music.empty": "🎵 Nemoras bibliotek er tomt"
+  "log.music.empty": "🎵 Nemoras bibliotek er tomt",
+  "intent.music_volume": "Nemoras lydstyrke fra 0 til 100",
+  "log.music.volume": "🎵 Nemoras lydstyrke {percent}%",
+  "log.music.badVolume": "🎵 lydstyrke: sig et tal fra 0 til 100"
 }

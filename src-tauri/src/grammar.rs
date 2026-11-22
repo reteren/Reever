@@ -12,7 +12,7 @@ use strsim::{jaro_winkler, levenshtein};
 use crate::actions::Action;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 16;
+const GRAMMAR_VERSION: u32 = 17;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -26,6 +26,7 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (14, &["listen"]),
     (15, &["index"]),
     (16, MUSIC_INTENTS),
+    (17, &["music_volume"]),
 ];
 /// Команды Неморы (nemora.rs): в грамматике всегда, но действуют и видны, только пока
 /// Немора установлена (`set_nemora_installed`).
@@ -846,6 +847,8 @@ pub enum MusicOp {
     Like,
     /// «Что играет»: название в журнал.
     NowPlaying,
+    /// «Громкость 50»: громкость самой Неморы, 0–100 (не Windows).
+    Volume,
 }
 
 impl MusicOp {
@@ -855,6 +858,11 @@ impl MusicOp {
 
     /// Нужна цель после ключевой фразы («включи трек» без названия — дослушать).
     pub fn needs_target(self) -> bool {
+        self.searches() || self == MusicOp::Volume
+    }
+
+    /// Цель — название, которое ищут в библиотеке (не число громкости).
+    pub fn searches(self) -> bool {
         matches!(self, MusicOp::Song | MusicOp::Artist | MusicOp::Album | MusicOp::Playlist)
     }
 }
@@ -1038,6 +1046,12 @@ fn music_defaults() -> Vec<Intent> {
             MusicOp::NowPlaying,
             "что сейчас играет в Неморе",
             &["что играет", "что сейчас играет", "что за трек", "what's playing", "what is playing"],
+        ),
+        music(
+            "music_volume",
+            MusicOp::Volume,
+            "громкость Неморы от 0 до 100",
+            &["громкость", "громкость музыки", "сделай громкость", "volume", "set volume", "music volume"],
         ),
     ]
 }
@@ -2114,7 +2128,8 @@ mod tests {
         old.save(&path).unwrap();
         let (migrated, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
         let music: Vec<&Intent> = migrated.intents.iter().filter(|i| i.kind == IntentKind::Music).collect();
-        assert_eq!(music.len(), super::MUSIC_INTENTS.len());
+        let defaults = Grammar::defaults();
+        assert_eq!(music.len(), defaults.intents.iter().filter(|i| i.kind == IntentKind::Music).count());
         assert!(music.iter().all(|i| i.enabled && !i.music.is_none()), "{music:?}");
         // сохранённый файл читается так же и второй раз ничего не дописывает
         let (again, _) = Grammar::load_or_migrate(&path, &mut Vec::new());
@@ -2460,7 +2475,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 16);
+        assert_eq!(Grammar::defaults().version, 17);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

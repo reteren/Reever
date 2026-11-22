@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 Nemoras ei mängi midagi",
   "log.music.paused": "🎵 ⏸ Nemora on peatatud",
   "log.music.mediaKey": "🎵 Nemora ei mängi: meediaklahv esita/peata",
-  "log.music.empty": "🎵 Nemora kogu on tühi"
+  "log.music.empty": "🎵 Nemora kogu on tühi",
+  "intent.music_volume": "Nemora helitugevus 0–100",
+  "log.music.volume": "🎵 Nemora helitugevus {percent}%",
+  "log.music.badVolume": "🎵 helitugevus: ütle arv 0–100"
 }

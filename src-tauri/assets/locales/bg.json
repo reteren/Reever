@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 в Nemora нищо не свири",
   "log.music.paused": "🎵 ⏸ Nemora е на пауза",
   "log.music.mediaKey": "🎵 Nemora не свири: медиен клавиш пусни/пауза",
-  "log.music.empty": "🎵 библиотеката на Nemora е празна"
+  "log.music.empty": "🎵 библиотеката на Nemora е празна",
+  "intent.music_volume": "сила на звука в Nemora от 0 до 100",
+  "log.music.volume": "🎵 сила на звука в Nemora {percent}%",
+  "log.music.badVolume": "🎵 сила на звука: кажи число от 0 до 100"
 }

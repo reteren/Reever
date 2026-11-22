@@ -644,5 +644,8 @@
   "log.music.nothing": "🎵 Nemora niekas negroja",
   "log.music.paused": "🎵 ⏸ Nemora pristabdyta",
   "log.music.mediaKey": "🎵 Nemora negroja: medijos klavišas groti/pristabdyti",
-  "log.music.empty": "🎵 Nemora biblioteka tuščia"
+  "log.music.empty": "🎵 Nemora biblioteka tuščia",
+  "intent.music_volume": "Nemora garsumas nuo 0 iki 100",
+  "log.music.volume": "🎵 Nemora garsumas {percent}%",
+  "log.music.badVolume": "🎵 garsumas: pasakyk skaičių nuo 0 iki 100"
 }

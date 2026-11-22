@@ -638,5 +638,8 @@
   "log.music.nothing": "🎵 Nemora에서 재생 중인 곡이 없습니다",
   "log.music.paused": "🎵 ⏸ Nemora 일시정지됨",
   "log.music.mediaKey": "🎵 Nemora가 재생 중이 아닙니다: 미디어 키 재생/일시정지",
-  "log.music.empty": "🎵 Nemora 라이브러리가 비어 있습니다"
+  "log.music.empty": "🎵 Nemora 라이브러리가 비어 있습니다",
+  "intent.music_volume": "Nemora 볼륨 0~100",
+  "log.music.volume": "🎵 Nemora 볼륨 {percent}%",
+  "log.music.badVolume": "🎵 볼륨: 0부터 100 사이의 숫자를 말하세요"
 }

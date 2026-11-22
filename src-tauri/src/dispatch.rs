@@ -952,6 +952,10 @@ mod tests {
         assert_eq!(music("поставь альбом nevermind", true), Route::Music { op: MusicOp::Album, queries: vec!["nevermind".into()] });
         assert_eq!(music("play playlist goat", true), Route::Music { op: MusicOp::Playlist, queries: vec!["goat".into()] });
         assert_eq!(music("лайкни", true), Route::Music { op: MusicOp::Like, queries: vec![] });
+        assert_eq!(music("громкость 40", true), Route::Music { op: MusicOp::Volume, queries: vec!["40".into()] });
+        assert!(matches!(music("громкость семьдесят пять", true), Route::Music { op: MusicOp::Volume, .. }));
+        // английское число нормализация уже пишет цифрами
+        assert_eq!(music("volume fifty", true), Route::Music { op: MusicOp::Volume, queries: vec!["50".into()] });
         assert_eq!(music("что сейчас играет", true), Route::Music { op: MusicOp::NowPlaying, queries: vec![] });
         // без названия — не команда (Engine дослушивает, сюда доходит только обрубок)
         assert_eq!(music("включи трек", true), Route::Unknown);

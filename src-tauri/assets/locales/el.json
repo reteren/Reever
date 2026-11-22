@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 δεν παίζει τίποτα στο Nemora",
   "log.music.paused": "🎵 ⏸ Το Nemora σε παύση",
   "log.music.mediaKey": "🎵 Το Nemora δεν παίζει: πλήκτρο πολυμέσων αναπαραγωγή/παύση",
-  "log.music.empty": "🎵 η βιβλιοθήκη του Nemora είναι άδεια"
+  "log.music.empty": "🎵 η βιβλιοθήκη του Nemora είναι άδεια",
+  "intent.music_volume": "ένταση του Nemora από 0 έως 100",
+  "log.music.volume": "🎵 ένταση του Nemora {percent}%",
+  "log.music.badVolume": "🎵 ένταση: πες έναν αριθμό από 0 έως 100"
 }

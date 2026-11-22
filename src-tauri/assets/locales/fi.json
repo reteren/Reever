@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 Nemorassa ei soi mitään",
   "log.music.paused": "🎵 ⏸ Nemora on tauolla",
   "log.music.mediaKey": "🎵 Nemora ei soita: mediapainike toisto/tauko",
-  "log.music.empty": "🎵 Nemoran kirjasto on tyhjä"
+  "log.music.empty": "🎵 Nemoran kirjasto on tyhjä",
+  "intent.music_volume": "Nemoran äänenvoimakkuus 0–100",
+  "log.music.volume": "🎵 Nemoran äänenvoimakkuus {percent}%",
+  "log.music.badVolume": "🎵 äänenvoimakkuus: sano luku 0–100"
 }

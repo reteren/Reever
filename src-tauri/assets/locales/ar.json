@@ -648,5 +648,8 @@
   "log.music.nothing": "🎵 لا شيء يُشغَّل في Nemora",
   "log.music.paused": "🎵 ⏸ Nemora متوقف مؤقتًا",
   "log.music.mediaKey": "🎵 Nemora لا يشغّل شيئًا: مفتاح الوسائط تشغيل/إيقاف مؤقت",
-  "log.music.empty": "🎵 مكتبة Nemora فارغة"
+  "log.music.empty": "🎵 مكتبة Nemora فارغة",
+  "intent.music_volume": "مستوى صوت Nemora من 0 إلى 100",
+  "log.music.volume": "🎵 مستوى صوت Nemora {percent}%",
+  "log.music.badVolume": "🎵 الصوت: قل رقمًا من 0 إلى 100"
 }

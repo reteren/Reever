@@ -640,5 +640,8 @@
   "log.music.nothing": "🎵 inget spelas i Nemora",
   "log.music.paused": "🎵 ⏸ Nemora är pausad",
   "log.music.mediaKey": "🎵 Nemora spelar inte: medieknapp spela/paus",
-  "log.music.empty": "🎵 Nemoras bibliotek är tomt"
+  "log.music.empty": "🎵 Nemoras bibliotek är tomt",
+  "intent.music_volume": "Nemoras volym från 0 till 100",
+  "log.music.volume": "🎵 Nemoras volym {percent}%",
+  "log.music.badVolume": "🎵 volym: säg ett tal från 0 till 100"
 }
