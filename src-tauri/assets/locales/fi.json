@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 koko jonoa toistetaan",
   "log.music.repeatOff": "🎵 uudelleentoisto pois",
   "log.music.queuedNext": "🎵 seuraavaksi: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemoran musiikkikomennot: {n} · näytä",
+  "say.nemora.hide": "Nemoran musiikkikomennot: {n} · piilota"
 }

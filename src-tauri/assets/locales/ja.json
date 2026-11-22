@@ -687,5 +687,8 @@
   "log.music.repeatAll": "🎵 🔁 キュー全体をリピート",
   "log.music.repeatOff": "🎵 リピートをオフにしました",
   "log.music.queuedNext": "🎵 次に再生：{what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora の音楽コマンド：{n} · 表示",
+  "say.nemora.hide": "Nemora の音楽コマンド：{n} · 隠す"
 }

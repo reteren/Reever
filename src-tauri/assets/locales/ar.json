@@ -697,5 +697,8 @@
   "log.music.repeatAll": "🎵 🔁 تكرار قائمة الانتظار كلها",
   "log.music.repeatOff": "🎵 التكرار متوقف",
   "log.music.queuedNext": "🎵 التالية: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "أوامر موسيقى Nemora: {n} · إظهار",
+  "say.nemora.hide": "أوامر موسيقى Nemora: {n} · إخفاء"
 }

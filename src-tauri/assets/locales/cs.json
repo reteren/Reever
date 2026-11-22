@@ -693,5 +693,8 @@
   "log.music.repeatAll": "🎵 🔁 opakuje se celá fronta",
   "log.music.repeatOff": "🎵 opakování vypnuto",
   "log.music.queuedNext": "🎵 jako další: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "hudební příkazy Nemory: {n} · zobrazit",
+  "say.nemora.hide": "hudební příkazy Nemory: {n} · skrýt"
 }

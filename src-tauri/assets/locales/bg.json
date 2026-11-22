@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 повторение на цялата опашка",
   "log.music.repeatOff": "🎵 повторението е изключено",
   "log.music.queuedNext": "🎵 следваща: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "музикални команди за Nemora: {n} · покажи",
+  "say.nemora.hide": "музикални команди за Nemora: {n} · скрий"
 }

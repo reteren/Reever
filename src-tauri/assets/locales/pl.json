@@ -693,5 +693,8 @@
   "log.music.repeatAll": "🎵 🔁 powtarzanie całej kolejki",
   "log.music.repeatOff": "🎵 powtarzanie wyłączone",
   "log.music.queuedNext": "🎵 następny: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "komendy muzyczne Nemora: {n} · pokaż",
+  "say.nemora.hide": "komendy muzyczne Nemora: {n} · ukryj"
 }

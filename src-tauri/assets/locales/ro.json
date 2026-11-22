@@ -691,5 +691,8 @@
   "log.music.repeatAll": "🎵 🔁 se repetă toată coada",
   "log.music.repeatOff": "🎵 repetarea e oprită",
   "log.music.queuedNext": "🎵 urmează: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "comenzi de muzică Nemora: {n} · arată",
+  "say.nemora.hide": "comenzi de muzică Nemora: {n} · ascunde"
 }

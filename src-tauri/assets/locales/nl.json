@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 de wachtrij wordt herhaald",
   "log.music.repeatOff": "🎵 herhalen is uit",
   "log.music.queuedNext": "🎵 hierna: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "muziekopdrachten voor Nemora: {n} · tonen",
+  "say.nemora.hide": "muziekopdrachten voor Nemora: {n} · verbergen"
 }

@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 az egész sor ismétlődik",
   "log.music.repeatOff": "🎵 ismétlés kikapcsolva",
   "log.music.queuedNext": "🎵 következő: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora zenei parancsok: {n} · mutasd",
+  "say.nemora.hide": "Nemora zenei parancsok: {n} · rejtsd el"
 }

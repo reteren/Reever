@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 repetindo a fila",
   "log.music.repeatOff": "🎵 repetição desligada",
   "log.music.queuedNext": "🎵 a seguir: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "comandos de música do Nemora: {n} · mostrar",
+  "say.nemora.hide": "comandos de música do Nemora: {n} · ocultar"
 }

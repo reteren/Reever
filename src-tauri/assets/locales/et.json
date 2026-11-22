@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 kogu järjekorda korratakse",
   "log.music.repeatOff": "🎵 kordus on väljas",
   "log.music.queuedNext": "🎵 järgmisena: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora muusikakäsud: {n} · näita",
+  "say.nemora.hide": "Nemora muusikakäsud: {n} · peida"
 }

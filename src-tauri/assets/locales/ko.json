@@ -687,5 +687,8 @@
   "log.music.repeatAll": "🎵 🔁 대기열 전체 반복",
   "log.music.repeatOff": "🎵 반복 꺼짐",
   "log.music.queuedNext": "🎵 다음 곡: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora 음악 명령: {n} · 보기",
+  "say.nemora.hide": "Nemora 음악 명령: {n} · 숨기기"
 }

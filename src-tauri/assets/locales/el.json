@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 επανάληψη όλης της ουράς",
   "log.music.repeatOff": "🎵 η επανάληψη απενεργοποιήθηκε",
   "log.music.queuedNext": "🎵 επόμενο: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "εντολές μουσικής Nemora: {n} · εμφάνιση",
+  "say.nemora.hide": "εντολές μουσικής Nemora: {n} · απόκρυψη"
 }

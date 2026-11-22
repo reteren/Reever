@@ -693,5 +693,8 @@
   "log.music.repeatAll": "🎵 🔁 kartojama visa eilė",
   "log.music.repeatOff": "🎵 kartojimas išjungtas",
   "log.music.queuedNext": "🎵 kita: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora muzikos komandos: {n} · rodyti",
+  "say.nemora.hide": "Nemora muzikos komandos: {n} · slėpti"
 }

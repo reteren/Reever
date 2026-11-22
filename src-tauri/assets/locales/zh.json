@@ -687,5 +687,8 @@
   "log.music.repeatAll": "🎵 🔁 循环整个队列",
   "log.music.repeatOff": "🎵 已关闭循环",
   "log.music.queuedNext": "🎵 下一首：{what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora 音乐命令：{n} · 显示",
+  "say.nemora.hide": "Nemora 音乐命令：{n} · 隐藏"
 }

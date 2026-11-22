@@ -689,5 +689,8 @@
   "log.music.repeatAll": "🎵 🔁 die Warteschlange wird wiederholt",
   "log.music.repeatOff": "🎵 Wiederholung aus",
   "log.music.queuedNext": "🎵 als Nächstes: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Musikbefehle für Nemora: {n} · anzeigen",
+  "say.nemora.hide": "Musikbefehle für Nemora: {n} · ausblenden"
 }

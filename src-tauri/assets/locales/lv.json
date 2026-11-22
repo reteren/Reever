@@ -691,5 +691,8 @@
   "log.music.repeatAll": "🎵 🔁 atkārto visu rindu",
   "log.music.repeatOff": "🎵 atkārtošana izslēgta",
   "log.music.queuedNext": "🎵 nākamā: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "Nemora mūzikas komandas: {n} · rādīt",
+  "say.nemora.hide": "Nemora mūzikas komandas: {n} · paslēpt"
 }

@@ -688,5 +688,8 @@
   "log.music.repeatAll": "🎵 🔁 повтор всей очереди",
   "log.music.repeatOff": "🎵 повтор выключен",
   "log.music.queuedNext": "🎵 следующим: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Немора",
+  "say.nemora.show": "музыкальные команды Неморы: {n} · показать",
+  "say.nemora.hide": "музыкальные команды Неморы: {n} · скрыть"
 }

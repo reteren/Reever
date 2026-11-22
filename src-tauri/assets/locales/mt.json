@@ -695,5 +695,8 @@
   "log.music.repeatAll": "🎵 🔁 qed jirrepeti l-kju kollu",
   "log.music.repeatOff": "🎵 ir-ripetizzjoni mitfija",
   "log.music.queuedNext": "🎵 li jmiss: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "kmandi tal-mużika ta' Nemora: {n} · uri",
+  "say.nemora.hide": "kmandi tal-mużika ta' Nemora: {n} · aħbi"
 }

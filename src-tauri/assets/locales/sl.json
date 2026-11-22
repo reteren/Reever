@@ -693,5 +693,8 @@
   "log.music.repeatAll": "🎵 🔁 ponavljanje cele vrste",
   "log.music.repeatOff": "🎵 ponavljanje izklopljeno",
   "log.music.queuedNext": "🎵 naslednja: {what}",
-  "log.music.seek": "🎵 {arrow} {position}"
+  "log.music.seek": "🎵 {arrow} {position}",
+  "say.nemora": "♪ Nemora",
+  "say.nemora.show": "glasbeni ukazi Nemore: {n} · pokaži",
+  "say.nemora.hide": "glasbeni ukazi Nemore: {n} · skrij"
 }
