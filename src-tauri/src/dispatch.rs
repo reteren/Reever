@@ -18,6 +18,9 @@ pub enum DispatchResult {
     Confirm(PendingAction),
     /// Показано окно выбора с N вариантами — ждать номер голосом (docs/find.md).
     Choose(usize),
+    /// Команда выполняется в фоне (Немора может запускаться секундами): звук успеха или
+    /// ошибки — когда она закончится (`nemora::take_outcomes`).
+    Background,
 }
 
 /// Действие, которое ждёт подтверждения голосом.
@@ -135,6 +138,12 @@ pub enum Route {
         url: String,
         text: String,
     },
+    /// Команда Неморы: что сделать и названное после ключевой фразы (варианты; пусто у
+    /// команд без цели).
+    Music {
+        op: crate::grammar::MusicOp,
+        queries: Vec<String>,
+    },
     /// Ничего не подошло.
     Unknown,
 }
@@ -148,18 +157,30 @@ pub fn route(
     actions: &[Action],
     match_threshold: f64,
 ) -> Route {
+    route_with(text, alt, grammar, actions, match_threshold, crate::grammar::nemora_installed())
+}
+
+/// `route` с явным «Немора установлена» (`nemora`): без неё её команды не сравниваются.
+pub fn route_with(
+    text: &str,
+    alt: Option<&str>,
+    grammar: &Grammar,
+    actions: &[Action],
+    match_threshold: f64,
+    nemora: bool,
+) -> Route {
     let text = strip_leading_fillers(&normalize(text));
     if text.is_empty() {
         return Route::Unknown;
     }
 
-    if let Some(trigger) = grammar.match_trigger(&text) {
+    if let Some(trigger) = grammar.match_trigger_nemora(&text, nemora) {
         let mut payloads = vec![trigger.payload.trim().to_string()];
         let alt_payload = alt
             .map(|alt| strip_leading_fillers(&normalize(alt)))
             .and_then(|alt| {
                 grammar
-                    .match_trigger(&alt)
+                    .match_trigger_nemora(&alt, nemora)
                     .filter(|matched| matched.intent.id == trigger.intent.id)
                     .map(|matched| matched.payload.trim().to_string())
             })
@@ -200,6 +221,18 @@ pub fn route(
         if trigger.intent.kind == IntentKind::Dictate {
             return Route::Dictate(payloads[0].clone());
         }
+        if trigger.intent.kind == IntentKind::Music {
+            let op = trigger.intent.music;
+            if op.is_none() || (op.needs_target() && payloads[0].is_empty()) {
+                return Route::Unknown;
+            }
+            let queries = if op.needs_target() || (op.optional_amount() && !payloads[0].is_empty()) {
+                payloads.iter().map(|p| join_cjk(p)).collect()
+            } else {
+                Vec::new()
+            };
+            return Route::Music { op, queries };
+        }
         if payloads[0].is_empty() {
             return Route::Unknown;
         }
@@ -215,6 +248,8 @@ pub fn route(
             IntentKind::Listen => Route::Listen,
             IntentKind::Index => Route::Index(join_cjk(&payloads[0])),
             IntentKind::Dictate => Route::Dictate(join_cjk(&payloads[0])),
+            // разобрано выше
+            IntentKind::Music => Route::Unknown,
             IntentKind::Find | IntentKind::FindFolder | IntentKind::FindFile => Route::Find {
                 scope: match trigger.intent.kind {
                     IntentKind::FindFolder => crate::find::FindScope::Folder,
@@ -409,6 +444,16 @@ pub fn dispatch(
                 );
                 return DispatchResult::Confirm(PendingAction::System(op));
             }
+            // Играет Немора — «предыдущий» и «заново» через неё: медиа-клавиша не знает,
+            // сколько трек уже играл, и сразу после «следующего» ушла бы на два трека назад.
+            if matches!(op.as_str(), "media_prev" | "media_restart")
+                && crate::grammar::nemora_installed()
+                && cfg.settings.nemora_media_via_app
+            {
+                ui_log(app, crate::msg!("log.system", action = &action.label, score = "-"));
+                crate::nemora::start_media(app, &op);
+                return DispatchResult::Background;
+            }
             let normalized = strip_leading_fillers(&normalize(text));
             let score = action.score(&[normalized]);
             ui_log(
@@ -557,6 +602,10 @@ pub fn dispatch(
             DispatchResult::Done(open_url(cfg, &label, &url, || launcher::shell_open(&url)))
         }
         Route::Find { scope, candidates } => dispatch_find(app, cfg, shared, scope, &candidates),
+        Route::Music { op, queries } => {
+            crate::nemora::start(app, op, queries, crate::nemora::Options::from_settings(&cfg.settings));
+            DispatchResult::Background
+        }
         Route::WebChat { label, url, text } => {
             if cfg.settings.offline_mode {
                 ui_log(app, crate::msg!("log.offline.chat"));
@@ -897,6 +946,59 @@ mod tests {
             Route::Launch(actions) => actions.into_iter().map(|action| action.id).collect(),
             other => panic!("ожидался Route::Launch, получено {other:?}"),
         }
+    }
+
+    fn music(text: &str, nemora: bool) -> Route {
+        super::route_with(text, None, &Grammar::defaults(), &actions(), THRESHOLD, nemora)
+    }
+
+    #[test]
+    fn nemora_commands_route_only_while_it_is_installed() {
+        use crate::grammar::MusicOp;
+        assert_eq!(
+            music("включи трек smells like teen spirit", true),
+            Route::Music { op: MusicOp::Song, queries: vec!["smells like teen spirit".into()] }
+        );
+        assert_eq!(music("поставь альбом nevermind", true), Route::Music { op: MusicOp::Album, queries: vec!["nevermind".into()] });
+        assert_eq!(music("play playlist goat", true), Route::Music { op: MusicOp::Playlist, queries: vec!["goat".into()] });
+        assert_eq!(music("лайкни", true), Route::Music { op: MusicOp::Like, queries: vec![] });
+        assert_eq!(music("громкость 40", true), Route::Music { op: MusicOp::Volume, queries: vec!["40".into()] });
+        assert_eq!(music("сделай громче", true), Route::Music { op: MusicOp::Louder, queries: vec![] });
+        assert_eq!(music("тише", true), Route::Music { op: MusicOp::Quieter, queries: vec![] });
+        assert_eq!(music("volume up", true), Route::Music { op: MusicOp::Louder, queries: vec![] });
+        assert_eq!(music("повторяй трек", true), Route::Music { op: MusicOp::RepeatOne, queries: vec![] });
+        assert_eq!(music("на повтор", true), Route::Music { op: MusicOp::RepeatOne, queries: vec![] });
+        assert_eq!(music("повторяй всё", true), Route::Music { op: MusicOp::RepeatAll, queries: vec![] });
+        assert_eq!(music("выключи повтор", true), Route::Music { op: MusicOp::RepeatOff, queries: vec![] });
+        assert_eq!(music("включи повтор", true), Route::Music { op: MusicOp::RepeatOne, queries: vec![] });
+        assert_eq!(music("поставь следующим нирвана", true), Route::Music { op: MusicOp::QueueNext, queries: vec!["нирвана".into()] });
+        assert_eq!(music("перемотай вперёд", true), Route::Music { op: MusicOp::Forward, queries: vec![] });
+        assert!(matches!(music("перемотай назад на 30 секунд", true), Route::Music { op: MusicOp::Back, queries } if !queries.is_empty()));
+        // «назад трек» и «включи следующий» — по-прежнему предыдущий / не очередь
+        assert_eq!(action_id(music("назад трек", true)), "sys_prev");
+        assert!(!matches!(music("включи следующий", true), Route::Music { op: MusicOp::QueueNext, .. }));
+        assert!(matches!(music("громкость семьдесят пять", true), Route::Music { op: MusicOp::Volume, .. }));
+        // английское число нормализация уже пишет цифрами
+        assert_eq!(music("volume fifty", true), Route::Music { op: MusicOp::Volume, queries: vec!["50".into()] });
+        assert_eq!(music("что сейчас играет", true), Route::Music { op: MusicOp::NowPlaying, queries: vec![] });
+        // без названия — не команда (Engine дослушивает, сюда доходит только обрубок)
+        assert_eq!(music("включи трек", true), Route::Unknown);
+        // без Неморы её фразы — обычный текст: «пауза»-фразы остаются системными
+        assert!(!matches!(music("включи трек smells like teen spirit", false), Route::Music { .. }));
+        assert_eq!(action_id(music("останови музыку", false)), "sys_play");
+        assert_eq!(music("останови музыку", true), Route::Music { op: MusicOp::Pause, queries: vec![] });
+        // системные команды не задеты
+        assert_eq!(action_id(music("выключи комп", true)), "sys_shutdown");
+        assert_eq!(action_id(music("выключи звук", true)), "sys_mute");
+        assert_eq!(action_id(music("следующий трек", true)), "sys_next");
+        assert_eq!(action_id(music("пауза", true)), "sys_play");
+        // «трек X» — коротко; «следующий трек», «назад трек» и «заново» — системные
+        assert_eq!(music("трек нирвана", true), Route::Music { op: MusicOp::Song, queries: vec!["нирвана".into()] });
+        assert_eq!(action_id(music("предыдущий трек", true)), "sys_prev");
+        assert_eq!(action_id(music("назад трек", true)), "sys_prev");
+        assert_eq!(action_id(music("переключи трек", true)), "sys_next");
+        assert_eq!(action_id(music("заново", true)), "sys_replay");
+        assert_eq!(action_id(music("начни сначала", false)), "sys_replay");
     }
 
     #[test]

@@ -288,6 +288,14 @@ fn default_actions() -> Vec<Action> {
             "media_prev",
             &["предыдущий трек", "назад трек", "previous track"],
         ),
+        // Фразы не начинаются с «трек»: «трек X» — команда Неморы (включить трек X).
+        act(
+            "sys_replay",
+            "Заново",
+            "system",
+            "media_restart",
+            &["заново", "сначала", "с начала", "начни сначала", "replay", "play again", "from the beginning"],
+        ),
     ]
 }
 

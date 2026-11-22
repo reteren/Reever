@@ -185,6 +185,58 @@ pub struct Settings {
     /// «Плавность»: 0 — как у монитора, 60 или 30 кадров.
     #[serde(default)]
     pub fps_limit: u32,
+    /// Музыкальные команды Неморы, когда она установлена (nemora.rs, docs/nemora.md).
+    #[serde(default = "default_true")]
+    pub nemora_enabled: bool,
+    /// Что играет после «включи трек X»: `smart` — вся библиотека в Smart Shuffle, `keep` —
+    /// вся библиотека, перемешивание как было, `artist` — песни этого исполнителя, `repeat` —
+    /// этот трек по кругу, `single` — только он.
+    #[serde(default = "default_nemora_after_song")]
+    pub nemora_after_song: String,
+    /// «Включи исполнителя X»: `shuffle`, `plays` (сначала популярные), `album` (по альбомам).
+    #[serde(default = "default_nemora_artist_order")]
+    pub nemora_artist_order: String,
+    /// Альбомы и плейлисты: `order` или `shuffle`.
+    #[serde(default = "default_nemora_collection_order")]
+    pub nemora_collection_order: String,
+    /// «Включи музыку», когда ничего не на паузе: `smart`, `favorites`, `plays`, `added`.
+    #[serde(default = "default_nemora_play_music")]
+    pub nemora_play_music: String,
+    /// Шаг «громче» / «тише», проценты громкости Неморы.
+    #[serde(default = "default_nemora_volume_step")]
+    pub nemora_volume_step: u32,
+    /// Запускать закрытую Немору для команд, которые включают музыку.
+    #[serde(default = "default_true")]
+    pub nemora_start_app: bool,
+    /// Только уверенные совпадения названия: нет очень похожего — «не нашлось».
+    #[serde(default)]
+    pub nemora_strict: bool,
+    /// «Предыдущий трек» и «заново» через Немору, когда играет она (иначе медиа-клавиша).
+    #[serde(default = "default_true")]
+    pub nemora_media_via_app: bool,
+    /// «Выключи музыку», когда Немора не играет, — медиа-клавиша паузы для другого плеера.
+    #[serde(default = "default_true")]
+    pub nemora_pause_fallback: bool,
+}
+
+fn default_nemora_after_song() -> String {
+    "smart".into()
+}
+
+fn default_nemora_artist_order() -> String {
+    "shuffle".into()
+}
+
+fn default_nemora_collection_order() -> String {
+    "order".into()
+}
+
+fn default_nemora_play_music() -> String {
+    "smart".into()
+}
+
+fn default_nemora_volume_step() -> u32 {
+    10
 }
 
 fn default_dictation_english_level() -> u8 {
@@ -502,6 +554,16 @@ fn parse_settings(text: &str) -> Settings {
     restore!("lite_monitor", lite_monitor, bool);
     restore!("fps_limit", fps_limit, u32);
     restore!("auto_update", auto_update, bool);
+    restore!("nemora_enabled", nemora_enabled, bool);
+    restore!("nemora_after_song", nemora_after_song, String);
+    restore!("nemora_artist_order", nemora_artist_order, String);
+    restore!("nemora_collection_order", nemora_collection_order, String);
+    restore!("nemora_play_music", nemora_play_music, String);
+    restore!("nemora_volume_step", nemora_volume_step, u32);
+    restore!("nemora_start_app", nemora_start_app, bool);
+    restore!("nemora_strict", nemora_strict, bool);
+    restore!("nemora_media_via_app", nemora_media_via_app, bool);
+    restore!("nemora_pause_fallback", nemora_pause_fallback, bool);
 
     if !invalid.is_empty() {
         eprintln!(
@@ -559,6 +621,16 @@ impl Default for Settings {
             lite_monitor: true,
             fps_limit: 0,
             auto_update: true,
+            nemora_enabled: true,
+            nemora_after_song: default_nemora_after_song(),
+            nemora_artist_order: default_nemora_artist_order(),
+            nemora_collection_order: default_nemora_collection_order(),
+            nemora_play_music: default_nemora_play_music(),
+            nemora_volume_step: default_nemora_volume_step(),
+            nemora_start_app: true,
+            nemora_strict: false,
+            nemora_media_via_app: true,
+            nemora_pause_fallback: true,
         }
     }
 }

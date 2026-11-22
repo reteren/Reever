@@ -64,6 +64,7 @@ cargo run --release --example eval -- --noise-db -30   # то же с фонов
 | `src-tauri/src/commands_api.rs` | команды для интерфейса |
 | `src-tauri/src/{find,local_index}.rs` | «найди …»: запросы и ранжирование, свой индекс дисков |
 | `src-tauri/src/{launcher,apps,system,winutil}.rs` | запуск, перечисление приложений, системные команды, окна |
+| `src-tauri/src/nemora.rs` | музыкальные команды Неморы: поиск установки, MCP-клиент `nemora-mcp.exe`, исполнение в фоне (`docs/nemora.md`) |
 | `src-tauri/src/app.rs` | каркас приложения: состояние, события, пути, вшитые ресурсы, главный поток |
 | `src-tauri/src/native/`, `main_native/`, `dialogs_native/`, `bubble_native/`, `mascot_native/` | нативные окна: ядро на Direct2D/DirectComposition, главное окно, выбор и подтверждение, пузырь, маскот |
 | `src-tauri/assets/` | вшитые в exe шрифты, кадры маскота, картинки рамки и словари интерфейса |

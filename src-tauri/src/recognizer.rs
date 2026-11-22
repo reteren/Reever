@@ -105,6 +105,21 @@ impl Transcriber for LazyAsr {
     }
 }
 
+/// Английская модель набора (`AsrSet::transcribe_language`) для названий в командах Неморы.
+/// Английской модели нет или она одна — пустой текст: остаётся то, что услышала основная.
+struct EnglishAsr(LazyAsr);
+
+impl Transcriber for EnglishAsr {
+    fn transcribe(&mut self, pcm: &[i16]) -> anyhow::Result<String> {
+        self.0
+            .inner
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.as_mut().and_then(|asr| asr.transcribe_language("en", pcm)))
+            .unwrap_or_else(|| Ok(String::new()))
+    }
+}
+
 /// Модели, оставшиеся от прошлого запуска потока. Настройки сохраняются на каждое изменение,
 /// и перезапуск ради порога VAD или паузы не должен заново грузить сотни мегабайт: если план
 /// моделей и число потоков те же, новый запуск забирает их отсюда.
@@ -264,6 +279,9 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     // записать английским словом — это и разрешает english_primary.
     engine.set_bilingual(None, None, LangMode::Ru);
     engine.set_english_primary(true);
+    // Кроме названий в командах Неморы: «включи трек ай рили лайк ю» многоязычная модель пишет
+    // транслитом, и поиск Неморы его не находит — название слушает ещё английская модель.
+    engine.set_music_second(Some(Box::new(EnglishAsr(asr.clone()))));
     log_languages(app, cfg);
     crate::grammar::set_active_languages(&cfg.models.languages());
     // окно прячет встроенные фразы действий на выключенных языках — пусть пересчитает
@@ -353,7 +371,17 @@ fn run_inner(app: &AppHandle, cfg: &ReeverConfig, shared: &Arc<SharedState>) -> 
     let mut voice_recording = false;
     let mut voice_progress = std::time::Instant::now();
     let mut reload_waiting: Option<std::time::Instant> = None;
+    let mut nemora_checked = std::time::Instant::now();
     loop {
+        // Команды Неморы, закончившиеся в фоне, — их звук и ответ; установку Неморы — заметить.
+        for outcome in crate::nemora::take_outcomes() {
+            worker.sound(if outcome.ok { "success.wav" } else { "error.wav" });
+            finish_background(app, outcome.answer);
+        }
+        if nemora_checked.elapsed() >= NEMORA_CHECK {
+            nemora_checked = std::time::Instant::now();
+            crate::nemora::tick(app);
+        }
         // Перезапуск (сохранены настройки, применилась тихая подстройка) ждёт конца команды:
         // посреди неё он обрывал команду, сигнал и уводил маскота. Но не дольше RELOAD_WAIT_MAX.
         let reload = shared.reload.load(Ordering::Relaxed);
@@ -1081,6 +1109,30 @@ const WAKE_SOUND_REPEAT: Duration = Duration::from_millis(1500);
 /// прошлой команды молчал, потому что «сигнал уже был».
 const SPOT_CONFIRM_WINDOW: Duration = Duration::from_secs(4);
 
+/// Как часто заметить установку или удаление Неморы и закрыть простаивающий nemora-mcp.
+const NEMORA_CHECK: Duration = Duration::from_secs(10);
+/// Сколько маскот держит ответ («что играет») в пузыре, прежде чем уйти.
+const ANSWER_SHOW: Duration = Duration::from_millis(3500);
+
+/// Фоновая команда закончилась: ответ — в пузырь, и маскот уходит, когда его прочтут. «idle» —
+/// только если всё ещё «выполняю»: новая команда, начатая тем временем, своё состояние ведёт сама.
+fn finish_background(app: &AppHandle, answer: Option<String>) {
+    let Some(answer) = answer else {
+        if crate::events::current_state() == "busy" {
+            set_state(app, "idle");
+        }
+        return;
+    };
+    let _ = app.emit("reever://answer", answer);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ANSWER_SHOW);
+        if crate::events::current_state() == "busy" {
+            set_state(&app, "idle");
+        }
+    });
+}
+
 impl Worker<'_> {
     fn sound(&self, name: &str) {
         self.play(&self.cfg.sound(name));
@@ -1685,6 +1737,9 @@ impl Worker<'_> {
                 self.sound(if ok { "success.wav" } else { "error.wav" });
                 set_state(self.app, "idle");
             }
+            // Немора: «выполняю», пока команда идёт (маскот на экране); звук и «idle» — когда она
+            // закончится (`run_worker` забирает итоги)
+            DispatchResult::Background => {}
             DispatchResult::Choose(count) => {
                 ui_log(
                     self.app,

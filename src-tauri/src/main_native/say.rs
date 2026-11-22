@@ -5,14 +5,39 @@
 use crate::grammar::{Grammar, Intent, IntentKind};
 use crate::ui_text::t;
 
-/// Строка списка: что сказать, что произойдёт; `key` — что раскрывает клик (id команды или
-/// `cancel`), `off` — команда выключена (строка приглушена).
-#[derive(Debug, Clone, PartialEq)]
+/// Строка списка: что сказать, что произойдёт; `key` — что раскрывает клик (id команды,
+/// `cancel` или `group:<имя>` — свернуть/развернуть группу), `off` — команда выключена (строка
+/// приглушена), `group` — строка группы, которая видна, только пока группа развёрнута.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SayRow {
     pub command: String,
     pub desc: String,
     pub key: Option<String>,
     pub off: bool,
+    pub group: Option<String>,
+    /// у заголовка группы — подпись, когда группа развёрнута (`desc` — когда свёрнута)
+    pub desc_open: Option<String>,
+}
+
+/// Группа команд Неморы: свёрнута, пока её не раскрыли (их два десятка, Главная — не справочник).
+pub const NEMORA_GROUP: &str = "nemora";
+
+/// Строки, которые видны при развёрнутых группах `open`: строки свёрнутых групп убраны, у
+/// заголовков — подпись по состоянию.
+pub fn visible_rows(rows: &[SayRow], open: &[String]) -> Vec<SayRow> {
+    rows.iter()
+        .filter(|row| row.group.as_ref().is_none_or(|g| open.contains(g)))
+        .map(|row| {
+            let mut row = row.clone();
+            let header_of = row.key.as_deref().and_then(|k| k.strip_prefix("group:")).map(String::from);
+            if let (Some(group), Some(open_desc)) = (header_of, row.desc_open.clone()) {
+                if open.contains(&group) {
+                    row.desc = open_desc;
+                }
+            }
+            row
+        })
+        .collect()
 }
 
 /// Список для экрана: подсказка над ним (пока ничего не услышано) и строки.
@@ -116,6 +141,9 @@ impl Ctx<'_> {
                 let cancel = self.pick(&self.heard_cancel_words(&g.cancel_words).into_iter().filter(|w| !["стоп", "stop", "хватит", "остановись"].contains(&w.trim().to_lowercase().as_str())).collect::<Vec<_>>(), if ru { "отмена" } else { "cancel" });
                 (format!("{wake} {trigger}"), self.t("example.listen", &[("wake", wake), ("stop", stop), ("cancel", &cancel)]))
             }
+            // «включи трек X» — с целью; «лайкни», «что играет» — команда целиком
+            IntentKind::Music if intent.music.needs_target() => (x, self.label(intent)),
+            IntentKind::Music => (format!("{wake} {trigger}"), self.label(intent)),
             IntentKind::Dictate => {
                 let stop = self.pick(&self.heard_cancel_words(&g.dictation_stop), if ru { "стоп ввод" } else { "stop typing" });
                 // «{wake} стоп» заканчивает диктовку, «{wake} отмена» стирает (engine.rs)
@@ -159,23 +187,56 @@ pub fn is_default_label(intent: &Intent) -> bool {
 }
 
 /// Список «Что можно сказать» для языка интерфейса `locale`; `langs` — языки распознавания
-/// (английский распознаётся всегда).
+/// (английский распознаётся всегда). Команды Неморы — только пока она установлена.
 pub fn build(g: &Grammar, locale: &str, langs: &[&str]) -> SayList {
+    build_with(g, locale, langs, crate::grammar::nemora_installed())
+}
+
+/// `build` с явным «Немора установлена» (`nemora`).
+pub fn build_with(g: &Grammar, locale: &str, langs: &[&str], nemora: bool) -> SayList {
     let cx = Ctx { locale, ru: locale == "ru" && langs.contains(&"ru"), langs };
     let wake = cx.wake(g);
     let launch = g.intents.iter().find(|i| i.kind == IntentKind::Launch && i.enabled);
     let open = cx.pick(launch.map_or(&[][..], |i| &i.triggers[..]), if cx.ru { "открой" } else { "open" });
     let hint = cx.t("home.hint", &[("wake", &wake), ("open", &open)]);
     let mut rows = Vec::new();
-    for intent in &g.intents {
+    let mut music: Vec<SayRow> = Vec::new();
+    for intent in g.intents.iter().filter(|i| nemora || i.kind != IntentKind::Music) {
         if let Some((command, desc)) = cx.example(g, intent, &wake) {
-            rows.push(SayRow { command, desc, key: Some(intent.id.clone()), off: !intent.enabled });
+            let row = SayRow { command, desc, key: Some(intent.id.clone()), off: !intent.enabled, ..Default::default() };
+            if intent.kind == IntentKind::Music {
+                music.push(SayRow { group: Some(NEMORA_GROUP.into()), ..row });
+            } else {
+                rows.push(row);
+            }
         }
     }
+    // команды Неморы — свёрнутой группой под заголовком «Немора»
+    if !music.is_empty() {
+        let n = music.len().to_string();
+        rows.push(SayRow {
+            command: cx.t("say.nemora", &[]),
+            desc: cx.t("say.nemora.show", &[("n", &n)]),
+            desc_open: Some(cx.t("say.nemora.hide", &[("n", &n)])),
+            key: Some(format!("group:{NEMORA_GROUP}")),
+            ..Default::default()
+        });
+        rows.extend(music);
+    }
+    // Музыка в любом плеере — системные действия (медиа-клавиши), правятся во вкладке «Действия»
+    for (ru, en, key) in [
+        ("пауза", "pause music", "example.media.pause"),
+        ("следующий трек", "next track", "example.media.next"),
+        ("предыдущий трек", "previous track", "example.media.prev"),
+        ("заново", "replay", "example.media.replay"),
+    ] {
+        let phrase = if cx.ru { ru } else { en };
+        rows.push(SayRow { command: format!("{wake} {phrase}"), desc: cx.t(key, &[]), ..Default::default() });
+    }
     let shutdown = if cx.ru { "выключи комп" } else { "shut down computer" };
-    rows.push(SayRow { command: format!("{wake} {shutdown}"), desc: cx.t("example.shutdown", &[]), key: None, off: false });
+    rows.push(SayRow { command: format!("{wake} {shutdown}"), desc: cx.t("example.shutdown", &[]), ..Default::default() });
     let cancel = cx.pick(&cx.heard_cancel_words(&g.cancel_words), if cx.ru { "отмена" } else { "cancel" });
-    rows.push(SayRow { command: format!("{wake} {cancel}"), desc: cx.t("example.cancel", &[]), key: Some("cancel".into()), off: false });
+    rows.push(SayRow { command: format!("{wake} {cancel}"), desc: cx.t("example.cancel", &[]), key: Some("cancel".into()), ..Default::default() });
     SayList { hint, rows, wake, ru: cx.ru }
 }
 
@@ -186,22 +247,58 @@ mod tests {
     #[test]
     fn russian_examples_only_when_russian_is_heard() {
         let g = Grammar::defaults();
-        let ru = build(&g, "ru", &["en", "ru"]);
-        assert!(ru.rows.iter().all(|r| r.command.starts_with("ривер ")), "{:?}", ru.rows);
-        assert_eq!(ru.rows.last().unwrap().key.as_deref(), Some("cancel"));
-        // русский интерфейс без русской модели — английские примеры
-        let en = build(&g, "ru", &["en"]);
-        assert!(en.rows.iter().all(|r| r.command.starts_with("reever ")), "{:?}", en.rows);
-        assert!(en.rows.iter().all(|r| is_english(&r.command.replace('…', "x"))), "{:?}", en.rows);
+        // заголовок группы («♪ Немора») — не команда; Немора здесь и установлена, и нет
+        let commands = |list: &SayList| -> Vec<SayRow> {
+            list.rows.iter().filter(|r| !r.key.as_deref().unwrap_or("").starts_with("group:")).cloned().collect()
+        };
+        for nemora in [false, true] {
+            let ru = build_with(&g, "ru", &["en", "ru"], nemora);
+            assert!(commands(&ru).iter().all(|r| r.command.starts_with("ривер ")), "{:?}", ru.rows);
+            assert_eq!(ru.rows.last().unwrap().key.as_deref(), Some("cancel"));
+            // русский интерфейс без русской модели — английские примеры
+            let en = build_with(&g, "ru", &["en"], nemora);
+            assert!(commands(&en).iter().all(|r| r.command.starts_with("reever ")), "{:?}", en.rows);
+            assert!(commands(&en).iter().all(|r| is_english(&r.command.replace('…', "x"))), "{:?}", en.rows);
+        }
     }
 
     #[test]
     fn every_enabled_intent_has_a_row_plus_shutdown_and_cancel() {
         let g = Grammar::defaults();
-        let list = build(&g, "en", &["en"]);
-        assert_eq!(list.rows.len(), g.intents.len() + 2);
+        let list = build_with(&g, "en", &["en"], true);
+        // + заголовок Неморы, 4 медиа-команды, выключение и отмена
+        assert_eq!(list.rows.len(), g.intents.len() + 7);
         assert!(list.rows.iter().all(|r| !r.desc.is_empty() && !r.desc.starts_with("example.")));
+        assert!(list.rows.iter().all(|r| !r.desc.starts_with("intent.")), "{:?}", list.rows);
         assert!(!list.hint.is_empty() && !list.hint.starts_with("home."));
+    }
+
+    #[test]
+    fn nemora_commands_are_listed_only_while_it_is_installed() {
+        let g = Grammar::defaults();
+        let music = g.intents.iter().filter(|i| i.kind == IntentKind::Music).count();
+        assert!(music > 0);
+        let with = build_with(&g, "ru", &["en", "ru"], true);
+        let without = build_with(&g, "ru", &["en", "ru"], false);
+        // + заголовок группы
+        assert_eq!(with.rows.len(), without.rows.len() + music + 1);
+        assert!(without.rows.iter().all(|r| !r.key.as_deref().unwrap_or("").starts_with("music_")));
+        assert!(without.rows.iter().all(|r| r.key.as_deref() != Some("group:nemora")));
+        let song = with.rows.iter().find(|r| r.key.as_deref() == Some("music_song")).unwrap();
+        assert_eq!(song.command, "ривер включи трек X");
+        let now = with.rows.iter().find(|r| r.key.as_deref() == Some("music_now")).unwrap();
+        assert_eq!(now.command, "ривер что играет");
+        // свёрнута — строк Неморы не видно, заголовок есть; развёрнута — все и подпись «скрыть»
+        let closed = visible_rows(&with.rows, &[]);
+        assert_eq!(closed.len(), without.rows.len() + 1);
+        let header = closed.iter().find(|r| r.key.as_deref() == Some("group:nemora")).unwrap();
+        let open = visible_rows(&with.rows, &["nemora".to_string()]);
+        assert_eq!(open.len(), with.rows.len());
+        let open_header = open.iter().find(|r| r.key.as_deref() == Some("group:nemora")).unwrap();
+        assert_ne!(header.desc, open_header.desc);
+        assert!(!header.desc.starts_with("say.") && !open_header.desc.starts_with("say."));
+        // медиа-команды остаются видны и при свёрнутой Неморе
+        assert!(closed.iter().any(|r| r.command == "ривер следующий трек"));
     }
 
     #[test]

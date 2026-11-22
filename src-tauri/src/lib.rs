@@ -43,6 +43,7 @@ pub mod main_native;
 pub mod main_demo;
 pub mod readme_demo;
 pub mod models;
+pub mod nemora;
 #[cfg(windows)]
 pub mod ortopt;
 pub mod bubble;
@@ -95,6 +96,7 @@ pub(crate) fn toggle_pause(app: &AppHandle) {
 
 fn quit(app: &AppHandle) {
     traymenu::remove_icon();
+    nemora::shutdown();
     app.exit(0);
 }
 
@@ -276,6 +278,8 @@ fn setup(app: &AppHandle) -> Result<(), String> {
     let actions_path = config::user_config_path(app, "actions.json");
     let grammar_path = config::user_config_path(app, "grammar.json");
     let shared = Arc::new(SharedState::new(actions_path, grammar_path));
+    // Немора установлена (и её команды не выключены) — они действуют с первой фразы (nemora.rs).
+    nemora::set_enabled(cfg.settings.nemora_enabled);
 
     app.manage(LiveConfig::new(cfg.clone()));
     app.manage(shared.clone());

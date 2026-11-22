@@ -53,6 +53,8 @@ const CARET_DROP: f32 = 0.1 * FONT_SIZE;
 const TAIL_HALF: f32 = 7.0;
 const TAIL_H: f32 = 9.0;
 const HOLD: Duration = Duration::from_millis(1600);
+/// Ответ держится дольше: его читают, а не просто сверяют с тем, что сказал.
+const ANSWER_HOLD: Duration = Duration::from_millis(4500);
 
 const ACC: Color = Color::rgb(0x27, 0xE6, 0xAA);
 const ACC_HOT: Color = Color::rgb(0xC8, 0xFF, 0xEC);
@@ -74,6 +76,8 @@ pub enum Msg {
     Layout { allowed: bool, ax: f32 },
     /// реплики знакомства (bubble_intro)
     Intro(Vec<String>),
+    /// ответ Reever на вопрос («что играет»): держится дольше обычного текста
+    Answer(String),
     /// «ривер слушай» начался (`true`: текст с чистого листа, пузырь открыт, пока идёт) или
     /// кончился (`false`: текст ещё чуть держится и пузырь закрывается).
     Session(bool),
@@ -295,6 +299,16 @@ impl BubbleView {
                 if !v.is_empty() {
                     self.committed = v.to_string();
                     self.live.clear();
+                }
+            }
+            Msg::Answer(v) => {
+                let v = v.trim();
+                if !v.is_empty() {
+                    self.committed = v.to_string();
+                    self.live.clear();
+                    self.active = true;
+                    // «idle» после ответа срок не сокращает: он ставится, только если срока нет
+                    self.hold_until = Some(now + ANSWER_HOLD);
                 }
             }
             Msg::Layout { allowed, ax } => {

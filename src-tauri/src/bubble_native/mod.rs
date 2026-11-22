@@ -33,6 +33,8 @@ pub fn init(app: &AppHandle) {
         app.listen_any("reever://partial", move |e| send(Msg::Partial(text(e.payload()))));
         app.listen_any("reever://said", move |e| send(Msg::Said(text(e.payload()))));
         app.listen_any("reever://heard", move |e| send(Msg::Heard(text(e.payload()))));
+        // ответ на вопрос («что играет», nemora.rs)
+        app.listen_any("reever://answer", move |e| send(Msg::Answer(text(e.payload()))));
     });
 }
 

@@ -424,6 +424,10 @@ pub struct MainView {
     editor_span: (f32, f32),
     status: serde_json::Value,
     info: Info,
+    /// «Что можно сказать» целиком; в `info.say.rows` — только видимое (свёрнутые группы убраны)
+    say_all: Vec<super::say::SayRow>,
+    /// развёрнутые группы («nemora»)
+    say_open: Vec<String>,
     woke_until: Option<Instant>,
     level: f32,
     level_raw: f32,
@@ -541,7 +545,13 @@ impl MainView {
             reveal: false,
             editor_span: (0.0, 0.0),
             status: snapshot.status.unwrap_or_default(),
-            info,
+            say_all: info.say.rows.clone(),
+            say_open: Vec::new(),
+            info: {
+                let mut info = info;
+                info.say.rows = super::say::visible_rows(&info.say.rows, &[]);
+                info
+            },
             woke_until: None,
             level: 0.0,
             level_raw: 0.0,
@@ -709,6 +719,8 @@ impl MainView {
                 self.settings_tab.sync(i.settings.clone());
                 self.text_tab.sync(i.settings.clone());
                 self.info = i;
+                self.say_all = self.info.say.rows.clone();
+                self.apply_say_groups();
             }
             Msg::Orb(_) => {}
             Msg::GrammarDone(err) => match err {
@@ -1653,6 +1665,12 @@ impl MainView {
     }
 
     /// Строка «Что можно сказать» под курсором (только видимая часть «Главной»).
+    /// Строки «Что можно сказать» по развёрнутым группам (`say_open`) из полного списка.
+    fn apply_say_groups(&mut self) {
+        self.info.say.rows = super::say::visible_rows(&self.say_all, &self.say_open);
+        self.say_hover = None;
+    }
+
     fn say_row_at(&self, x: f32, y: f32) -> Option<usize> {
         if TABS[self.tab] != "home" || !native::controls::inside(screen_r(), x, y) || y < screen_r().y + 34.0 {
             return None;
@@ -2163,7 +2181,18 @@ impl MainView {
             }
             Target::Row(i) => {
                 if let Some(key) = self.info.say.rows.get(i).and_then(|r| r.key.clone()) {
-                    self.open_editor(&key);
+                    if let Some(group) = key.strip_prefix("group:") {
+                        // заголовок группы — свернуть или развернуть её
+                        if let Some(p) = self.say_open.iter().position(|g| g == group) {
+                            self.say_open.remove(p);
+                        } else {
+                            self.say_open.push(group.to_string());
+                        }
+                        self.apply_say_groups();
+                        self.static_dirty = true;
+                    } else {
+                        self.open_editor(&key);
+                    }
                 }
             }
         }

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.8.8-27E6AA?style=flat-square&labelColor=0b1512" alt="version 0.8.8">
+  <img src="https://img.shields.io/badge/version-0.9.6-27E6AA?style=flat-square&labelColor=0b1512" alt="version 0.9.6">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-27E6AA?style=flat-square&labelColor=0b1512" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/Rust-native%20UI-27E6AA?style=flat-square&labelColor=0b1512" alt="Rust, native UI">
   <img src="https://img.shields.io/badge/speech-on%20device-27E6AA?style=flat-square&labelColor=0b1512" alt="speech on device">
@@ -38,6 +38,7 @@ Everything is recognized on your own machine with sherpa-onnx models. There is n
 
 - [What it can do](#what-it-can-do)
 - [What you can say](#what-you-can-say)
+- [Music in Nemora](#music-in-nemora)
 - [Your own actions](#your-own-actions)
 - [Finding files and folders](#finding-files-and-folders)
 - [Questions before risky commands](#questions-before-risky-commands)
@@ -69,7 +70,8 @@ Everything is recognized on your own machine with sherpa-onnx models. There is n
 | Transcribe | audio and video files, or whatever your computer is playing right now |
 | Calculate | opens the Windows calculator and enters the expression |
 | Press keys | single keys and shortcuts: "press enter", "press alt tab", "press f5" |
-| Control the PC | play/pause, next and previous track, mute, shut down, restart |
+| Control the PC | play/pause, next and previous track, replay, mute, shut down, restart |
+| Play music | if the Nemora player is installed: songs, artists, albums and playlists by name, shuffle, likes, volume, repeat, seeking |
 
 All of it works hands free after the wake word, or with a push-to-talk hotkey if you prefer silence in the room.
 
@@ -93,11 +95,31 @@ The defaults below are English. Every phrase, including the wake word itself, ca
 | `reever listen` | writes down what the computer is playing |
 | `reever chatgpt ...` · `reever claude ...` · `reever gemini ...` | asks the chat in your browser |
 | `reever press ctrl shift s` | presses a key or a shortcut |
-| `reever pause music` · `reever next track` · `reever mute sound` | media and sound |
+| `reever pause music` · `reever next track` · `reever previous track` · `reever replay` | music in any player through the media keys. "replay" starts the current track again |
+| `reever mute sound` | mutes the sound |
 | `reever shut down computer` · `reever restart computer` | asks "yes or no" first |
 | `reever cancel` · `reever stop` | drops the current command |
 
 You can say it in one breath ("reever, open downloads") or with pauses ("reever", wait for the sound, "open downloads"). A command whose target is already known runs after 0.3 s of silence instead of waiting for the full pause.
+
+## Music in Nemora
+
+If the [Nemora](docs/nemora.md) music player is installed, Reever notices it by itself and a group of music commands appears under "What you can say". Nothing has to be turned on in either app. Remove Nemora and the commands disappear again, without a restart.
+
+| Say | What happens |
+|---|---|
+| `reever play song X` | the song, then the whole library in Smart Shuffle |
+| `reever play artist X` · `reever play album X` · `reever play playlist X` | an artist shuffled, an album or a playlist in order |
+| `reever play music` · `reever pause music` | resume or pause Nemora |
+| `reever smart shuffle` · `reever shuffle` · `reever shuffle off` | shuffle modes |
+| `reever like song` | adds the playing song to favorites |
+| `reever what's playing` | the artist and title appear in the mascot's bubble |
+| `reever volume 50` · `reever volume up` · `reever volume down` | Nemora's own volume, not the Windows one |
+| `reever repeat song` · `reever repeat all` · `reever repeat off` | repeat modes |
+| `reever play next X` | puts X right after the current song |
+| `reever skip forward` · `reever rewind` | seeks 15 s, or as much as you say |
+
+Song titles are matched by sound too, so an English title recognized in Cyrillic letters still finds the right track, and an unrelated song is never played instead. What follows a song, how artists and albums are ordered and the volume step are set in Settings, Nemora.
 
 ## Your own actions
 

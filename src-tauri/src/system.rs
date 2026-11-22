@@ -25,7 +25,10 @@ pub fn run_system(op: &str) -> bool {
         "mute" => tap(VK_VOLUME_MUTE),
         "media_play_pause" => tap(VK_MEDIA_PLAY_PAUSE),
         "media_next" => tap(VK_MEDIA_NEXT_TRACK),
-        "media_prev" => tap(VK_MEDIA_PREV_TRACK),
+        // Одно нажатие «назад» плееры понимают как «этот трек сначала», если он уже поиграл
+        // (Немора — после 5 с, Spotify — после 3 с); на предыдущий трек — второе нажатие.
+        "media_prev" => double_tap(VK_MEDIA_PREV_TRACK),
+        "media_restart" => tap(VK_MEDIA_PREV_TRACK),
         _ => false,
     }
 }
@@ -36,6 +39,19 @@ fn run(exe: &str, args: &[&str]) -> bool {
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .is_ok()
+}
+
+/// Пауза между двумя нажатиями: плеер должен успеть обработать первое.
+const DOUBLE_TAP_GAP: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Два нажатия подряд — в своём потоке, чтобы аудио-поток не ждал паузу между ними.
+fn double_tap(vk: VIRTUAL_KEY) -> bool {
+    tap(vk);
+    std::thread::spawn(move || {
+        std::thread::sleep(DOUBLE_TAP_GAP);
+        tap(vk);
+    });
+    true
 }
 
 /// Эмуляция нажатия медиа/громкость-клавиши.

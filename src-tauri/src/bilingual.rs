@@ -57,9 +57,27 @@ pub fn resolve(
     wake_words: &[String],
     grammar: &Grammar,
     known_target: &dyn Fn(&str) -> bool,
+    second: Option<&mut dyn Transcriber>,
+    lid: Option<&mut dyn LanguageId>,
+    mode: LangMode,
+) -> Resolved {
+    let nemora = crate::grammar::nemora_installed();
+    resolve_with(seg_audio, timed, prefix, wake_words, grammar, known_target, second, lid, mode, nemora)
+}
+
+/// `resolve` с явным «Немора установлена» (`nemora`): от него зависит, команда ли «включи трек».
+#[allow(clippy::too_many_arguments)]
+pub fn resolve_with(
+    seg_audio: &[i16],
+    timed: &Timed,
+    prefix: &str,
+    wake_words: &[String],
+    grammar: &Grammar,
+    known_target: &dyn Fn(&str) -> bool,
     mut second: Option<&mut dyn Transcriber>,
     lid: Option<&mut dyn LanguageId>,
     mode: LangMode,
+    nemora: bool,
 ) -> Resolved {
     let (segment_words, segment_spans) = segment_after_wake(seg_audio, timed, wake_words);
     let prefix_words = words(&normalize(prefix));
@@ -89,7 +107,7 @@ pub fn resolve(
     if crate::textnorm::is_cancel(&command, &grammar.cancel_words) {
         return resolved_ru(&command);
     }
-    let matched = grammar.match_trigger(&command);
+    let matched = grammar.match_trigger_nemora(&command, nemora);
     let (consumed, phrase, intent_lang, can_transcribe) = if let Some(found) = matched {
         let consumed = command_words
             .len()
