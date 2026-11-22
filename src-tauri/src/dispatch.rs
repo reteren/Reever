@@ -968,6 +968,11 @@ mod tests {
         assert_eq!(action_id(music("выключи звук", true)), "sys_mute");
         assert_eq!(action_id(music("следующий трек", true)), "sys_next");
         assert_eq!(action_id(music("пауза", true)), "sys_play");
+        // «трек X» — коротко, как «включи трек X»
+        assert_eq!(music("трек нирвана", true), Route::Music { op: MusicOp::Song, queries: vec!["нирвана".into()] });
+        assert_eq!(action_id(music("предыдущий трек", true)), "sys_prev");
+        assert_eq!(action_id(music("назад трек", true)), "sys_prev");
+        assert_eq!(action_id(music("переключи трек", true)), "sys_next");
     }
 
     #[test]

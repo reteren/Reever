@@ -12,7 +12,7 @@ use strsim::{jaro_winkler, levenshtein};
 use crate::actions::Action;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 17;
+const GRAMMAR_VERSION: u32 = 18;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -166,6 +166,8 @@ const ADDED_DEFAULT_TRIGGERS: &[(u32, &str, &str)] = &[
     // Parakeet v3 пишет русский глагол и в неопределённой форме: «завершить телеграм».
     (10, "kill", "завершить"),
     (10, "close", "закрыть"),
+    // «ривер трек нирвана» — коротко, как «включи трек»
+    (18, "music_song", "трек"),
 ];
 
 /// Фразы команд на языках из языковых пакетов (версия 10): (язык, id намерения, фразы).
@@ -972,7 +974,7 @@ fn music_defaults() -> Vec<Intent> {
             "music_song",
             MusicOp::Song,
             "включить трек в Неморе",
-            &["включи трек", "включи песню", "поставь трек", "поставь песню", "play song", "play track"],
+            &["включи трек", "трек", "включи песню", "поставь трек", "поставь песню", "play song", "play track"],
         ),
         music(
             "music_artist",
@@ -2475,7 +2477,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 17);
+        assert_eq!(Grammar::defaults().version, 18);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()
