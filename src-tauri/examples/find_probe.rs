@@ -31,6 +31,7 @@ fn main() {
     println!("недавних Windows: {}", recent.len());
     let index = DiskIndex::load_or_scan(&installed_snapshot());
     println!("записей в индексе: {}", index.entries());
+    let started = std::time::Instant::now();
     let items = find::search(
         &index,
         &candidates,
@@ -39,6 +40,7 @@ fn main() {
         &Usage::default(),
         &recent,
     );
+    println!("поиск: {:.1} мс", started.elapsed().as_secs_f64() * 1000.0);
     for (i, item) in items.iter().take(12).enumerate() {
         println!(
             "{:>2}. {}{} {:.2}  {}",
