@@ -24,6 +24,12 @@ python tools/build_installer.py    # релизный инсталлятор -> 
 bash tools/test_build.sh           # release-exe с ресурсами в test-build/, без установщика
 ```
 
+Релиз и автообновление: тег `v<версия>`, совпадающий с `src-tauri/Cargo.toml`, после push
+запускает `.github/workflows/release.yml` — тесты, установщик и релиз GitHub с ним. Установленные
+копии проверяют `releases/latest` при запуске и раз в 6 часов (`src-tauri/src/update.rs`). Пока
+репозиторий закрыт, GitHub отдаёт релизы только с входом, и проверка пишет об этом в журнал.
+Вручную то же самое — `python tools/release.py` после `build_installer.py`.
+
 GIF для README (`docs/media/`) снимаются с самих окон вне экрана, интерфейс на английском:
 
 ```bash

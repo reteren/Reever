@@ -28,6 +28,10 @@ use crate::config::LiveConfig;
 use crate::events::ui_log;
 
 const LATEST: &str = "https://api.github.com/repos/reteren/Reever/releases/latest";
+/// Сам репозиторий: по нему 404 на `LATEST` отличается «релизов нет» от «репозиторий закрытый».
+const REPO: &str = "https://api.github.com/repos/reteren/Reever";
+/// Что репозиторий закрыт, журнал уже сказал (раз за запуск, а не каждые 6 часов).
+static PRIVATE_LOGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 /// Первая проверка после запуска: сеть после входа в Windows поднимается не сразу.
 const FIRST_CHECK: Duration = Duration::from_secs(20);
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
@@ -226,9 +230,17 @@ fn user_idle() -> Duration {
 
 /// Новее текущей версии есть релиз → скачать (или докачать) и проверить установщик.
 fn fetch_newer(dir: &Path) -> Result<Option<Staged>, String> {
-    // 404 — у репозитория ещё нет ни одного релиза: обновляться не на что.
     let body = match curl(&["-H", "Accept: application/vnd.github+json", LATEST]) {
-        Err(error) if error.contains("404") => return Ok(None),
+        Err(error) if error.contains("404") => {
+            // 404 и у самого репозитория — он закрытый: без входа GitHub релизы не показывает.
+            // Заработает само, когда репозиторий станет публичным; до тех пор — одна строка в
+            // журнале за запуск. Иначе 404 — релизов ещё нет, обновляться не на что.
+            let private = matches!(curl(&["-H", "Accept: application/vnd.github+json", REPO]), Err(e) if e.contains("404"));
+            if private && !PRIVATE_LOGGED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                return Err("github.com/reteren/Reever is not public yet, its releases cannot be checked".into());
+            }
+            return Ok(None);
+        }
         other => other?,
     };
     let release: Release = serde_json::from_slice(&body).map_err(|e| format!("GitHub: {e}"))?;

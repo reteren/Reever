@@ -1,0 +1,68 @@
+name: release
+
+# Тег v<версия> (git tag v0.9.7 && git push origin v0.9.7) — собрать установщик и выложить
+# его релизом. Установленные копии Reever смотрят releases/latest и качают оттуда
+# Reever_<версия>_x64-setup.exe (src-tauri/src/update.rs); размер и SHA-256 сверяют с теми,
+# что отдаёт GitHub.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # тег и версия в Cargo.toml должны совпадать: иначе обновление скачало бы не тот файл
+      - name: Check tag against Cargo.toml
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          if ("v$version" -ne "${{ github.ref_name }}") {
+            Write-Error "tag ${{ github.ref_name }} does not match version $version in src-tauri/Cargo.toml"
+            exit 1
+          }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache speech dependencies
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/resources/model
+          key: speech-${{ runner.os }}-${{ hashFiles('scripts/fetch-deps.ps1', 'src-tauri/windows/installer.nsi') }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Fetch speech dependencies
+        shell: powershell
+        run: .\scripts\fetch-deps.ps1
+
+      - name: Unit tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+      - name: Build installer
+        run: python tools/build_installer.py
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $installer = "src-tauri/target/release/bundle/nsis/Reever_${env:VERSION}_x64-setup.exe"
+          if (-not (Test-Path $installer)) { Write-Error "$installer not found"; exit 1 }
+          gh release create "${{ github.ref_name }}" $installer --verify-tag --title "Reever $env:VERSION" --generate-notes

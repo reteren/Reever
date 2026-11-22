@@ -1,6 +1,8 @@
 """Выложить собранный установщик релизом GitHub, откуда его берёт автообновление (update.rs).
 
-    python tools/release.py                    # релиз v<версия> с установщиком этой версии
+    git tag v<версия> && git push origin v<версия>   # обычный путь: собирает и выкладывает CI
+                                               # (.github/workflows/release.yml)
+    python tools/release.py                    # то же вручную: релиз v<версия> с локальным установщиком
     python tools/release.py --notes "что нового"
 
 Версия — из src-tauri/Cargo.toml, установщик — src-tauri/target/release/bundle/nsis/
