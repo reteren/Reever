@@ -769,28 +769,81 @@ fn distinct(queries: &[String]) -> Vec<&str> {
     out
 }
 
-/// Насколько название похоже на запрос, 0…1: лучшая пара вариантов по Левенштейну
-/// («goat» и «гоат» сравниваются в одной азбуке). Запрос внутри названия («smells like teen
-/// spirit» в «… (Remastered)») — не меньше 0,85; название внутри запроса — без поблажки,
-/// иначе «I Really Like You» обходил бы «I Really Like You Part 2».
-fn similarity(name: &str, query: &str) -> f64 {
-    let names: Vec<String> = name_variants(name)
+/// Фонетический ключ варианта: без пробелов (слитное «DEADMATRIX» = «дэд матрикс»), гласные,
+/// которые транслит и модель путают, сведены (е э и ы й → и, ю → у, я → а, о → а), повторы
+/// букв схлопнуты. Сравнивает звучание, а не написание.
+fn skeleton(form: &str) -> String {
+    let mut out = String::with_capacity(form.len());
+    for c in form.chars().filter(|c| !c.is_whitespace()) {
+        let c = match c {
+            'е' | 'э' | 'ы' | 'й' | 'ё' => 'и',
+            'ю' => 'у',
+            'я' | 'о' => 'а',
+            other => other,
+        };
+        if !out.ends_with(c) {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// Ключи текста: двойные латинские буквы схлопнуты до транслитерации («Fluxxwave» —
+/// «флуксвав», а не «флуксксвав»), потом `skeleton` каждого варианта.
+fn phonetic_keys(text: &str) -> Vec<String> {
+    let mut single = String::with_capacity(text.len());
+    for c in canonical(text).chars() {
+        if !(c.is_ascii_alphabetic() && single.ends_with(c)) {
+            single.push(c);
+        }
+    }
+    crate::textnorm::comparison_forms(&single)
         .iter()
-        .flat_map(|variant| forms(variant))
-        .collect();
+        .map(|form| skeleton(form))
+        .filter(|key| !key.is_empty())
+        .collect()
+}
+
+/// Запрос внутри названия: 0,7 и больше — чем больше названия он покрывает, тем ближе к 1.
+/// Название внутри запроса — без поблажки, иначе «I Really Like You» обходил бы
+/// «I Really Like You Part 2».
+fn contained(name: &str, query: &str, min_chars: usize) -> Option<f64> {
+    let (name_len, query_len) = (name.chars().count(), query.chars().count());
+    (query_len >= min_chars && name.contains(query))
+        .then(|| 0.7 + 0.3 * query_len as f64 / name_len.max(1) as f64)
+}
+
+/// Насколько название похоже на запрос, 0…1: лучшее из сравнения вариантов по Левенштейну
+/// («goat» и «гоат» в одной азбуке) и сравнения фонетических ключей («флюкс вэйв спидап» и
+/// «Fluxxwave (Sped Up)»). Запрос, целиком входящий в название, — не меньше 0,7.
+fn similarity(name: &str, query: &str) -> f64 {
+    let variants = name_variants(name);
+    let names: Vec<String> = variants.iter().flat_map(|variant| forms(variant)).collect();
     let queries = forms(query);
     let mut best = 0.0_f64;
     for name in &names {
         for query in &queries {
-            let mut score = strsim::normalized_levenshtein(name, query);
-            if query.chars().count() >= 3 && name.contains(query.as_str()) {
-                score = score.max(0.85);
-            }
-            best = best.max(score);
+            let score = strsim::normalized_levenshtein(name, query);
+            best = best.max(contained(name, query, 3).map_or(score, |c| c.max(score)));
+        }
+    }
+    let name_keys: Vec<String> = variants
+        .iter()
+        .flat_map(|variant| phonetic_keys(variant))
+        .collect();
+    let query_keys = phonetic_keys(query);
+    for name in &name_keys {
+        for query in &query_keys {
+            let score = strsim::normalized_levenshtein(name, query);
+            best = best.max(contained(name, query, 5).map_or(score, |c| c.max(score)));
         }
     }
     best
 }
+
+/// Похожесть первого результата поиска, ниже которой он — не то: на транслите поиск Неморы
+/// отдаёт случайное («дэд матрикс» → «i fvcked up my happiness…», 0,12).
+const MIN_FALLBACK: f64 = 0.3;
 
 /// Лучшее совпадение по всем вариантам запроса и его оценка: точное название — 1, иначе
 /// самое похожее, если не меньше `MIN_SIMILAR`. При равенстве — раньше в выдаче и раньше
@@ -814,11 +867,16 @@ fn best_similar<T: Clone>(found: &Found<T>) -> Option<(f64, T)> {
         .map(|(score, item)| (score, item.clone()))
 }
 
-/// Первый результат первого варианта, по которому что-то нашлось (выдача Неморы ранжирована).
+/// Первый результат первого варианта, по которому что-то нашлось (выдача Неморы ранжирована),
+/// — если он хоть немного похож (`MIN_FALLBACK`) или его не сравнить по буквам (японское,
+/// китайское название: кириллические чтения японского Немора понимает сама).
 fn first_result<T: Clone>(found: &Found<T>) -> Option<T> {
-    found
-        .iter()
-        .find_map(|(_, items)| items.first().map(|(_, item)| item.clone()))
+    found.iter().find_map(|(query, items)| {
+        let (name, item) = items.first()?;
+        let comparable =
+            name.chars().any(|c| c.is_alphabetic()) && !name.chars().any(crate::textnorm::is_cjk);
+        (!comparable || similarity(name, query) >= MIN_FALLBACK).then(|| item.clone())
+    })
 }
 
 /// Лучший кандидат: `best_similar`, иначе `first_result` (`with_library` без библиотеки).
@@ -1500,8 +1558,8 @@ mod tests {
             pick(&found, "smells like teen spirit").as_deref(),
             Some("c")
         );
-        // ничего похожего — первый в выдаче Неморы
-        assert_eq!(pick(&found, "совсем другое").as_deref(), Some("a"));
+        // ничего похожего — не включать случайное: «не нашлось»
+        assert_eq!(pick(&found, "совсем другое"), None);
         let only_versions = json!({ "songs": [{ "songId": "b", "viewId": "b:v1", "version": "Slowed", "title": "T" }] });
         assert_eq!(pick(&only_versions, "t").as_deref(), Some("b"));
         assert_eq!(pick(&json!({ "songs": [] }), "t"), None);
@@ -1645,6 +1703,42 @@ mod tests {
         ] {
             assert_eq!(volume_percent(text), want, "{text}");
         }
+    }
+
+    #[test]
+    fn glued_and_doubled_titles_are_heard_by_sound() {
+        // «включи трек дэд матрикс» → «DEADMATRIX.exe», а не случайный первый результат
+        let found: Found<&str> = vec![(
+            "дэд матрикс".into(),
+            vec![(
+                "i fvcked up my happiness playing a nintendo emulator".into(),
+                "junk",
+            )],
+        )];
+        assert_eq!(choose(&found), None);
+        let library: Found<&str> = vec![(
+            "дэд матрикс".into(),
+            vec![
+                (
+                    "i fvcked up my happiness playing a nintendo emulator".into(),
+                    "junk",
+                ),
+                ("DEADMATRIX.exe".into(), "deadmatrix"),
+            ],
+        )];
+        assert_eq!(choose(&library), Some("deadmatrix"));
+        // «флюкс вэйв спидап» — «Fluxxwave (Sped Up)», не «Fluxxwave (Lay with Me)»
+        let fluxx: Found<&str> = vec![(
+            "флюкс вэйв спидап".into(),
+            vec![
+                ("Fluxxwave (Lay with Me)".into(), "lay"),
+                ("Fluxxwave (Sped Up)".into(), "sped"),
+            ],
+        )];
+        assert_eq!(choose(&fluxx), Some("sped"));
+        // японское название по буквам не сравнить — ранжирование Неморы остаётся
+        let japanese: Found<&str> = vec![("мушоку тенсей".into(), vec![("無職転生".into(), "jp")])];
+        assert_eq!(choose(&japanese), Some("jp"));
     }
 
     #[test]
