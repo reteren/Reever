@@ -1,6 +1,6 @@
 [package]
 name = "reever"
-version = "0.8.8"
+version = "0.8.9"
 edition = "2021"
 description = "Reever — offline voice launcher for Windows"
 
