@@ -62,10 +62,38 @@ const GROUPS: &[(&str, &[(&str, &str)])] = &[
     ),
     ("speech_text", &[("listen_silence_s", "listen_silence")]),
     ("search", &[("local_index", "bool")]),
+    // только когда Немора установлена (rebuild); без «nemora_enabled» остальное скрыто (field)
+    (
+        "nemora",
+        &[
+            ("nemora_enabled", "nemora_enabled"),
+            ("nemora_after_song", "choice"),
+            ("nemora_artist_order", "choice"),
+            ("nemora_collection_order", "choice"),
+            ("nemora_play_music", "choice"),
+            ("nemora_volume_step", "volume_step"),
+            ("nemora_start_app", "bool"),
+            ("nemora_strict", "bool"),
+            ("nemora_media_via_app", "bool"),
+            ("nemora_pause_fallback", "bool"),
+        ],
+    ),
     ("system", &[("confirm_dangerous", "bool"), ("confirm_close", "bool"), ("raise_result", "bool"), ("auto_update", "bool")]),
 ];
 
 const ACTIVATION: [&str; 3] = ["both", "wake", "hotkey"];
+
+/// Варианты выбора настроек Неморы; первый — значение по умолчанию (config.rs). Подписи —
+/// `settings.<ключ>.<вариант>`.
+fn choices(key: &str) -> &'static [&'static str] {
+    match key {
+        "nemora_after_song" => &["smart", "keep", "artist", "repeat", "single"],
+        "nemora_artist_order" => &["shuffle", "plays", "album"],
+        "nemora_collection_order" => &["order", "shuffle"],
+        "nemora_play_music" => &["smart", "favorites", "plays", "added"],
+        _ => &[],
+    }
+}
 const MASCOT_MODES: [&str; 3] = ["always", "commands", "never"];
 const NEVER_UNLOAD: f32 = 121.0;
 const CYRILLIC: [&str; 3] = ["ru", "uk", "bg"];
@@ -222,7 +250,17 @@ impl SettingsTab {
     fn flag(&self, key: &str) -> bool {
         match self.get(key) {
             Value::Bool(b) => b,
-            Value::Null => matches!(key, "mascot_bubble" | "dictation_punctuation" | "dictation_ellipsis" | "lite_monitor"),
+            Value::Null => matches!(
+                key,
+                "mascot_bubble"
+                    | "dictation_punctuation"
+                    | "dictation_ellipsis"
+                    | "lite_monitor"
+                    | "nemora_enabled"
+                    | "nemora_start_app"
+                    | "nemora_media_via_app"
+                    | "nemora_pause_fallback"
+            ),
             _ => false,
         }
     }
@@ -300,11 +338,20 @@ impl SettingsTab {
         if (key == "lite_monitor" && !self.flag("lite_ui"))
             || (key.starts_with("dictation_ellipsis") && !self.flag("dictation_punctuation"))
             || (key == "dictation_ellipsis_pause_ms" && !self.flag("dictation_ellipsis"))
+            || (key.starts_with("nemora_") && key != "nemora_enabled" && !self.flag("nemora_enabled"))
         {
             return;
         }
         let help = self.help(key);
         match kind {
+            "nemora_enabled" => {
+                items.push(Item::Check { id: format!("cb:{key}"), label: self.label(key), on: self.flag(key) });
+                if let Some(path) = crate::nemora::installed_path() {
+                    let text = t(&self.locale, "settings.nemora_enabled.found", &[("path", &path.display().to_string())]);
+                    items.push(Item::Help { text, indent: true });
+                }
+                return;
+            }
             "bool" | "lite_ui" | "mascot_bubble" => {
                 items.push(Item::Check { id: format!("cb:{key}"), label: self.label(key), on: self.flag(key) });
                 if let Some(h) = &help {
@@ -348,6 +395,17 @@ impl SettingsTab {
                     })
                     .collect();
                 items.push(Item::Select { id: key.into(), options, selected: if cur.is_empty() { "both".into() } else { cur } });
+            }
+            "choice" => {
+                let options: Vec<(String, String)> =
+                    choices(key).iter().map(|o| (o.to_string(), self.t(&format!("settings.{key}.{o}")))).collect();
+                let cur = self.text_of(key);
+                let selected = if choices(key).contains(&cur.as_str()) { cur } else { choices(key)[0].to_string() };
+                items.push(Item::Select { id: key.into(), options, selected });
+            }
+            "volume_step" => {
+                let v = self.num(key).unwrap_or(10.0).clamp(5.0, 25.0) as f32;
+                items.push(Item::Slider { id: key.into(), min: 5.0, max: 25.0, step: 5.0, value: v, text: format!("{}%", v as i64) });
             }
             "mascot_scale" => {
                 let v = self.num(key).unwrap_or(100.0).clamp(100.0, 500.0) as f32;
@@ -572,7 +630,12 @@ impl SettingsTab {
             suffix: self.t("settings.grammarLinkSuffix"),
         }];
         items.push(Item::Gap(14.0));
+        let nemora = crate::nemora::installed_path().is_some();
         for (group, fields) in GROUPS {
+            // настройки Неморы — только когда она установлена
+            if *group == "nemora" && !nemora {
+                continue;
+            }
             items.push(Item::GroupBegin { legend: self.t(&format!("settings.group.{group}")), icon: None });
             for (key, kind) in fields.iter() {
                 self.field(&mut items, key, kind);
@@ -956,6 +1019,22 @@ mod tests {
         t.set_local("ui_language", Value::String("ru".into()));
         let out = t.on_event(FormEvent::Remove("ul:ru".into(), 0));
         assert_eq!(out, Some(SettingsOut::UiLanguages { codes: vec!["en".into()], language: "auto".into() }));
+    }
+
+    #[test]
+    fn nemora_choices_save_their_value_and_default_to_the_first() {
+        let mut t = tab();
+        let mut items = Vec::new();
+        t.field(&mut items, "nemora_after_song", "choice");
+        assert!(items.iter().any(|item| matches!(item, Item::Select { selected, options, .. }
+            if selected == "smart" && options.len() == 5 && options.iter().all(|(_, label)| !label.starts_with("settings.")))));
+        t.on_event(FormEvent::Select("nemora_after_song".into(), "repeat".into()));
+        assert_eq!(t.patch.get("nemora_after_song"), Some(&serde_json::json!("repeat")));
+        // выключенная интеграция прячет остальные настройки Неморы
+        t.set_local("nemora_enabled", Value::Bool(false));
+        let mut hidden = Vec::new();
+        t.field(&mut hidden, "nemora_after_song", "choice");
+        assert!(hidden.is_empty());
     }
 
     #[test]

@@ -497,7 +497,9 @@ pub fn save_settings(
     *state.ptt_hotkey.lock().map_err(|e| e.to_string())? = s.hotkey.clone();
     *state.mute_hotkey.lock().map_err(|e| e.to_string())? = s.mute_hotkey.clone();
     let local_index = s.local_index;
+    let nemora_enabled = s.nemora_enabled;
     config.set(Arc::new(fresh));
+    crate::nemora::set_enabled(nemora_enabled);
     if let Some(index) = app.try_state::<crate::local_index::IndexManager>() {
         index.set_enabled(local_index);
     }

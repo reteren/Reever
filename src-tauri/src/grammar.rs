@@ -12,7 +12,7 @@ use strsim::{jaro_winkler, levenshtein};
 use crate::actions::Action;
 use crate::textnorm::{comparison_forms, normalize, strip_leading_fillers};
 
-const GRAMMAR_VERSION: u32 = 18;
+const GRAMMAR_VERSION: u32 = 19;
 /// Версионированные дефолты дописываются старым пользователям, но не восстанавливаются
 /// после явного удаления намерения из грамматики актуальной версии.
 const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
@@ -27,6 +27,7 @@ const ADDED_DEFAULT_INTENTS: &[(u32, &[&str])] = &[
     (15, &["index"]),
     (16, MUSIC_INTENTS),
     (17, &["music_volume"]),
+    (19, &["music_louder", "music_quieter"]),
 ];
 /// Команды Неморы (nemora.rs): в грамматике всегда, но действуют и видны, только пока
 /// Немора установлена (`set_nemora_installed`).
@@ -851,6 +852,10 @@ pub enum MusicOp {
     NowPlaying,
     /// «Громкость 50»: громкость самой Неморы, 0–100 (не Windows).
     Volume,
+    /// «Громче»: громкость Неморы на шаг из настроек.
+    Louder,
+    /// «Тише».
+    Quieter,
 }
 
 impl MusicOp {
@@ -1054,6 +1059,18 @@ fn music_defaults() -> Vec<Intent> {
             MusicOp::Volume,
             "громкость Неморы от 0 до 100",
             &["громкость", "громкость музыки", "сделай громкость", "volume", "set volume", "music volume"],
+        ),
+        music(
+            "music_louder",
+            MusicOp::Louder,
+            "Немора громче",
+            &["громче", "сделай громче", "погромче", "louder", "volume up"],
+        ),
+        music(
+            "music_quieter",
+            MusicOp::Quieter,
+            "Немора тише",
+            &["тише", "сделай тише", "потише", "quieter", "volume down"],
         ),
     ]
 }
@@ -2477,7 +2494,7 @@ mod tests {
 
     #[test]
     fn existing_json_uses_defaults_for_missing_fields_and_empty_wake_list() {
-        assert_eq!(Grammar::defaults().version, 18);
+        assert_eq!(Grammar::defaults().version, 19);
         assert_eq!(
             serde_json::from_str::<Grammar>(r#"{"intents":[]}"#)
                 .unwrap()

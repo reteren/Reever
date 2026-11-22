@@ -446,7 +446,10 @@ pub fn dispatch(
             }
             // Играет Немора — «предыдущий» и «заново» через неё: медиа-клавиша не знает,
             // сколько трек уже играл, и сразу после «следующего» ушла бы на два трека назад.
-            if matches!(op.as_str(), "media_prev" | "media_restart") && crate::grammar::nemora_installed() {
+            if matches!(op.as_str(), "media_prev" | "media_restart")
+                && crate::grammar::nemora_installed()
+                && cfg.settings.nemora_media_via_app
+            {
                 ui_log(app, crate::msg!("log.system", action = &action.label, score = "-"));
                 crate::nemora::start_media(app, &op);
                 return DispatchResult::Background;
@@ -600,7 +603,7 @@ pub fn dispatch(
         }
         Route::Find { scope, candidates } => dispatch_find(app, cfg, shared, scope, &candidates),
         Route::Music { op, queries } => {
-            crate::nemora::start(app, op, queries, cfg.settings.private_log);
+            crate::nemora::start(app, op, queries, crate::nemora::Options::from_settings(&cfg.settings));
             DispatchResult::Background
         }
         Route::WebChat { label, url, text } => {
@@ -960,6 +963,9 @@ mod tests {
         assert_eq!(music("play playlist goat", true), Route::Music { op: MusicOp::Playlist, queries: vec!["goat".into()] });
         assert_eq!(music("лайкни", true), Route::Music { op: MusicOp::Like, queries: vec![] });
         assert_eq!(music("громкость 40", true), Route::Music { op: MusicOp::Volume, queries: vec!["40".into()] });
+        assert_eq!(music("сделай громче", true), Route::Music { op: MusicOp::Louder, queries: vec![] });
+        assert_eq!(music("тише", true), Route::Music { op: MusicOp::Quieter, queries: vec![] });
+        assert_eq!(music("volume up", true), Route::Music { op: MusicOp::Louder, queries: vec![] });
         assert!(matches!(music("громкость семьдесят пять", true), Route::Music { op: MusicOp::Volume, .. }));
         // английское число нормализация уже пишет цифрами
         assert_eq!(music("volume fifty", true), Route::Music { op: MusicOp::Volume, queries: vec!["50".into()] });

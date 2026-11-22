@@ -277,8 +277,8 @@ fn setup(app: &AppHandle) -> Result<(), String> {
     let actions_path = config::user_config_path(app, "actions.json");
     let grammar_path = config::user_config_path(app, "grammar.json");
     let shared = Arc::new(SharedState::new(actions_path, grammar_path));
-    // Немора установлена — её команды в грамматике действуют с первой фразы (nemora.rs).
-    nemora::refresh();
+    // Немора установлена (и её команды не выключены) — они действуют с первой фразы (nemora.rs).
+    nemora::set_enabled(cfg.settings.nemora_enabled);
 
     app.manage(LiveConfig::new(cfg.clone()));
     app.manage(shared.clone());

@@ -15,6 +15,7 @@
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -143,6 +144,21 @@ fn registry_string(
 
 /// Последняя проверка: когда и что нашли.
 static FOUND: Mutex<Option<(Instant, Option<PathBuf>)>> = Mutex::new(None);
+/// Настройки → Немора → «Музыкальные команды Неморы». Выключено — команды скрыты, как будто
+/// Неморы нет.
+static ENABLED: AtomicBool = AtomicBool::new(true);
+
+/// Включить или выключить команды Неморы (при запуске и после сохранения настроек).
+pub fn set_enabled(enabled: bool) {
+    ENABLED.store(enabled, Ordering::Relaxed);
+    *FOUND.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    refresh();
+}
+
+/// Где найден nemora-mcp (для настроек; `None` — Немора не установлена).
+pub fn installed_path() -> Option<PathBuf> {
+    mcp_path()
+}
 
 /// Найти Немору заново (не чаще раза в `RECHECK`) и включить или спрятать её команды.
 /// Возвращает `Some(установлена)`, если с прошлой проверки это изменилось.
@@ -159,7 +175,7 @@ pub fn refresh() -> Option<bool> {
         .as_ref()
         .is_none_or(|(_, before)| before.is_some() != installed);
     *found = Some((Instant::now(), path));
-    crate::grammar::set_nemora_installed(installed);
+    crate::grammar::set_nemora_installed(installed && ENABLED.load(Ordering::Relaxed));
     changed.then_some(installed)
 }
 
@@ -442,14 +458,59 @@ pub fn take_outcomes() -> Vec<bool> {
     std::mem::take(&mut *OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()))
 }
 
+/// Как ведут себя команды Неморы — Настройки → Немора (`Settings::nemora_*`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Options {
+    /// После «включи трек X»: `smart`, `keep`, `artist`, `repeat`, `single`.
+    pub after_song: String,
+    /// «Включи исполнителя X»: `shuffle`, `plays`, `album`.
+    pub artist_order: String,
+    /// Альбомы и плейлисты вперемешку (иначе по порядку).
+    pub collection_shuffle: bool,
+    /// «Включи музыку», когда ничего не на паузе: `smart`, `favorites`, `plays`, `added`.
+    pub play_music: String,
+    /// Шаг «громче» / «тише», проценты.
+    pub volume_step: u32,
+    /// Запускать закрытую Немору для команд, которые включают музыку.
+    pub start_app: bool,
+    /// Только уверенные совпадения названия.
+    pub strict: bool,
+    /// «Выключи музыку» без играющей Неморы — медиа-клавиша для другого плеера.
+    pub pause_fallback: bool,
+    /// Не писать названия в журнал.
+    pub private: bool,
+}
+
+impl Options {
+    pub fn from_settings(settings: &crate::config::Settings) -> Self {
+        Self {
+            after_song: settings.nemora_after_song.clone(),
+            artist_order: settings.nemora_artist_order.clone(),
+            collection_shuffle: settings.nemora_collection_order == "shuffle",
+            play_music: settings.nemora_play_music.clone(),
+            volume_step: settings.nemora_volume_step,
+            start_app: settings.nemora_start_app,
+            strict: settings.nemora_strict,
+            pause_fallback: settings.nemora_pause_fallback,
+            private: settings.private_log,
+        }
+    }
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Self::from_settings(&crate::config::Settings::default())
+    }
+}
+
 /// Выполнить команду Неморы в своём потоке. `queries` — названное после ключевой фразы
-/// (варианты по порядку предпочтения); `private` — не писать названия в журнал.
-pub fn start(app: &AppHandle, op: MusicOp, queries: Vec<String>, private: bool) {
+/// (варианты по порядку предпочтения).
+pub fn start(app: &AppHandle, op: MusicOp, queries: Vec<String>, options: Options) {
     let app = app.clone();
     let spawned = std::thread::Builder::new()
         .name("reever-nemora".into())
         .spawn(move || {
-            let ok = run(&app, op, &queries, private);
+            let ok = run(&app, op, &queries, &options);
             OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()).push(ok);
         });
     if let Err(error) = spawned {
@@ -519,13 +580,15 @@ fn media_in_nemora(op: &str) -> Result<bool, CallError> {
 
 struct Run<'a> {
     app: &'a AppHandle,
-    private: bool,
+    options: &'a Options,
+    /// Немора была открыта, когда пришла команда.
+    running: bool,
 }
 
 impl Run<'_> {
     /// Название для журнала: в приватном журнале — «…».
     fn name(&self, text: &str) -> String {
-        if self.private {
+        if self.options.private {
             "…".into()
         } else {
             text.to_string()
@@ -553,12 +616,16 @@ impl Run<'_> {
     }
 }
 
-fn run(app: &AppHandle, op: MusicOp, queries: &[String], private: bool) -> bool {
-    let run = Run { app, private };
+fn run(app: &AppHandle, op: MusicOp, queries: &[String], options: &Options) -> bool {
+    let failed = Run {
+        app,
+        options,
+        running: false,
+    };
     // app_status не запускает Немору: узнать, открыта ли она и что разрешено агентам
     let status = match call("app_status", json!({}), CALL_TIMEOUT) {
         Ok(status) => status,
-        Err(error) => return run.failed(&error),
+        Err(error) => return failed.failed(&error),
     };
     if matches!(
         status.get("access").and_then(Value::as_str),
@@ -571,7 +638,18 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], private: bool) -> bool 
         .get("running")
         .and_then(Value::as_bool)
         .unwrap_or(false);
+    let run = Run {
+        app,
+        options,
+        running,
+    };
+    let starts = matches!(
+        op,
+        MusicOp::Song | MusicOp::Artist | MusicOp::Album | MusicOp::Playlist | MusicOp::Play
+    );
     let result = match op {
+        // запускать закрытую Немору выключено в настройках
+        _ if starts && !running && !options.start_app => not_running(&run),
         MusicOp::Song => play_song(&run, queries),
         MusicOp::Artist => play_artist(&run, queries),
         MusicOp::Album => play_album(&run, queries),
@@ -590,6 +668,8 @@ fn run(app: &AppHandle, op: MusicOp, queries: &[String], private: bool) -> bool 
         MusicOp::NowPlaying if !running => not_running(&run),
         MusicOp::NowPlaying => now_playing(&run),
         MusicOp::Volume => volume(&run, queries, running),
+        MusicOp::Louder => volume_step(&run, true),
+        MusicOp::Quieter => volume_step(&run, false),
         MusicOp::None => Ok(false),
     };
     result.unwrap_or_else(|error| run.failed(&error))
@@ -845,10 +925,13 @@ fn similarity(name: &str, query: &str) -> f64 {
 /// отдаёт случайное («дэд матрикс» → «i fvcked up my happiness…», 0,12).
 const MIN_FALLBACK: f64 = 0.3;
 
+/// Настройка «только уверенные совпадения»: похожесть не ниже этой, без запасного первого
+/// результата поиска.
+const STRICT_SIMILAR: f64 = 0.8;
+
 /// Лучшее совпадение по всем вариантам запроса и его оценка: точное название — 1, иначе
-/// самое похожее, если не меньше `MIN_SIMILAR`. При равенстве — раньше в выдаче и раньше
-/// вариант.
-fn best_similar<T: Clone>(found: &Found<T>) -> Option<(f64, T)> {
+/// самое похожее, если не меньше `min`. При равенстве — раньше в выдаче и раньше вариант.
+fn best_similar<T: Clone>(found: &Found<T>, min: f64) -> Option<(f64, T)> {
     for (query, items) in found {
         if let Some((_, item)) = items.iter().find(|(name, _)| same(name, query)) {
             return Some((1.0, item.clone()));
@@ -863,7 +946,7 @@ fn best_similar<T: Clone>(found: &Found<T>) -> Option<(f64, T)> {
             }
         }
     }
-    best.filter(|(score, _)| *score >= MIN_SIMILAR)
+    best.filter(|(score, _)| *score >= min)
         .map(|(score, item)| (score, item.clone()))
 }
 
@@ -882,7 +965,7 @@ fn first_result<T: Clone>(found: &Found<T>) -> Option<T> {
 /// Лучший кандидат: `best_similar`, иначе `first_result` (`with_library` без библиотеки).
 #[cfg(test)]
 fn choose<T: Clone>(found: &Found<T>) -> Option<T> {
-    best_similar(found)
+    best_similar(found, MIN_SIMILAR)
         .map(|(_, item)| item)
         .or_else(|| first_result(found))
 }
@@ -900,9 +983,13 @@ fn cyrillic(text: &str) -> bool {
 fn with_library<T: Clone>(
     found: &Found<T>,
     queries: &[&str],
+    strict: bool,
     library: impl FnOnce() -> Result<Vec<(String, T)>, CallError>,
 ) -> Result<Option<T>, CallError> {
-    let best = best_similar(found);
+    let min = if strict { STRICT_SIMILAR } else { MIN_SIMILAR };
+    // запасной первый результат — только без строгого выбора
+    let fallback = |found: &Found<T>| if strict { None } else { first_result(found) };
+    let best = best_similar(found, min);
     let confident = best.as_ref().map_or(0.0, |(score, _)| *score) >= SEARCH_CONFIDENT;
     let spoken: Vec<&str> = queries
         .iter()
@@ -910,18 +997,18 @@ fn with_library<T: Clone>(
         .filter(|q| cyrillic(q) || !confident)
         .collect();
     if best.as_ref().is_some_and(|(score, _)| *score >= 1.0) || spoken.is_empty() {
-        return Ok(best.map(|(_, item)| item).or_else(|| first_result(found)));
+        return Ok(best.map(|(_, item)| item).or_else(|| fallback(found)));
     }
     let library = library()?;
     let everything: Found<T> = spoken
         .iter()
         .map(|query| (query.to_string(), library.clone()))
         .collect();
-    let best = match (best, best_similar(&everything)) {
+    let best = match (best, best_similar(&everything, min)) {
         (Some(search), Some(whole)) => Some(if whole.0 > search.0 { whole } else { search }),
         (search, whole) => search.or(whole),
     };
-    Ok(best.map(|(_, item)| item).or_else(|| first_result(found)))
+    Ok(best.map(|(_, item)| item).or_else(|| fallback(found)))
 }
 
 /// Все строки списка Неморы (`items_key` — массив в ответе) по страницам.
@@ -1039,13 +1126,17 @@ fn song_ids(list: &Value) -> Vec<String> {
         .collect()
 }
 
-/// Все песни области (`None` — вся библиотека) по страницам list_songs.
-fn list_all(scope: Option<&str>) -> Result<Vec<String>, CallError> {
+/// Все песни области (`None` — вся библиотека) по страницам list_songs; `sort` — порядок
+/// Неморы (`plays` — сначала популярные, `album`, `added`…), `None` — её порядок по умолчанию.
+fn list_all(scope: Option<&str>, sort: Option<&str>) -> Result<Vec<String>, CallError> {
     let mut ids = Vec::new();
     loop {
         let mut arguments = json!({ "limit": PAGE, "offset": ids.len() });
         if let Some(scope) = scope {
             arguments["scope"] = json!(scope);
+        }
+        if let Some(sort) = sort {
+            arguments["sort"] = json!(sort);
         }
         let page = call("list_songs", arguments, CALL_TIMEOUT)?;
         let rows = song_ids(&page);
@@ -1083,7 +1174,7 @@ fn enable_smart() -> Result<bool, CallError> {
 
 /// «Включи трек X»: найденный трек, за ним вся библиотека в Smart Shuffle — музыка не
 /// кончается на одном треке (play без shuffle делает очередь ровно из переданного).
-fn find_song(queries: &[String]) -> Result<Option<Value>, CallError> {
+fn find_song(queries: &[String], strict: bool) -> Result<Option<Value>, CallError> {
     let queries = distinct(queries);
     let mut found = Vec::new();
     for query in &queries {
@@ -1092,35 +1183,122 @@ fn find_song(queries: &[String]) -> Result<Option<Value>, CallError> {
             song_candidates(&search(query, "songs", 10)?),
         ));
     }
-    with_library(&found, &queries, library_songs)
+    with_library(&found, &queries, strict, library_songs)
+}
+
+/// Режим повтора, каким он был до «повторять этот трек» / «только этот трек»: Reever сам
+/// поставил «один» или «выкл» и возвращает прежний на следующей команде воспроизведения —
+/// иначе следующий альбом крутил бы по кругу свою первую песню.
+static REPEAT_BEFORE: Mutex<Option<String>> = Mutex::new(None);
+
+/// Поставить режим повтора, запомнив прежний (если он ещё не запомнен).
+fn set_repeat_remembering(mode: &str) -> Result<(), CallError> {
+    let before = call("now_playing", json!({}), CALL_TIMEOUT)
+        .ok()
+        .and_then(|now| now.get("repeat").and_then(Value::as_str).map(String::from));
+    call("set_repeat", json!({ "mode": mode }), CALL_TIMEOUT)?;
+    let mut saved = REPEAT_BEFORE.lock().unwrap_or_else(|e| e.into_inner());
+    if saved.is_none() {
+        *saved = before.filter(|before| before != mode);
+    }
+    Ok(())
+}
+
+/// Вернуть режим повтора, который Reever поменял для одного трека.
+fn restore_repeat() {
+    let before = REPEAT_BEFORE
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    if let Some(mode) = before {
+        let _ = call("set_repeat", json!({ "mode": mode }), CALL_TIMEOUT);
+    }
+}
+
+/// Порядок песен исполнителя для list_songs; `None` — вперемешку (play с shuffle).
+fn artist_sort(order: &str) -> Option<&'static str> {
+    match order {
+        "plays" => Some("plays"),
+        "album" => Some("album"),
+        _ => None,
+    }
 }
 
 fn play_song(run: &Run, queries: &[String]) -> Result<bool, CallError> {
-    let Some(song) = find_song(queries)? else {
+    let Some(song) = find_song(queries, run.options.strict)? else {
         return Ok(run.not_found(queries.first().map_or("", String::as_str)));
     };
     let Some(id) = song.get("songId").and_then(Value::as_str).map(String::from) else {
         return Ok(run.not_found(queries.first().map_or("", String::as_str)));
     };
-    let mut queue = list_all(None).unwrap_or_default();
+    let mode = run.options.after_song.as_str();
+    if matches!(mode, "repeat" | "single") {
+        // очередь — только этот трек; повтор «один» или «выкл» (при «всё» трек крутился бы)
+        call("play", json!({ "song_ids": [id] }), START_TIMEOUT)?;
+        run.playing(&song_line(&song));
+        set_repeat_remembering(if mode == "repeat" { "one" } else { "off" })?;
+        return Ok(true);
+    }
+    restore_repeat();
+    // перемешивание до команды: play без shuffle выключает оба режима
+    let shuffle_before = if run.running && mode == "keep" {
+        call("now_playing", json!({}), CALL_TIMEOUT)
+            .ok()
+            .and_then(|now| shuffle_mode(&now).map(String::from))
+    } else {
+        None
+    };
+    let mut queue = if mode == "artist" {
+        let artist = song
+            .get("artists")
+            .and_then(Value::as_array)
+            .and_then(|artists| artists.first())
+            .and_then(Value::as_str)
+            .map(String::from);
+        let sort = artist_sort(&run.options.artist_order);
+        artist
+            .map(|artist| list_all(Some(&format!("artist:{artist}")), sort).unwrap_or_default())
+            .unwrap_or_default()
+    } else {
+        list_all(None, None).unwrap_or_default()
+    };
     queue.retain(|other| *other != id);
     queue.insert(0, id);
-    let whole = queue.len() > 1;
+    let rest = queue.len() > 1;
     call(
         "play",
         json!({ "song_ids": queue, "start_index": 0 }),
         START_TIMEOUT,
     )?;
     run.playing(&song_line(&song));
-    if whole {
-        // smart переставляет очередь, играющий трек остаётся первым
-        enable_smart()?;
+    if !rest {
+        return Ok(true);
+    }
+    // перемешивание переставляет очередь, играющий трек остаётся первым
+    match mode {
+        "keep" => match shuffle_before.as_deref() {
+            Some("smart") => {
+                enable_smart()?;
+            }
+            Some("shuffle") => {
+                call("set_shuffle", json!({ "mode": "shuffle" }), CALL_TIMEOUT)?;
+            }
+            _ => {}
+        },
+        "artist" => {
+            if artist_sort(&run.options.artist_order).is_none() {
+                call("set_shuffle", json!({ "mode": "shuffle" }), CALL_TIMEOUT)?;
+            }
+        }
+        _ => {
+            enable_smart()?;
+        }
     }
     Ok(true)
 }
 
 /// «Включи исполнителя X»: все его песни вперемешку.
-fn find_artist(queries: &[String]) -> Result<Option<String>, CallError> {
+fn find_artist(queries: &[String], strict: bool) -> Result<Option<String>, CallError> {
     let queries = distinct(queries);
     let mut found = Vec::new();
     for query in &queries {
@@ -1135,7 +1313,7 @@ fn find_artist(queries: &[String]) -> Result<Option<String>, CallError> {
             .collect();
         found.push((query.to_string(), names));
     }
-    with_library(&found, &queries, || {
+    with_library(&found, &queries, strict, || {
         list_pages("list_artists", "items", 500, |artist| {
             let name = artist.get("name")?.as_str()?.to_string();
             Some((name.clone(), name))
@@ -1144,16 +1322,18 @@ fn find_artist(queries: &[String]) -> Result<Option<String>, CallError> {
 }
 
 fn play_artist(run: &Run, queries: &[String]) -> Result<bool, CallError> {
-    let Some(artist) = find_artist(queries)? else {
+    let Some(artist) = find_artist(queries, run.options.strict)? else {
         return Ok(run.not_found(queries.first().map_or("", String::as_str)));
     };
-    let ids = list_all(Some(&format!("artist:{artist}")))?;
+    let sort = artist_sort(&run.options.artist_order);
+    let ids = list_all(Some(&format!("artist:{artist}")), sort)?;
     if ids.is_empty() {
         return Ok(run.not_found(&artist));
     }
+    restore_repeat();
     call(
         "play",
-        json!({ "song_ids": ids, "shuffle": true }),
+        json!({ "song_ids": ids, "shuffle": sort.is_none() }),
         START_TIMEOUT,
     )?;
     run.playing(&artist);
@@ -1162,7 +1342,7 @@ fn play_artist(run: &Run, queries: &[String]) -> Result<bool, CallError> {
 
 /// «Включи альбом X»: альбом в порядке треков.
 /// Альбом: (ключ для list_songs, название).
-fn find_album(queries: &[String]) -> Result<Option<(String, String)>, CallError> {
+fn find_album(queries: &[String], strict: bool) -> Result<Option<(String, String)>, CallError> {
     let queries = distinct(queries);
     let mut found = Vec::new();
     for query in &queries {
@@ -1184,7 +1364,7 @@ fn find_album(queries: &[String]) -> Result<Option<(String, String)>, CallError>
             .collect();
         found.push((query.to_string(), albums));
     }
-    with_library(&found, &queries, || {
+    with_library(&found, &queries, strict, || {
         list_pages("list_albums", "albums", 500, |album| {
             let key = album.get("key")?.as_str()?.to_string();
             let title = album
@@ -1198,14 +1378,19 @@ fn find_album(queries: &[String]) -> Result<Option<(String, String)>, CallError>
 }
 
 fn play_album(run: &Run, queries: &[String]) -> Result<bool, CallError> {
-    let Some((key, title)) = find_album(queries)? else {
+    let Some((key, title)) = find_album(queries, run.options.strict)? else {
         return Ok(run.not_found(queries.first().map_or("", String::as_str)));
     };
-    let ids = list_all(Some(&format!("album:{key}")))?;
+    let ids = list_all(Some(&format!("album:{key}")), None)?;
     if ids.is_empty() {
         return Ok(run.not_found(&title));
     }
-    call("play", json!({ "song_ids": ids }), START_TIMEOUT)?;
+    restore_repeat();
+    call(
+        "play",
+        json!({ "song_ids": ids, "shuffle": run.options.collection_shuffle }),
+        START_TIMEOUT,
+    )?;
     run.playing(&title);
     Ok(true)
 }
@@ -1290,13 +1475,28 @@ fn play_playlist(run: &Run, queries: &[String]) -> Result<bool, CallError> {
     if ids.is_empty() {
         return Ok(run.not_found(&name));
     }
-    call("play", json!({ "song_ids": ids }), START_TIMEOUT)?;
+    restore_repeat();
+    call(
+        "play",
+        json!({ "song_ids": ids, "shuffle": run.options.collection_shuffle }),
+        START_TIMEOUT,
+    )?;
     run.playing(&name);
     Ok(true)
 }
 
-/// «Включи музыку»: остановленное — продолжить; играет — ничего не трогать; иначе вся
-/// библиотека в Smart Shuffle.
+/// Одна страница list_songs в порядке `sort` (самые слушаемые, недавно добавленные).
+fn top_songs(sort: &str) -> Result<Vec<String>, CallError> {
+    let page = call(
+        "list_songs",
+        json!({ "limit": PAGE, "sort": sort }),
+        CALL_TIMEOUT,
+    )?;
+    Ok(song_ids(&page))
+}
+
+/// «Включи музыку»: остановленное — продолжить; играет — ничего не трогать; иначе — что
+/// выбрано в настройках (по умолчанию вся библиотека в Smart Shuffle).
 fn play_music(run: &Run, running: bool) -> Result<bool, CallError> {
     let now = if running {
         Some(call("now_playing", json!({}), CALL_TIMEOUT)?)
@@ -1319,7 +1519,30 @@ fn play_music(run: &Run, running: bool) -> Result<bool, CallError> {
         }
         return Ok(true);
     }
-    let ids = list_all(None)?;
+    restore_repeat();
+    // избранное, самые слушаемые, недавно добавленные — если там что-то есть
+    let chosen = match run.options.play_music.as_str() {
+        "favorites" => song_ids(&call(
+            "get_playlist",
+            json!({ "playlist_id": "Favorites" }),
+            CALL_TIMEOUT,
+        )?),
+        "plays" => top_songs("plays")?,
+        "added" => top_songs("added")?,
+        _ => Vec::new(),
+    };
+    if !chosen.is_empty() {
+        let shuffle = run.options.play_music != "added";
+        call(
+            "play",
+            json!({ "song_ids": chosen, "shuffle": shuffle }),
+            START_TIMEOUT,
+        )?;
+        let now = call("now_playing", json!({}), CALL_TIMEOUT).unwrap_or_default();
+        run.playing(&song_line(&now));
+        return Ok(true);
+    }
+    let ids = list_all(None, None)?;
     if ids.is_empty() {
         ui_log(run.app, crate::msg!("log.music.empty"));
         return Ok(false);
@@ -1348,6 +1571,10 @@ fn pause(run: &Run, running: bool) -> Result<bool, CallError> {
             ui_log(run.app, crate::msg!("log.music.paused"));
             return Ok(true);
         }
+    }
+    if !run.options.pause_fallback {
+        ui_log(run.app, crate::msg!("log.music.nothing"));
+        return Ok(false);
     }
     ui_log(run.app, crate::msg!("log.music.mediaKey"));
     Ok(crate::system::run_system("media_play_pause"))
@@ -1439,6 +1666,28 @@ fn volume(run: &Run, queries: &[String], running: bool) -> Result<bool, CallErro
     Ok(true)
 }
 
+/// «Громче» / «тише»: громкость Неморы на шаг из настроек.
+fn volume_step(run: &Run, up: bool) -> Result<bool, CallError> {
+    if !run.running {
+        return not_running(run);
+    }
+    let now = call("now_playing", json!({}), CALL_TIMEOUT)?;
+    let current = now
+        .get("volumePercent")
+        .and_then(Value::as_f64)
+        .unwrap_or(50.0);
+    let step = f64::from(run.options.volume_step.clamp(1, 50));
+    let next = (current + if up { step } else { -step })
+        .clamp(0.0, 100.0)
+        .round();
+    call("set_volume", json!({ "percent": next }), CALL_TIMEOUT)?;
+    ui_log(
+        run.app,
+        crate::msg!("log.music.volume", percent = next as u8),
+    );
+    Ok(true)
+}
+
 fn smart_shuffle(run: &Run) -> Result<bool, CallError> {
     if enable_smart()? {
         ui_log(run.app, crate::msg!("log.music.smart"));
@@ -1496,9 +1745,9 @@ fn now_playing(run: &Run) -> Result<bool, CallError> {
 /// (examples/nemora_probe.rs: проверить разбор на своей библиотеке).
 pub fn preview(op: MusicOp, queries: &[String]) -> Result<Option<String>, String> {
     let found = match op {
-        MusicOp::Song => find_song(queries).map(|song| song.map(|song| song_line(&song))),
-        MusicOp::Artist => find_artist(queries),
-        MusicOp::Album => find_album(queries).map(|album| album.map(|(_, title)| title)),
+        MusicOp::Song => find_song(queries, false).map(|song| song.map(|song| song_line(&song))),
+        MusicOp::Artist => find_artist(queries, false),
+        MusicOp::Album => find_album(queries, false).map(|album| album.map(|(_, title)| title)),
         MusicOp::Playlist => find_playlist(queries).map(|playlist| playlist.map(|(_, name)| name)),
         _ => return Ok(None),
     };
@@ -1601,14 +1850,14 @@ mod tests {
         // поиск Неморы транслит не нашёл — сравнение со всей библиотекой
         let nothing: Found<&str> = vec![("хейт мьюзик".into(), vec![])];
         assert_eq!(
-            with_library(&nothing, &["хейт мьюзик"], library),
+            with_library(&nothing, &["хейт мьюзик"], false, library),
             Ok(Some("hm"))
         );
         // точное совпадение в выдаче — библиотеку не листаем
         let exact: Found<&str> = vec![("hate music".into(), vec![("Hate Music".into(), "search")])];
         let untouched = || -> Result<Vec<(String, &str)>, CallError> { panic!("library listed") };
         assert_eq!(
-            with_library(&exact, &["hate music"], untouched),
+            with_library(&exact, &["hate music"], false, untouched),
             Ok(Some("search"))
         );
         // латиница, по которой поиск ничего похожего не дал, — листаем
@@ -1620,20 +1869,20 @@ mod tests {
         };
         let none: Found<&str> = vec![("i really like you part too".into(), vec![])];
         assert_eq!(
-            with_library(&none, &["i really like you part too"], parts),
+            with_library(&none, &["i really like you part too"], false, parts),
             Ok(Some("pt2"))
         );
         // латиница с похожим результатом — не листаем: опечатки поиск Неморы понимает сам
         let latin: Found<&str> = vec![("hate musik".into(), vec![("Hate Music".into(), "search")])];
         assert_eq!(
-            with_library(&latin, &["hate musik"], untouched),
+            with_library(&latin, &["hate musik"], false, untouched),
             Ok(Some("search"))
         );
         // в библиотеке ничего похожего — первый результат поиска, как раньше
         let junk: Found<&str> = vec![("хейт мьюзик".into(), vec![("Хейтеры".into(), "ru")])];
         let unrelated = || Ok(vec![("Antidepressant".to_string(), "ad")]);
         assert_eq!(
-            with_library(&junk, &["хейт мьюзик"], unrelated),
+            with_library(&junk, &["хейт мьюзик"], false, unrelated),
             Ok(Some("ru"))
         );
     }
@@ -1811,7 +2060,7 @@ mod tests {
         assert!(status.get("access").is_some());
         let found = search("a", "songs", 3).expect("search");
         println!("search: {found}");
-        let first = list_all(None).expect("list_songs");
+        let first = list_all(None, None).expect("list_songs");
         println!("library: {} songs", first.len());
         assert!(!first.is_empty());
         let playlists = call("list_playlists", json!({}), CALL_TIMEOUT).expect("list_playlists");
