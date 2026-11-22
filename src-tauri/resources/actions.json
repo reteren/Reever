@@ -414,21 +414,6 @@
     ]
   },
   {
-    "id": "act_mqlqmu6d",
-    "label": "VHOLUME",
-    "kind": "shell",
-    "target": "steam://rungameid/4245250",
-    "verbs": [
-      "запусти"
-    ],
-    "phrases": [
-      "волю",
-      "volume",
-      "в холле ума",
-      "волен"
-    ]
-  },
-  {
     "id": "act_mqm8lbc1",
     "label": "Calculator",
     "kind": "uwp",
