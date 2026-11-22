@@ -1254,7 +1254,7 @@ dependencies = [
 
 [[package]]
 name = "reever"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "accesskit",
  "accesskit_windows",
