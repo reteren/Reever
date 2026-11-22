@@ -647,5 +647,9 @@
   "log.music.empty": "🎵 бібліотека Nemora порожня",
   "intent.music_volume": "гучність Nemora від 0 до 100",
   "log.music.volume": "🎵 гучність Nemora {percent}%",
-  "log.music.badVolume": "🎵 гучність: назви число від 0 до 100"
+  "log.music.badVolume": "🎵 гучність: назви число від 0 до 100",
+  "example.media.pause": "пауза й продовження в будь-якому плеєрі",
+  "example.media.next": "наступний трек",
+  "example.media.prev": "попередній трек",
+  "example.media.replay": "поточний трек спочатку"
 }

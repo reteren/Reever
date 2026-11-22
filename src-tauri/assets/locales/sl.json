@@ -647,5 +647,9 @@
   "log.music.empty": "🎵 knjižnica Nemore je prazna",
   "intent.music_volume": "glasnost Nemore od 0 do 100",
   "log.music.volume": "🎵 glasnost Nemore {percent}%",
-  "log.music.badVolume": "🎵 glasnost: povej število od 0 do 100"
+  "log.music.badVolume": "🎵 glasnost: povej število od 0 do 100",
+  "example.media.pause": "predvajaj / premor v katerem koli predvajalniku",
+  "example.media.next": "naslednja skladba",
+  "example.media.prev": "prejšnja skladba",
+  "example.media.replay": "trenutna skladba od začetka"
 }

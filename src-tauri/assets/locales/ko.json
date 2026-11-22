@@ -641,5 +641,9 @@
   "log.music.empty": "🎵 Nemora 라이브러리가 비어 있습니다",
   "intent.music_volume": "Nemora 볼륨 0~100",
   "log.music.volume": "🎵 Nemora 볼륨 {percent}%",
-  "log.music.badVolume": "🎵 볼륨: 0부터 100 사이의 숫자를 말하세요"
+  "log.music.badVolume": "🎵 볼륨: 0부터 100 사이의 숫자를 말하세요",
+  "example.media.pause": "어떤 플레이어에서든 재생 / 일시정지",
+  "example.media.next": "다음 곡",
+  "example.media.prev": "이전 곡",
+  "example.media.replay": "현재 곡 처음부터"
 }

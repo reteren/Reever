@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 Nemoras bibliotek är tomt",
   "intent.music_volume": "Nemoras volym från 0 till 100",
   "log.music.volume": "🎵 Nemoras volym {percent}%",
-  "log.music.badVolume": "🎵 volym: säg ett tal från 0 till 100"
+  "log.music.badVolume": "🎵 volym: säg ett tal från 0 till 100",
+  "example.media.pause": "spela / pausa i valfri spelare",
+  "example.media.next": "nästa låt",
+  "example.media.prev": "föregående låt",
+  "example.media.replay": "nuvarande låt från början"
 }

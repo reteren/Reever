@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 de bibliotheek van Nemora is leeg",
   "intent.music_volume": "Nemora-volume van 0 tot 100",
   "log.music.volume": "🎵 Nemora-volume {percent}%",
-  "log.music.badVolume": "🎵 volume: zeg een getal van 0 tot 100"
+  "log.music.badVolume": "🎵 volume: zeg een getal van 0 tot 100",
+  "example.media.pause": "afspelen / pauzeren in elke speler",
+  "example.media.next": "volgend nummer",
+  "example.media.prev": "vorig nummer",
+  "example.media.replay": "het huidige nummer vanaf het begin"
 }

@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 η βιβλιοθήκη του Nemora είναι άδεια",
   "intent.music_volume": "ένταση του Nemora από 0 έως 100",
   "log.music.volume": "🎵 ένταση του Nemora {percent}%",
-  "log.music.badVolume": "🎵 ένταση: πες έναν αριθμό από 0 έως 100"
+  "log.music.badVolume": "🎵 ένταση: πες έναν αριθμό από 0 έως 100",
+  "example.media.pause": "αναπαραγωγή / παύση σε οποιοδήποτε πρόγραμμα",
+  "example.media.next": "επόμενο κομμάτι",
+  "example.media.prev": "προηγούμενο κομμάτι",
+  "example.media.replay": "το τρέχον κομμάτι από την αρχή"
 }

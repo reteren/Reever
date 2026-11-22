@@ -751,6 +751,22 @@
     ]
   },
   {
+    "id": "sys_replay",
+    "label": "Заново",
+    "kind": "system",
+    "target": "media_restart",
+    "verbs": [],
+    "phrases": [
+      "заново",
+      "сначала",
+      "с начала",
+      "начни сначала",
+      "replay",
+      "play again",
+      "from the beginning"
+    ]
+  },
+  {
     "id": "act_mqnph6ks",
     "label": "Панель управления",
     "kind": "uwp",

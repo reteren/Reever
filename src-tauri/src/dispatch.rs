@@ -444,6 +444,13 @@ pub fn dispatch(
                 );
                 return DispatchResult::Confirm(PendingAction::System(op));
             }
+            // Играет Немора — «предыдущий» и «заново» через неё: медиа-клавиша не знает,
+            // сколько трек уже играл, и сразу после «следующего» ушла бы на два трека назад.
+            if matches!(op.as_str(), "media_prev" | "media_restart") && crate::grammar::nemora_installed() {
+                ui_log(app, crate::msg!("log.system", action = &action.label, score = "-"));
+                crate::nemora::start_media(app, &op);
+                return DispatchResult::Background;
+            }
             let normalized = strip_leading_fillers(&normalize(text));
             let score = action.score(&[normalized]);
             ui_log(
@@ -968,11 +975,13 @@ mod tests {
         assert_eq!(action_id(music("выключи звук", true)), "sys_mute");
         assert_eq!(action_id(music("следующий трек", true)), "sys_next");
         assert_eq!(action_id(music("пауза", true)), "sys_play");
-        // «трек X» — коротко, как «включи трек X»
+        // «трек X» — коротко; «следующий трек», «назад трек» и «заново» — системные
         assert_eq!(music("трек нирвана", true), Route::Music { op: MusicOp::Song, queries: vec!["нирвана".into()] });
         assert_eq!(action_id(music("предыдущий трек", true)), "sys_prev");
         assert_eq!(action_id(music("назад трек", true)), "sys_prev");
         assert_eq!(action_id(music("переключи трек", true)), "sys_next");
+        assert_eq!(action_id(music("заново", true)), "sys_replay");
+        assert_eq!(action_id(music("начни сначала", false)), "sys_replay");
     }
 
     #[test]

@@ -461,6 +461,62 @@ pub fn start(app: &AppHandle, op: MusicOp, queries: Vec<String>, private: bool) 
     }
 }
 
+/// Системные «предыдущий трек» (`media_prev`) и «заново» (`media_restart`), когда Немора
+/// установлена: играет она — точно через неё, иначе медиа-клавиша (другой плеер).
+pub fn start_media(app: &AppHandle, op: &str) {
+    let (app, owned) = (app.clone(), op.to_string());
+    let spawned = std::thread::Builder::new()
+        .name("reever-nemora".into())
+        .spawn(move || {
+            let ok = match media_in_nemora(&owned) {
+                Ok(true) => true,
+                Ok(false) => crate::system::run_system(&owned),
+                Err(error) => {
+                    ui_log(&app, crate::msg!("log.music.failed", error = error));
+                    crate::system::run_system(&owned)
+                }
+            };
+            OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()).push(ok);
+        });
+    if spawned.is_err() {
+        let ok = crate::system::run_system(op);
+        OUTCOMES.lock().unwrap_or_else(|e| e.into_inner()).push(ok);
+    }
+}
+
+/// `true` — сделано в Неморе; `false` — она не играет, нужна медиа-клавиша. app_status не
+/// запускает закрытую Немору.
+fn media_in_nemora(op: &str) -> Result<bool, CallError> {
+    let status = call("app_status", json!({}), CALL_TIMEOUT)?;
+    let running = status
+        .get("running")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let allowed = !matches!(
+        status.get("access").and_then(Value::as_str),
+        Some("off" | "read")
+    );
+    if !running || !allowed {
+        return Ok(false);
+    }
+    let now = call("now_playing", json!({}), CALL_TIMEOUT)?;
+    if now.get("playing").and_then(Value::as_bool) != Some(true) {
+        return Ok(false);
+    }
+    if op == "media_restart" {
+        call("seek", json!({ "seconds": 0 }), CALL_TIMEOUT)?;
+        return Ok(true);
+    }
+    // previous_song после первых 5 с только перематывает в начало — тогда ещё раз
+    let before = now.get("songId").cloned();
+    call("previous_song", json!({}), CALL_TIMEOUT)?;
+    let after = call("now_playing", json!({}), CALL_TIMEOUT)?;
+    if before.is_some() && after.get("songId").cloned() == before {
+        call("previous_song", json!({}), CALL_TIMEOUT)?;
+    }
+    Ok(true)
+}
+
 struct Run<'a> {
     app: &'a AppHandle,
     private: bool,

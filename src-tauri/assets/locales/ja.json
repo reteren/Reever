@@ -641,5 +641,9 @@
   "log.music.empty": "🎵 Nemora のライブラリは空です",
   "intent.music_volume": "Nemora の音量 0〜100",
   "log.music.volume": "🎵 Nemora の音量 {percent}%",
-  "log.music.badVolume": "🎵 音量：0〜100 の数字を言ってください"
+  "log.music.badVolume": "🎵 音量：0〜100 の数字を言ってください",
+  "example.media.pause": "どのプレーヤーでも再生 / 一時停止",
+  "example.media.next": "次の曲",
+  "example.media.prev": "前の曲",
+  "example.media.replay": "今の曲を最初から"
 }

@@ -645,5 +645,9 @@
   "log.music.empty": "🎵 biblioteca Nemora este goală",
   "intent.music_volume": "volumul Nemora de la 0 la 100",
   "log.music.volume": "🎵 volumul Nemora {percent}%",
-  "log.music.badVolume": "🎵 volum: spune un număr de la 0 la 100"
+  "log.music.badVolume": "🎵 volum: spune un număr de la 0 la 100",
+  "example.media.pause": "redare / pauză în orice player",
+  "example.media.next": "piesa următoare",
+  "example.media.prev": "piesa anterioară",
+  "example.media.replay": "piesa curentă de la început"
 }

@@ -647,5 +647,9 @@
   "log.music.empty": "🎵 Nemora biblioteka tuščia",
   "intent.music_volume": "Nemora garsumas nuo 0 iki 100",
   "log.music.volume": "🎵 Nemora garsumas {percent}%",
-  "log.music.badVolume": "🎵 garsumas: pasakyk skaičių nuo 0 iki 100"
+  "log.music.badVolume": "🎵 garsumas: pasakyk skaičių nuo 0 iki 100",
+  "example.media.pause": "groti / pristabdyti bet kuriame grotuve",
+  "example.media.next": "kitas takelis",
+  "example.media.prev": "ankstesnis takelis",
+  "example.media.replay": "dabartinis takelis nuo pradžios"
 }

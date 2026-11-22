@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 Nemoran kirjasto on tyhjä",
   "intent.music_volume": "Nemoran äänenvoimakkuus 0–100",
   "log.music.volume": "🎵 Nemoran äänenvoimakkuus {percent}%",
-  "log.music.badVolume": "🎵 äänenvoimakkuus: sano luku 0–100"
+  "log.music.badVolume": "🎵 äänenvoimakkuus: sano luku 0–100",
+  "example.media.pause": "toisto / tauko missä tahansa soittimessa",
+  "example.media.next": "seuraava kappale",
+  "example.media.prev": "edellinen kappale",
+  "example.media.replay": "nykyinen kappale alusta"
 }

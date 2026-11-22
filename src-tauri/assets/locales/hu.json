@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 a Nemora könyvtára üres",
   "intent.music_volume": "a Nemora hangereje 0 és 100 között",
   "log.music.volume": "🎵 a Nemora hangereje {percent}%",
-  "log.music.badVolume": "🎵 hangerő: mondj egy számot 0 és 100 között"
+  "log.music.badVolume": "🎵 hangerő: mondj egy számot 0 és 100 között",
+  "example.media.pause": "lejátszás / szünet bármelyik lejátszóban",
+  "example.media.next": "következő szám",
+  "example.media.prev": "előző szám",
+  "example.media.replay": "a mostani szám az elejéről"
 }

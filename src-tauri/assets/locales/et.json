@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 Nemora kogu on tühi",
   "intent.music_volume": "Nemora helitugevus 0–100",
   "log.music.volume": "🎵 Nemora helitugevus {percent}%",
-  "log.music.badVolume": "🎵 helitugevus: ütle arv 0–100"
+  "log.music.badVolume": "🎵 helitugevus: ütle arv 0–100",
+  "example.media.pause": "esita / peata mis tahes pleieris",
+  "example.media.next": "järgmine lugu",
+  "example.media.prev": "eelmine lugu",
+  "example.media.replay": "praegune lugu algusest"
 }

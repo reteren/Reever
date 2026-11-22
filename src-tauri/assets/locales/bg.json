@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 библиотеката на Nemora е празна",
   "intent.music_volume": "сила на звука в Nemora от 0 до 100",
   "log.music.volume": "🎵 сила на звука в Nemora {percent}%",
-  "log.music.badVolume": "🎵 сила на звука: кажи число от 0 до 100"
+  "log.music.badVolume": "🎵 сила на звука: кажи число от 0 до 100",
+  "example.media.pause": "пускане / пауза във всеки плейър",
+  "example.media.next": "следваща песен",
+  "example.media.prev": "предишна песен",
+  "example.media.replay": "текущата песен отначало"
 }

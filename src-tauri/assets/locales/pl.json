@@ -647,5 +647,9 @@
   "log.music.empty": "🎵 biblioteka Nemora jest pusta",
   "intent.music_volume": "głośność Nemora od 0 do 100",
   "log.music.volume": "🎵 głośność Nemora {percent}%",
-  "log.music.badVolume": "🎵 głośność: powiedz liczbę od 0 do 100"
+  "log.music.badVolume": "🎵 głośność: powiedz liczbę od 0 do 100",
+  "example.media.pause": "odtwarzanie / pauza w dowolnym odtwarzaczu",
+  "example.media.next": "następny utwór",
+  "example.media.prev": "poprzedni utwór",
+  "example.media.replay": "bieżący utwór od początku"
 }

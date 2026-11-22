@@ -180,6 +180,16 @@ pub fn build_with(g: &Grammar, locale: &str, langs: &[&str], nemora: bool) -> Sa
             rows.push(SayRow { command, desc, key: Some(intent.id.clone()), off: !intent.enabled });
         }
     }
+    // Музыка в любом плеере — системные действия (медиа-клавиши), правятся во вкладке «Действия»
+    for (ru, en, key) in [
+        ("пауза", "pause music", "example.media.pause"),
+        ("следующий трек", "next track", "example.media.next"),
+        ("предыдущий трек", "previous track", "example.media.prev"),
+        ("заново", "replay", "example.media.replay"),
+    ] {
+        let phrase = if cx.ru { ru } else { en };
+        rows.push(SayRow { command: format!("{wake} {phrase}"), desc: cx.t(key, &[]), key: None, off: false });
+    }
     let shutdown = if cx.ru { "выключи комп" } else { "shut down computer" };
     rows.push(SayRow { command: format!("{wake} {shutdown}"), desc: cx.t("example.shutdown", &[]), key: None, off: false });
     let cancel = cx.pick(&cx.heard_cancel_words(&g.cancel_words), if cx.ru { "отмена" } else { "cancel" });
@@ -207,7 +217,8 @@ mod tests {
     fn every_enabled_intent_has_a_row_plus_shutdown_and_cancel() {
         let g = Grammar::defaults();
         let list = build_with(&g, "en", &["en"], true);
-        assert_eq!(list.rows.len(), g.intents.len() + 2);
+        // + 4 медиа-команды, выключение и отмена
+        assert_eq!(list.rows.len(), g.intents.len() + 6);
         assert!(list.rows.iter().all(|r| !r.desc.is_empty() && !r.desc.starts_with("example.")));
         assert!(list.rows.iter().all(|r| !r.desc.starts_with("intent.")), "{:?}", list.rows);
         assert!(!list.hint.is_empty() && !list.hint.starts_with("home."));

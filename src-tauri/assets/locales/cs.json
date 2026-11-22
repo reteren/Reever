@@ -647,5 +647,9 @@
   "log.music.empty": "🎵 knihovna Nemory je prázdná",
   "intent.music_volume": "hlasitost Nemory od 0 do 100",
   "log.music.volume": "🎵 hlasitost Nemory {percent}%",
-  "log.music.badVolume": "🎵 hlasitost: řekni číslo od 0 do 100"
+  "log.music.badVolume": "🎵 hlasitost: řekni číslo od 0 do 100",
+  "example.media.pause": "přehrát / pozastavit v libovolném přehrávači",
+  "example.media.next": "další skladba",
+  "example.media.prev": "předchozí skladba",
+  "example.media.replay": "aktuální skladba od začátku"
 }

@@ -641,5 +641,9 @@
   "log.music.empty": "🎵 Nemora 的音乐库是空的",
   "intent.music_volume": "Nemora 音量 0 到 100",
   "log.music.volume": "🎵 Nemora 音量 {percent}%",
-  "log.music.badVolume": "🎵 音量：请说 0 到 100 的数字"
+  "log.music.badVolume": "🎵 音量：请说 0 到 100 的数字",
+  "example.media.pause": "任何播放器中播放 / 暂停",
+  "example.media.next": "下一首",
+  "example.media.prev": "上一首",
+  "example.media.replay": "当前曲目从头播放"
 }

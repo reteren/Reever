@@ -642,5 +642,9 @@
   "log.music.empty": "🎵 библиотека Неморы пуста",
   "intent.music_volume": "громкость Неморы от 0 до 100",
   "log.music.volume": "🎵 громкость Неморы {percent}%",
-  "log.music.badVolume": "🎵 громкость: назови число от 0 до 100"
+  "log.music.badVolume": "🎵 громкость: назови число от 0 до 100",
+  "example.media.pause": "пауза и продолжение в любом плеере",
+  "example.media.next": "следующий трек",
+  "example.media.prev": "предыдущий трек",
+  "example.media.replay": "текущий трек сначала"
 }

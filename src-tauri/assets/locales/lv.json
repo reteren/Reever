@@ -645,5 +645,9 @@
   "log.music.empty": "🎵 Nemora bibliotēka ir tukša",
   "intent.music_volume": "Nemora skaļums no 0 līdz 100",
   "log.music.volume": "🎵 Nemora skaļums {percent}%",
-  "log.music.badVolume": "🎵 skaļums: pasaki skaitli no 0 līdz 100"
+  "log.music.badVolume": "🎵 skaļums: pasaki skaitli no 0 līdz 100",
+  "example.media.pause": "atskaņot / pauzēt jebkurā atskaņotājā",
+  "example.media.next": "nākamā dziesma",
+  "example.media.prev": "iepriekšējā dziesma",
+  "example.media.replay": "pašreizējā dziesma no sākuma"
 }

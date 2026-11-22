@@ -651,5 +651,9 @@
   "log.music.empty": "🎵 مكتبة Nemora فارغة",
   "intent.music_volume": "مستوى صوت Nemora من 0 إلى 100",
   "log.music.volume": "🎵 مستوى صوت Nemora {percent}%",
-  "log.music.badVolume": "🎵 الصوت: قل رقمًا من 0 إلى 100"
+  "log.music.badVolume": "🎵 الصوت: قل رقمًا من 0 إلى 100",
+  "example.media.pause": "تشغيل / إيقاف مؤقت في أي مشغل",
+  "example.media.next": "المقطع التالي",
+  "example.media.prev": "المقطع السابق",
+  "example.media.replay": "المقطع الحالي من البداية"
 }

@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 la biblioteca de Nemora está vacía",
   "intent.music_volume": "volumen de Nemora de 0 a 100",
   "log.music.volume": "🎵 volumen de Nemora {percent}%",
-  "log.music.badVolume": "🎵 volumen: di un número del 0 al 100"
+  "log.music.badVolume": "🎵 volumen: di un número del 0 al 100",
+  "example.media.pause": "reproducir / pausar en cualquier reproductor",
+  "example.media.next": "canción siguiente",
+  "example.media.prev": "canción anterior",
+  "example.media.replay": "la canción actual desde el principio"
 }

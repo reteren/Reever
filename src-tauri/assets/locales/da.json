@@ -643,5 +643,9 @@
   "log.music.empty": "🎵 Nemoras bibliotek er tomt",
   "intent.music_volume": "Nemoras lydstyrke fra 0 til 100",
   "log.music.volume": "🎵 Nemoras lydstyrke {percent}%",
-  "log.music.badVolume": "🎵 lydstyrke: sig et tal fra 0 til 100"
+  "log.music.badVolume": "🎵 lydstyrke: sig et tal fra 0 til 100",
+  "example.media.pause": "afspil / pause i enhver afspiller",
+  "example.media.next": "næste nummer",
+  "example.media.prev": "forrige nummer",
+  "example.media.replay": "det aktuelle nummer forfra"
 }

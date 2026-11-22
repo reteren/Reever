@@ -649,5 +649,9 @@
   "log.music.empty": "🎵 il-librerija ta' Nemora vojta",
   "intent.music_volume": "il-volum ta' Nemora minn 0 sa 100",
   "log.music.volume": "🎵 il-volum ta' Nemora {percent}%",
-  "log.music.badVolume": "🎵 volum: għid numru minn 0 sa 100"
+  "log.music.badVolume": "🎵 volum: għid numru minn 0 sa 100",
+  "example.media.pause": "play / pause fi kwalunkwe player",
+  "example.media.next": "il-kanzunetta li jmiss",
+  "example.media.prev": "il-kanzunetta ta' qabel",
+  "example.media.replay": "il-kanzunetta ta' issa mill-bidu"
 }
