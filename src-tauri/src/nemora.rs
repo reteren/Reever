@@ -633,8 +633,11 @@ impl Run<'_> {
     }
 }
 
-/// Немора с отдельным уровнем доступа для Reever (Настройки → AI agents → Reever) — новее
-/// 3.0.1: там уровень ещё общий для всех агентов. По версии из app_status.
+/// Немора с отдельным уровнем доступа для Reever (Настройки → AI agents → Reever): новее
+/// 3.0.1, где уровень ещё общий для всех агентов. По версии из app_status (ровно версия из её
+/// Cargo.toml). Мелкий фикс Немора выпускает как «X.Y.Z-stable.hotfixN» без нового номера —
+/// по semver он новее X.Y.Z, поэтому «3.0.1-stable.hotfix1» уже со своим уровнем. Сборка
+/// Неморы из рабочего дерева отдаёт «3.0.1-stable» и с изменением — только у её автора.
 fn own_level(status: &Value) -> bool {
     let version = status
         .get("version")
@@ -645,7 +648,11 @@ fn own_level(status: &Value) -> bool {
         .take_while(|part| !part.is_empty())
         .filter_map(|part| part.parse().ok())
         .collect();
-    numbers.len() >= 3 && numbers[..3] > [3, 0, 1][..]
+    if numbers.len() < 3 {
+        return false;
+    }
+    let triple = [numbers[0], numbers[1], numbers[2]];
+    triple > [3, 0, 1] || (triple == [3, 0, 1] && version.contains(".hotfix"))
 }
 
 /// Ошибка Неморы — отказ в доступе («turned agents off», «lets Reever read only»).
@@ -2208,6 +2215,9 @@ mod tests {
         assert!(!own_level(&json!({ "version": "3.0.1-stable" })));
         assert!(own_level(&json!({ "version": "3.0.2-stable" })));
         assert!(own_level(&json!({ "version": "3.1.0" })));
+        assert!(own_level(&json!({ "version": "3.0.1-stable.hotfix1" })));
+        assert!(!own_level(&json!({ "version": "3.0.0-stable.hotfix1" })));
+        assert!(own_level(&json!({ "version": "3.0.2-stable" })));
         assert!(!own_level(&json!({})));
         let old = "The user has turned agents off in Nemora (Settings, AI agents).";
         let reever_off = "The user has turned Reever off in Nemora (Settings, AI agents, Reever).";
