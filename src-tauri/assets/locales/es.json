@@ -692,5 +692,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "comandos de música de Nemora: {n} · mostrar",
-  "say.nemora.hide": "comandos de música de Nemora: {n} · ocultar"
+  "say.nemora.hide": "comandos de música de Nemora: {n} · ocultar",
+  "log.music.noAccessReever": "🎵 Nemora no deja que Reever lo controle: Nemora → Ajustes → Agentes de IA → Reever"
 }

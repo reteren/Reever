@@ -690,5 +690,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "Nemora の音楽コマンド：{n} · 表示",
-  "say.nemora.hide": "Nemora の音楽コマンド：{n} · 隠す"
+  "say.nemora.hide": "Nemora の音楽コマンド：{n} · 隠す",
+  "log.music.noAccessReever": "🎵 Nemora は Reever の操作を許可していません：Nemora → 設定 → AI エージェント → Reever"
 }

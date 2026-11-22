@@ -559,7 +559,11 @@ pub fn start_media(app: &AppHandle, op: &str) {
 /// `true` — сделано в Неморе; `false` — она не играет, нужна медиа-клавиша. app_status не
 /// запускает закрытую Немору.
 fn media_in_nemora(op: &str) -> Result<bool, CallError> {
-    let status = call("app_status", json!({}), CALL_TIMEOUT)?;
+    let status = match call("app_status", json!({}), CALL_TIMEOUT) {
+        // доступ закрыт (Немора 3.0.1 отвечает ошибкой) — медиа-клавиша
+        Err(CallError::Tool(text)) if access_refused(&text) => return Ok(false),
+        other => other?,
+    };
     let running = status
         .get("running")
         .and_then(Value::as_bool)
@@ -629,6 +633,41 @@ impl Run<'_> {
     }
 }
 
+/// Немора с отдельным уровнем доступа для Reever (Настройки → AI agents → Reever) — новее
+/// 3.0.1: там уровень ещё общий для всех агентов. По версии из app_status.
+fn own_level(status: &Value) -> bool {
+    let version = status
+        .get("version")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let numbers: Vec<u32> = version
+        .split(|c: char| !c.is_ascii_digit())
+        .take_while(|part| !part.is_empty())
+        .filter_map(|part| part.parse().ok())
+        .collect();
+    numbers.len() >= 3 && numbers[..3] > [3, 0, 1][..]
+}
+
+/// Ошибка Неморы — отказ в доступе («turned agents off», «lets Reever read only»).
+fn access_refused(text: &str) -> bool {
+    let text = text.to_lowercase();
+    (text.contains("turned") && text.contains(" off")) || text.contains("read only")
+}
+
+/// Отказ относится к собственному уровню Reever (новая Немора называет его в тексте).
+fn reever_level_error(text: &str) -> bool {
+    text.to_lowercase().contains("reever")
+}
+
+/// «Немора не даёт управлять» — с путём к своему уровню Reever или к общему уровню агентов.
+fn no_access(app: &AppHandle, own: bool) {
+    if own {
+        ui_log(app, crate::msg!("log.music.noAccessReever"));
+    } else {
+        ui_log(app, crate::msg!("log.music.noAccess"));
+    }
+}
+
 /// Выполнить команду: успех и ответ для пузыря (если он есть).
 fn run(
     app: &AppHandle,
@@ -642,16 +681,20 @@ fn run(
         running: false,
         answer: Default::default(),
     };
-    // app_status не запускает Немору: узнать, открыта ли она и что разрешено агентам
+    // app_status не запускает Немору: узнать, открыта ли она и что разрешено Reever
     let status = match call("app_status", json!({}), CALL_TIMEOUT) {
         Ok(status) => status,
+        // Немора 3.0.1 при выключенных агентах отвечает на app_status ошибкой, а не access: off
+        Err(CallError::Tool(text)) if access_refused(&text) => {
+            no_access(app, reever_level_error(&text));
+            return (false, None);
+        }
         Err(error) => return (failed.failed(&error), None),
     };
-    if matches!(
-        status.get("access").and_then(Value::as_str),
-        Some("off" | "read")
-    ) {
-        ui_log(app, crate::msg!("log.music.noAccess"));
+    // «что играет» — только чтение: при уровне «read» он разрешён
+    let access = status.get("access").and_then(Value::as_str);
+    if access == Some("off") || (access == Some("read") && op != MusicOp::NowPlaying) {
+        no_access(app, own_level(&status));
         return (false, None);
     }
     let running = status
@@ -2158,6 +2201,23 @@ mod tests {
         }
         assert_eq!(clock(83.4), "1:23");
         assert_eq!(clock(5.0), "0:05");
+    }
+
+    #[test]
+    fn access_refusals_point_to_the_right_level() {
+        assert!(!own_level(&json!({ "version": "3.0.1-stable" })));
+        assert!(own_level(&json!({ "version": "3.0.2-stable" })));
+        assert!(own_level(&json!({ "version": "3.1.0" })));
+        assert!(!own_level(&json!({})));
+        let old = "The user has turned agents off in Nemora (Settings, AI agents).";
+        let reever_off = "The user has turned Reever off in Nemora (Settings, AI agents, Reever).";
+        let reever_read = "Nemora lets Reever read only; this needs `control`. The user can change it in Settings, AI agents, Reever.";
+        assert!(access_refused(old) && !reever_level_error(old));
+        assert!(access_refused(reever_off) && reever_level_error(reever_off));
+        assert!(access_refused(reever_read) && reever_level_error(reever_read));
+        assert!(!access_refused(
+            "Nemora is not running. Ask the user to open it."
+        ));
     }
 
     #[test]

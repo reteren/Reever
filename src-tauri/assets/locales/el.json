@@ -692,5 +692,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "εντολές μουσικής Nemora: {n} · εμφάνιση",
-  "say.nemora.hide": "εντολές μουσικής Nemora: {n} · απόκρυψη"
+  "say.nemora.hide": "εντολές μουσικής Nemora: {n} · απόκρυψη",
+  "log.music.noAccessReever": "🎵 Το Nemora δεν επιτρέπει στο Reever να το ελέγχει: Nemora → Settings → AI agents → Reever"
 }

@@ -696,5 +696,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "Nemora muzikos komandos: {n} · rodyti",
-  "say.nemora.hide": "Nemora muzikos komandos: {n} · slėpti"
+  "say.nemora.hide": "Nemora muzikos komandos: {n} · slėpti",
+  "log.music.noAccessReever": "🎵 Nemora neleidžia Reever valdyti: Nemora → Settings → AI agents → Reever"
 }

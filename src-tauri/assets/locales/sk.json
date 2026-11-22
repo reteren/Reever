@@ -696,5 +696,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "hudobné príkazy Nemory: {n} · zobraziť",
-  "say.nemora.hide": "hudobné príkazy Nemory: {n} · skryť"
+  "say.nemora.hide": "hudobné príkazy Nemory: {n} · skryť",
+  "log.music.noAccessReever": "🎵 Nemora nedovoľuje Reever ovládanie: Nemora → Settings → AI agents → Reever"
 }

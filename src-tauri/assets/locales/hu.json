@@ -692,5 +692,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "Nemora zenei parancsok: {n} · mutasd",
-  "say.nemora.hide": "Nemora zenei parancsok: {n} · rejtsd el"
+  "say.nemora.hide": "Nemora zenei parancsok: {n} · rejtsd el",
+  "log.music.noAccessReever": "🎵 A Nemora nem engedi a Reevernek a vezérlést: Nemora → Settings → AI agents → Reever"
 }

@@ -698,5 +698,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "kmandi tal-mużika ta' Nemora: {n} · uri",
-  "say.nemora.hide": "kmandi tal-mużika ta' Nemora: {n} · aħbi"
+  "say.nemora.hide": "kmandi tal-mużika ta' Nemora: {n} · aħbi",
+  "log.music.noAccessReever": "🎵 Nemora ma tħallix lil Reever jikkontrollaha: Nemora → Settings → AI agents → Reever"
 }

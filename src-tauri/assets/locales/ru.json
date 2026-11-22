@@ -691,5 +691,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Немора",
   "say.nemora.show": "музыкальные команды Неморы: {n} · показать",
-  "say.nemora.hide": "музыкальные команды Неморы: {n} · скрыть"
+  "say.nemora.hide": "музыкальные команды Неморы: {n} · скрыть",
+  "log.music.noAccessReever": "🎵 Немора не даёт Reever управлять: Немора → Настройки → ИИ-агенты → Reever"
 }

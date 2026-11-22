@@ -690,5 +690,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "Nemora 音乐命令：{n} · 显示",
-  "say.nemora.hide": "Nemora 音乐命令：{n} · 隐藏"
+  "say.nemora.hide": "Nemora 音乐命令：{n} · 隐藏",
+  "log.music.noAccessReever": "🎵 Nemora 不允许 Reever 控制：Nemora → 设置 → AI 智能体 → Reever"
 }

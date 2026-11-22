@@ -692,5 +692,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "muziekopdrachten voor Nemora: {n} · tonen",
-  "say.nemora.hide": "muziekopdrachten voor Nemora: {n} · verbergen"
+  "say.nemora.hide": "muziekopdrachten voor Nemora: {n} · verbergen",
+  "log.music.noAccessReever": "🎵 Nemora laat Reever niets bedienen: Nemora → Settings → AI agents → Reever"
 }

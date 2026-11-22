@@ -692,5 +692,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "musikkommandoer til Nemora: {n} · vis",
-  "say.nemora.hide": "musikkommandoer til Nemora: {n} · skjul"
+  "say.nemora.hide": "musikkommandoer til Nemora: {n} · skjul",
+  "log.music.noAccessReever": "🎵 Nemora lader ikke Reever styre: Nemora → Settings → AI agents → Reever"
 }

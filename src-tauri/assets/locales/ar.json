@@ -700,5 +700,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "أوامر موسيقى Nemora: {n} · إظهار",
-  "say.nemora.hide": "أوامر موسيقى Nemora: {n} · إخفاء"
+  "say.nemora.hide": "أوامر موسيقى Nemora: {n} · إخفاء",
+  "log.music.noAccessReever": "🎵 لا يسمح Nemora لـ Reever بالتحكم: Nemora ← الإعدادات ← وكلاء الذكاء الاصطناعي ← Reever"
 }

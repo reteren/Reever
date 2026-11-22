@@ -694,5 +694,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "glazbene naredbe Nemore: {n} · prikaži",
-  "say.nemora.hide": "glazbene naredbe Nemore: {n} · sakrij"
+  "say.nemora.hide": "glazbene naredbe Nemore: {n} · sakrij",
+  "log.music.noAccessReever": "🎵 Nemora ne dopušta Reever upravljanje: Nemora → Settings → AI agents → Reever"
 }

@@ -696,5 +696,6 @@
   "log.music.seek": "🎵 {arrow} {position}",
   "say.nemora": "♪ Nemora",
   "say.nemora.show": "музичні команди Nemora: {n} · показати",
-  "say.nemora.hide": "музичні команди Nemora: {n} · сховати"
+  "say.nemora.hide": "музичні команди Nemora: {n} · сховати",
+  "log.music.noAccessReever": "🎵 Nemora не дозволяє Reever керувати: Nemora → Налаштування → ШІ-агенти → Reever"
 }
