@@ -10,7 +10,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.9.6-27E6AA?style=flat-square&labelColor=0b1512" alt="version 0.9.6">
+  <img src="https://img.shields.io/badge/version-1.0.0-27E6AA?style=flat-square&labelColor=0b1512" alt="version 1.0.0">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-27E6AA?style=flat-square&labelColor=0b1512" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-27E6AA?style=flat-square&labelColor=0b1512" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/Rust-native%20UI-27E6AA?style=flat-square&labelColor=0b1512" alt="Rust, native UI">
   <img src="https://img.shields.io/badge/speech-on%20device-27E6AA?style=flat-square&labelColor=0b1512" alt="speech on device">
@@ -56,6 +57,7 @@ Everything is recognized on your own machine with sherpa-onnx models. There is n
 - [Build from source](#build-from-source)
 - [How it works](#how-it-works)
 - [Credits](#credits)
+- [License](#license)
 
 ## What it can do
 
@@ -422,3 +424,7 @@ flowchart LR
 Reever is made by 46psy4.
 
 Speech models come from NVIDIA (Parakeet), FunAudioLLM (SenseVoice), OpenAI (Whisper) and Silero (VAD), run through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Licenses of every shipped component are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+## License
+
+Reever is released under the [MIT License](LICENSE). The speech models it downloads and ships keep their own licenses, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

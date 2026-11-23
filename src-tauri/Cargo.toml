@@ -1,7 +1,8 @@
 [package]
 name = "reever"
-version = "0.9.6"
+version = "1.0.0"
 edition = "2021"
+license = "MIT"
 description = "Reever — offline voice launcher for Windows"
 
 # Библиотека — всё приложение (тесты и examples/ собираются против неё),
