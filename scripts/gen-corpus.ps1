@@ -398,6 +398,9 @@ if ($Dictation) {
 
 if ($Find) {
     $targetsPath = Join-Path $RepoRoot 'testdata/find-targets.json'
+    if (-not (Test-Path -LiteralPath $targetsPath)) {
+        throw "нет testdata/find-targets.json: это 20–25 файлов и папок на твоём диске, формат — docs/find.md («Замер»)"
+    }
     $targets = Get-Content -LiteralPath $targetsPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if (@($targets).Count -lt 20 -or @($targets).Count -gt 25) {
         throw "find-targets.json должен содержать 20–25 целей, сейчас: $(@($targets).Count)"

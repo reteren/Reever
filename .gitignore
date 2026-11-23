@@ -25,6 +25,10 @@
 /testdata/wake-lang-corpus/
 # Записи голоса пользователя для детектора «ривер» — личные, не в git.
 /testdata/wake/
+# Цели «ривер найди …» — файлы и папки на диске того, кто меряет (docs/find.md), не в git.
+/testdata/find-targets.json
+/testdata/find-manifest.json
+/testdata/find-report.md
 
 # Тестовый exe без установки (tools/test_build.sh)
 /test-build/

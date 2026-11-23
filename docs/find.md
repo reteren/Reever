@@ -117,6 +117,11 @@ Everything (`examples/find_probe`) «проджект джиэсти» — та�
   голоса читают английские имена до неузнаваемости («src-tauri» → «стори», «actions.json» →
   «yeah it sounds sound»). Живой голос не мерен.
 - Отчёт: `testdata/find-report.md`.
+- Цели — настоящие файлы и папки на диске того, кто меряет, поэтому `testdata/find-targets.json`,
+  манифест и отчёт в git не хранятся. Файл целей — массив из 20–25 записей
+  `{"id", "name", "path", "kind": "folder"|"file", "language": "en"|"ru"|"mixed", "phrase": "any"|"folder"|"file"}`,
+  `name` — последняя часть `path`; затем `scripts/gen-corpus.ps1 -Find` и
+  `cargo run --release --example eval_find`.
 
 ## Выбор
 
