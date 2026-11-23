@@ -14,6 +14,7 @@ makensis ищется в PATH, затем в Program Files (x86)/NSIS, зате�
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import re
 import shutil
@@ -104,6 +105,23 @@ def main() -> None:
     ]
     subprocess.run(cmd, check=True)
     print(f"{out} ({out.stat().st_size} bytes)")
+    print(stage_release(out, ver))
+
+
+def stage_release(installer: Path, ver: str) -> Path:
+    """Всё, что выкладывается релизом GitHub, — в одну папку release/<версия>/ (не в git):
+    установщик, SHA256SUMS.txt и RELEASE_NOTES.md (заготовка; написанное руками не трогается).
+    Автообновлению из этого нужен только установщик: версию оно берёт из тега, сумму — у GitHub."""
+    folder = ROOT / "release" / ver
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / installer.name
+    shutil.copy2(installer, target)
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (folder / "SHA256SUMS.txt").write_text(f"{digest}  {target.name}\n", encoding="utf-8")
+    notes = folder / "RELEASE_NOTES.md"
+    if not notes.exists():
+        notes.write_text(f"Reever {ver}\n", encoding="utf-8")
+    return folder
 
 
 if __name__ == "__main__":

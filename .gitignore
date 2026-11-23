@@ -32,3 +32,8 @@
 
 # Тестовый exe без установки (tools/test_build.sh)
 /test-build/
+# Готовое к выкладке релизом (tools/build_installer.py): установщик, суммы, текст релиза.
+/release/
+
+# Проводник Windows (своя иконка папки)
+desktop.ini

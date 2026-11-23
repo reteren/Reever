@@ -5,8 +5,8 @@
     python tools/release.py                    # то же вручную: релиз v<версия> с локальным установщиком
     python tools/release.py --notes "что нового"
 
-Версия — из src-tauri/Cargo.toml, установщик — src-tauri/target/release/bundle/nsis/
-Reever_<версия>_x64-setup.exe (сначала python tools/build_installer.py). Нужен gh, вошедший
+Версия — из src-tauri/Cargo.toml; установщик и текст релиза — из release/<версия>/
+(Reever_<версия>_x64-setup.exe, RELEASE_NOTES.md; их кладёт python tools/build_installer.py). Нужен gh, вошедший
 в аккаунт с правом записи в репозиторий. Тег ставится на текущий коммит, поэтому он должен
 быть уже запушен: иначе скрипт останавливается.
 
@@ -35,9 +35,11 @@ def main() -> None:
     args = ap.parse_args()
 
     ver = version()
-    installer = SRC / "target" / "release" / "bundle" / "nsis" / f"Reever_{ver}_x64-setup.exe"
+    folder = ROOT / "release" / ver
+    installer = folder / f"Reever_{ver}_x64-setup.exe"
     if not installer.is_file():
         sys.exit(f"{installer} not found: run python tools/build_installer.py first")
+    notes_file = folder / "RELEASE_NOTES.md"
 
     head = git("rev-parse", "HEAD")
     git("fetch", "--quiet", "origin")
@@ -49,7 +51,7 @@ def main() -> None:
             "gh", "release", "create", f"v{ver}", str(installer),
             "--target", head,
             "--title", f"Reever {ver}",
-            "--notes", args.notes or f"Reever {ver}",
+            *(["--notes", args.notes] if args.notes else ["--notes-file", str(notes_file)] if notes_file.is_file() else ["--notes", f"Reever {ver}"]),
         ],
         cwd=ROOT,
         check=True,
